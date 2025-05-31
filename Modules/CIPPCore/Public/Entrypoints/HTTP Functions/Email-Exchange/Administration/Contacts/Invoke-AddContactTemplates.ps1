@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddContactTemplate {
+Function Invoke-AddContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -22,8 +22,8 @@ Function Invoke-AddContactTemplate {
         $contactObject = [ordered]@{}
 
         # Set name and comments first
-        $contactObject["name"] = $Request.body.Name ?? $Request.body.PolicyName ?? "Contact Template $(Get-Date -Format 'yyyy-MM-dd-HH-mm-ss')"
-        $contactObject["comments"] = $Request.body.Description ?? $Request.body.AdminDisplayName ?? "Contact template created $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        $contactObject["name"] = $Request.body.displayName
+        $contactObject["comments"] = "Contact template created $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 
         # Copy specific properties we want to keep
         $propertiesToKeep = @(

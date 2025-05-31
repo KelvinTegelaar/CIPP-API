@@ -1,5 +1,6 @@
 using namespace System.Net
-Function Invoke-RemoveContactTemplate {
+
+Function Invoke-RemoveContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -10,8 +11,10 @@ Function Invoke-RemoveContactTemplate {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.Headers
+
     Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $ID = $request.query.ID ?? $request.body.ID
+
     try {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$id'"

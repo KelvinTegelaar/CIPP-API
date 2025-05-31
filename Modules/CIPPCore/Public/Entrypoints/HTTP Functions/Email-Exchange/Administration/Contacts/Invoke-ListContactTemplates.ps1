@@ -11,6 +11,7 @@ Function Invoke-ListContactTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'templates'
     $Templates = Get-ChildItem 'Config\*.ContactTemplate.json' | ForEach-Object {
         $Entity = @{
@@ -21,16 +22,42 @@ Function Invoke-ListContactTemplates {
         }
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
     }
-    #List policies
-    $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'ContactTemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $GUID = $_.RowKey
-        $data = $_.JSON | ConvertFrom-Json
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
-        $data
+
+    # Check if a specific template ID is requested
+    if ($Request.query.ID -or $Request.query.id) {
+        $RequestedID = $Request.query.ID ?? $Request.query.id
+        Write-LogMessage -headers $Headers -API $APIName -message "Retrieving specific template with ID: $RequestedID" -Sev 'Debug'
+
+        # Query directly for the specific template by RowKey for efficiency
+        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$RequestedID'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $GUID = $_.RowKey
+            $data = $_.JSON | ConvertFrom-Json
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
+            $data
+        }
+
+        if (-not $Templates) {
+            Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -Sev 'Warning'
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = @{ Error = "Template with ID $RequestedID not found" }
+            })
+            return
+        }
+    } else {
+        # List all policies if no specific ID requested
+        Write-LogMessage -headers $Headers -API $APIName -message 'Retrieving all contact templates' -Sev 'Debug'
+
+        $Filter = "PartitionKey eq 'ContactTemplate'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $GUID = $_.RowKey
+            $data = $_.JSON | ConvertFrom-Json
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
+            $data
+        }
     }
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
+
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
