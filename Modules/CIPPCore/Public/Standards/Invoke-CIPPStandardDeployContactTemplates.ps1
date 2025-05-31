@@ -203,22 +203,34 @@ function Invoke-CIPPStandardDeployContactTemplates {
                         $Template = $Contact.Template
                         $ExistingContact = $CurrentContacts | Where-Object { $_.DisplayName -eq $Template.displayName }
 
-                        # Update basic MailContact properties
-                        $UpdateContactParams = @{
+                        # Update MailContact properties (email address)
+                        $UpdateMailContactParams = @{
                             Identity = $ExistingContact.Identity
                             ExternalEmailAddress = $Template.email
                         }
 
-                        # Add optional name fields if provided
+                        # Update the existing mail contact
+                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailContact' -cmdParams $UpdateMailContactParams -UseSystemMailbox $true
+
+                        # Update Contact properties (names) if provided
+                        $UpdateContactParams = @{
+                            Identity = $ExistingContact.Identity
+                        }
+                        $ContactNeedsUpdate = $false
+
                         if (![string]::IsNullOrWhiteSpace($Template.firstName)) {
                             $UpdateContactParams.FirstName = $Template.firstName
+                            $ContactNeedsUpdate = $true
                         }
                         if (![string]::IsNullOrWhiteSpace($Template.lastName)) {
                             $UpdateContactParams.LastName = $Template.lastName
+                            $ContactNeedsUpdate = $true
                         }
 
-                        # Update the existing mail contact
-                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailContact' -cmdParams $UpdateContactParams -UseSystemMailbox $true
+                        # Only update Contact if we have name changes
+                        if ($ContactNeedsUpdate) {
+                            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Contact' -cmdParams $UpdateContactParams -UseSystemMailbox $true
+                        }
 
                         # Store contact info for second pass
                         $ProcessedContacts.Add([PSCustomObject]@{
