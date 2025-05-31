@@ -1,4 +1,6 @@
 using namespace System.Net
+using namespace System.Collections.Generic
+using namespace System.Text.RegularExpressions
 
 Function Invoke-ListContacts {
     <#
@@ -10,62 +12,162 @@ Function Invoke-ListContacts {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-
-    # Define fields to retrieve
-    $selectList = @(
-        'id',
-        'companyName',
-        'displayName',
-        'mail',
-        'onPremisesSyncEnabled',
-        'editURL',
-        'givenName',
-        'jobTitle',
-        'surname',
-        'addresses',
-        'phones'
-    )
-
     # Get query parameters
     $TenantFilter = $Request.Query.tenantFilter
     $ContactID = $Request.Query.id
 
-    # Validate required parameters
+    # Early validation and exit
     if (-not $TenantFilter) {
-        $StatusCode = [HttpStatusCode]::BadRequest
-        $GraphRequest = 'tenantFilter is required'
-        Write-Host 'Error: Missing tenantFilter parameter'
-    } else {
-        try {
-            # Construct Graph API URI based on whether an ID is provided
-            $graphUri = if ([string]::IsNullOrWhiteSpace($ContactID) -eq $false) {
-                "https://graph.microsoft.com/beta/contacts/$($ContactID)?`$select=$($selectList -join ',')"
-            } else {
-                "https://graph.microsoft.com/beta/contacts?`$top=999&`$select=$($selectList -join ',')"
-            }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'tenantFilter is required'
+        })
+        return
+    }
 
-            # Make the Graph API request
-            $GraphRequest = New-GraphGetRequest -uri $graphUri -tenantid $TenantFilter
+    # Pre-compiled regex for MailTip cleaning
+    $script:HtmlTagRegex ??= [regex]::new('<[^>]+>', [RegexOptions]::Compiled)
+    $script:LineBreakRegex ??= [regex]::new('\\n|\r\n|\r', [RegexOptions]::Compiled)
+    $script:SmtpPrefixRegex ??= [regex]::new('^SMTP:', [RegexOptions]::Compiled -bor [RegexOptions]::IgnoreCase)
 
-            if ([string]::IsNullOrWhiteSpace($ContactID) -eq $false) {
-                $HiddenFromGAL = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Recipient' -cmdParams @{RecipientTypeDetails = 'MailContact' } -Select 'HiddenFromAddressListsEnabled,ExternalDirectoryObjectId' | Where-Object { $_.ExternalDirectoryObjectId -eq $ContactID }
-                $GraphRequest | Add-Member -NotePropertyName 'hidefromGAL' -NotePropertyValue $HiddenFromGAL.HiddenFromAddressListsEnabled
+    function ConvertTo-ContactObject {
+        param($Contact, $MailContact)
+
+        # Early exit if essential data missing
+        if (!$Contact.Id) { return $null }
+
+        $mailAddress = if ($MailContact.ExternalEmailAddress) {
+            $script:SmtpPrefixRegex.Replace($MailContact.ExternalEmailAddress, [string]::Empty, 1)
+        } else { $null }
+
+        $cleanMailTip = if ($MailContact.MailTip -and $MailContact.MailTip.Length -gt 0) {
+            $cleaned = $script:HtmlTagRegex.Replace($MailContact.MailTip, [string]::Empty)
+            $cleaned = $script:LineBreakRegex.Replace($cleaned, "`n")
+            $cleaned.Trim()
+        } else { $null }
+
+        $phoneCapacity = 0
+        if ($Contact.Phone) { $phoneCapacity++ }
+        if ($Contact.MobilePhone) { $phoneCapacity++ }
+
+        $phones = if ($phoneCapacity -gt 0) {
+            $phoneList = [List[hashtable]]::new($phoneCapacity)
+            if ($Contact.Phone) {
+                $phoneList.Add(@{ type = "business"; number = $Contact.Phone })
             }
-            # Ensure single result when ID is provided
-            if ($ContactID -and $GraphRequest -is [array]) {
-                $GraphRequest = $GraphRequest | Select-Object -First 1
+            if ($Contact.MobilePhone) {
+                $phoneList.Add(@{ type = "mobile"; number = $Contact.MobilePhone })
             }
-            $StatusCode = [HttpStatusCode]::OK
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            $StatusCode = [HttpStatusCode]::InternalServerError
-            $GraphRequest = $ErrorMessage
+            $phoneList.ToArray()
+        } else { @() }
+
+        return @{
+            id = $Contact.Id
+            displayName = $Contact.DisplayName
+            givenName = $Contact.FirstName
+            surname = $Contact.LastName
+            mail = $mailAddress
+            companyName = $Contact.Company
+            jobTitle = $Contact.Title
+            website = $Contact.WebPage
+            notes = $Contact.Notes
+            hidefromGAL = $MailContact.HiddenFromAddressListsEnabled
+            mailTip = $cleanMailTip
+            onPremisesSyncEnabled = $Contact.IsDirSynced
+            addresses = @(@{
+                street = $Contact.StreetAddress
+                city = $Contact.City
+                state = $Contact.StateOrProvince
+                countryOrRegion = $Contact.CountryOrRegion
+                postalCode = $Contact.PostalCode
+            })
+            phones = $phones
         }
     }
 
-    # Return response
+    try {
+        if (![string]::IsNullOrWhiteSpace($ContactID)) {
+            # Single contact request
+            Write-Host "Getting specific contact: $ContactID"
+
+            $Contact = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
+                Identity = $ContactID
+            }
+
+            $MailContact = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-MailContact' -cmdParams @{
+                Identity = $ContactID
+            }
+
+            if (!$Contact -or !$MailContact) {
+                throw "Contact not found or insufficient permissions"
+            }
+
+            $ContactResponse = ConvertTo-ContactObject -Contact $Contact -MailContact $MailContact
+
+        } else {
+            # Get all contacts
+            Write-Host "Getting all contacts"
+
+            $Contacts = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
+                RecipientTypeDetails = 'MailContact'
+                ResultSize = 'Unlimited'
+            }
+
+            # Exit if no contacts
+            if (!$Contacts -or $Contacts.Count -eq 0) {
+                $ContactResponse = @()
+            } else {
+                # Filter contacts with missing IDs
+                $ValidContacts = $Contacts.Where({$_.Id -and $_.Identity})
+
+                if ($ValidContacts.Count -eq 0) {
+                    $ContactResponse = @()
+                } else {
+                    $ContactIdentities = $ValidContacts.Identity
+                    $MailContacts = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-MailContact' -cmdParams @{
+                        ResultSize = 'Unlimited'
+                    } | Where-Object { $_.Identity -in $ContactIdentities }
+
+                    # Build dictionary
+                    $MailContactLookup = [Dictionary[string, object]]::new(
+                        $MailContacts.Count,
+                        [StringComparer]::OrdinalIgnoreCase
+                    )
+
+                    foreach ($mc in $MailContacts) {
+                        if ($mc.Identity) {
+                            $MailContactLookup[$mc.Identity] = $mc
+                        }
+                    }
+
+                    $FormattedContacts = [List[object]]::new($ValidContacts.Count)
+
+                    # Process contacts
+                    foreach ($Contact in $ValidContacts) {
+                        if ($MailContactLookup.ContainsKey($Contact.Identity)) {
+                            $ContactObj = ConvertTo-ContactObject -Contact $Contact -MailContact $MailContactLookup[$Contact.Identity]
+                            if ($ContactObj) {
+                                $FormattedContacts.Add($ContactObj)
+                            }
+                        }
+                    }
+
+                    $ContactResponse = $FormattedContacts.ToArray()
+                }
+            }
+        }
+
+        $StatusCode = [HttpStatusCode]::OK
+
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $ContactResponse = $ErrorMessage
+        Write-Host "Error in ListContacts: $ErrorMessage"
+    }
+
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest | Where-Object { $null -ne $_.id })
-        })
+        StatusCode = $StatusCode
+        Body       = $ContactResponse
+    })
 }
