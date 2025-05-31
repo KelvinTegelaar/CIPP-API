@@ -19,7 +19,7 @@ Function Invoke-AddContact {
 
     try {
         # Prepare the body for New-MailContact cmdlet
-        $BodyToship = [pscustomobject] @{
+        $BodyToship = @{
             displayName          = $ContactObject.displayName
             name                 = $ContactObject.displayName
             ExternalEmailAddress = $ContactObject.email
@@ -30,34 +30,45 @@ Function Invoke-AddContact {
         # Create the mail contact first
         $NewContact = New-ExoRequest -tenantid $TenantId -cmdlet 'New-MailContact' -cmdParams $BodyToship -UseSystemMailbox $true
 
-        # Prepare the body for Set-Contact cmdlet to add additional details
-        $SetContactParams = [pscustomobject] @{
+        # Build SetContactParams efficiently with only provided values
+        $SetContactParams = @{
             Identity = $NewContact.id
         }
 
-        # Add optional fields if they exist
-        if ($ContactObject.Title) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'Title' -Value $ContactObject.Title }
-        if ($ContactObject.Company) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'Company' -Value $ContactObject.Company }
-        if ($ContactObject.StreetAddress) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'StreetAddress' -Value $ContactObject.StreetAddress }
-        if ($ContactObject.City) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'City' -Value $ContactObject.City }
-        if ($ContactObject.State) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'StateOrProvince' -Value $ContactObject.State }
-        if ($ContactObject.PostalCode) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'PostalCode' -Value $ContactObject.PostalCode }
-        if ($ContactObject.CountryOrRegion) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'CountryOrRegion' -Value $ContactObject.CountryOrRegion }
-        if ($ContactObject.phone) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'Phone' -Value $ContactObject.phone }
-        if ($ContactObject.mobilePhone) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'MobilePhone' -Value $ContactObject.mobilePhone }
-        if ($ContactObject.website) { $SetContactParams | Add-Member -MemberType NoteProperty -Name 'WebPage' -Value $ContactObject.website }
+        # Helper to add non-empty values
+        $PropertyMap = @{
+            'Title'           = $ContactObject.Title
+            'Company'         = $ContactObject.Company
+            'StreetAddress'   = $ContactObject.StreetAddress
+            'City'            = $ContactObject.City
+            'StateOrProvince' = $ContactObject.State
+            'PostalCode'      = $ContactObject.PostalCode
+            'CountryOrRegion' = $ContactObject.CountryOrRegion
+            'Phone'           = $ContactObject.phone
+            'MobilePhone'     = $ContactObject.mobilePhone
+            'WebPage'         = $ContactObject.website
+        }
 
-        # Update the contact with additional details
-        $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
+        # Add only non-null/non-empty properties
+        foreach ($Property in $PropertyMap.GetEnumerator()) {
+            if (![string]::IsNullOrWhiteSpace($Property.Value)) {
+                $SetContactParams[$Property.Key] = $Property.Value
+            }
+        }
 
-        # Set mail contact specific properties
+        # Update the contact with additional details only if we have properties to set
+        if ($SetContactParams.Count -gt 1) {
+            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
+        }
+
+        # Build MailContact parameters efficiently
         $MailContactParams = @{
             Identity = $NewContact.id
-            HiddenFromAddressListsEnabled = [boolean]$ContactObject.hidefromGAL
+            HiddenFromAddressListsEnabled = [bool]$ContactObject.hidefromGAL
         }
 
         # Add MailTip if provided
-        if ($ContactObject.mailTip) {
+        if (![string]::IsNullOrWhiteSpace($ContactObject.mailTip)) {
             $MailContactParams.MailTip = $ContactObject.mailTip
         }
 

@@ -20,9 +20,13 @@ Function Invoke-EditContact {
         # Extract contact information from the request body
         $contactInfo = $Request.Body
 
-        # Prepare the body for the Set-Contact cmdlet
-        $bodyForSetContact = [pscustomobject] @{
-            'Identity'            = $contactInfo.ContactID
+        # Build contact parameters with only provided values
+        $bodyForSetContact = @{
+            Identity = $contactInfo.ContactID
+        }
+
+        # Map of properties to check and add
+        $ContactPropertyMap = @{
             'DisplayName'         = $contactInfo.displayName
             'WindowsEmailAddress' = $contactInfo.email
             'FirstName'           = $contactInfo.firstName
@@ -39,24 +43,39 @@ Function Invoke-EditContact {
             'WebPage'             = $contactInfo.website
         }
 
-        # Call the Set-Contact cmdlet to update the contact
-        $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-Contact' -cmdParams $bodyForSetContact -UseSystemMailbox $true
+        # Add only non-null/non-empty properties
+        foreach ($Property in $ContactPropertyMap.GetEnumerator()) {
+            if (![string]::IsNullOrWhiteSpace($Property.Value)) {
+                $bodyForSetContact[$Property.Key] = $Property.Value
+            }
+        }
+
+        # Update contact only if we have properties to set beyond Identity
+        if ($bodyForSetContact.Count -gt 1) {
+            $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-Contact' -cmdParams $bodyForSetContact -UseSystemMailbox $true
+        }
 
         # Prepare mail contact specific parameters
         $MailContactParams = @{
             Identity = $contactInfo.ContactID
-            HiddenFromAddressListsEnabled = [System.Convert]::ToBoolean($contactInfo.hidefromGAL)
+        }
+
+        # Handle boolean conversion safely
+        if ($null -ne $contactInfo.hidefromGAL) {
+            $MailContactParams.HiddenFromAddressListsEnabled = [bool]$contactInfo.hidefromGAL
         }
 
         # Add MailTip if provided
-        if ($contactInfo.mailTip) {
+        if (![string]::IsNullOrWhiteSpace($contactInfo.mailTip)) {
             $MailContactParams.MailTip = $contactInfo.mailTip
         }
 
-        # Update mail contact properties
-        $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
+        # Update mail contact only if we have properties to set beyond Identity
+        if ($MailContactParams.Count -gt 1) {
+            $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
+        }
 
-        $Results = "Successfully edited contact $($contactInfo.DisplayName)"
+        $Results = "Successfully edited contact $($contactInfo.displayName)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantID -message $Results -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     }
