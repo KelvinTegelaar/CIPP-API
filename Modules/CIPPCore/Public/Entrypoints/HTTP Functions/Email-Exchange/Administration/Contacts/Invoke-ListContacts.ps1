@@ -87,7 +87,7 @@ Function Invoke-ListContacts {
 
     try {
         if (![string]::IsNullOrWhiteSpace($ContactID)) {
-            # Single contact request
+            # Single contact request - keep existing complex formatting
             Write-Host "Getting specific contact: $ContactID"
 
             $Contact = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
@@ -105,55 +105,17 @@ Function Invoke-ListContacts {
             $ContactResponse = ConvertTo-ContactObject -Contact $Contact -MailContact $MailContact
 
         } else {
-            # Get all contacts
+            # Get all contacts - simplified approach
             Write-Host "Getting all contacts"
 
-            $Contacts = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
-                RecipientTypeDetails = 'MailContact'
+            $ContactResponse = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
+                Filter = "RecipientTypeDetails -eq 'MailContact'"
                 ResultSize = 'Unlimited'
-            }
+            } | Select-Object -Property City, Company, Department, DisplayName, FirstName, LastName, IsDirSynced, Guid, WindowsEmailAddress
 
-            # Exit if no contacts
-            if (!$Contacts -or $Contacts.Count -eq 0) {
+            # Return empty array if no contacts found
+            if (!$ContactResponse) {
                 $ContactResponse = @()
-            } else {
-                # Filter contacts with missing IDs
-                $ValidContacts = $Contacts.Where({$_.Id -and $_.Identity})
-
-                if ($ValidContacts.Count -eq 0) {
-                    $ContactResponse = @()
-                } else {
-                    $ContactIdentities = $ValidContacts.Identity
-                    $MailContacts = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-MailContact' -cmdParams @{
-                        ResultSize = 'Unlimited'
-                    } | Where-Object { $_.Identity -in $ContactIdentities }
-
-                    # Build dictionary
-                    $MailContactLookup = [Dictionary[string, object]]::new(
-                        $MailContacts.Count,
-                        [StringComparer]::OrdinalIgnoreCase
-                    )
-
-                    foreach ($mc in $MailContacts) {
-                        if ($mc.Identity) {
-                            $MailContactLookup[$mc.Identity] = $mc
-                        }
-                    }
-
-                    $FormattedContacts = [List[object]]::new($ValidContacts.Count)
-
-                    # Process contacts
-                    foreach ($Contact in $ValidContacts) {
-                        if ($MailContactLookup.ContainsKey($Contact.Identity)) {
-                            $ContactObj = ConvertTo-ContactObject -Contact $Contact -MailContact $MailContactLookup[$Contact.Identity]
-                            if ($ContactObj) {
-                                $FormattedContacts.Add($ContactObj)
-                            }
-                        }
-                    }
-
-                    $ContactResponse = $FormattedContacts.ToArray()
-                }
             }
         }
 
