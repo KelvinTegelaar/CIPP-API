@@ -100,4 +100,4 @@ function Invoke-CIPPStandardDeployMailContact {
         Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -FieldValue $($ExistingContact ? $true : $ReportData) -Tenant $Tenant
     }
-} 
+}

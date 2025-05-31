@@ -3557,6 +3557,89 @@
         }
       }
     },
+    "/ListContactTemplates": {
+      "get": {
+        "description": "List Contact Templates",
+        "summary": "List Contact Templates",
+        "tags": ["GET"],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  }
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RemoveContactTemplates": {
+      "get": {
+        "description": "Remove Contact Template",
+        "summary": "Remove Contact Template",
+        "tags": ["GET"],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddContactTemplates": {
+      "post": {
+        "description": "Add Contact Template",
+        "summary": "Add Contact Template",
+        "tags": ["POST"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
     "/ListMailboxRules": {
       "get": {
         "description": "ListMailboxRules",
