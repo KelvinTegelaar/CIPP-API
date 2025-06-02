@@ -27,7 +27,7 @@ function Invoke-CIPPStandardAddDKIM {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/exchange-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -66,9 +66,36 @@ function Invoke-CIPPStandardAddDKIM {
         return
     }
 
+    # Same exclusions also found in Push-DomainAnalyserTenant
+    $ExclusionDomains = @(
+        '*.microsoftonline.com'
+        '*.exclaimer.cloud'
+        '*.excl.cloud'
+        '*.codetwo.online'
+        '*.call2teams.com'
+        '*.signature365.net'
+        '*.myteamsconnect.io'
+        '*.teams.dstny.com'
+    )
 
-    $AllDomains = ($BatchResults | Where-Object { $_.DomainName }).DomainName
-    $DKIM = $BatchResults | Where-Object { $_.Domain } | Select-Object Domain, Enabled, Status
+    $AllDomains = ($BatchResults | Where-Object { $_.DomainName }).DomainName | ForEach-Object {
+        $Domain = $_
+        foreach ($ExclusionDomain in $ExclusionDomains) {
+            if ($Domain -like $ExclusionDomain) {
+                $Domain = $null
+            }
+        }
+        if ($null -ne $Domain) { $Domain }
+    }
+    $DKIM = $BatchResults | Where-Object { $_.Domain } | Select-Object Domain, Enabled, Status | ForEach-Object {
+        $Domain = $_
+        foreach ($ExclusionDomain in $ExclusionDomains) {
+            if ($Domain.Domain -like $ExclusionDomain) {
+                $Domain = $null
+            }
+        }
+        if ($null -ne $Domain) { $Domain }
+    }
 
     # List of domains for each way to enable DKIM
     $NewDomains = $AllDomains | Where-Object { $DKIM.Domain -notcontains $_ }

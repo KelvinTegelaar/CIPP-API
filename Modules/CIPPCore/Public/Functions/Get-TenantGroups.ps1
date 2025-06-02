@@ -43,46 +43,46 @@ function Get-TenantGroups {
     }
 
     if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
+        $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
         $Memberships = $AllMembers | Where-Object { $_.customerId -eq $Tenants.customerId }
         foreach ($Group in $Memberships) {
             $Group = $Groups | Where-Object { $_.RowKey -eq $Group.GroupId }
             if ($Group) {
-                [PSCustomObject]@{
+                $Results.Add([PSCustomObject]@{
                     Id          = $Group.RowKey
                     Name        = $Group.Name
                     Description = $Group.Description
-                }
+                })
             }
         }
+        return $Results | Sort-Object Name
     } else {
-        $Groups | ForEach-Object {
-            $Group = $_
+        $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
+        foreach ($Group in $Groups) {
             $Members = $AllMembers | Where-Object { $_.GroupId -eq $Group.RowKey }
-            if (!$Members) {
-                $Members = @()
-            }
-
-            $Members = $Members | ForEach-Object {
-                $Member = $_
-                $Tenant = $Tenants | Where-Object { $Member.customerId -eq $_.customerId }
-                if ($Tenant) {
-                    @{
-                        customerId        = $Tenant.customerId
-                        displayName       = $Tenant.displayName
-                        defaultDomainName = $Tenant.defaultDomainName
+            $MembersList = [System.Collections.Generic.List[hashtable]]::new()
+            if ($Members) {
+                foreach ($Member in $Members) {
+                    $Tenant = $Tenants | Where-Object { $Member.customerId -eq $_.customerId }
+                    if ($Tenant) {
+                        $MembersList.Add(@{
+                            customerId        = $Tenant.customerId
+                            displayName       = $Tenant.displayName
+                            defaultDomainName = $Tenant.defaultDomainName
+                        })
                     }
                 }
+                $SortedMembers = $MembersList | Sort-Object displayName
+            } else {
+                $SortedMembers = @()
             }
-            if (!$Members) {
-                $Members = @()
-            }
-
-            [PSCustomObject]@{
+            $Results.Add([PSCustomObject]@{
                 Id          = $Group.RowKey
                 Name        = $Group.Name
                 Description = $Group.Description
-                Members     = @($Members)
-            }
+                Members     = @($SortedMembers)
+            })
         }
+        return $Results | Sort-Object Name
     }
 }

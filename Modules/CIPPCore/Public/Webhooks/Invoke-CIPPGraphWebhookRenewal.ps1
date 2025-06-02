@@ -12,6 +12,7 @@ function Invoke-CippGraphWebhookRenewal {
     }
 
     if (($WebhookData | Measure-Object).Count -gt 0) {
+        Write-LogMessage -API 'Scheduler_RenewGraphSubscriptions' -tenant 'none' -message 'Starting Graph Subscription Renewal' -sev Info
         foreach ($UpdateSub in $WebhookData) {
             try {
                 $TenantFilter = $UpdateSub.PartitionKey
