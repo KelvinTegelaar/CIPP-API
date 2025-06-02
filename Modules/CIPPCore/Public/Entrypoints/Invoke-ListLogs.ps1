@@ -3,7 +3,7 @@ using namespace System.Net
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
