@@ -3,7 +3,7 @@ using namespace System.Net
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
@@ -53,20 +53,31 @@ function Invoke-ListLogs {
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
 
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -in $LogLevel -and $_.Username -like $username }
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
+            $_.Severity -in $LogLevel -and $_.Username -like $username
+        }
+
+        # Pre-fetch tenants only if filtering is needed
+        $TenantLookup = @{}
+        if ($AllowedTenants -ne 'AllTenants') {
+            $TenantLookup = Get-Tenants -IncludeErrors | Group-Object -Property defaultDomainName -AsHashTable -AsString
+        }
+
         foreach ($Row in $Rows) {
-            if ($AllowedTenants -notcontains 'AllTenants') {
-                $TenantList = Get-Tenants -IncludeErrors
-                if ($Row.Tenant -ne 'None' -and $Row.Tenant) {
-                    $Tenant = $TenantList | Where-Object -Property defaultDomainName -EQ $Row.Tenant
-                    if ($Tenant -and $Tenant.customerId -notin $AllowedTenants) {
-                        continue
-                    }
+            if ($AllowedTenants -ne 'AllTenants' -and $Row.Tenant -and $Row.Tenant -ne 'None') {
+                $Tenant = $TenantLookup[$Row.Tenant]
+                if (!$Tenant -or $Tenant.customerId -notin $AllowedTenants) { continue }
+            }
+
+            $LogData = $null
+            if ($Row.LogData) {
+                try {
+                    $LogData = $Row.LogData | ConvertFrom-Json
+                } catch {
+                    $LogData = $Row.LogData
                 }
             }
-            $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
-                $Row.LogData | ConvertFrom-Json
-            } else { $Row.LogData }
+
             [PSCustomObject]@{
                 DateTime = $Row.Timestamp
                 Tenant   = $Row.Tenant
@@ -75,11 +86,7 @@ function Invoke-ListLogs {
                 User     = $Row.Username
                 Severity = $Row.Severity
                 LogData  = $LogData
-                TenantID = if ($Row.TenantID -ne $null) {
-                    $Row.TenantID
-                } else {
-                    'None'
-                }
+                TenantID = $Row.TenantID ?? 'None'
                 AppId    = $Row.AppId
                 IP       = $Row.IP
             }
