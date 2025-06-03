@@ -38,7 +38,7 @@ function Invoke-ExecNewSafeLinksPolicy {
     # Extract rule settings from body
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
-    $Enabled = $Request.Body.Enabled
+    $State = $Request.Body.State
     $RuleName = $Request.Body.RuleName
 
     # Extract recipient fields and handle different input formats
@@ -192,9 +192,9 @@ function Invoke-ExecNewSafeLinksPolicy {
 
         $null = New-ExoRequest @ExoRuleRequestParam
 
-        # If Enabled is specified, enable or disable the rule
-        if ($null -ne $Enabled) {
-            $EnableCmdlet = $Enabled ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
+        # If State is specified, enable or disable the rule
+        if ($null -ne $State) {
+            $EnableCmdlet = $State ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
             $EnableRequestParam = @{
                 tenantid         = $TenantFilter
                 cmdlet           = $EnableCmdlet

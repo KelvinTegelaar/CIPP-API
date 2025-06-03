@@ -92,7 +92,7 @@ function Invoke-EditSafeLinksPolicy {
     # Extract rule parameters from body
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
-    $Enabled = $Request.Body.Enabled
+    $State = $Request.Body.State
 
     # Process recipient-related parameters
     $SentTo = Process-ArrayField -Field $Request.Body.SentTo
@@ -176,8 +176,8 @@ function Invoke-EditSafeLinksPolicy {
         }
 
         # Handle enable/disable if needed
-        if ($null -ne $Enabled) {
-            $EnableCmdlet = $Enabled ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
+        if ($null -ne $State) {
+            $EnableCmdlet = $State ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
             $EnableRequestParam = @{
                 tenantid         = $TenantFilter
                 cmdlet           = $EnableCmdlet
@@ -189,8 +189,8 @@ function Invoke-EditSafeLinksPolicy {
 
             $null = New-ExoRequest @EnableRequestParam
             $hasRuleOperation = $true
-            $Enabled = $Enabled ? "enabled" : "disabled"
-            $ruleMessages.Add($Enabled)
+            $State = $State ? "enabled" : "disabled"
+            $ruleMessages.Add($State)
         }
 
         # Add combined rule message if any rule operations were performed

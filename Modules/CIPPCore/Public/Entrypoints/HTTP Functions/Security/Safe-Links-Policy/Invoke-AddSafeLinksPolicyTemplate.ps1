@@ -51,7 +51,7 @@ Function Invoke-AddSafeLinksPolicyTemplate {
             "DeliverMessageAfterScan", "DisableUrlRewrite", "DoNotRewriteUrls",
             "AdminDisplayName", "CustomNotificationText", "EnableOrganizationBranding",
             # Rule properties
-            "RuleName", "Priority", "Enabled", "Comments",
+            "RuleName", "Priority", "State", "Comments",
             "SentTo", "SentToMemberOf", "RecipientDomainIs",
             "ExceptIfSentTo", "ExceptIfSentToMemberOf", "ExceptIfRecipientDomainIs"
         )

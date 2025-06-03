@@ -19,6 +19,7 @@ Function Invoke-ListSafeLinksPolicy {
         $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-SafeLinksPolicy' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
         $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-SafeLinksRule' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
         $BuiltInRules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-EOPProtectionPolicyRule' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
+        write-host $Rules
 
         # Track matched items to identify orphans
         $MatchedRules = [System.Collections.Generic.HashSet[string]]::new()
@@ -73,7 +74,7 @@ Function Invoke-ListSafeLinksPolicy {
                 PolicyName = $policyName
                 RuleName = $associatedRule.Name
                 Priority = if ($matchingBuiltInRule) { $matchingBuiltInRule.Priority } else { $associatedRule.Priority }
-                Enabled = if ($matchingBuiltInRule) { $matchingBuiltInRule.Enabled } else { $associatedRule.Enabled }
+                State = if ($matchingBuiltInRule) { $matchingBuiltInRule.State } else { $associatedRule.State }
                 SentTo = $associatedRule.SentTo
                 SentToMemberOf = $associatedRule.SentToMemberOf
                 RecipientDomainIs = $associatedRule.RecipientDomainIs
@@ -112,7 +113,7 @@ Function Invoke-ListSafeLinksPolicy {
                     PolicyName = $rule.SafeLinksPolicy
                     RuleName = $rule.Name
                     Priority = $rule.Priority
-                    Enabled = $rule.Enabled
+                    State = $rule.State
                     SentTo = $rule.SentTo
                     SentToMemberOf = $rule.SentToMemberOf
                     RecipientDomainIs = $rule.RecipientDomainIs
@@ -153,7 +154,7 @@ Function Invoke-ListSafeLinksPolicy {
                         PolicyName = $null
                         RuleName = $builtInRule.Name
                         Priority = $builtInRule.Priority
-                        Enabled = $builtInRule.Enabled
+                        State = $builtInRule.State
                         SentTo = $builtInRule.SentTo
                         SentToMemberOf = $builtInRule.SentToMemberOf
                         RecipientDomainIs = $builtInRule.RecipientDomainIs
