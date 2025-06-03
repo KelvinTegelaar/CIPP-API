@@ -73,7 +73,7 @@ Function Invoke-ListSafeLinksPolicy {
                 PolicyName = $policyName
                 RuleName = $associatedRule.Name
                 Priority = if ($matchingBuiltInRule) { $matchingBuiltInRule.Priority } else { $associatedRule.Priority }
-                State = if ($matchingBuiltInRule) { $matchingBuiltInRule.Enabled } else { $associatedRule.Enabled }
+                Enabled = if ($matchingBuiltInRule) { $matchingBuiltInRule.Enabled } else { $associatedRule.Enabled }
                 SentTo = $associatedRule.SentTo
                 SentToMemberOf = $associatedRule.SentToMemberOf
                 RecipientDomainIs = $associatedRule.RecipientDomainIs
@@ -112,7 +112,7 @@ Function Invoke-ListSafeLinksPolicy {
                     PolicyName = $rule.SafeLinksPolicy
                     RuleName = $rule.Name
                     Priority = $rule.Priority
-                    State = $rule.Enabled
+                    Enabled = $rule.Enabled
                     SentTo = $rule.SentTo
                     SentToMemberOf = $rule.SentToMemberOf
                     RecipientDomainIs = $rule.RecipientDomainIs
@@ -153,7 +153,7 @@ Function Invoke-ListSafeLinksPolicy {
                         PolicyName = $null
                         RuleName = $builtInRule.Name
                         Priority = $builtInRule.Priority
-                        State = $builtInRule.Enabled
+                        Enabled = $builtInRule.Enabled
                         SentTo = $builtInRule.SentTo
                         SentToMemberOf = $builtInRule.SentToMemberOf
                         RecipientDomainIs = $builtInRule.RecipientDomainIs

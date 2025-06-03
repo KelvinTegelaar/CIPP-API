@@ -48,7 +48,7 @@ Function Invoke-EditSafeLinksPolicyTemplate {
             "AdminDisplayName", "CustomNotificationText", "EnableOrganizationBranding",
 
             # Rule properties
-            "RuleName", "Priority", "State", "Comments",
+            "RuleName", "Priority", "Enabled", "Comments",
             "SentTo", "SentToMemberOf", "RecipientDomainIs",
             "ExceptIfSentTo", "ExceptIfSentToMemberOf", "ExceptIfRecipientDomainIs"
         )
