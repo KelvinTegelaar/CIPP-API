@@ -32,31 +32,31 @@ function Invoke-EditSafeLinksPolicy {
 
         # If already an array, process each item
         if ($Field -is [array]) {
-            $result = @()
+            $result = [System.Collections.ArrayList]@()
             foreach ($item in $Field) {
                 if ($item -is [string]) {
-                    $result += $item
+                    $result.Add($item) | Out-Null
                 }
                 elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
                     # Extract value from object
                     if ($null -ne $item.value) {
-                        $result += $item.value
+                        $result.Add($item.value) | Out-Null
                     }
                     elseif ($null -ne $item.userPrincipalName) {
-                        $result += $item.userPrincipalName
+                        $result.Add($item.userPrincipalName) | Out-Null
                     }
                     elseif ($null -ne $item.id) {
-                        $result += $item.id
+                        $result.Add($item.id) | Out-Null
                     }
                     else {
-                        $result += $item.ToString()
+                        $result.Add($item.ToString()) | Out-Null
                     }
                 }
                 else {
-                    $result += $item.ToString()
+                    $result.Add($item.ToString()) | Out-Null
                 }
             }
-            return $result
+            return $result.ToArray()
         }
 
         # If it's a single object
@@ -102,11 +102,11 @@ function Invoke-EditSafeLinksPolicy {
     $ExceptIfSentToMemberOf = Process-ArrayField -Field $Request.Body.ExceptIfSentToMemberOf
     $ExceptIfRecipientDomainIs = Process-ArrayField -Field $Request.Body.ExceptIfRecipientDomainIs
 
-    $Results = [System.Collections.Generic.List[string]]@()
+    $Results = [System.Collections.ArrayList]@()
     $hasPolicyParams = $false
     $hasRuleParams = $false
     $hasRuleOperation = $false
-    $ruleMessages = [System.Collections.Generic.List[string]]@()
+    $ruleMessages = [System.Collections.ArrayList]@()
 
     try {
         # Check which types of updates we need to perform
@@ -157,7 +157,7 @@ function Invoke-EditSafeLinksPolicy {
             }
 
             $null = New-ExoRequest @ExoPolicyRequestParam
-            $Results.Add("Successfully updated SafeLinks policy '$PolicyName'")
+            $Results.Add("Successfully updated SafeLinks policy '$PolicyName'") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Updated SafeLinks policy '$PolicyName'" -Sev 'Info'
         }
 
@@ -172,7 +172,7 @@ function Invoke-EditSafeLinksPolicy {
 
             $null = New-ExoRequest @ExoRuleRequestParam
             $hasRuleOperation = $true
-            $ruleMessages.Add("updated properties")
+            $ruleMessages.Add("updated properties") | Out-Null
         }
 
         # Handle enable/disable if needed
@@ -190,13 +190,13 @@ function Invoke-EditSafeLinksPolicy {
             $null = New-ExoRequest @EnableRequestParam
             $hasRuleOperation = $true
             $State = $State ? "enabled" : "disabled"
-            $ruleMessages.Add($State)
+            $ruleMessages.Add($State) | Out-Null
         }
 
         # Add combined rule message if any rule operations were performed
         if ($hasRuleOperation) {
             $ruleOperations = $ruleMessages -join " and "
-            $Results.Add("Successfully $ruleOperations SafeLinks rule '$RuleName'")
+            $Results.Add("Successfully $ruleOperations SafeLinks rule '$RuleName'") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$ruleOperations SafeLinks rule '$RuleName'" -Sev 'Info'
         }
 
@@ -204,7 +204,7 @@ function Invoke-EditSafeLinksPolicy {
     }
     catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Results.Add("Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)")
+        $Results.Add("Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

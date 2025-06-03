@@ -72,31 +72,31 @@ function Invoke-ExecNewSafeLinksPolicy {
 
         # If already an array, process each item
         if ($Field -is [array]) {
-            $result = @()
+            $result = [System.Collections.ArrayList]@()
             foreach ($item in $Field) {
                 if ($item -is [string]) {
-                    $result += $item
+                    $result.Add($item) | Out-Null
                 }
                 elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
                     # Extract value from object
                     if ($null -ne $item.value) {
-                        $result += $item.value
+                        $result.Add($item.value) | Out-Null
                     }
                     elseif ($null -ne $item.userPrincipalName) {
-                        $result += $item.userPrincipalName
+                        $result.Add($item.userPrincipalName) | Out-Null
                     }
                     elseif ($null -ne $item.id) {
-                        $result += $item.id
+                        $result.Add($item.id) | Out-Null
                     }
                     else {
-                        $result += $item.ToString()
+                        $result.Add($item.ToString()) | Out-Null
                     }
                 }
                 else {
-                    $result += $item.ToString()
+                    $result.Add($item.ToString()) | Out-Null
                 }
             }
-            return $result
+            return $result.ToArray()
         }
 
         # If it's a single object

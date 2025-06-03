@@ -18,7 +18,7 @@ function Invoke-ExecDeleteSafeLinksPolicy {
     $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
     $PolicyName = $Request.Query.PolicyName ?? $Request.Body.PolicyName
 
-    $ResultMessages = @()
+    $ResultMessages = [System.Collections.ArrayList]@()
 
     try {
         # Only try to delete the rule if a name was provided
@@ -34,17 +34,17 @@ function Invoke-ExecDeleteSafeLinksPolicy {
                     useSystemMailbox = $true
                 }
                 $null = New-ExoRequest @ExoRequestRuleParam
-                $ResultMessages += "Successfully deleted SafeLinks rule '$RuleName'"
+                $ResultMessages.Add("Successfully deleted SafeLinks rule '$RuleName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully deleted SafeLinks rule '$RuleName'" -Sev 'Info'
             }
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $ResultMessages += "Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)"
+                $ResultMessages.Add("Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
             }
         }
         else {
-            $ResultMessages += "No rule name provided, skipping rule deletion"
+            $ResultMessages.Add("No rule name provided, skipping rule deletion") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No rule name provided, skipping rule deletion" -Sev 'Info'
         }
 
@@ -61,17 +61,17 @@ function Invoke-ExecDeleteSafeLinksPolicy {
                     useSystemMailbox = $true
                 }
                 $null = New-ExoRequest @ExoRequestPolicyParam
-                $ResultMessages += "Successfully deleted SafeLinks policy '$PolicyName'"
+                $ResultMessages.Add("Successfully deleted SafeLinks policy '$PolicyName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully deleted SafeLinks policy '$PolicyName'" -Sev 'Info'
             }
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $ResultMessages += "Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)"
+                $ResultMessages.Add("Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
             }
         }
         else {
-            $ResultMessages += "No policy name provided, skipping policy deletion"
+            $ResultMessages.Add("No policy name provided, skipping policy deletion") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No policy name provided, skipping policy deletion" -Sev 'Info'
         }
 

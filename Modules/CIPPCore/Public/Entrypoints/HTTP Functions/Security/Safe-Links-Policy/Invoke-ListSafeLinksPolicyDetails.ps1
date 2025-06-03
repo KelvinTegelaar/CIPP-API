@@ -21,7 +21,7 @@ function Invoke-ListSafeLinksPolicyDetails {
     $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
 
     $Result = @{}
-    $LogMessages = @()
+    $LogMessages = [System.Collections.ArrayList]@()
 
     try {
         # Get policy details if PolicyName is provided
@@ -38,18 +38,18 @@ function Invoke-ListSafeLinksPolicyDetails {
                 $PolicyDetails = New-ExoRequest @PolicyRequestParam
                 $Result.Policy = $PolicyDetails
                 $Result.PolicyName = $PolicyDetails.Name
-                $LogMessages += "Successfully retrieved details for SafeLinks policy '$PolicyName'"
+                $LogMessages.Add("Successfully retrieved details for SafeLinks policy '$PolicyName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully retrieved details for SafeLinks policy '$PolicyName'" -Sev 'Info'
             }
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $LogMessages += "Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)"
+                $LogMessages.Add("Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
                 $Result.PolicyError = "Failed to retrieve: $($ErrorMessage.NormalizedError)"
             }
         }
         else {
-            $LogMessages += "No policy name provided, skipping policy retrieval"
+            $LogMessages.Add("No policy name provided, skipping policy retrieval") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No policy name provided, skipping policy retrieval" -Sev 'Info'
         }
 
@@ -67,18 +67,18 @@ function Invoke-ListSafeLinksPolicyDetails {
                 $RuleDetails = New-ExoRequest @RuleRequestParam
                 $Result.Rule = $RuleDetails
                 $Result.RuleName = $RuleDetails.Name
-                $LogMessages += "Successfully retrieved details for SafeLinks rule '$RuleName'"
+                $LogMessages.Add("Successfully retrieved details for SafeLinks rule '$RuleName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully retrieved details for SafeLinks rule '$RuleName'" -Sev 'Info'
             }
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $LogMessages += "Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)"
+                $LogMessages.Add("Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
                 $Result.RuleError = "Failed to retrieve: $($ErrorMessage.NormalizedError)"
             }
         }
         else {
-            $LogMessages += "No rule name provided, skipping rule retrieval"
+            $LogMessages.Add("No rule name provided, skipping rule retrieval") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No rule name provided, skipping rule retrieval" -Sev 'Info'
         }
 
