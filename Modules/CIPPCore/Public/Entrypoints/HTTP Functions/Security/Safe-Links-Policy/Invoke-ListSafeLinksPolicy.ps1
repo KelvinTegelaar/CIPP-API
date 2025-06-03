@@ -19,7 +19,6 @@ Function Invoke-ListSafeLinksPolicy {
         $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-SafeLinksPolicy' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
         $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-SafeLinksRule' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
         $BuiltInRules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-EOPProtectionPolicyRule' | Select-Object -Property * -ExcludeProperty '*@odata.type' , '*@data.type'
-        write-host $Rules
 
         # Track matched items to identify orphans
         $MatchedRules = [System.Collections.Generic.HashSet[string]]::new()
@@ -179,8 +178,6 @@ Function Invoke-ListSafeLinksPolicy {
         $PolicyOnlyConfigs = ($SortedOutput | Where-Object { $_.ConfigurationStatus -like "*Policy Only*" }).Count
         $RuleOnlyConfigs = ($SortedOutput | Where-Object { $_.ConfigurationStatus -like "*Rule Only*" }).Count
         $BuiltInOnlyConfigs = ($SortedOutput | Where-Object { $_.ConfigurationStatus -like "*Built-In Rule Only*" }).Count
-
-        Write-LogMessage -headers $Headers -API $APIName -message "Retrieved SafeLinks configurations: $CompleteConfigs complete, $PolicyOnlyConfigs policy-only, $RuleOnlyConfigs rule-only, $BuiltInOnlyConfigs built-in-only" -Sev 'Info'
 
         if ($PolicyOnlyConfigs -gt 0 -or $RuleOnlyConfigs -gt 0) {
             Write-LogMessage -headers $Headers -API $APIName -message "Found $($PolicyOnlyConfigs + $RuleOnlyConfigs) orphaned SafeLinks configurations that may need attention" -Sev 'Warning'
