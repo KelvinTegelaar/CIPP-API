@@ -38,7 +38,7 @@ function Invoke-ExecNewSafeLinksPolicy {
     # Extract rule settings from body
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
-    $Enabled = $Request.Body.State
+    $Enabled = $Request.Body.Enabled
     $RuleName = $Request.Body.RuleName
 
     # Extract recipient fields and handle different input formats

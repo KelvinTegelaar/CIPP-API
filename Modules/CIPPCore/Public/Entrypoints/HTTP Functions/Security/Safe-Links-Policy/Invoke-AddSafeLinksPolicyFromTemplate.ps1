@@ -175,9 +175,9 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Created SafeLinks rule '$RuleName'" -Sev 'Info'
 
             # Handle rule state
-            $StateMessage = ""
-            if ($null -ne $Template.State) {
-                $IsEnabled = switch ($Template.State) {
+            $EnabledMessage = ""
+            if ($null -ne $Template.Enabled) {
+                $IsEnabled = switch ($Template.Enabled) {
                     "Enabled" { $true }
                     "Disabled" { $false }
                     $true { $true }
@@ -188,11 +188,11 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
                 if ($null -ne $IsEnabled) {
                     $Cmdlet = $IsEnabled ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams @{ Identity = $RuleName } -useSystemMailbox $true
-                    $StateMessage = " (rule $($IsEnabled ? 'enabled' : 'disabled'))"
+                    $EnabledMessage = " (rule $($IsEnabled ? 'enabled' : 'disabled'))"
                 }
             }
 
-            return "Successfully deployed SafeLinks policy '$PolicyName' and rule '$RuleName' to tenant $TenantFilter$StateMessage"
+            return "Successfully deployed SafeLinks policy '$PolicyName' and rule '$RuleName' to tenant $TenantFilter$EnabledMessage"
         }
 
         # Process each tenant and template combination
