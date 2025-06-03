@@ -1744,7 +1744,7 @@
         "label": "Select SafeLinks Policy Templates",
         "api": {
           "url": "/api/ListSafeLinksPolicyTemplates",
-          "labelField": "name",
+          "labelField": "TemplateName",
           "valueField": "GUID",
           "queryKey": "ListSafeLinksPolicyTemplates"
         }

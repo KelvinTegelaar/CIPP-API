@@ -7,7 +7,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
     .ROLE
         Exchange.SafeLinks.ReadWrite
     .DESCRIPTION
-        This function deploys a SafeLinks policy and rule from a template to selected tenants.
+        This function deploys SafeLinks policies and rules from templates to selected tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,204 +19,194 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
     try {
         $RequestBody = $Request.Body
 
-        # Extract tenant IDs from the selectedTenants objects - just get the value property
+        # Extract tenant IDs from selectedTenants
         $SelectedTenants = $RequestBody.selectedTenants | ForEach-Object { $_.value }
-        if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
-
-        # Parse the PolicyConfig if it's a string
-        if ($RequestBody.PolicyConfig -is [string]) {
-            $PolicyConfig = $RequestBody.PolicyConfig | ConvertFrom-Json -ErrorAction Stop
-        } else {
-            $PolicyConfig = $RequestBody.PolicyConfig
+        if ('AllTenants' -in $SelectedTenants) {
+            $SelectedTenants = (Get-Tenants).defaultDomainName
         }
 
-        # Helper function to process array fields
-        function Process-ArrayField {
-            param (
-                [Parameter(Mandatory = $false)]
-                $Field
-            )
+        # Extract templates from TemplateList
+        $Templates = $RequestBody.TemplateList | ForEach-Object { $_.value }
+
+        if (-not $Templates -or $Templates.Count -eq 0) {
+            throw "No templates provided in TemplateList"
+        }
+
+        # Helper function to process array fields with cleaner logic
+        function ConvertTo-SafeArray {
+            param($Field)
 
             if ($null -eq $Field) { return @() }
 
-            # If already an array, process each item
+            # Handle arrays
             if ($Field -is [array]) {
-                $result = @()
-                foreach ($item in $Field) {
-                    if ($item -is [string]) {
-                        $result += $item
-                    }
-                    elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
-                        # Extract value from object
-                        if ($null -ne $item.value) {
-                            $result += $item.value
-                        }
-                        elseif ($null -ne $item.userPrincipalName) {
-                            $result += $item.userPrincipalName
-                        }
-                        elseif ($null -ne $item.id) {
-                            $result += $item.id
-                        }
-                        else {
-                            $result += $item.ToString()
-                        }
-                    }
-                    else {
-                        $result += $item.ToString()
-                    }
+                return $Field | ForEach-Object {
+                    if ($_ -is [string]) { $_ }
+                    elseif ($_.value) { $_.value }
+                    elseif ($_.userPrincipalName) { $_.userPrincipalName }
+                    elseif ($_.id) { $_.id }
+                    else { $_.ToString() }
                 }
-                return $result
             }
 
-            # If it's a single object
+            # Handle single objects
             if ($Field -is [hashtable] -or $Field -is [PSCustomObject]) {
-                if ($null -ne $Field.value) { return @($Field.value) }
-                if ($null -ne $Field.userPrincipalName) { return @($Field.userPrincipalName) }
-                if ($null -ne $Field.id) { return @($Field.id) }
+                if ($Field.value) { return @($Field.value) }
+                if ($Field.userPrincipalName) { return @($Field.userPrincipalName) }
+                if ($Field.id) { return @($Field.id) }
             }
 
-            # If it's a string, return as an array with one item
-            if ($Field -is [string]) {
-                return @($Field)
-            }
+            # Handle strings
+            if ($Field -is [string]) { return @($Field) }
 
             return @($Field)
         }
 
-        $Results = foreach ($TenantFilter in $SelectedTenants) {
-            try {
-                # Extract policy name from template
-                $PolicyName = $PolicyConfig.PolicyName ?? $PolicyConfig.Name
-                $RuleName = $PolicyConfig.RuleName ?? $PolicyName
+        function Test-PolicyExists {
+            param($TenantFilter, $PolicyName)
 
-                # Check if policy exists by listing all policies and filtering
-                $ExistingPoliciesParam = @{
-                    tenantid         = $TenantFilter
-                    cmdlet           = 'Get-SafeLinksPolicy'
-                    useSystemMailbox = $true
-                }
+            $ExistingPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeLinksPolicy' -useSystemMailbox $true
+            return $ExistingPolicies | Where-Object { $_.Name -eq $PolicyName }
+        }
 
-                $ExistingPolicies = New-ExoRequest @ExistingPoliciesParam
-                $PolicyExists = $ExistingPolicies | Where-Object { $_.Name -eq $PolicyName }
+        function Test-RuleExists {
+            param($TenantFilter, $RuleName)
 
-                if ($PolicyExists) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy with name '$PolicyName' already exists in tenant $TenantFilter" -Sev 'Warning'
-                    "Policy with name '$PolicyName' already exists in tenant $TenantFilter"
-                    continue
-                }
+            $ExistingRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeLinksRule' -useSystemMailbox $true
+            return $ExistingRules | Where-Object { $_.Name -eq $RuleName }
+        }
 
-                # Check if rule exists by listing all rules and filtering
-                $ExistingRulesParam = @{
-                    tenantid         = $TenantFilter
-                    cmdlet           = 'Get-SafeLinksRule'
-                    useSystemMailbox = $true
-                }
+        function New-SafeLinksPolicyFromTemplate {
+            param($TenantFilter, $Template)
 
-                $ExistingRules = New-ExoRequest @ExistingRulesParam
-                $RuleExists = $ExistingRules | Where-Object { $_.Name -eq $RuleName }
+            $PolicyName = $Template.PolicyName
+            $RuleName = $Template.RuleName ?? "$($PolicyName)_Rule"
 
-                if ($RuleExists) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule with name '$RuleName' already exists in tenant $TenantFilter" -Sev 'Warning'
-                    "Rule with name '$RuleName' already exists in tenant $TenantFilter"
-                    continue
-                }
-
-                # Process arrays in the template
-                $DoNotRewriteUrls = Process-ArrayField -Field $PolicyConfig.DoNotRewriteUrls
-                $SentTo = Process-ArrayField -Field $PolicyConfig.SentTo
-                $SentToMemberOf = Process-ArrayField -Field $PolicyConfig.SentToMemberOf
-                $RecipientDomainIs = Process-ArrayField -Field $PolicyConfig.RecipientDomainIs
-                $ExceptIfSentTo = Process-ArrayField -Field $PolicyConfig.ExceptIfSentTo
-                $ExceptIfSentToMemberOf = Process-ArrayField -Field $PolicyConfig.ExceptIfSentToMemberOf
-                $ExceptIfRecipientDomainIs = Process-ArrayField -Field $PolicyConfig.ExceptIfRecipientDomainIs
-
-                # PART 1: Create SafeLinks Policy
-                # Build command parameters for policy
-                $policyParams = @{
-                    Name = $PolicyName
-                }
-
-                # Only add parameters that are explicitly provided in the template
-                if ($null -ne $PolicyConfig.EnableSafeLinksForEmail) { $policyParams.Add('EnableSafeLinksForEmail', $PolicyConfig.EnableSafeLinksForEmail) }
-                if ($null -ne $PolicyConfig.EnableSafeLinksForTeams) { $policyParams.Add('EnableSafeLinksForTeams', $PolicyConfig.EnableSafeLinksForTeams) }
-                if ($null -ne $PolicyConfig.EnableSafeLinksForOffice) { $policyParams.Add('EnableSafeLinksForOffice', $PolicyConfig.EnableSafeLinksForOffice) }
-                if ($null -ne $PolicyConfig.TrackClicks) { $policyParams.Add('TrackClicks', $PolicyConfig.TrackClicks) }
-                if ($null -ne $PolicyConfig.AllowClickThrough) { $policyParams.Add('AllowClickThrough', $PolicyConfig.AllowClickThrough) }
-                if ($null -ne $PolicyConfig.ScanUrls) { $policyParams.Add('ScanUrls', $PolicyConfig.ScanUrls) }
-                if ($null -ne $PolicyConfig.EnableForInternalSenders) { $policyParams.Add('EnableForInternalSenders', $PolicyConfig.EnableForInternalSenders) }
-                if ($null -ne $PolicyConfig.DeliverMessageAfterScan) { $policyParams.Add('DeliverMessageAfterScan', $PolicyConfig.DeliverMessageAfterScan) }
-                if ($null -ne $PolicyConfig.DisableUrlRewrite) { $policyParams.Add('DisableUrlRewrite', $PolicyConfig.DisableUrlRewrite) }
-                if ($null -ne $DoNotRewriteUrls -and $DoNotRewriteUrls.Count -gt 0) { $policyParams.Add('DoNotRewriteUrls', $DoNotRewriteUrls) }
-                if ($null -ne $PolicyConfig.AdminDisplayName) { $policyParams.Add('AdminDisplayName', $PolicyConfig.AdminDisplayName) }
-                if ($null -ne $PolicyConfig.CustomNotificationText) { $policyParams.Add('CustomNotificationText', $PolicyConfig.CustomNotificationText) }
-                if ($null -ne $PolicyConfig.EnableOrganizationBranding) { $policyParams.Add('EnableOrganizationBranding', $PolicyConfig.EnableOrganizationBranding) }
-
-                $ExoPolicyRequestParam = @{
-                    tenantid         = $TenantFilter
-                    cmdlet           = 'New-SafeLinksPolicy'
-                    cmdParams        = $policyParams
-                    useSystemMailbox = $true
-                }
-
-                $null = New-ExoRequest @ExoPolicyRequestParam
-                $PolicyResult = "Successfully created new SafeLinks policy '$PolicyName'"
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $PolicyResult -Sev 'Info'
-
-                # PART 2: Create SafeLinks Rule
-                # Build command parameters for rule
-                $ruleParams = @{
-                    Name = $RuleName
-                    SafeLinksPolicy = $PolicyName
-                }
-
-                # Only add parameters that are explicitly provided
-                if ($null -ne $PolicyConfig.Priority) { $ruleParams.Add('Priority', $PolicyConfig.Priority) }
-                if ($null -ne $PolicyConfig.Description) { $ruleParams.Add('Comments', $PolicyConfig.Description) }
-                if ($null -ne $SentTo -and $SentTo.Count -gt 0) { $ruleParams.Add('SentTo', $SentTo) }
-                if ($null -ne $SentToMemberOf -and $SentToMemberOf.Count -gt 0) { $ruleParams.Add('SentToMemberOf', $SentToMemberOf) }
-                if ($null -ne $RecipientDomainIs -and $RecipientDomainIs.Count -gt 0) { $ruleParams.Add('RecipientDomainIs', $RecipientDomainIs) }
-                if ($null -ne $ExceptIfSentTo -and $ExceptIfSentTo.Count -gt 0) { $ruleParams.Add('ExceptIfSentTo', $ExceptIfSentTo) }
-                if ($null -ne $ExceptIfSentToMemberOf -and $ExceptIfSentToMemberOf.Count -gt 0) { $ruleParams.Add('ExceptIfSentToMemberOf', $ExceptIfSentToMemberOf) }
-                if ($null -ne $ExceptIfRecipientDomainIs -and $ExceptIfRecipientDomainIs.Count -gt 0) { $ruleParams.Add('ExceptIfRecipientDomainIs', $ExceptIfRecipientDomainIs) }
-
-                $ExoRuleRequestParam = @{
-                    tenantid         = $TenantFilter
-                    cmdlet           = 'New-SafeLinksRule'
-                    cmdParams        = $ruleParams
-                    useSystemMailbox = $true
-                }
-
-                $null = New-ExoRequest @ExoRuleRequestParam
-                $RuleResult = "Successfully created new SafeLinks rule '$RuleName'"
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $RuleResult -Sev 'Info'
-
-                # If State is specified in the template, enable or disable the rule
-                if ($null -ne $PolicyConfig.State) {
-                    $Enabled = $PolicyConfig.State -eq "Enabled"
-                    $EnableCmdlet = $Enabled ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
-                    $EnableRequestParam = @{
-                        tenantid         = $TenantFilter
-                        cmdlet           = $EnableCmdlet
-                        cmdParams        = @{
-                            Identity = $RuleName
-                        }
-                        useSystemMailbox = $true
-                    }
-
-                    $null = New-ExoRequest @EnableRequestParam
-                    $StateMsg = $Enabled ? "enabled" : "disabled"
-                }
-
-                # Return success message as a simple string
-                "Successfully deployed SafeLinks policy '$PolicyName' and rule '$RuleName' to tenant $TenantFilter" + $(if ($null -ne $PolicyConfig.State) { " (rule $StateMsg)" } else { "" })
+            # Check if policy already exists
+            if (Test-PolicyExists -TenantFilter $TenantFilter -PolicyName $PolicyName) {
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy '$PolicyName' already exists" -Sev 'Warning'
+                return "Policy '$PolicyName' already exists in tenant $TenantFilter"
             }
-            catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                $ErrorDetail = "Failed to deploy SafeLinks policy template to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
 
-                # Return error message as a simple string
-                "Failed to deploy SafeLinks policy template to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
+            # Check if rule already exists
+            if (Test-RuleExists -TenantFilter $TenantFilter -RuleName $RuleName) {
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule '$RuleName' already exists" -Sev 'Warning'
+                return "Rule '$RuleName' already exists in tenant $TenantFilter"
+            }
+
+            # Process array fields
+            $DoNotRewriteUrls = ConvertTo-SafeArray -Field $Template.DoNotRewriteUrls
+            $SentTo = ConvertTo-SafeArray -Field $Template.SentTo
+            $SentToMemberOf = ConvertTo-SafeArray -Field $Template.SentToMemberOf
+            $RecipientDomainIs = ConvertTo-SafeArray -Field $Template.RecipientDomainIs
+            $ExceptIfSentTo = ConvertTo-SafeArray -Field $Template.ExceptIfSentTo
+            $ExceptIfSentToMemberOf = ConvertTo-SafeArray -Field $Template.ExceptIfSentToMemberOf
+            $ExceptIfRecipientDomainIs = ConvertTo-SafeArray -Field $Template.ExceptIfRecipientDomainIs
+
+            # Create policy parameters
+            $PolicyParams = @{ Name = $PolicyName }
+
+            # Policy configuration mapping
+            $PolicyMappings = @{
+                'EnableSafeLinksForEmail' = 'EnableSafeLinksForEmail'
+                'EnableSafeLinksForTeams' = 'EnableSafeLinksForTeams'
+                'EnableSafeLinksForOffice' = 'EnableSafeLinksForOffice'
+                'TrackClicks' = 'TrackClicks'
+                'AllowClickThrough' = 'AllowClickThrough'
+                'ScanUrls' = 'ScanUrls'
+                'EnableForInternalSenders' = 'EnableForInternalSenders'
+                'DeliverMessageAfterScan' = 'DeliverMessageAfterScan'
+                'DisableUrlRewrite' = 'DisableUrlRewrite'
+                'AdminDisplayName' = 'AdminDisplayName'
+                'CustomNotificationText' = 'CustomNotificationText'
+                'EnableOrganizationBranding' = 'EnableOrganizationBranding'
+            }
+
+            foreach ($templateKey in $PolicyMappings.Keys) {
+                if ($null -ne $Template.$templateKey) {
+                    $PolicyParams[$PolicyMappings[$templateKey]] = $Template.$templateKey
+                }
+            }
+
+            if ($DoNotRewriteUrls.Count -gt 0) {
+                $PolicyParams['DoNotRewriteUrls'] = $DoNotRewriteUrls
+            }
+
+            # Create SafeLinks Policy
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-SafeLinksPolicy' -cmdParams $PolicyParams -useSystemMailbox $true
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Created SafeLinks policy '$PolicyName'" -Sev 'Info'
+
+            # Create rule parameters
+            $RuleParams = @{
+                Name = $RuleName
+                SafeLinksPolicy = $PolicyName
+            }
+
+            # Rule configuration mapping
+            $RuleMappings = @{
+                'Priority' = 'Priority'
+                'TemplateDescription' = 'Comments'
+            }
+
+            foreach ($templateKey in $RuleMappings.Keys) {
+                if ($null -ne $Template.$templateKey) {
+                    $RuleParams[$RuleMappings[$templateKey]] = $Template.$templateKey
+                }
+            }
+
+            # Add array parameters if they have values
+            $ArrayMappings = @{
+                'SentTo' = $SentTo
+                'SentToMemberOf' = $SentToMemberOf
+                'RecipientDomainIs' = $RecipientDomainIs
+                'ExceptIfSentTo' = $ExceptIfSentTo
+                'ExceptIfSentToMemberOf' = $ExceptIfSentToMemberOf
+                'ExceptIfRecipientDomainIs' = $ExceptIfRecipientDomainIs
+            }
+
+            foreach ($paramName in $ArrayMappings.Keys) {
+                if ($ArrayMappings[$paramName].Count -gt 0) {
+                    $RuleParams[$paramName] = $ArrayMappings[$paramName]
+                }
+            }
+
+            # Create SafeLinks Rule
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-SafeLinksRule' -cmdParams $RuleParams -useSystemMailbox $true
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Created SafeLinks rule '$RuleName'" -Sev 'Info'
+
+            # Handle rule state
+            $StateMessage = ""
+            if ($null -ne $Template.State) {
+                $IsEnabled = switch ($Template.State) {
+                    "Enabled" { $true }
+                    "Disabled" { $false }
+                    $true { $true }
+                    $false { $false }
+                    default { $null }
+                }
+
+                if ($null -ne $IsEnabled) {
+                    $Cmdlet = $IsEnabled ? 'Enable-SafeLinksRule' : 'Disable-SafeLinksRule'
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams @{ Identity = $RuleName } -useSystemMailbox $true
+                    $StateMessage = " (rule $($IsEnabled ? 'enabled' : 'disabled'))"
+                }
+            }
+
+            return "Successfully deployed SafeLinks policy '$PolicyName' and rule '$RuleName' to tenant $TenantFilter$StateMessage"
+        }
+
+        # Process each tenant and template combination
+        $Results = foreach ($TenantFilter in $SelectedTenants) {
+            foreach ($Template in $Templates) {
+                try {
+                    New-SafeLinksPolicyFromTemplate -TenantFilter $TenantFilter -Template $Template
+                }
+                catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    $ErrorDetail = "Failed to deploy template '$($Template.TemplateName)' to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
+                    $ErrorDetail
+                }
             }
         }
 
@@ -229,9 +219,9 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    # Return response
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Results}
-        })
+        StatusCode = $StatusCode
+        Body = @{ Results = $Results }
+    })
 }

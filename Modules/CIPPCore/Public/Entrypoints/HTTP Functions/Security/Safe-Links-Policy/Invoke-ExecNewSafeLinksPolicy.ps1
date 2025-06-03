@@ -49,6 +49,18 @@ function Invoke-ExecNewSafeLinksPolicy {
     $ExceptIfSentToMemberOf = $Request.Body.ExceptIfSentToMemberOf
     $ExceptIfRecipientDomainIs = $Request.Body.ExceptIfRecipientDomainIs
 
+    function Test-PolicyExists {
+        param($TenantFilter, $PolicyName)
+        $ExistingPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeLinksPolicy' -useSystemMailbox $true
+        return $ExistingPolicies | Where-Object { $_.Name -eq $PolicyName }
+    }
+
+    function Test-RuleExists {
+        param($TenantFilter, $RuleName)
+        $ExistingRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeLinksRule' -useSystemMailbox $true
+        return $ExistingRules | Where-Object { $_.Name -eq $RuleName }
+    }
+
     # Helper function to process array fields
     function Process-ArrayField {
         param (
@@ -112,38 +124,18 @@ function Invoke-ExecNewSafeLinksPolicy {
     $DoNotRewriteUrls = Process-ArrayField -Field $DoNotRewriteUrls
 
     try {
-        # Check if policy exists by listing all policies and filtering
-        $ExistingPoliciesParam = @{
-            tenantid         = $TenantFilter
-            cmdlet           = 'Get-SafeLinksPolicy'
-            useSystemMailbox = $true
+        # Check if policy already exists
+        if (Test-PolicyExists -TenantFilter $TenantFilter -PolicyName $PolicyName) {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy '$PolicyName' already exists" -Sev 'Warning'
+            return "Policy '$PolicyName' already exists in tenant $TenantFilter"
         }
 
-        $ExistingPolicies = New-ExoRequest @ExistingPoliciesParam
-        $PolicyExists = $ExistingPolicies | Where-Object { $_.Name -eq $PolicyName }
-
-        if ($PolicyExists) {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy with name '$PolicyName' already exists in tenant $TenantFilter" -Sev 'Warning'
-            "Policy with name '$PolicyName' already exists in tenant $TenantFilter"
-            continue
+        # Check if rule already exists
+        if (Test-RuleExists -TenantFilter $TenantFilter -RuleName $RuleName) {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule '$RuleName' already exists" -Sev 'Warning'
+            return "Rule '$RuleName' already exists in tenant $TenantFilter"
         }
 
-        # Check if rule exists by listing all rules and filtering
-        $ExistingRulesParam = @{
-            tenantid         = $TenantFilter
-            cmdlet           = 'Get-SafeLinksRule'
-            useSystemMailbox = $true
-        }
-
-        $ExistingRules = New-ExoRequest @ExistingRulesParam
-        $RuleExists = $ExistingRules | Where-Object { $_.Name -eq $RuleName }
-
-        if ($RuleExists) {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule with name '$RuleName' already exists in tenant $TenantFilter" -Sev 'Warning'
-            "Rule with name '$RuleName' already exists in tenant $TenantFilter"
-            continue
-        }
-        # PART 1: Create SafeLinks Policy
         # Build command parameters for policy
         $policyParams = @{
             Name = $PolicyName
@@ -175,7 +167,6 @@ function Invoke-ExecNewSafeLinksPolicy {
         $PolicyResult = "Successfully created new SafeLinks policy '$PolicyName'"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $PolicyResult -Sev 'Info'
 
-        # PART 2: Create SafeLinks Rule
         # Build command parameters for rule
         $ruleParams = @{
             Name = $RuleName
