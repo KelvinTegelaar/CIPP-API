@@ -23,8 +23,8 @@ Function Invoke-CreateSafeLinksPolicyTemplate {
         $policyObject = [ordered]@{}
 
         # Set name and comments first
-        $policyObject["TemplateName"] = $Request.body.Name
-        $policyObject["TemplateDescription"] = $Request.body.Description
+        $policyObject["TemplateName"] = $Request.body.TemplateName
+        $policyObject["TemplateDescription"] = $Request.body.TemplateDescription
 
         # Copy specific properties we want to keep
         $propertiesToKeep = @(

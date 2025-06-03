@@ -31,8 +31,8 @@ Function Invoke-AddSafeLinksPolicyTemplate {
         $policyObject = [ordered]@{}
 
         # Set name and comments - prioritize template-specific fields
-        $policyObject["TemplateName"] = $Request.body.Name
-        $policyObject["TemplateDescription"] = $Request.body.Description
+        $policyObject["TemplateName"] = $Request.body.TemplateName
+        $policyObject["TemplateDescription"] = $Request.body.TemplateDescription
 
         # For templates, if no specific policy description is provided, use template description as default
         if ([string]::IsNullOrEmpty($Request.body.AdminDisplayName) -and -not [string]::IsNullOrEmpty($Request.body.Description)) {
