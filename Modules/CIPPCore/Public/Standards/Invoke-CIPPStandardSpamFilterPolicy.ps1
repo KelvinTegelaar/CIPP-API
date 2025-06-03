@@ -241,7 +241,9 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState ? $CurrentState : @{ state = 'Spam filter policy not found' }
+            $CurrentState = $CurrentState | Select-Object -Property Name, SpamAction, SpamQuarantineTag, HighConfidenceSpamAction, HighConfidenceSpamQuarantineTag, BulkSpamAction, BulkQuarantineTag, PhishSpamAction, PhishQuarantineTag, HighConfidencePhishAction, HighConfidencePhishQuarantineTag, BulkThreshold, QuarantineRetentionPeriod, IncreaseScoreWithImageLinks, IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, IncreaseScoreWithBizOrInfoUrls, MarkAsSpamEmptyMessages, MarkAsSpamJavaScriptInHtml, MarkAsSpamFramesInHtml, MarkAsSpamObjectTagsInHtml, MarkAsSpamEmbedTagsInHtml, MarkAsSpamFormTagsInHtml, MarkAsSpamWebBugsInHtml, MarkAsSpamSensitiveWordList, MarkAsSpamSpfRecordHardFail, MarkAsSpamFromAddressAuthFail, MarkAsSpamNdrBackscatter, MarkAsSpamBulkMail, InlineSafetyTipsEnabled, PhishZapEnabled, SpamZapEnabled
+
+            $FieldValue = $StateIsCorrect ?? $CurrentState ?? @{ state = 'Spam filter policy not found' }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }
