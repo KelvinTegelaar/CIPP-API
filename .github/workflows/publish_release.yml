@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    if: github.event.repository.fork == false && github.event_name == 'push'
+    if: github.event_name == 'push'
     name: Generate Release Notes and Upload to Azure
     runs-on: ubuntu-latest
 
