@@ -114,6 +114,10 @@ function Add-CIPPDelegatedPermission {
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {
+            if ([string]::IsNullOrEmpty($NewScope) -or $NewScope -eq ' ') {
+                $Results.add("No delegated permissions to add for $($svcPrincipalId.displayName)")
+                continue
+            }
             try {
                 $Createbody = @{
                     clientId    = $ourSVCPrincipal.id
@@ -147,6 +151,13 @@ function Add-CIPPDelegatedPermission {
                 $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)")
                 continue
             }
+
+            if ([string]::IsNullOrEmpty($NewScope) -or $NewScope -eq ' ') {
+                # No permissions to update
+                $Results.add("No delegated permissions to update for $($svcPrincipalId.displayName)")
+                continue
+            }
+
             $Patchbody = @{
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress
