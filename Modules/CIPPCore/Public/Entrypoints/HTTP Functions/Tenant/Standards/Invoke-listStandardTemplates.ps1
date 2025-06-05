@@ -29,6 +29,11 @@ function Invoke-listStandardTemplates {
             return
         }
         $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+
+        if (!$Data.excludedTenants) {
+            $Data | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @() -Force
+        }
+
         if ($Data.excludedTenants -and $Data.excludedTenants -ne 'excludedTenants') {
             $Data.excludedTenants = @($Data.excludedTenants)
         } else {
