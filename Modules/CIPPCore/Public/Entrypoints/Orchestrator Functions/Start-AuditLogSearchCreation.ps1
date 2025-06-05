@@ -7,7 +7,12 @@ function Start-AuditLogSearchCreation {
     param()
     try {
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
-        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'"
+        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'" | ForEach-Object {
+            $ConfigEntry = $_
+            $ConfigEntry.excludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json
+            $ConfigEntry.Tenants = $ConfigEntry.Tenants | ConvertFrom-Json
+            $ConfigEntry
+        }
 
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
@@ -16,11 +21,29 @@ function Start-AuditLogSearchCreation {
         $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
         Write-Information 'Audit Logs: Creating new searches'
+
         foreach ($Tenant in $TenantList) {
-            $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntries.Tenants | ConvertFrom-Json)
-            $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
-            if ($Configuration -and $Tenant -in $TenantsList) {
-                $ServiceFilters = $Configuration | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] }
+            Write-Information "Processing tenant $($Tenant.defaultDomainName) - $($Tenant.customerId)"
+            $TenantInConfig = $false
+            $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
+            foreach ($ConfigEntry in $ConfigEntries) {
+                if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
+                    continue
+                }
+                $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)
+                if ($TenantsList.value -contains $Tenant.defaultDomainName -or $TenantsList.value -contains 'AllTenants') {
+                    $TenantInConfig = $true
+                    $MatchingConfigs.Add($ConfigEntry)
+                }
+            }
+
+            if (!$TenantInConfig) {
+                Write-Information "Tenant $($Tenant.defaultDomainName) has no configured audit log rules, skipping search creation."
+                continue
+            }
+
+            if ($MatchingConfigs) {
+                $ServiceFilters = $MatchingConfigs | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] }
                 try {
                     $LogSearch = @{
                         StartTime         = $StartTime

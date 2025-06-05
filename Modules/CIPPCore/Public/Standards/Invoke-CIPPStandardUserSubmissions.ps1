@@ -196,6 +196,8 @@ function Invoke-CIPPStandardUserSubmissions {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
+            $PolicyState = $PolicyState | Select-Object EnableReportToMicrosoft, ReportJunkToCustomizedAddress, ReportNotJunkToCustomizedAddress, ReportPhishToCustomizedAddress, ReportJunkAddresses, ReportNotJunkAddresses, ReportPhishAddresses
+            $RuleState = $RuleState | Select-Object State, SentTo
             $FieldValue = @{ PolicyState = $PolicyState; RuleState = $RuleState }
         }
 

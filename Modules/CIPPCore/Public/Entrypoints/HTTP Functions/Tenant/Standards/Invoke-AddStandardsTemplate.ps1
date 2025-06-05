@@ -29,9 +29,8 @@ function Invoke-AddStandardsTemplate {
         RowKey       = "$GUID"
         PartitionKey = 'StandardsTemplateV2'
         GUID         = "$GUID"
-
     }
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Standards Template $($Request.body.templateName) with GUID $GUID added/edited." -Sev 'Info'
     $body = [pscustomobject]@{'Results' = 'Successfully added template'; Metadata = @{id = $GUID } }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
