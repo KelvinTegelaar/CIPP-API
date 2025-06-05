@@ -8,8 +8,8 @@ function Get-CIPPAlertInactiveLicensedUsers {
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
-        [Parameter(Mandatory = $false)] #future use
-        [switch]$SkipNeverSignedIn, #future use
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeNeverSignedIn, # Include users who have never signed in (default is to skip them), future use would allow this to be set in an alert configuration
         $TenantFilter
     )
 
@@ -45,10 +45,8 @@ function Get-CIPPAlertInactiveLicensedUsers {
 
                 # Check if inactive
                 $isInactive = (-not $lastSignIn) -or ([DateTime]$lastSignIn -le $Lookup)
-
-                # Apply SkipNeverSignedIn filter #future use
-                if ($SkipNeverSignedIn -and -not $lastSignIn) { continue }
-
+                # Skip users who have never signed in by default (unless IncludeNeverSignedIn is specified)
+                if (-not $IncludeNeverSignedIn -and -not $lastSignIn) { continue }
                 # Only process inactive users
                 if ($isInactive) {
                     if (-not $lastSignIn) {
