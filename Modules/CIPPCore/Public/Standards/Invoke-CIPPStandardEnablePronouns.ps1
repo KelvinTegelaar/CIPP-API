@@ -35,10 +35,9 @@ function Invoke-CIPPStandardEnablePronouns {
         $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $($ErrorMessage.NormalizedError)" -sev Error
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Return
     }
-    Write-Host $CurrentState
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -49,11 +48,11 @@ function Invoke-CIPPStandardEnablePronouns {
             $CurrentState.isEnabledInOrganization = $true
             try {
                 $Body = ConvertTo-Json -InputObject $CurrentState -Depth 10 -Compress
-                New-GraphPostRequest -Uri $Uri -tenantid $Tenant -Body $Body -type PATCH
+                $null = New-GraphPostRequest -Uri $Uri -tenantid $Tenant -Body $Body -type PATCH -AsApp $true
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled pronouns.' -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable pronouns. Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable pronouns. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
