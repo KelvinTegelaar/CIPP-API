@@ -61,7 +61,10 @@ function Invoke-ListStandardsCompare {
         if (-not $TenantStandards.ContainsKey($Tenant)) {
             $TenantStandards[$Tenant] = @{}
         }
-        $TenantStandards[$Tenant][$FieldName] = $FieldValue
+        $TenantStandards[$Tenant][$FieldName] = @{
+            Value       = $FieldValue
+            LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
     }
 
     foreach ($Tenant in $TenantStandards.Keys) {
