@@ -9,7 +9,11 @@ function Start-AuditLogSearchCreation {
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
         $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'" | ForEach-Object {
             $ConfigEntry = $_
-            $ConfigEntry.excludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json
+            if (!$ConfigEntry.excludedTenants) {
+                $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
+            } else {
+                $ConfigEntry.excludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json
+            }
             $ConfigEntry.Tenants = $ConfigEntry.Tenants | ConvertFrom-Json
             $ConfigEntry
         }
