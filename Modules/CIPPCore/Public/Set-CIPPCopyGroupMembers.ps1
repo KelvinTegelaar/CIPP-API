@@ -46,7 +46,7 @@ function Set-CIPPCopyGroupMembers {
         try {
             if ($PSCmdlet.ShouldProcess($MailGroup.displayName, "Add $UserId to group")) {
                 if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
-                    $Params = @{ Identity = $MailGroup.mailNickname; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
+                    $Params = @{ Identity = $MailGroup.id; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
                     try {
                         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                     } catch {

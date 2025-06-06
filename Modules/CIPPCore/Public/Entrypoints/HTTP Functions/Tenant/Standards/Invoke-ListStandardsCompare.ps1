@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListStandardsCompare {
+function Invoke-ListStandardsCompare {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,7 +10,13 @@ Function Invoke-ListStandardsCompare {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+
     $Table = Get-CIPPTable -TableName 'CippStandardsReports'
+    $TenantFilter = $Request.Query.tenantFilter
+    if ($TenantFilter) {
+        $Table.Filter = "RowKey eq '{0}'" -f $TenantFilter
+    }
+
     $Results = Get-CIPPAzDataTableEntity @Table
 
     #in the results we have objects starting with "standards." All these have to be converted from JSON. Do not do this is its a boolean
