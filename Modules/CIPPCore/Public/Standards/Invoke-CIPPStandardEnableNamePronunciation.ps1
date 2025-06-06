@@ -27,7 +27,7 @@ function Invoke-CIPPStandardEnableNamePronunciation {
 
     param ($Tenant, $Settings)
 
-    $Uri = 'https://graph.microsoft.com/v1.0/admin/people/namePronunciation'
+    $Uri = 'https://graph.microsoft.com/beta/admin/people/namePronunciation'
     try {
         $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant
     } catch {
@@ -46,7 +46,7 @@ function Invoke-CIPPStandardEnableNamePronunciation {
             $CurrentState.isEnabledInOrganization = $true
             try {
                 $Body = ConvertTo-Json -InputObject $CurrentState -Depth 10 -Compress
-                New-GraphPostRequest -Uri $Uri -tenantid $Tenant -Body $Body -type PATCH
+                $null = New-GraphPostRequest -Uri $Uri -tenantid $Tenant -Body $Body -type PATCH -AsApp $true
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled name pronunciation.' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
