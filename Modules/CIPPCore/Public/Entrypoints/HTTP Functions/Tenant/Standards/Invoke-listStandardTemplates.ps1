@@ -28,18 +28,20 @@ function Invoke-listStandardTemplates {
             Write-Host "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
             return
         }
-        $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+        if ($Data) {
+            $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
 
-        if (!$Data.excludedTenants) {
-            $Data | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @() -Force
+            if (!$Data.excludedTenants) {
+                $Data | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @() -Force
+            } else {
+                if ($Data.excludedTenants -and $Data.excludedTenants -ne 'excludedTenants') {
+                    $Data.excludedTenants = @($Data.excludedTenants)
+                } else {
+                    $Data.excludedTenants = @()
+                }
+            }
+            $Data
         }
-
-        if ($Data.excludedTenants -and $Data.excludedTenants -ne 'excludedTenants') {
-            $Data.excludedTenants = @($Data.excludedTenants)
-        } else {
-            $Data.excludedTenants = @()
-        }
-        $Data
     } | Sort-Object -Property templateName
 
     if ($ID) { $Templates = $Templates | Where-Object GUID -EQ $ID }
