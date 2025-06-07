@@ -19,7 +19,7 @@ function Invoke-GetCippAlerts {
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
     $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
-    $Role = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userRoles
+    $Role = Get-CippAccessRole -Request $Request
 
     $CIPPVersion = $Request.Query.localversion
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion
