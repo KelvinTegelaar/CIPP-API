@@ -23,6 +23,10 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
             Set-Mailbox -RecipientLimits
         RECOMMENDEDBY
             "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -177,4 +181,4 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -FieldValue $FieldValue -Tenant $Tenant
     }
-} 
+}
