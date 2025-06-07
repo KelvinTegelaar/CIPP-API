@@ -46,57 +46,57 @@ Function Invoke-ListRooms {
                 $GraphRequest = @(
                     [PSCustomObject]@{
                         # Core Mailbox Properties
-                        id                            = $RoomMailbox.ExternalDirectoryObjectId
-                        displayName                   = $RoomMailbox.DisplayName
-                        mail                          = $RoomMailbox.PrimarySmtpAddress
-                        mailNickname                  = $RoomMailbox.Alias
-                        accountDisabled               = $RoomMailbox.AccountDisabled
-                        hiddenFromAddressListsEnabled = $RoomMailbox.HiddenFromAddressListsEnabled
-                        isDirSynced                   = $RoomMailbox.IsDirSynced
+                        id                             = $RoomMailbox.ExternalDirectoryObjectId
+                        displayName                    = $RoomMailbox.DisplayName
+                        mail                           = $RoomMailbox.PrimarySmtpAddress
+                        mailNickname                   = $RoomMailbox.Alias
+                        accountDisabled                = $RoomMailbox.AccountDisabled
+                        hiddenFromAddressListsEnabled  = $RoomMailbox.HiddenFromAddressListsEnabled
+                        isDirSynced                    = $RoomMailbox.IsDirSynced
 
                         # Room Booking Settings
-                        bookingType                   = $PlaceDetails.BookingType
-                        resourceDelegates             = $PlaceDetails.ResourceDelegates
-                        capacity                      = [int]($PlaceDetails.Capacity ?? $RoomMailbox.ResourceCapacity ?? 0)
+                        bookingType                    = $PlaceDetails.BookingType
+                        resourceDelegates              = $PlaceDetails.ResourceDelegates
+                        capacity                       = [int]($PlaceDetails.Capacity ?? $RoomMailbox.ResourceCapacity ?? 0)
 
                         # Location Information
-                        building                      = $PlaceDetails.Building
-                        floor                         = $PlaceDetails.Floor
-                        floorLabel                    = $PlaceDetails.FloorLabel
-                        street                        = if ([string]::IsNullOrWhiteSpace($PlaceDetails.Street)) { $null } else { $PlaceDetails.Street }
-                        city                          = if ([string]::IsNullOrWhiteSpace($PlaceDetails.City)) { $null } else { $PlaceDetails.City }
-                        state                         = if ([string]::IsNullOrWhiteSpace($PlaceDetails.State)) { $null } else { $PlaceDetails.State }
-                        postalCode                    = if ([string]::IsNullOrWhiteSpace($PlaceDetails.PostalCode)) { $null } else { $PlaceDetails.PostalCode }
-                        countryOrRegion               = if ([string]::IsNullOrWhiteSpace($PlaceDetails.CountryOrRegion)) { $null } else { $PlaceDetails.CountryOrRegion }
+                        building                       = $PlaceDetails.Building
+                        floor                          = $PlaceDetails.Floor
+                        floorLabel                     = $PlaceDetails.FloorLabel
+                        street                         = if ([string]::IsNullOrWhiteSpace($PlaceDetails.Street)) { $null } else { $PlaceDetails.Street }
+                        city                           = if ([string]::IsNullOrWhiteSpace($PlaceDetails.City)) { $null } else { $PlaceDetails.City }
+                        state                          = if ([string]::IsNullOrWhiteSpace($PlaceDetails.State)) { $null } else { $PlaceDetails.State }
+                        postalCode                     = if ([string]::IsNullOrWhiteSpace($PlaceDetails.PostalCode)) { $null } else { $PlaceDetails.PostalCode }
+                        countryOrRegion                = if ([string]::IsNullOrWhiteSpace($PlaceDetails.CountryOrRegion)) { $null } else { $PlaceDetails.CountryOrRegion }
 
                         # Room Equipment
-                        audioDeviceName               = $PlaceDetails.AudioDeviceName
-                        videoDeviceName               = $PlaceDetails.VideoDeviceName
-                        displayDeviceName             = $PlaceDetails.DisplayDeviceName
-                        mtrEnabled                    = $PlaceDetails.MTREnabled
+                        audioDeviceName                = $PlaceDetails.AudioDeviceName
+                        videoDeviceName                = $PlaceDetails.VideoDeviceName
+                        displayDeviceName              = $PlaceDetails.DisplayDeviceName
+                        mtrEnabled                     = $PlaceDetails.MTREnabled
 
                         # Room Features
-                        isWheelChairAccessible        = $PlaceDetails.IsWheelChairAccessible
-                        phone                         = if ([string]::IsNullOrWhiteSpace($PlaceDetails.Phone)) { $null } else { $PlaceDetails.Phone }
-                        tags                          = $PlaceDetails.Tags
-                        spaceType                     = $PlaceDetails.SpaceType
+                        isWheelChairAccessible         = $PlaceDetails.IsWheelChairAccessible
+                        phone                          = if ([string]::IsNullOrWhiteSpace($PlaceDetails.Phone)) { $null } else { $PlaceDetails.Phone }
+                        tags                           = $PlaceDetails.Tags
+                        spaceType                      = $PlaceDetails.SpaceType
 
                         # Calendar Properties
-                        AllowConflicts                = $CalendarProperties.AllowConflicts
-                        AllowRecurringMeetings        = $CalendarProperties.AllowRecurringMeetings
-                        BookingWindowInDays           = $CalendarProperties.BookingWindowInDays
-                        MaximumDurationInMinutes      = $CalendarProperties.MaximumDurationInMinutes
-                        ProcessExternalMeetingMessages= $CalendarProperties.ProcessExternalMeetingMessages
-                        EnforceCapacity               = $CalendarProperties.EnforceCapacity
-                        ForwardRequestsToDelegates    = $CalendarProperties.ForwardRequestsToDelegates
-                        ScheduleOnlyDuringWorkHours   = $CalendarProperties.ScheduleOnlyDuringWorkHours
-                        AutomateProcessing            = $CalendarProperties.AutomateProcessing
+                        AllowConflicts                 = $CalendarProperties.AllowConflicts
+                        AllowRecurringMeetings         = $CalendarProperties.AllowRecurringMeetings
+                        BookingWindowInDays            = $CalendarProperties.BookingWindowInDays
+                        MaximumDurationInMinutes       = $CalendarProperties.MaximumDurationInMinutes
+                        ProcessExternalMeetingMessages = $CalendarProperties.ProcessExternalMeetingMessages
+                        EnforceCapacity                = $CalendarProperties.EnforceCapacity
+                        ForwardRequestsToDelegates     = $CalendarProperties.ForwardRequestsToDelegates
+                        ScheduleOnlyDuringWorkHours    = $CalendarProperties.ScheduleOnlyDuringWorkHours
+                        AutomateProcessing             = $CalendarProperties.AutomateProcessing
 
                         # Calendar Configuration Properties
-                        WorkDays                      = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkDays)) { $null } else { $CalendarConfigurationProperties.WorkDays }
-                        WorkHoursStartTime            = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursStartTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursStartTime }
-                        WorkHoursEndTime              = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursEndTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursEndTime }
-                        WorkingHoursTimeZone          = $CalendarConfigurationProperties.WorkingHoursTimeZone
+                        WorkDays                       = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkDays)) { $null } else { $CalendarConfigurationProperties.WorkDays }
+                        WorkHoursStartTime             = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursStartTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursStartTime }
+                        WorkHoursEndTime               = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursEndTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursEndTime }
+                        WorkingHoursTimeZone           = $CalendarConfigurationProperties.WorkingHoursTimeZone
                     }
                 )
             }

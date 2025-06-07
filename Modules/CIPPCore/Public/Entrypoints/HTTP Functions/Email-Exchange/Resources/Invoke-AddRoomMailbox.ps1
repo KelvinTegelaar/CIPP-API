@@ -32,7 +32,8 @@ Function Invoke-AddRoomMailbox {
 
         # Block sign-in for the mailbox
         try {
-            $Request = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $Headers -AccountEnabled $false
+            $BlockSignInRequest = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $Headers -AccountEnabled $false
+            if ($BlockSignInRequest -like 'Could not disable*') { throw $BlockSignInRequest }
             $Results.Add("Blocked sign-in for Room mailbox; $($MailboxObject.userPrincipalName)")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
@@ -41,8 +42,9 @@ Function Invoke-AddRoomMailbox {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $Results.Add("Failed to create Room mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
+        $Message = "Failed to create room mailbox: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
+        $Results.Add($Message)
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
