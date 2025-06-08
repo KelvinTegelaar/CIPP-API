@@ -24,8 +24,10 @@ function Invoke-AddGroupTemplate {
             '*generic*' { 'generic' }
             '*mail*' { 'mailenabledsecurity' }
             '*Distribution*' { 'distribution' }
+            '*security*' { 'security' }
             default { $Request.Body.groupType }
         }
+        if ($Request.body.membershipRules) { $groupType = 'dynamic' }
         $object = [PSCustomObject]@{
             displayName     = $Request.Body.displayName
             description     = $Request.Body.description
