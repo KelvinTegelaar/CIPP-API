@@ -16,11 +16,20 @@ function Invoke-AddGroupTemplate {
     $GUID = $Request.Body.GUID ?? (New-Guid).GUID
     try {
         if (!$Request.Body.displayname) { throw 'You must enter a displayname' }
-
+        $groupType = switch -wildcard ($Request.Body.groupType) {
+            '*dynamic*' { 'dynamic' }
+            '*azurerole*' { 'azurerole' }
+            '*unified*' { 'm365' }
+            '*Microsoft*' { 'm365' }
+            '*generic*' { 'generic' }
+            '*mail*' { 'mailenabledsecurity' }
+            '*Distribution*' { 'distribution' }
+            default { $Request.Body.groupType }
+        }
         $object = [PSCustomObject]@{
             displayName     = $Request.Body.displayName
             description     = $Request.Body.description
-            groupType       = $Request.Body.groupType
+            groupType       = $groupType
             membershipRules = $Request.Body.membershipRules
             allowExternal   = $Request.Body.allowExternal
             username        = $Request.Body.username
