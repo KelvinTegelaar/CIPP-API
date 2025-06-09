@@ -115,7 +115,7 @@ function Invoke-ListUserMailboxDetails {
 
     # Parse permissions
 
-    #Implemented as an arraylist that uses .add().
+    #Implemented as an ArrayList that uses .add().
     $ParsedPerms = [System.Collections.ArrayList]::new()
     foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
         foreach ($Perm in $PermSet) {
@@ -177,7 +177,7 @@ function Invoke-ListUserMailboxDetails {
         $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
     }
 
-    # Parse InPlaceHolds to determine hold types if avaliable
+    # Parse InPlaceHolds to determine hold types if available
     $InPlaceHold = $false
     $EDiscoveryHold = $false
     $PurviewRetentionHold = $false
