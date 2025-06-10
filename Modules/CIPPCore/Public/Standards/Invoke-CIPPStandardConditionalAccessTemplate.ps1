@@ -26,14 +26,12 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
 
     If ($Settings.remediate -eq $true) {
-
-        $APINAME = 'Standards'
 
         foreach ($Setting in $Settings) {
             try {

@@ -32,22 +32,32 @@ function Invoke-AddGroup {
                 }
                 if ($GroupObject.membershipRules) {
                     $BodyParams | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue ($GroupObject.membershipRules)
-                    $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
                     $BodyParams | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
+                    if ($GroupObject.groupType -eq 'm365') {
+                        $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified', 'DynamicMembership')
+                        $BodyParams.mailEnabled = $true
+                    }
+                    else {
+                        $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
+                    }
+                    # Skip adding static members if we're using dynamic membership
+                    $SkipStaticMembers = $true
                 }
-                if ($GroupObject.groupType -eq 'm365') {
+                elseif ($GroupObject.groupType -eq 'm365') {
                     $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
+                    $BodyParams.mailEnabled = $true
                 }
                 if ($GroupObject.owners) {
                     $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.owners) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'owners@odata.bind' = @($BodyParams.'owners@odata.bind')
                 }
-                if ($GroupObject.members) {
+                if ($GroupObject.members -and -not $SkipStaticMembers) {
                     $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.members) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyParams -Depth 10) -Verbose
-            } else {
+            }
+            else {
                 if ($GroupObject.groupType -eq 'dynamicDistribution') {
                     $ExoParams = @{
                         Name               = $GroupObject.displayName
@@ -55,7 +65,8 @@ function Invoke-AddGroup {
                         PrimarySmtpAddress = $Email
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $ExoParams
-                } else {
+                }
+                else {
                     $ExoParams = @{
                         Name                               = $GroupObject.displayName
                         Alias                              = $GroupObject.username
@@ -77,7 +88,8 @@ function Invoke-AddGroup {
             "Successfully created group $($GroupObject.displayName) for $($tenant)"
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
 
-        } catch {
+        }
+        catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Group creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"

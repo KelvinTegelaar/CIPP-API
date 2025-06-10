@@ -36,7 +36,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -52,6 +52,9 @@ function Invoke-CIPPStandardQuarantineTemplate {
             try {
                 # Create hashtable with desired Quarantine Setting
                 $EndUserQuarantinePermissions   = @{
+                    # ViewHeader and Download are set to false because the value 0 or 1 does nothing per Microsoft documentation
+                    PermissionToViewHeader = $false
+                    PermissionToDownload  = $false
                     PermissionToBlockSender = $Policy.PermissionToBlockSender
                     PermissionToDelete  = $Policy.PermissionToDelete
                     PermissionToPreview = $Policy.PermissionToPreview
@@ -64,7 +67,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                 if ($Policy.displayName.value -in $CurrentPolicies.Name) {
                     #Get the current policy and convert EndUserQuarantinePermissions from string to hashtable for compare
                     $ExistingPolicy = $CurrentPolicies | Where-Object -Property Name -eq $Policy.displayName.value
-                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
+                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue -InputObject $ExistingPolicy.EndUserQuarantinePermissions -ErrorAction Stop
 
                     #Compare the current policy
                     $StateIsCorrect = ($ExistingPolicy.Name -eq $Policy.displayName.value) -and
