@@ -49,9 +49,10 @@ function Invoke-CIPPStandardDisableTenantCreation {
                     Body     = '{"defaultUserRolePermissions":{"allowedToCreateTenants":false}}'
                 }
                 New-GraphPostRequest @GraphRequest
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Disabled users from creating tenants.' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Successfully disabled users from creating tenants.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Failed to disable users from creating tenants' -sev 'Error' -LogData $_
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable users from creating tenants. Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
             }
         }
     }
