@@ -12,14 +12,14 @@ Function Invoke-ExecModifyCalPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
-    
+
     $Username = $request.body.userID
     $Tenantfilter = $request.body.tenantfilter
     $Permissions = $request.body.permissions
 
     Write-LogMessage -headers $Request.Headers -API $APINAME-message "Processing request for user: $Username, tenant: $Tenantfilter" -Sev 'Debug'
 
-    if ($username -eq $null) { 
+    if ($username -eq $null) {
         Write-LogMessage -headers $Request.Headers -API $APINAME-message 'Username is null' -Sev 'Error'
         $body = [pscustomobject]@{'Results' = @('Username is required') }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -28,12 +28,11 @@ Function Invoke-ExecModifyCalPerms {
             })
         return
     }
-    
+
     try {
         $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
         Write-LogMessage -headers $Request.Headers -API $APINAME-message "Retrieved user ID: $userid" -Sev 'Debug'
-    }
-    catch {
+    } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME-message "Failed to get user ID: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = @("Failed to get user ID: $($_.Exception.Message)") }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -50,8 +49,7 @@ Function Invoke-ExecModifyCalPerms {
     if ($Permissions -is [PSCustomObject]) {
         if ($Permissions.PSObject.Properties.Name -match '^\d+$') {
             $Permissions = $Permissions.PSObject.Properties.Value
-        }
-        else {
+        } else {
             $Permissions = @($Permissions)
         }
     }
@@ -60,14 +58,14 @@ Function Invoke-ExecModifyCalPerms {
 
     foreach ($Permission in $Permissions) {
         Write-LogMessage -headers $Request.Headers -API $APINAME-message "Processing permission: $($Permission | ConvertTo-Json)" -Sev 'Debug'
-        
+
         $PermissionLevel = $Permission.PermissionLevel.value ?? $Permission.PermissionLevel
         $Modification = $Permission.Modification
         $CanViewPrivateItems = $Permission.CanViewPrivateItems ?? $false
         $FolderName = $Permission.FolderName ?? 'Calendar'
-        
+
         Write-LogMessage -headers $Request.Headers -API $APINAME-message "Permission Level: $PermissionLevel, Modification: $Modification, CanViewPrivateItems: $CanViewPrivateItems, FolderName: $FolderName" -Sev 'Debug'
-        
+
         # Handle UserID as array or single value
         $TargetUsers = @($Permission.UserID | ForEach-Object { $_.value ?? $_ })
 
@@ -76,22 +74,24 @@ Function Invoke-ExecModifyCalPerms {
         foreach ($TargetUser in $TargetUsers) {
             try {
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Processing target user: $TargetUser" -Sev 'Debug'
-                
-                $Result = Set-CIPPCalendarPermission -APIName $APIName `
-                    -Headers $Request.Headers `
-                    -RemoveAccess $(if ($Modification -eq 'Remove') { $TargetUser } else { $null }) `
-                    -TenantFilter $Tenantfilter `
-                    -UserID $userid `
-                    -folderName $FolderName `
-                    -UserToGetPermissions $TargetUser `
-                    -LoggingName $TargetUser `
-                    -Permissions $PermissionLevel `
-                    -CanViewPrivateItems $CanViewPrivateItems
+                $Params = @{
+                    APIName              = $APIName
+                    Headers              = $Request.Headers
+                    RemoveAccess         = if ($Modification -eq 'Remove') { $TargetUser } else { $null }
+                    TenantFilter         = $Tenantfilter
+                    UserID               = $userid
+                    folderName           = $FolderName
+                    UserToGetPermissions = $TargetUser
+                    LoggingName          = $TargetUser
+                    Permissions          = $PermissionLevel
+                    CanViewPrivateItems  = $CanViewPrivateItems
+                }
+
+                $Result = Set-CIPPCalendarPermission @Params
 
                 $null = $results.Add($Result)
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Successfully executed $($PermissionLevel) permission modification for $($TargetUser) on $($username)" -Sev 'Info' -tenant $TenantFilter
-            }
-            catch {
+            } catch {
                 $HasErrors = $true
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not execute $($PermissionLevel) permission modification for $($TargetUser) on $($username). Error: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                 $null = $results.Add("Could not execute $($PermissionLevel) permission modification for $($TargetUser) on $($username). Error: $($_.Exception.Message)")
@@ -112,4 +112,4 @@ Function Invoke-ExecModifyCalPerms {
             StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
             Body       = $Body
         })
-} 
+}
