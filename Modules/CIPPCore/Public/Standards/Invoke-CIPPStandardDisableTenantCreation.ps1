@@ -48,7 +48,7 @@ function Invoke-CIPPStandardDisableTenantCreation {
                     Type     = 'PATCH'
                     Body     = '{"defaultUserRolePermissions":{"allowedToCreateTenants":false}}'
                 }
-                New-GraphPostRequest @GraphRequest
+                New-GraphPOSTRequest @GraphRequest
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Successfully disabled users from creating tenants.' -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
