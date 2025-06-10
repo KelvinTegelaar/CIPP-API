@@ -77,44 +77,18 @@ Function Invoke-ExecModifyCalPerms {
             try {
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Processing target user: $TargetUser" -Sev 'Debug'
                 
-                if ($Modification -eq 'Remove') {
-                    try {
-                        $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{
-                            Identity = "$($userid):\$FolderName"
-                            User     = $TargetUser
-                            Confirm  = $false
-                        }
-                        $null = $results.Add("Removed $($TargetUser) from $($username) $FolderName permissions")
-                    }
-                    catch {
-                        $null = $results.Add("No existing permissions to remove for $($TargetUser)")
-                    }
-                }
-                else {
-                    Write-LogMessage -headers $Request.Headers -API $APINAME-message "Setting permissions with AccessRights: $PermissionLevel" -Sev 'Debug'
+                $Result = Set-CIPPCalendarPermission -APIName $APIName `
+                    -Headers $Request.Headers `
+                    -RemoveAccess $(if ($Modification -eq 'Remove') { $TargetUser } else { $null }) `
+                    -TenantFilter $Tenantfilter `
+                    -UserID $userid `
+                    -folderName $FolderName `
+                    -UserToGetPermissions $TargetUser `
+                    -LoggingName $TargetUser `
+                    -Permissions $PermissionLevel `
+                    -CanViewPrivateItems $CanViewPrivateItems
 
-                    $cmdParams = @{
-                        Identity     = "$($userid):\$FolderName"
-                        User         = $TargetUser
-                        AccessRights = $PermissionLevel
-                        Confirm      = $false
-                    }
-
-                    if ($CanViewPrivateItems) {
-                        $cmdParams['SharingPermissionFlags'] = 'Delegate,CanViewPrivateItems'
-                    }
-
-                    try {
-                        # Try Add first
-                        $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $cmdParams
-                        $null = $results.Add("Granted $($TargetUser) $($PermissionLevel) access to $($username) $FolderName$($CanViewPrivateItems ? ' with access to private items' : '')")
-                    }
-                    catch {
-                        # If Add fails, try Set
-                        $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $cmdParams
-                        $null = $results.Add("Updated $($TargetUser) $($PermissionLevel) access to $($username) $FolderName$($CanViewPrivateItems ? ' with access to private items' : '')")
-                    }
-                }
+                $null = $results.Add($Result)
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Successfully executed $($PermissionLevel) permission modification for $($TargetUser) on $($username)" -Sev 'Info' -tenant $TenantFilter
             }
             catch {
