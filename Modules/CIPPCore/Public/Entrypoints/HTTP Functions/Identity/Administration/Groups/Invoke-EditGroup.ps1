@@ -16,8 +16,7 @@ function Invoke-EditGroup {
     $UserObj = $Request.Body
     $GroupType = $UserObj.groupId.addedFields.groupType ? $UserObj.groupId.addedFields.groupType : $UserObj.groupType
     $GroupName = $UserObj.groupName ? $UserObj.groupName : $UserObj.groupId.addedFields.groupName
-
-    #Write-Warning ($Request.Body | ConvertTo-Json -Depth 10)
+    $OrgGroup = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($UserObj.groupId)" -tenantid $UserObj.tenantFilter
 
     $AddMembers = $UserObj.AddMember
     $UserObj.groupId = $UserObj.groupId.value ?? $UserObj.groupId
@@ -29,6 +28,39 @@ function Invoke-EditGroup {
     $GraphLogs = [System.Collections.Generic.List[object]]::new()
     $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
     $ExoLogs = [System.Collections.Generic.List[object]]::new()
+
+    #Edit properties:
+    if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
+        $Params = @{ Identity = $UserObj.groupId; DisplayName = $UserObj.displayName; Description = $UserObj.description; name = $UserObj.mailNickname }
+        $ExoBulkRequests.Add(@{
+                CmdletInput = @{
+                    CmdletName = 'Set-DistributionGroup'
+                    Parameters = $Params
+                }
+            })
+        $ExoLogs.Add(@{
+                message = "Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes."
+                target  = $UserObj.groupId
+            })
+    } else {
+        $PatchObj = @{
+            displayName     = $UserObj.displayName
+            description     = $UserObj.description
+            mailNickname    = $UserObj.mailNickname
+            mailEnabled     = $OrgGroup.mailEnabled
+            securityEnabled = $OrgGroup.securityEnabled
+        }
+        Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
+        if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
+        try {
+            $patch = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($UserObj.groupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
+            $Results.Add("Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes.")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Edited group properties for $($GroupName) group" -Sev 'Info'
+        } catch {
+            $Results.Add("Error - Failed to edit group properties: $($_.Exception.Message)")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Failed to patch group: $($_.Exception.Message)" -Sev 'Error'
+        }
+    }
 
     if ($AddMembers) {
         $AddMembers | ForEach-Object {
@@ -256,6 +288,8 @@ function Invoke-EditGroup {
                 }
             })
     }
+
+
 
     Write-Information "Graph Bulk Requests: $($BulkRequests.Count)"
     if ($BulkRequests.Count -gt 0) {
