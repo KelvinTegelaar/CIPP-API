@@ -64,8 +64,9 @@ Function Invoke-ExecModifyCalPerms {
         $PermissionLevel = $Permission.PermissionLevel.value ?? $Permission.PermissionLevel
         $Modification = $Permission.Modification
         $CanViewPrivateItems = $Permission.CanViewPrivateItems ?? $false
+        $FolderName = $Permission.FolderName ?? 'Calendar'
         
-        Write-LogMessage -headers $Request.Headers -API $APINAME-message "Permission Level: $PermissionLevel, Modification: $Modification, CanViewPrivateItems: $CanViewPrivateItems" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME-message "Permission Level: $PermissionLevel, Modification: $Modification, CanViewPrivateItems: $CanViewPrivateItems, FolderName: $FolderName" -Sev 'Debug'
         
         # Handle UserID as array or single value
         $TargetUsers = @($Permission.UserID | ForEach-Object { $_.value ?? $_ })
@@ -79,11 +80,11 @@ Function Invoke-ExecModifyCalPerms {
                 if ($Modification -eq 'Remove') {
                     try {
                         $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{
-                            Identity = "$($userid):\Calendar"
+                            Identity = "$($userid):\$FolderName"
                             User     = $TargetUser
                             Confirm  = $false
                         }
-                        $null = $results.Add("Removed $($TargetUser) from $($username) Calendar permissions")
+                        $null = $results.Add("Removed $($TargetUser) from $($username) $FolderName permissions")
                     }
                     catch {
                         $null = $results.Add("No existing permissions to remove for $($TargetUser)")
@@ -93,7 +94,7 @@ Function Invoke-ExecModifyCalPerms {
                     Write-LogMessage -headers $Request.Headers -API $APINAME-message "Setting permissions with AccessRights: $PermissionLevel" -Sev 'Debug'
 
                     $cmdParams = @{
-                        Identity     = "$($userid):\Calendar"
+                        Identity     = "$($userid):\$FolderName"
                         User         = $TargetUser
                         AccessRights = $PermissionLevel
                         Confirm      = $false
@@ -106,12 +107,12 @@ Function Invoke-ExecModifyCalPerms {
                     try {
                         # Try Add first
                         $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $cmdParams
-                        $null = $results.Add("Granted $($TargetUser) $($PermissionLevel) access to $($username) Calendar$($CanViewPrivateItems ? ' with access to private items' : '')")
+                        $null = $results.Add("Granted $($TargetUser) $($PermissionLevel) access to $($username) $FolderName$($CanViewPrivateItems ? ' with access to private items' : '')")
                     }
                     catch {
                         # If Add fails, try Set
                         $CalPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $cmdParams
-                        $null = $results.Add("Updated $($TargetUser) $($PermissionLevel) access to $($username) Calendar$($CanViewPrivateItems ? ' with access to private items' : '')")
+                        $null = $results.Add("Updated $($TargetUser) $($PermissionLevel) access to $($username) $FolderName$($CanViewPrivateItems ? ' with access to private items' : '')")
                     }
                 }
                 Write-LogMessage -headers $Request.Headers -API $APINAME-message "Successfully executed $($PermissionLevel) permission modification for $($TargetUser) on $($username)" -Sev 'Info' -tenant $TenantFilter
