@@ -69,18 +69,18 @@ function Invoke-EditUser {
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $BodyToship -verbose
-        $null = $Results.Add( 'Success. The user has been edited.' )
+        $Results.Add( 'Success. The user has been edited.' )
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Edited user $($UserObj.DisplayName) with id $($UserObj.id)" -Sev Info
         if ($UserObj.password) {
             $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $UserObj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.MustChangePass } } | ConvertTo-Json
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $PasswordProfile -verbose
-            $null = $Results.Add("Success. The password has been set to $($UserObj.password)")
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $PasswordProfile -Verbose
+            $Results.Add("Success. The password has been set to $($UserObj.password)")
             Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "User edit API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $null = $Results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
+        $Results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
     }
 
 
@@ -90,7 +90,7 @@ function Invoke-EditUser {
         if ($licenses -or $UserObj.removeLicenses) {
             if ($UserObj.sherwebLicense.value) {
                 $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $null = $Results.Add('Added Sherweb License, scheduling assignment')
+                $Results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"
@@ -115,16 +115,16 @@ function Invoke-EditUser {
                 #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
                 if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
                     Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
-                    $null = $Results.Add( 'Success. User license is already correct.' )
+                    $Results.Add( 'Success. User license is already correct.' )
                 } else {
                     if ($UserObj.removeLicenses) {
                         $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Headers
-                        $null = $Results.Add($licResults)
+                        $Results.Add($licResults)
                     } else {
                         #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
                         $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
                         $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $headers
-                        $null = $Results.Add($licResults)
+                        $Results.Add($licResults)
                     }
 
                 }
@@ -134,7 +134,7 @@ function Invoke-EditUser {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $null = $Results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
+        $Results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
         Write-Warning "License assign API failed. $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
     }

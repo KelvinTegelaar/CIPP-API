@@ -27,7 +27,7 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPGroups -userid $userid -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
         }
         { $_.HideFromGAL -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -hidefromgal $true -Headers $Headers -APIName $APIName
+            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
         }
         { $_.DisableSignIn -eq $true } {
             Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
@@ -99,7 +99,7 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
         }
         { $_.'ClearImmutableId' -eq $true } {
-            Clear-CIPPImmutableId -userid $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         }
     }
     return $Return
