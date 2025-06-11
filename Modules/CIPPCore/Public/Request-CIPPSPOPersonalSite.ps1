@@ -43,10 +43,11 @@ function Request-CIPPSPOPersonalSite {
         $Request = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
         if (!$Request.IsComplete) { throw }
         Write-LogMessage -headers $Headers -API $APIName -message "Requested personal site for $($UserEmails -join ', ')" -Sev 'Info' -tenant $TenantFilter
-        return "Requested personal site for $($UserEmails -join ', ')"
+        return "Successfully requested personal site for $($UserEmails -join ', ')"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Could not request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

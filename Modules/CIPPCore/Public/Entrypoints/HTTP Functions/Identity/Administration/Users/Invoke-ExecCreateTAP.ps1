@@ -26,14 +26,14 @@ Function Invoke-ExecCreateTAP {
             $TAPResult,
             @{
                 resultText = "User ID: $UserID"
-                copyField = $UserID
-                state = 'success'
+                copyField  = $UserID
+                state      = 'success'
             }
         )
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = Get-NormalizedError -message $($_.Exception.Message)
+        $Results = Get-NormalizedError -message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
