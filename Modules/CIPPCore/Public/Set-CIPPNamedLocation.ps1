@@ -3,8 +3,8 @@ function Set-CIPPNamedLocation {
     param(
         $NamedLocationId,
         $TenantFilter,
-        #$Change should be one of 'addIp','addLocation','removeIp','removeLocation','rename'
-        [ValidateSet('addIp', 'addLocation', 'removeIp', 'removeLocation', 'rename')]
+        #$Change should be one of 'addIp','addLocation','removeIp','removeLocation','rename','setTrusted','setUntrusted'
+        [ValidateSet('addIp', 'addLocation', 'removeIp', 'removeLocation', 'rename', 'setTrusted', 'setUntrusted')]
         $Change,
         $Content,
         $APIName = 'Set Named Location',
@@ -29,12 +29,18 @@ function Set-CIPPNamedLocation {
             'rename' {
                 $NamedLocations.displayName = $Content
             }
+            'setTrusted' {
+                $NamedLocations.isTrusted = $true
+            }
+            'setUntrusted' {
+                $NamedLocations.isTrusted = $false
+            }
         }
         if ($PSCmdlet.ShouldProcess($NamedLocations.displayName, "Editing named location: $($NamedLocations.displayName). Change: $Change with content $($Content)")) {
             #Remove unneeded properties
             if ($NamedLocations.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') {
                 $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'countriesAndRegions', 'includeUnknownCountriesAndRegions'
-            } else {
+            } elseif ($NamedLocations.'@odata.type' -eq '#microsoft.graph.ipNamedLocation') {
                 $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'ipRanges', 'isTrusted'
             }
 
