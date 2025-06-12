@@ -11,15 +11,14 @@ Function Invoke-AddUser {
     param($Request, $TriggerMetadata)
 
     $APIName = 'AddUser'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $UserObj = $Request.body
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
     if ($UserObj.Scheduled.Enabled) {
         $TaskBody = [pscustomobject]@{
-            TenantFilter  = 'AllTenants'
-            Name          = "New user creation: $($UserObj.User)@$($UserObj.Domain)"
+            TenantFilter  = $UserObj.tenantfilter
+            Name          = "New user creation: $($UserObj.mailNickname)@$($UserObj.PrimDomain.value)"
             Command       = @{
                 value = 'New-CIPPUserTask'
                 label = 'New-CIPPUserTask'
@@ -32,22 +31,27 @@ Function Invoke-AddUser {
                 PSA     = [bool]$Request.Body.PostExecution.PSA
             }
         }
-        Add-CIPPScheduledTask -Task $TaskBody -hidden $false -DisallowDuplicateName $true
+        Add-CIPPScheduledTask -Task $TaskBody -hidden $false -DisallowDuplicateName $true -Headers $Request.Headers
         $body = [pscustomobject] @{
             'Results' = @("Successfully created scheduled task to create user $($UserObj.DisplayName)")
         }
     } else {
-        $CreationResults = New-CIPPUserTask -userobj $UserObj -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $CreationResults = New-CIPPUserTask -userobj $UserObj -APIName $APINAME -Headers $Request.Headers
         $body = [pscustomobject] @{
-            'Results'  = $CreationResults.Results
-            'Username' = $CreationResults.username
-            'Password' = $CreationResults.password
+            'Results'  = @(
+                $CreationResults.Results[0],
+                $CreationResults.Results[1],
+                @{
+                    'resultText' = $CreationResults.Results[2]
+                    'copyField' = $CreationResults.password
+                    'state' = 'success'
+                }
+            )
             'CopyFrom' = @{
                 'Success' = $CreationResults.CopyFrom.Success
                 'Error'   = $CreationResults.CopyFrom.Error
             }
         }
-
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

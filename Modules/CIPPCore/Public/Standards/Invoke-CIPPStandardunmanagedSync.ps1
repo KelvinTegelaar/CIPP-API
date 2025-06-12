@@ -13,17 +13,18 @@ function Invoke-CIPPStandardunmanagedSync {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Update-MgAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -52,11 +53,13 @@ function Invoke-CIPPStandardunmanagedSync {
         if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is disabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Alert
+            Write-StandardsAlert -message 'Sync for unmanaged devices is not disabled' -object $CurrentInfo -tenant $tenant -standardName 'unmanagedSync' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.unmanagedSync' -FieldValue $CurrentInfo.isUnmanagedSyncAppForTenantRestricted -Tenant $tenant
         Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $CurrentInfo.isUnmanagedSyncAppForTenantRestricted -StoreAs bool -Tenant $tenant
     }
 }

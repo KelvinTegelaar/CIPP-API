@@ -3,15 +3,16 @@ using namespace System.Net
 Function Invoke-ListAppsRepository {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Search = $Request.Body.Search
     $Repository = $Request.Body.Repository

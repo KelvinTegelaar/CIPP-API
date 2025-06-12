@@ -10,15 +10,13 @@ Function Invoke-AddOfficeApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Input bindings are passed in via param block.
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.defaultDomainName
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
     $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
 
@@ -74,16 +72,16 @@ Function Invoke-AddOfficeApp {
                 "Office deployment already exists for $($Tenant)"
                 Continue
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Added Office profile to $($tenant)" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Added Office profile to $($tenant)" -Sev 'Info'
             if ($AssignTo) {
                 $AssignO365 = if ($AssignTo -ne 'AllDevicesAndUsers') { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required"}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required"},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required"}]}' }           Write-Host ($AssignO365)
                 New-graphPostRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $tenant -Body $AssignO365 -type POST
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
+                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
             }
             "Successfully added Office App for $($Tenant)"
         } catch {
             "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Failed to add Office App. Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Failed to add Office App. Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 

@@ -20,13 +20,21 @@ function Set-CIPPSAMAdminRoles {
     $SAMRolesTable = Get-CIPPTable -tablename 'SAMRoles'
     $Roles = Get-CIPPAzDataTableEntity @SAMRolesTable
 
-    $SAMRoles = $Roles.Roles | ConvertFrom-Json
-    $Tenants = $Roles.Tenants | ConvertFrom-Json
+    try {
+        $SAMRoles = $Roles.Roles | ConvertFrom-Json -ErrorAction Stop
+        $Tenants = $Roles.Tenants | ConvertFrom-Json -ErrorAction Stop
+        if ($Tenants.value) {
+            $Tenants = $Tenants.value
+        }
+    } catch {
+        $ActionLogs.Add('CIPP-SAM roles not configured')
+        return $ActionLogs
+    }
 
     if (($SAMRoles | Measure-Object).count -gt 0 -and $Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants') {
-        $AppMemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationId)')/memberOf/#microsoft.graph.directoryRole" -tenantid $TenantFilter -AsApp $true
+        $AppMemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationID)')/memberOf/#microsoft.graph.directoryRole" -tenantid $TenantFilter -AsApp $true
 
-        $sp = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationId)')?`$select=id,displayName" -tenantid $TenantFilter -AsApp $true)
+        $sp = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationID)')?`$select=id,displayName" -tenantid $TenantFilter -AsApp $true)
         $id = $sp.id
 
         $Requests = $SAMRoles | Where-Object { $AppMemberOf.roleTemplateId -notcontains $_.value } | ForEach-Object {
@@ -46,13 +54,13 @@ function Set-CIPPSAMAdminRoles {
         if (($Requests | Measure-Object).count -gt 0) {
             $HasFailures = $false
             try {
-                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationId; ObjectId = $id; DisplayName = 'CIPP-SAM' } -Compliance -tenantid $TenantFilter -useSystemMailbox $true -AsApp
+                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -Compliance -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Compliance Center')
             } catch {
                 $ActionLogs.Add('Service Principal already added to Compliance Center')
             }
             try {
-                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationId; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
+                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Exchange Online')
             } catch {
                 $ActionLogs.Add('Service Principal already added to Exchange Online')

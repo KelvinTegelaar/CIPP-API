@@ -13,44 +13,48 @@ function Invoke-CIPPStandardallowOAuthTokens {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-12-18
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
 
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
-    $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
+    $CurrentState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
+    $StateIsCorrect = ($CurrentState.state -eq 'enabled')
 
     If ($Settings.remediate -eq $true) {
-        if ($State) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens is already enabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'softwareOath' -Enabled $true
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'softwareOath' -Enabled $true
+            } catch {
+            }
         }
     }
 
     if ($Settings.alert -eq $true) {
-
-        if ($State) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Software OTP/oAuth tokens is not enabled' -object $CurrentState -tenant $tenant -standardName 'allowOAuthTokens' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.allowOAuthTokens' -FieldValue $StateIsCorrect -TenantFilter $tenant
     }
-
 }

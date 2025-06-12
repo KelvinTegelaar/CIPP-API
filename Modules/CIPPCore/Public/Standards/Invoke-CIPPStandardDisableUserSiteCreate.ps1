@@ -13,17 +13,18 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Update-MgAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -33,31 +34,35 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
 
     If ($Settings.remediate -eq $true) {
 
-        if ($CurrentInfo.isSiteCreationEnabled) {
+        if ($CurrentInfo.isSiteCreationEnabled -or $CurrentInfo.isSiteCreationUIEnabled) {
             try {
-                $body = '{"isSiteCreationEnabled": false}'
+                $body = '{"isSiteCreationEnabled": false, "isSiteCreationUIEnabled": false}'
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled standard users from creating sites' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled standard users from creating sites and adjusted UI setting' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable standard users from creating sites: $ErrorMessage" -sev Error
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are already disabled from creating sites' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are already disabled from creating sites and UI setting is adjusted' -sev Info
         }
 
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.isSiteCreationEnabled -eq $false) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are not allowed to create sites' -sev Info
+        if ($CurrentInfo.isSiteCreationEnabled -eq $false -and $CurrentInfo.isSiteCreationUIEnabled -eq $false) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are not allowed to create sites and UI setting is disabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are allowed to create sites' -sev Alert
+            Write-StandardsAlert -message 'Standard users are allowed to create sites or UI setting is enabled' -object $CurrentInfo -tenant $tenant -standardName 'DisableUserSiteCreate' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are allowed to create sites or UI setting is enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $CurrentInfo.isSiteCreationEnabled -and $CurrentInfo.isSiteCreationUIEnabled ? ($CurrentInfo | Select-Object isSiteCreationEnabled, isSiteCreationUIEnabled) : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableUserSiteCreate' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableUserSiteCreateUI' -FieldValue $CurrentInfo.isSiteCreationUIEnabled -StoreAs bool -Tenant $tenant
     }
 }

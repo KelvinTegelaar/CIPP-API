@@ -10,7 +10,7 @@ function Convert-SKUname {
     )
     if (!$ConvertTable) {
         Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-        $ConvertTable = Import-Csv Conversiontable.csv
+        $ConvertTable = Import-Csv ConversionTable.csv
     }
     if ($skuname) { $ReturnedName = ($ConvertTable | Where-Object { $_.String_Id -eq $skuname } | Select-Object -Last 1).'Product_Display_Name' }
     if ($skuID) { $ReturnedName = ($ConvertTable | Where-Object { $_.guid -eq $skuid } | Select-Object -Last 1).'Product_Display_Name' }

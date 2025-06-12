@@ -7,6 +7,10 @@ function Invoke-ExecPartnerWebhook {
     #>
     Param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     switch ($Request.Query.Action) {
         'ListEventTypes' {
             $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/events'
@@ -32,25 +36,28 @@ function Invoke-ExecPartnerWebhook {
             }
         }
         'CreateSubscription' {
+            if ($Request.Body.EventType.value) {
+                $Request.Body.EventType = $Request.Body.EventType.value
+            }
+
             $BaseURL = ([System.Uri]$Request.Headers.'x-ms-original-url').Host
             $Webhook = @{
-                TenantFilter  = $env:TenantId
+                TenantFilter  = $env:TenantID
                 PartnerCenter = $true
                 BaseURL       = $BaseURL
                 EventType     = $Request.Body.EventType
-                ExecutingUser = $Request.Headers.'x-ms-client-principal'
+                Headers       = $Request.Headers.'x-ms-client-principal'
             }
+
             $Results = New-CIPPGraphSubscription @Webhook
 
-            if ($Request.Body.standardsExcludeAllTenants -eq $true) {
-                $ConfigTable = Get-CIPPTable -TableName Config
-                $PartnerWebhookOnboarding = [PSCustomObject]@{
-                    PartitionKey               = 'Config'
-                    RowKey                     = 'PartnerWebhookOnboarding'
-                    StandardsExcludeAllTenants = $true
-                }
-                Add-CIPPAzDataTableEntity @ConfigTable -Entity $PartnerWebhookOnboarding -Force | Out-Null
+            $ConfigTable = Get-CIPPTable -TableName Config
+            $PartnerWebhookOnboarding = [PSCustomObject]@{
+                PartitionKey               = 'Config'
+                RowKey                     = 'PartnerWebhookOnboarding'
+                StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
             }
+            Add-CIPPAzDataTableEntity @ConfigTable -Entity $PartnerWebhookOnboarding -Force | Out-Null
         }
         'SendTest' {
             $Results = New-GraphPOSTRequest -uri 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/validationEvents' -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'

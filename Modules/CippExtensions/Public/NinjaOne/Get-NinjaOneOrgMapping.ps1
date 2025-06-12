@@ -6,23 +6,22 @@ function Get-NinjaOneOrgMapping {
     try {
         $Tenants = Get-Tenants -IncludeErrors
 
-        $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
-        $MigrateRows = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
-            #$Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.NinjaOneName)"; value = "$($_.NinjaOne)" }
-            [PSCustomObject]@{
-                RowKey          = $_.RowKey
-                IntegrationName = $_.NinjaOneName
-                IntegrationId   = $_.NinjaOne
-                PartitionKey    = 'NinjaOneMapping'
+        $ExtensionMappings = Get-ExtensionMapping -Extension 'NinjaOne'
+
+        $Tenants = Get-Tenants -IncludeErrors
+
+        $Mappings = foreach ($Mapping in $ExtensionMappings) {
+            $Tenant = $Tenants | Where-Object { $_.RowKey -eq $Mapping.RowKey }
+            if ($Tenant) {
+                [PSCustomObject]@{
+                    TenantId        = $Tenant.customerId
+                    Tenant          = $Tenant.displayName
+                    TenantDomain    = $Tenant.defaultDomainName
+                    IntegrationId   = $Mapping.IntegrationId
+                    IntegrationName = $Mapping.IntegrationName
+                }
             }
-            Remove-AzDataTableEntity @CIPPMapping -Entity $_
         }
-
-        if (($MigrateRows | Measure-Object).Count -gt 0) {
-            Add-AzDataTableEntity @CIPPMapping -Entity $MigrateRows -Force
-        }
-
-        $Mappings = Get-ExtensionMapping -Extension 'NinjaOne'
         #Get Available Tenants
 
         #Get available Ninja clients
@@ -53,9 +52,8 @@ function Get-NinjaOneOrgMapping {
     }
 
     $MappingObj = [PSCustomObject]@{
-        Tenants   = @($Tenants)
         Companies = @($NinjaOrgs | Sort-Object name)
-        Mappings  = $Mappings
+        Mappings  = @($Mappings)
     }
 
     return $MappingObj

@@ -11,8 +11,12 @@ function Push-CippExtensionData {
         'Hudu' {
             if ($Config.Hudu.Enabled) {
                 Write-Host 'Perfoming Hudu Extension Sync...'
-                Invoke-HuduExtensionSync -Configuration $Config.Hudu -TenantFilter $TenantFilter
+                Invoke-HuduExtensionSync -Configuration $Config -TenantFilter $TenantFilter
             }
+        }
+        'CustomData' {
+            Write-Host 'Perfoming Custom Data Extension Sync...'
+            Invoke-CustomDataSync -TenantFilter $TenantFilter
         }
     }
 }

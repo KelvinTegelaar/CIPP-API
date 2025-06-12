@@ -3,23 +3,30 @@ function New-GraphGetRequest {
     .FUNCTIONALITY
     Internal
     #>
-    Param(
-        $uri,
-        $tenantid,
-        $scope,
+    [CmdletBinding()]
+    param(
+        [string]$uri,
+        [string]$tenantid,
+        [string]$scope,
         $AsApp,
-        $noPagination,
-        $NoAuthCheck,
-        $skipTokenCache,
+        [bool]$noPagination,
+        $NoAuthCheck = $false,
+        [bool]$skipTokenCache,
+        $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ($NoAuthCheck -eq $false) {
+        $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
+    } else {
+        $IsAuthorised = $true
+    }
+
+    if ($NoAuthCheck -eq $true -or $IsAuthorised) {
         if ($scope -eq 'ExchangeOnline') {
-            $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-            $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
+            $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
         } else {
             $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
@@ -36,7 +43,7 @@ function New-GraphGetRequest {
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
-                LastGraphError  = $null
+                LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
             }
@@ -58,8 +65,11 @@ function New-GraphGetRequest {
                     $Data.'@odata.count'
                     $NextURL = $null
                 } else {
-                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { ($Data) }
-                    if ($noPagination) {
+                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
+                    if ($noPagination -eq $true) {
+                        if ($Caller -eq 'Get-GraphRequestList') {
+                            @{ 'nextLink' = $data.'@odata.nextLink' }
+                        }
                         $nextURL = $null
                     } else {
                         $NextPageUriFound = $false
@@ -81,15 +91,26 @@ function New-GraphGetRequest {
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
+                    if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+                    }
                     $Tenant.GraphErrorCount++
-                    Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                    Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
                 }
                 throw $Message
             }
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        $Tenant.LastGraphError = ''
-        $Tenant.GraphErrorCount = 0
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
+        } else {
+            $Tenant.LastGraphError = ''
+        }
+        if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+        } else {
+            $Tenant.GraphErrorCount = 0
+        }
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

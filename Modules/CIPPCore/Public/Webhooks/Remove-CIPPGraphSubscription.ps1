@@ -6,7 +6,7 @@ function Remove-CIPPGraphSubscription {
         $APIName = 'Remove Graph Webhook',
         $Type,
         $EventType,
-        $ExecutingUser,
+        $Headers,
         $Cleanup = $false
     )
     try {
@@ -18,17 +18,17 @@ function Remove-CIPPGraphSubscription {
                     $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($sub.contentType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
                     Try {
                         $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter -and $_.Resource -eq $EventType -and $_.version -ne '2' }
-                        $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
+                        $null = Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity
                     } catch {
-                        Write-LogMessage -user $ExecutingUser -API $APIName -message 'Deleted an audit log webhook that was already removed from CIPP' -Sev 'Info' -tenant $TenantFilter
+                        Write-LogMessage -headers $Headers -API $APIName -message 'Deleted an audit log webhook that was already removed from CIPP' -Sev 'Info' -tenant $TenantFilter
 
                     }
                 } catch {
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to cleanup old audit logs: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to cleanup old audit logs: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                 }
             }
         } else {
-            $WebhookTable = Get-CIPPTable -TableName webhookTable
+            $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
             if ($type -eq 'AuditLog') {
                 $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter -and $_.Resource -eq $EventType }
             } else {
@@ -39,18 +39,18 @@ function Remove-CIPPGraphSubscription {
                 try {
                     $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($EventType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
                 } catch {
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to remove webhook subscription at Microsoft's side: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove webhook subscription at Microsoft's side: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                 }
-                $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
+                $null = Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity
             } else {
                 $OldID = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscriptions' -tenantid $TenantFilter) | Where-Object { $_.notificationUrl -eq $WebhookRow.WebhookNotificationUrl }
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($oldId.ID)" -tenantid $TenantFilter -type DELETE -body {} -Verbose
-                $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
+                $null = Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity
             }
             return "Removed webhook subscription to $($WebhookRow.resource) for $($TenantFilter)"
         }
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to renew Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to renew Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
         return "Failed to remove Webhook Subscription $($GraphRequest.value.notificationUrl): $($_.Exception.Message)"
     }
 }

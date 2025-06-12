@@ -10,8 +10,9 @@ Function Invoke-ExecExtensionSync {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     switch ($Request.Query.Extension) {
         'Gradient' {
@@ -19,12 +20,19 @@ Function Invoke-ExecExtensionSync {
                 Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message 'Starting billing processing.' -sev Info
                 $Table = Get-CIPPTable -TableName Extensionsconfig
                 $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
+
                 foreach ($ConfigItem in $Configuration.psobject.properties.name) {
                     switch ($ConfigItem) {
                         'Gradient' {
                             If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
-                                Push-OutputBinding -Name gradientqueue -Value 'LetsGo'
-                                $Results = [pscustomobject]@{'Results' = 'Successfully started Gradient Sync' }
+                                $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
+                                $ProcessorFunction = [PSCustomObject]@{
+                                    PartitionKey = 'Function'
+                                    RowKey       = 'New-GradientServiceSyncRun'
+                                    FunctionName = 'New-GradientServiceSyncRun'
+                                }
+                                Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
+                                $Results = [pscustomobject]@{'Results' = 'Successfully queued Gradient Sync' }
                             }
                         }
                     }

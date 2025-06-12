@@ -15,7 +15,7 @@ function Invoke-NinjaOneOrgMapping {
     }
 
     #Get Available Tenants
-    $Tenants = Get-Tenants
+    $Tenants = Get-Tenants -IncludeErrors
     #Get available Ninja clients
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
@@ -87,7 +87,7 @@ function Invoke-NinjaOneOrgMapping {
                 IntegrationName = "$($MatchedOrg.name)"
             }
             Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
-            Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
+            Write-LogMessage -API 'NinjaOneAutoMap_Queue'  -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
         }
     }
 

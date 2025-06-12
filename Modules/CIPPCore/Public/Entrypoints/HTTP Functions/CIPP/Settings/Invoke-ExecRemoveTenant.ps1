@@ -16,7 +16,7 @@ function Invoke-ExecRemoveTenant {
         $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($Request.Body.TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
         if ($Tenant) {
             try {
-                Remove-AzDataTableEntity @Table -Entity $Tenant
+                Remove-AzDataTableEntity -Force @Table -Entity $Tenant
                 $Body = @{Results = "$($Tenant.displayName) ($($Tenant.customerId)) deleted from CIPP. Note: This does not remove the GDAP relationship, see the Tenant Offboarding wizard to perform that action." }
                 $StatusCode = [HttpStatusCode]::OK
             } catch {

@@ -10,30 +10,34 @@ Function Invoke-ListPartnerRelationships {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
     try {
         $GraphRequestList = @{
             Endpoint            = 'policies/crossTenantAccessPolicy/partners'
-            TenantFilter        = $Request.Query.TenantFilter
+            TenantFilter        = $TenantFilter
             QueueNameOverride   = 'Partner Relationships'
             ReverseTenantLookup = $true
         }
         $GraphRequest = Get-GraphRequestList @GraphRequestList
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequest = @()
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    $StatusCode = [HttpStatusCode]::OK
 
-    $results = [PSCustomObject]@{
+    $Results = [PSCustomObject]@{
         Results = @($GraphRequest)
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $results
+            Body       = $Results
         })
-
 }

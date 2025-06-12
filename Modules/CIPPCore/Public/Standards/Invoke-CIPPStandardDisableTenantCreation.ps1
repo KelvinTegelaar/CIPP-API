@@ -13,52 +13,61 @@ function Invoke-CIPPStandardDisableTenantCreation {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-11-29
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthorizationPolicy
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTenantCreation'
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
-    $State = $CurrentInfo.defaultUserRolePermissions.allowedToCreateTenants
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
+    $StateIsCorrect = ($CurrentState.defaultUserRolePermissions.allowedToCreateTenants -eq $false)
 
     If ($Settings.remediate -eq $true) {
-
-        if ($State) {
-            try {
-                $body = '{"defaultUserRolePermissions":{"allowedToCreateTenants":false}}'
-                New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type patch -Body $body -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating tenants.' -sev Info
-                $State = $false
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating tenants:  $ErrorMessage" -sev 'Error'
-            }
-        } else {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are already disabled from creating tenants.' -sev Info
-        }
-    }
-    if ($Settings.alert -eq $true) {
-
-        if ($State) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create tenants.' -sev Alert
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create tenants.' -sev Info
+            try {
+                $GraphRequest = @{
+                    tenantid    = $tenant
+                    uri         = 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy'
+                    AsApp       = $false
+                    Type        = 'PATCH'
+                    ContentType = 'application/json'
+                    Body        = '{"defaultUserRolePermissions":{"allowedToCreateTenants":false}}'
+                }
+                New-GraphPostRequest @GraphRequest
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating tenants.' -sev Info
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to disable users from creating tenants' -sev 'Error' -LogData $_
+            }
         }
     }
+
+    if ($Settings.alert -eq $true) {
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create tenants.' -sev Info
+        } else {
+            Write-StandardsAlert -message 'Users are allowed to create tenants' -object $CurrentState -tenant $tenant -standardName 'DisableTenantCreation' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create tenants.' -sev Info
+        }
+    }
+
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $State -StoreAs bool -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableTenantCreation' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

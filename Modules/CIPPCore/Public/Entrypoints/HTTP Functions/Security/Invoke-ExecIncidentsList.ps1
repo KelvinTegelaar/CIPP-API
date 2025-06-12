@@ -10,17 +10,21 @@ Function Invoke-ExecIncidentsList {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    try {
-        # Interact with query parameters or the body of the request.
-        $TenantFilter = $Request.Query.TenantFilter
-        $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $Request.Query.TenantFilter -AsApp $true
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-            foreach ($incident in $incidents) {
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+
+    try {
+        $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
+            # Single tenant functionality
+            $Incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $TenantFilter -AsApp $true
+
+            foreach ($incident in $Incidents) {
                 [PSCustomObject]@{
-                    Tenant         = $Request.Query.TenantFilter
+                    Tenant         = $TenantFilter
                     Id             = $incident.id
                     Status         = $incident.status
                     IncidentUrl    = $incident.incidentWebUrl
@@ -37,17 +41,41 @@ Function Invoke-ExecIncidentsList {
                 }
             }
         } else {
+            # AllTenants functionality
             $Table = Get-CIPPTable -TableName cachealertsandincidents
-            $Filter = "PartitionKey eq 'Incident'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
-            if (!$Rows) {
-                Push-OutputBinding -Name incidentqueue -Value (Get-Date).ToString()
-                [PSCustomObject]@{
-                    Waiting = $true
+            $PartitionKey = 'Incident'
+            $Filter = "PartitionKey eq '$PartitionKey'"
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
+            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            # If a queue is running, we will not start a new one
+            if ($RunningQueue) {
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
                 }
+            } elseif (!$Rows -and !$RunningQueue) {
+                # If no rows are found and no queue is running, we will start a new one
+                $TenantList = Get-Tenants -IncludeErrors
+                $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                }
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'IncidentOrchestrator'
+                    QueueFunction    = @{
+                        FunctionName = 'GetTenants'
+                        QueueId      = $Queue.RowKey
+                        TenantParams = @{
+                            IncludeErrors = $true
+                        }
+                        DurableName  = 'ExecIncidentsListAllTenants'
+                    }
+                    SkipLog          = $true
+                }
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
             } else {
-                $incidents = $Rows
-                foreach ($incident in $incidents) {
+                $Incidents = $Rows
+                foreach ($incident in $Incidents) {
                     $IncidentObj = $incident.Incident | ConvertFrom-Json
                     [PSCustomObject]@{
                         Tenant         = $incident.Tenant
@@ -69,13 +97,14 @@ Function Invoke-ExecIncidentsList {
             }
         }
     } catch {
+        $Body = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
-        $body = $_.Exception.message
     }
-    if (!$body) {
+    if (!$Body) {
         $StatusCode = [HttpStatusCode]::OK
-        $body = [PSCustomObject]@{
-            MSResults = ($GraphRequest | Where-Object -Property id -NE $null)
+        $Body = [PSCustomObject]@{
+            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object id -Descending)
+            Metadata = $Metadata
         }
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

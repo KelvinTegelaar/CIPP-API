@@ -28,19 +28,34 @@ function Get-HuduFieldMapping {
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
-        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).Hudu
+        $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop
         Connect-HuduAPI -configuration $Configuration
 
-        $AssetLayouts = Get-HuduAssetLayouts | Select-Object @{Name = 'FieldType' ; Expression = { 'Layouts' } }, @{Name = 'value'; Expression = { $_.id } }, name, fields
+        try {
+            $AssetLayouts = Get-HuduAssetLayouts -ErrorAction Stop | Select-Object @{Name = 'FieldType' ; Expression = { 'Layouts' } }, @{Name = 'value'; Expression = { $_.id } }, name, fields
+        } catch {
+            $Message = $_.Exception.Message -replace "'" | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($Message) {
+                $Message = $Message.error
+            } else {
+                $Message = $_.Exception.Message
+            }
+
+            Write-Warning "Could not get Hudu Asset Layouts, error: $Message"
+            Write-LogMessage -Message "Could not get Hudu Asset Layouts, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
+            $AssetLayouts = @(@{FieldType = 'Layouts'; name = "Could not get Hudu Asset Layouts, $Message"; value = -1 })
+        }
     } catch {
-        $Message = if ($_.ErrorDetails.Message) {
-            Get-NormalizedError -Message $_.ErrorDetails.Message
+        $Message = $_.Exception.Message -replace "'" | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($Message) {
+            $Message = $Message.error
         } else {
-            $_.Exception.message
+            $Message = $_.Exception.Message
         }
 
+        Write-Warning "Could not get Hudu Asset Layouts, error: $Message"
         Write-LogMessage -Message "Could not get Hudu Asset Layouts, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
-        $AssetLayouts = @(@{name = "Could not get Hudu Asset Layouts, error: $Message"; value = '-1' })
+        $AssetLayouts = @(@{FieldType = 'Layouts'; name = "Could not get Hudu Asset Layouts, $Message"; value = -1 })
     }
 
     $Unset = [PSCustomObject]@{
@@ -53,7 +68,7 @@ function Get-HuduFieldMapping {
         CIPPFields        = $CIPPFields
         CIPPFieldHeaders  = $CIPPFieldHeaders
         IntegrationFields = @($Unset) + @($AssetLayouts)
-        Mappings          = $Mappings
+        Mappings          = @($Mappings)
     }
 
     return $MappingObj

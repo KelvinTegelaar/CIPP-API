@@ -10,12 +10,12 @@ Function Invoke-ExecUniversalSearch {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     # Interact with query parameters or the body of the request.
 
@@ -38,11 +38,11 @@ Function Invoke-ExecUniversalSearch {
                 )
             }
         } | ConvertTo-Json -Depth 10
-        $GraphRequest = (New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedTenantOperations' -tenantid $env:TenantID -body $payload -IgnoreErrors $true)
+        $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedTenantOperations' -tenantid $env:TenantID -body $payload -IgnoreErrors $true
         if (!$GraphRequest.result.results) {
             $GraphRequest = ($GraphRequest.error.message | ConvertFrom-Json).result.results | ConvertFrom-Json | Where-Object { $_.'_TenantId' -in $tenantfilter.customerId }
         } else {
-            $GraphRequest.result.Results | ConvertFrom-Json -ErrorAction SilentlyContinue | Where-Object { $_.'_TenantId' -in $tenantfilter.customerId }
+            $GraphRequest = $GraphRequest.result.Results | ConvertFrom-Json -ErrorAction SilentlyContinue | Where-Object { $_.'_TenantId' -in $tenantfilter.customerId }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

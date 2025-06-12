@@ -3,6 +3,8 @@ function Invoke-PublicWebhooks {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        Public
     #>
     param($Request, $TriggerMetadata)
 
@@ -65,7 +67,8 @@ function Invoke-PublicWebhooks {
             }
             Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
         } else {
-            return 'Not replying to this webhook or processing it'
+            $Body = 'This webhook is not authorized.'
+            $StatusCode = [HttpStatusCode]::Forbidden
         }
         $Body = 'Webhook Recieved'
         $StatusCode = [HttpStatusCode]::OK

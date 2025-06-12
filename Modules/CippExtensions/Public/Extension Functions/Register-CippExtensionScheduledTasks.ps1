@@ -1,5 +1,5 @@
 function Register-CIPPExtensionScheduledTasks {
-    Param(
+    param(
         [switch]$Reschedule
     )
 
@@ -14,13 +14,39 @@ function Register-CIPPExtensionScheduledTasks {
     $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
-    $Extensions = @('Hudu')
+    $Extensions = @('Hudu', 'NinjaOne', 'CustomData')
     $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
-        if ($ExtensionConfig.Enabled -eq $true) {
-            $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
-            $FieldMapping = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)FieldMapping'"
+        if ($ExtensionConfig.Enabled -eq $true -or $Extension -eq 'CustomData') {
+            if ($Extension -eq 'CustomData') {
+                $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
+                $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
+                    $Mapping = $_.JSON | ConvertFrom-Json
+                    if ($Mapping.sourceType.value -eq 'extensionSync') {
+                        $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
+                            $Tenants
+                        } else {
+                            foreach ($TenantMapping in $TenantMappings) {
+                                $TenantMapping | Where-Object { $_.customerId -eq $Mapping.tenantFilter.value -or $_.defaultDomainName -eq $Mapping.tenantFilter.value }
+                            }
+                        }
+                        foreach ($TenantMapping in $TenantMappings) {
+                            [pscustomobject]@{
+                                RowKey = $TenantMapping.customerId
+                            }
+                        }
+                    }
+                } | Sort-Object -Property RowKey -Unique
+
+                if (($Mappings | Measure-Object).Count -eq 0) {
+                    Write-Warning 'No tenants found for CustomData extension'
+                    continue
+                }
+            } else {
+                $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
+                $FieldMapping = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)FieldMapping'"
+            }
             $FieldSync = @{}
             $SyncTypes = [System.Collections.Generic.List[string]]::new()
 
@@ -30,14 +56,9 @@ function Register-CIPPExtensionScheduledTasks {
 
             $SyncTypes.Add('Overview')
             $SyncTypes.Add('Groups')
-
-            if ($FieldSync.Users) {
-                $SyncTypes.Add('Users')
-                $SyncTypes.Add('Mailboxes')
-            }
-            if ($FieldSync.Devices) {
-                $SyncTypes.Add('Devices')
-            }
+            $SyncTypes.Add('Users')
+            $SyncTypes.Add('Mailboxes')
+            $SyncTypes.Add('Devices')
 
             foreach ($Mapping in $Mappings) {
                 $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
@@ -73,7 +94,7 @@ function Register-CIPPExtensionScheduledTasks {
                 }
 
                 $ExistingPushTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
-                if (!$ExistingPushTask -or $Reschedule.IsPresent) {
+                if ((!$ExistingPushTask -or $Reschedule.IsPresent) -and $Extension -ne 'NinjaOne') {
                     # push cached data to extension
                     $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
                     $Task = [pscustomobject]@{
@@ -102,7 +123,7 @@ function Register-CIPPExtensionScheduledTasks {
             $PushTasks | Where-Object { $_.SyncType -eq $Extension } | ForEach-Object {
                 Write-Information "Extension Disabled: Cleaning up scheduled task $($_.Name) for tenant $($_.Tenant)"
                 $Entity = $_ | Select-Object -Property PartitionKey, RowKey
-                Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
+                Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
             }
         }
     }
@@ -112,14 +133,14 @@ function Register-CIPPExtensionScheduledTasks {
         if ($Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
-            Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
         }
     }
     foreach ($Task in $PushTasks) {
         if ($Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
-            Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
         }
     }
 }

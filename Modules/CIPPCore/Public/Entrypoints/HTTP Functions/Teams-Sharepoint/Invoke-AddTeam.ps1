@@ -10,19 +10,21 @@ Function Invoke-AddTeam {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $userobj = $Request.body
+    # Interact with the body of the request
+    $TeamObj = $Request.Body
+    $TenantID = $TeamObj.tenantid
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-    $Owners = ($userobj.owner).Split([Environment]::NewLine) | Where-Object { $_ -ne $null -or $_ -ne '' }
+    $Owners = ($TeamObj.owner)
     try {
-
+        if ($null -eq $Owners) {
+            throw 'You have to add at least one owner to the team'
+        }
         $Owners = $Owners | ForEach-Object {
-            $OwnerID = "https://graph.microsoft.com/beta/users('" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$_" -tenantid $Userobj.tenantid).id + "')"
+            $OwnerID = "https://graph.microsoft.com/beta/users('$($_)')"
             @{
                 '@odata.type'     = '#microsoft.graph.aadUserConversationMember'
                 'roles'           = @('owner')
@@ -32,29 +34,31 @@ Function Invoke-AddTeam {
 
         $TeamsSettings = [PSCustomObject]@{
             'template@odata.bind' = "https://graph.microsoft.com/v1.0/teamsTemplates('standard')"
-            'visibility'          = $userobj.visibility
-            'displayName'         = $userobj.displayname
-            'description'         = $userobj.description
-            'members'             = @($owners)
+            'visibility'          = $TeamObj.visibility
+            'displayName'         = $TeamObj.displayName
+            'description'         = $TeamObj.description
+            'members'             = @($Owners)
 
         } | ConvertTo-Json -Depth 10
+        # Write-Host $TeamsSettings
 
-        Write-Host $TeamsSettings
-        New-GraphPostRequest -AsApp $true -uri 'https://graph.microsoft.com/beta/teams' -tenantid $Userobj.tenantid -type POST -body $TeamsSettings -verbose
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev 'Info'
-        $body = [pscustomobject]@{'Results' = 'Success. Team has been added' }
+        $null = New-GraphPostRequest -AsApp $true -uri 'https://graph.microsoft.com/beta/teams' -tenantid $TenantID -type POST -body $TeamsSettings -Verbose
+        $Message = "Successfully created Team: '$($TeamObj.displayName)'"
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantID -message $Message -Sev Info
+        $StatusCode = [HttpStatusCode]::OK
 
-    }
-    catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Adding Team failed. Error: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed. Error message: $($_.Exception.Message)" }
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Message = "Failed to create Team: '$($TeamObj.displayName)'. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantID -message $Message -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            StatusCode = $StatusCode
+            Body       = @{ Results = $Message }
         })
 
 }

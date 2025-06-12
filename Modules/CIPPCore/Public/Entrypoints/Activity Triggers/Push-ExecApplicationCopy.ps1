@@ -1,13 +1,14 @@
-function Push-ExecApplicationCopy($QueueItem, $TriggerMetadata) {
+function Push-ExecApplicationCopy {
     <#
     .FUNCTIONALITY
         Entrypoint
     #>
+    [CmdletBinding()]
+    param($Item)
     try {
-        $Queueitem = $QueueItem | ConvertTo-Json -Depth 10 | ConvertFrom-Json
-        Write-Host "$($Queueitem | ConvertTo-Json -Depth 10)"
-        New-CIPPApplicationCopy -App $queueitem.AppId -Tenant $Queueitem.Tenant
+        Write-Host "$($Item | ConvertTo-Json -Depth 10)"
+        New-CIPPApplicationCopy -App $Item.AppId -Tenant $Item.Tenant
     } catch {
-        Write-LogMessage -message "Error adding application to tenant $($Queueitem.Tenant) - $($_.Exception.Message)" -tenant $Queueitem.Tenant -API 'Add Multitenant App' -sev Error
+        Write-LogMessage -message "Error adding application to tenant $($Item.Tenant) - $($_.Exception.Message)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error
     }
 }
