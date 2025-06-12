@@ -3,10 +3,10 @@ function Set-CIPPNamedLocation {
     param(
         $NamedLocationId,
         $TenantFilter,
-        #$change should be one of 'addip','addlocation','removeip','removelocation'
-        [ValidateSet('addip', 'addlocation', 'removeip', 'removelocation')]
-        $change,
-        $content,
+        #$Change should be one of 'addIp','addLocation','removeIp','removeLocation','rename'
+        [ValidateSet('addIp', 'addLocation', 'removeIp', 'removeLocation', 'rename')]
+        $Change,
+        $Content,
         $APIName = 'Set Named Location',
         $Headers
     )
@@ -14,23 +14,33 @@ function Set-CIPPNamedLocation {
     try {
         $NamedLocations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -Tenantid $tenantfilter
         switch ($change) {
-            'addip' {
+            'addIp' {
                 $NamedLocations.ipRanges = @($NamedLocations.ipRanges + @{ cidrAddress = $content; '@odata.type' = '#microsoft.graph.iPv4CidrRange' })
             }
-            'addlocation' {
+            'addLocation' {
                 $NamedLocations.countriesAndRegions = $NamedLocations.countriesAndRegions + $content
             }
-            'removeip' {
+            'removeIp' {
                 $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object -Property cidrAddress -NE $content)
             }
-            'removelocation' {
+            'removeLocation' {
                 $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $content })
+            }
+            'rename' {
+                $NamedLocations.displayName = $content
             }
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
-            #Remove unneeded propertie
+            #Remove unneeded properties
             if ($change -like '*location*') {
                 $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'countriesAndRegions', 'includeUnknownCountriesAndRegions'
+            } elseif ($change -eq 'rename') {
+                # For rename, only include the basic properties needed
+                if ($NamedLocations.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') {
+                    $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'countriesAndRegions', 'includeUnknownCountriesAndRegions'
+                } else {
+                    $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'ipRanges', 'isTrusted'
+                }
             } else {
                 $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'ipRanges', 'isTrusted'
             }
@@ -42,6 +52,6 @@ function Set-CIPPNamedLocation {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Failed to edit named location. Error: $($ErrorMessage.NormalizedError)"
+        throw "Failed to edit named location. Error: $($ErrorMessage.NormalizedError)"
     }
 }
