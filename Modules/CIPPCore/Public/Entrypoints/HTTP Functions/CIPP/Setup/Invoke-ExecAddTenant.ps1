@@ -24,8 +24,7 @@ function Invoke-ExecAddTenant {
 
         if ($tenantId -eq $env:TenantID) {
             # If the tenant is the partner tenant, return an error because you cannot add the partner tenant as direct tenant
-            $Results = @{'message' = 'You cannot add the partner tenant as a direct tenant.'; 'severity' = 'error'; 'state' = 'error' }
-            Write-LogMessage -API 'Add-Tenant' -message "Attempted to add partner tenant $tenantId as direct tenant." -Sev 'Error'
+            $Results = @{'message' = 'You cannot add the partner tenant as a direct tenant. Please connect the tenant using the "Connect to Partner Tenant" option. '; 'severity' = 'error'; }
         } elseif ($ExistingTenant) {
             # Update existing tenant
             $ExistingTenant.delegatedPrivilegeStatus = 'directTenant'
