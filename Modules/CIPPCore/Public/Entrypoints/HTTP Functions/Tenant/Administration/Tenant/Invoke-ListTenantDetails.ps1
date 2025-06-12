@@ -28,6 +28,7 @@ Function Invoke-ListTenantDetails {
 
         $Groups = (Get-TenantGroups -TenantFilter $TenantFilter) ?? @()
         $org | Add-Member -MemberType NoteProperty -Name 'Groups' -Value @($Groups)
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
