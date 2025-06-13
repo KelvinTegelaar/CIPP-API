@@ -32,10 +32,10 @@ function Invoke-CIPPStandardTwoClickEmailProtection {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TwoClickEmailProtection'
 
     # Get state value using null-coalescing operator
-    $state = $Settings.state.value ?? $Settings.state
+    $State = $Settings.state.value ?? $Settings.state
 
     # Input validation
-    if ([string]::IsNullOrWhiteSpace($state)) {
+    if ([string]::IsNullOrWhiteSpace($State)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'TwoClickEmailProtection: Invalid state parameter set' -sev Error
         Return
     }
@@ -48,31 +48,32 @@ function Invoke-CIPPStandardTwoClickEmailProtection {
         Return
     }
 
-    $WantedState = $state -eq 'enabled' ? $true : $false
+    $WantedState = $State -eq 'enabled' ? $true : $false
     $StateIsCorrect = $CurrentState -eq $WantedState ? $true : $false
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate two-click email protection'
 
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is already set to $state." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is already set to $State." -sev Info
         } else {
             try {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ TwoClickMailPreviewEnabled = $WantedState } -useSystemMailbox $true
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set two-click email protection to $state." -sev Info
+                $StateIsCorrect = -not $StateIsCorrect # Toggle the state to reflect the change
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set two-click email protection to $State." -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set two-click email protection to $state. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set two-click email protection to $State. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is correctly set to $state." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is correctly set to $State." -sev Info
         } else {
-            Write-StandardsAlert -message "Two-click email protection is not correctly set to $state, but instead $($CurrentState ? 'enabled' : 'disabled')" -object @{TwoClickMailPreviewEnabled = $CurrentState } -tenant $Tenant -standardName 'TwoClickEmailProtection' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is not correctly set to $state, but instead $($CurrentState ? 'enabled' : 'disabled')" -sev Info
+            Write-StandardsAlert -message "Two-click email protection is not correctly set to $State, but instead $($CurrentState ? 'enabled' : 'disabled')" -object @{TwoClickMailPreviewEnabled = $CurrentState } -tenant $Tenant -standardName 'TwoClickEmailProtection' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Two-click email protection is not correctly set to $State, but instead $($CurrentState ? 'enabled' : 'disabled')" -sev Info
         }
     }
 
