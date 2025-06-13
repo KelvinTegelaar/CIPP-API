@@ -14,7 +14,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
             Entra (AAD) Standards
         TAG
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.PWcompanionAppAllowedState.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.PWcompanionAppAllowedState.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"},{"label":"Microsoft managed","value":"default"}]}
         IMPACT
             Low Impact
         ADDEDDATE
