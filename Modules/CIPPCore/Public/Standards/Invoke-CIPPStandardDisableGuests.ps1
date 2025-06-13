@@ -26,17 +26,18 @@ function Invoke-CIPPStandardDisableGuests {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#medium-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
 
-    $Lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
+    $90Days = (Get-Date).AddDays(-90).ToUniversalTime()
+    $Lookup = $90Days.ToString('o')
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastSuccessfulSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-        Where-Object { $_.userType -eq 'Guest' -and $_.AccountEnabled -eq $true }
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
+        Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $90Days }
 
     $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
         ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)

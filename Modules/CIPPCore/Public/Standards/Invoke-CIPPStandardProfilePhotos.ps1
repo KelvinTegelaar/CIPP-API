@@ -25,7 +25,7 @@ function Invoke-CIPPStandardProfilePhotos {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/global-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -42,25 +42,23 @@ function Invoke-CIPPStandardProfilePhotos {
     # true if wanted state is enabled, false if disabled
     $DesiredState = $StateValue -eq 'enabled'
 
-    <#
-    HACK This does not work, as the API endpoint is not available via GDAP it seems? It works in the Graph Explorer, but not here.
-    The error is: "Authorization failed because of missing requirement(s)."
-    I'm keeping the code here for now, so it's much easier to re-enable if Microsoft makes it possible someday. -Bobby
-    #>
-
     # Get current Graph policy state
-    # $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
-    # $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
-    # $UsersCanChangePhotos = if (($CurrentGraphState.allowedRoles -contains 'fe930be7-5e62-47db-91af-98c3a49a38b1' -and $CurrentGraphState.allowedRoles -contains '62e90394-69f5-4237-9190-012177145e10') -or
-    #     $null -ne $CurrentGraphState.allowedRoles) { $false } else { $true }
-    # $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
+    $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
+    $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
+    $UsersCanChangePhotos = if ([string]::IsNullOrWhiteSpace($CurrentGraphState.allowedRoles) ) { $true } else { $false }
+    $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
 
+    if ($UsersCanChangePhotos -eq $false -and $DesiredState -eq $false) {
+        # Check if the correct roles are present
+        $GraphStateCorrect = $CurrentGraphState.allowedRoles -contains '62e90394-69f5-4237-9190-012177145e10' -and $CurrentGraphState.allowedRoles -contains 'fe930be7-5e62-47db-91af-98c3a49a38b1'
+    }
 
     # Get current OWA mailbox policy state
     $CurrentOWAState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' } -Select 'Identity,SetPhotoEnabled'
     $OWAStateCorrect = $CurrentOWAState.SetPhotoEnabled -eq $DesiredState
-    # $CurrentStatesCorrect = $GraphStateCorrect -eq $true -and $OWAStateCorrect -eq $true
-    $CurrentStatesCorrect = $OWAStateCorrect -eq $true
+
+    # Check if both states are correct
+    $CurrentStatesCorrect = $GraphStateCorrect -eq $true -and $OWAStateCorrect -eq $true
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -72,7 +70,7 @@ function Invoke-CIPPStandardProfilePhotos {
                     Write-Host 'Enabling'
                     # Enable photo updates
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{Identity = $CurrentOWAState.Identity; SetPhotoEnabled = $true } -useSystemMailbox $true
-                    # $null = New-GraphRequest -uri $Uri -tenant $Tenant -type DELETE
+                    $null = New-GraphPostRequest -uri $Uri -tenant $Tenant -type DELETE -AsApp $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set Profile photo settings to $StateValue" -sev Info
 
                 } else {
@@ -80,15 +78,15 @@ function Invoke-CIPPStandardProfilePhotos {
                     # Disable photo updates
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{Identity = $CurrentOWAState.Identity; SetPhotoEnabled = $false } -useSystemMailbox $true
 
-                    # $body = @{
-                    #     source       = 'cloud'
-                    #     allowedRoles = @(
-                    #         'fe930be7-5e62-47db-91af-98c3a49a38b1', # Global admin
-                    #         '62e90394-69f5-4237-9190-012177145e10'  # User admin
-                    #     )
-                    # }
-                    # $body = ConvertTo-Json -InputObject $body -Depth 5 -Compress
-                    # $null = New-GraphPostRequest -uri $Uri -tenant $Tenant -body $body -type PATCH -AsApp $true
+                    $body = @{
+                        source       = 'cloud'
+                        allowedRoles = @(
+                            'fe930be7-5e62-47db-91af-98c3a49a38b1', # Global admin
+                            '62e90394-69f5-4237-9190-012177145e10'  # User admin
+                        )
+                    }
+                    $body = ConvertTo-Json -InputObject $body -Depth 5 -Compress
+                    $null = New-GraphPostRequest -uri $Uri -tenant $Tenant -body $body -type PATCH -AsApp $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set Profile photo settings to $StateValue" -sev Info
                 }
             } catch {
@@ -115,7 +113,10 @@ function Invoke-CIPPStandardProfilePhotos {
         if ($CurrentStatesCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentOWAState
+            $FieldValue = [PSCustomObject]@{
+                OwaStateCorrect   = $OWAStateCorrect
+                GraphStateCorrect = $GraphStateCorrect
+            }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.ProfilePhotos' -FieldValue $FieldValue -Tenant $Tenant
     }

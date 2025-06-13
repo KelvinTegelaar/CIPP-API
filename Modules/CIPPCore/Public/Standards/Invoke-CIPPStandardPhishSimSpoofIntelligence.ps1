@@ -14,6 +14,7 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
             Defender Standards
         TAG
         ADDEDCOMPONENT
+            {"type":"switch","label":"Remove extra domains from the allow list","name":"standards.PhishSimSpoofIntelligence.RemoveExtraDomains","defaultValue":false,"required":false}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Allowed Domains","name":"standards.PhishSimSpoofIntelligence.AllowedDomains"}
         IMPACT
             Medium Impact
@@ -25,7 +26,7 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#medium-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -35,8 +36,12 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
 
     [String[]]$AddDomain = $Settings.AllowedDomains.value | Where-Object { $_ -notin $DomainState.SendingInfrastructure }
 
-    $RemoveDomain = $DomainState | Where-Object { $_.SendingInfrastructure -notin $Settings.AllowedDomains.value } |
-    Select-Object -Property Identity,SendingInfrastructure
+    if ($Settings.RemoveExtraDomains -eq $true) {
+        $RemoveDomain = $DomainState | Where-Object { $_.SendingInfrastructure -notin $Settings.AllowedDomains.value } |
+            Select-Object -Property Identity,SendingInfrastructure
+    } else {
+        $RemoveDomain = @()
+    }
 
     $StateIsCorrect = ($AddDomain.Count -eq 0 -and $RemoveDomain.Count -eq 0)
 
@@ -51,15 +56,17 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
         } Else {
             $BulkRequests = New-Object System.Collections.Generic.List[Hashtable]
 
-            # Prepare removal requests
-            If ($RemoveDomain.Count -gt 0) {
-                Write-Host "Removing $($RemoveDomain.Count) domains from Spoof Intelligence"
-                $BulkRequests.Add(@{
-                    CmdletInput = @{
-                        CmdletName = 'Remove-TenantAllowBlockListSpoofItems'
-                        Parameters = @{ Identity = 'default'; Ids = $RemoveDomain.Identity }
-                    }
-                })
+            if ($Settings.RemoveExtraDomains -eq $true) {
+                # Prepare removal requests
+                If ($RemoveDomain.Count -gt 0) {
+                    Write-Host "Removing $($RemoveDomain.Count) domains from Spoof Intelligence"
+                    $BulkRequests.Add(@{
+                            CmdletInput = @{
+                                CmdletName = 'Remove-TenantAllowBlockListSpoofItems'
+                                Parameters = @{ Identity = 'default'; Ids = $RemoveDomain.Identity }
+                            }
+                        })
+                }
             }
 
             # Prepare addition requests

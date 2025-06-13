@@ -14,7 +14,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
             Device Management Standards
         TAG
         DISABLEDFEATURES
-            {"report":true,"warn":true,"remediate":false}
+            {"report":false,"warn":false,"remediate":false}
         ADDEDCOMPONENT
             {"type":"number","name":"standards.AutopilotStatusPage.TimeOutInMinutes","label":"Timeout in minutes","defaultValue":60}
             {"type":"textField","name":"standards.AutopilotStatusPage.ErrorMessage","label":"Custom Error Message","required":false}
@@ -33,7 +33,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
 

@@ -26,7 +26,7 @@ function Push-ListMailboxRulesQueue {
                     Rules        = [string]($Rule | ConvertTo-Json)
                     RowKey       = [string](New-Guid).guid
                     Tenant       = [string]$domainName
-                    PartitionKey = 'mailboxrules'
+                    PartitionKey = 'MailboxRules'
                 }
 
             }
@@ -38,7 +38,7 @@ function Push-ListMailboxRulesQueue {
                 Rules        = [string]$Rules
                 RowKey       = [string]$domainName
                 Tenant       = [string]$domainName
-                PartitionKey = 'mailboxrules'
+                PartitionKey = 'MailboxRules'
             }
         }
     } catch {
@@ -49,7 +49,7 @@ function Push-ListMailboxRulesQueue {
             Rules        = [string]$Rules
             RowKey       = [string]$domainName
             Tenant       = [string]$domainName
-            PartitionKey = 'mailboxrules'
+            PartitionKey = 'MailboxRules'
         }
     }
     Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
