@@ -3,7 +3,7 @@ function Invoke-ExecAppPermissionTemplate {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Tenant.Application.ReadWrite
+        Tenant.ApplicationTemplates.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
