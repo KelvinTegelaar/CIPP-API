@@ -10,6 +10,8 @@ Function Invoke-EditPolicy {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    # Note, suspect this is deprecated - rvdwegen
+
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
