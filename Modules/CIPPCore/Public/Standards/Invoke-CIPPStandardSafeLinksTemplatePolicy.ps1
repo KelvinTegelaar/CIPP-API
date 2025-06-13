@@ -7,27 +7,25 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
     .SYNOPSIS
         (Label) SafeLinks Policy Template
     .DESCRIPTION
-        (Helptext) This applies selected SafeLinks policy templates to the tenant, creating or updating as needed
-        (DocsDescription) This applies selected SafeLinks policy templates to the tenant, creating or updating as needed
+        (Helptext) Deploy and manage SafeLinks policy templates to protect against malicious URLs in emails and Office documents.
+        (DocsDescription) Deploy and manage SafeLinks policy templates to protect against malicious URLs in emails and Office documents.
     .NOTES
         CAT
-            Defender Standards
-        TAG
-            "CIS"
-            "mdo_safelinksforemail"
-            "mdo_safelinksforOfficeApps"
-        ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"name":"standards.SafeLinksTemplatePolicy.TemplateIds","label":"SafeLinks Templates","loadingMessage":"Loading templates...","api":{"url":"/api/ListSafeLinksPolicyTemplates","labelField":"name","valueField":"GUID","queryKey":"ListSafeLinksPolicyTemplates"}}
+            Templates
+        MULTIPLE
+            False
+        DISABLEDFEATURES
+            {"report":false,"warn":false,"remediate":false}
         IMPACT
-            Low Impact
+            Medium Impact
         ADDEDDATE
             2025-04-29
-        POWERSHELLEQUIVALENT
-            New-SafeLinksPolicy, Set-SafeLinksPolicy, New-SafeLinksRule, Set-SafeLinksRule
-        RECOMMENDEDBY
-            "CIS"
+        ADDEDCOMPONENT
+            {"type":"autoComplete","multiple":true,"creatable":false,"name":"standards.SafeLinksTemplatePolicy.TemplateIds","label":"Select SafeLinks Policy Templates","api":{"url":"/api/ListSafeLinksPolicyTemplates","labelField":"TemplateName","valueField":"GUID","queryKey":"ListSafeLinksPolicyTemplates"}}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
