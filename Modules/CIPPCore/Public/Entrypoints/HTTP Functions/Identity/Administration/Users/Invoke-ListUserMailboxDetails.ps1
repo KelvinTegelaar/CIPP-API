@@ -64,7 +64,7 @@ function Invoke-ListUserMailboxDetails {
             }
         )
         Write-Host $UserID
-        $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName&$top=999'
+        $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
         Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
 
@@ -144,21 +144,48 @@ function Invoke-ListUserMailboxDetails {
         $ParsedPerms = @()
     }
 
-    # Get forwarding address
-    $ForwardingAddress = if ($MailboxDetailedRequest.ForwardingAddress) {
-        try {
-            (New-GraphGetRequest -TenantId $TenantFilter -Uri "https://graph.microsoft.com/beta/users/$($MailboxDetailedRequest.ForwardingAddress)").UserPrincipalName
-        } catch {
-            try {
-                '{0} ({1})' -f $MailboxDetailedRequest.ForwardingAddress, (($((New-GraphGetRequest -TenantId $TenantFilter -Uri "https://graph.microsoft.com/beta/users?`$filter=displayName eq '$($MailboxDetailedRequest.ForwardingAddress)'") | Select-Object -First 1 -ExpandProperty UserPrincipalName)))
-            } catch {
-                $MailboxDetailedRequest.ForwardingAddress
+    # Get forwarding address - lazy load contacts only if needed
+    $ForwardingAddress = $null
+    if ($MailboxDetailedRequest.ForwardingSmtpAddress) {
+        # External forwarding
+        $ForwardingAddress = $MailboxDetailedRequest.ForwardingSmtpAddress -replace '^smtp:', ''
+    } elseif ($MailboxDetailedRequest.ForwardingAddress) {
+        # Internal forwarding
+        $rawAddress = $MailboxDetailedRequest.ForwardingAddress
+
+        if ($rawAddress -match '@') {
+            # Already an email address
+            $ForwardingAddress = $rawAddress
+        } else {
+            # First try users array
+            $matchedUser = $usernames | Where-Object {
+                $_.id -eq $rawAddress -or
+                $_.displayName -eq $rawAddress -or
+                $_.mailNickname -eq $rawAddress
+            }
+
+            if ($matchedUser) {
+                $ForwardingAddress = $matchedUser.userPrincipalName
+            } else {
+                # Query for the specific contact only
+                try {
+                    # Escape single quotes in the filter value
+                    $escapedAddress = $rawAddress -replace "'", "''"
+                    $filterQuery = "displayName eq '$escapedAddress' or mailNickname eq '$escapedAddress'"
+                    $contactUri = "https://graph.microsoft.com/beta/contacts?`$filter=$filterQuery&`$select=displayName,mail,mailNickname"
+
+                    $matchedContacts = New-GraphGetRequest -tenantid $TenantFilter -uri $contactUri
+
+                    if ($matchedContacts -and $matchedContacts.Count -gt 0) {
+                        $ForwardingAddress = $matchedContacts[0].mail
+                    } else {
+                        $ForwardingAddress = $rawAddress
+                    }
+                } catch {
+                    $ForwardingAddress = $rawAddress
+                }
             }
         }
-    } elseif ($MailboxDetailedRequest.ForwardingSmtpAddress -and $MailboxDetailedRequest.ForwardingAddress) {
-        "$($MailboxDetailedRequest.ForwardingAddress) $($MailboxDetailedRequest.ForwardingSmtpAddress)"
-    } else {
-        $MailboxDetailedRequest.ForwardingSmtpAddress
     }
 
     $ProhibitSendQuotaString = $MailboxDetailedRequest.ProhibitSendQuota -split ' '

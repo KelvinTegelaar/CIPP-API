@@ -2850,7 +2850,7 @@
             "schema": {
               "type": "string"
             },
-            "name": "keepCopy",
+            "name": "KeepCopy",
             "in": "body"
           }
         ],
@@ -3829,7 +3829,7 @@
             "schema": {
               "type": "string"
             },
-            "name": "keepCopy",
+            "name": "KeepCopy",
             "in": "body"
           },
           {
