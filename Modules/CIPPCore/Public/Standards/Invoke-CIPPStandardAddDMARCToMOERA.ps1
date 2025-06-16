@@ -45,9 +45,9 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
-        $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property IsInitial -eq $true
+        $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property Name -like "*.onmicrosoft.com"
 
-        $CurrentInfo = $domains | ForEach-Object {
+        $CurrentInfo = $Domains | ForEach-Object {
             # Get current DNS records that matches _dmarc hostname and TXT type
             $CurrentRecords = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($_.Name)" | Select-Object -ExpandProperty DnsRecords | Where-Object { $_.HostName -eq $RecordModel.HostName -and $_.Type -eq $RecordModel.Type }
 
@@ -88,8 +88,14 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         # Check if match is true and there is only one DMARC record for the domain
         $StateIsCorrect = $false -notin $CurrentInfo.Match -and $CurrentInfo.Count -eq 1
     } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to get dns records for MOERA domains: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
-        throw "Failed to get dns records for MOERA domains: $(Get-NormalizedError -message $_.Exception.message)"
+        if ($_.Exception.Message -like '*403*') {
+            $Message = "AddDMARCToMOERA: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Domain Name Administrator' role: $(Get-NormalizedError -message $_.Exception.message)"
+        }
+        else {
+            $Message = "Failed to get dns records for MOERA domains: $(Get-NormalizedError -message $_.Exception.message)"
+        }
+        Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error
+        throw $Message
     }
 
     If ($Settings.remediate -eq $true) {
