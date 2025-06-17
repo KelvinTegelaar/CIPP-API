@@ -16,10 +16,11 @@ function Invoke-EditGroup {
     $UserObj = $Request.Body
     $GroupType = $UserObj.groupId.addedFields.groupType ? $UserObj.groupId.addedFields.groupType : $UserObj.groupType
     $GroupName = $UserObj.groupName ? $UserObj.groupName : $UserObj.groupId.addedFields.groupName
-    $OrgGroup = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($UserObj.groupId)" -tenantid $UserObj.tenantFilter
+    $GroupId = $UserObj.groupId.value ?? $UserObj.groupId
+    $OrgGroup = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter
 
     $AddMembers = $UserObj.AddMember
-    $UserObj.groupId = $UserObj.groupId.value ?? $UserObj.groupId
+
 
     $TenantId = $UserObj.tenantId ?? $UserObj.tenantFilter
 
@@ -29,36 +30,38 @@ function Invoke-EditGroup {
     $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
     $ExoLogs = [System.Collections.Generic.List[object]]::new()
 
-    #Edit properties:
-    if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
-        $Params = @{ Identity = $UserObj.groupId; DisplayName = $UserObj.displayName; Description = $UserObj.description; name = $UserObj.mailNickname }
-        $ExoBulkRequests.Add(@{
-                CmdletInput = @{
-                    CmdletName = 'Set-DistributionGroup'
-                    Parameters = $Params
-                }
-            })
-        $ExoLogs.Add(@{
-                message = "Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes."
-                target  = $UserObj.groupId
-            })
-    } else {
-        $PatchObj = @{
-            displayName     = $UserObj.displayName
-            description     = $UserObj.description
-            mailNickname    = $UserObj.mailNickname
-            mailEnabled     = $OrgGroup.mailEnabled
-            securityEnabled = $OrgGroup.securityEnabled
-        }
-        Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
-        if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
-        try {
-            $patch = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($UserObj.groupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
-            $Results.Add("Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes.")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Edited group properties for $($GroupName) group" -Sev 'Info'
-        } catch {
-            $Results.Add("Error - Failed to edit group properties: $($_.Exception.Message)")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Failed to patch group: $($_.Exception.Message)" -Sev 'Error'
+    if ($UserObj.displayName -or $UserObj.description -or $UserObj.mailNickname -or $UserObj.membershipRules) {
+        #Edit properties:
+        if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
+            $Params = @{ Identity = $GroupId; DisplayName = $UserObj.displayName; Description = $UserObj.description; name = $UserObj.mailNickname }
+            $ExoBulkRequests.Add(@{
+                    CmdletInput = @{
+                        CmdletName = 'Set-DistributionGroup'
+                        Parameters = $Params
+                    }
+                })
+            $ExoLogs.Add(@{
+                    message = "Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes."
+                    target  = $GroupId
+                })
+        } else {
+            $PatchObj = @{
+                displayName     = $UserObj.displayName
+                description     = $UserObj.description
+                mailNickname    = $UserObj.mailNickname
+                mailEnabled     = $OrgGroup.mailEnabled
+                securityEnabled = $OrgGroup.securityEnabled
+            }
+            Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
+            if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
+            try {
+                $patch = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
+                $Results.Add("Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes.")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Edited group properties for $($GroupName) group" -Sev 'Info'
+            } catch {
+                $Results.Add("Error - Failed to edit group properties: $($_.Exception.Message)")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Failed to patch group: $($_.Exception.Message)" -Sev 'Error'
+            }
         }
     }
 
@@ -73,7 +76,7 @@ function Invoke-EditGroup {
                 }
 
                 if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
-                    $Params = @{ Identity = $UserObj.groupId; Member = $Member; BypassSecurityGroupManagerCheck = $true }
+                    $Params = @{ Identity = $GroupId; Member = $Member; BypassSecurityGroupManagerCheck = $true }
                     # Write-Host ($UserObj | ConvertTo-Json -Depth 10) #Debugging line
                     $ExoBulkRequests.Add(@{
                             CmdletInput = @{
@@ -94,7 +97,7 @@ function Invoke-EditGroup {
                     $BulkRequests.Add(@{
                             id      = "addMember-$Member"
                             method  = 'PATCH'
-                            url     = "groups/$($UserObj.groupId)"
+                            url     = "groups/$($GroupId)"
                             body    = $AddMemberBody
                             headers = @{
                                 'Content-Type' = 'application/json'
@@ -118,7 +121,7 @@ function Invoke-EditGroup {
             try {
                 $Member = $_
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
-                    $Params = @{ Identity = $UserObj.groupId; Member = $Member.value; BypassSecurityGroupManagerCheck = $true }
+                    $Params = @{ Identity = $GroupId; Member = $Member.value; BypassSecurityGroupManagerCheck = $true }
                     $ExoBulkRequests.Add(@{
                             CmdletInput = @{
                                 CmdletName = 'Add-DistributionGroupMember'
@@ -146,7 +149,7 @@ function Invoke-EditGroup {
                 $Member = $_.value
                 $MemberID = $_.addedFields.id
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
-                    $Params = @{ Identity = $UserObj.groupId; Member = $MemberID ; BypassSecurityGroupManagerCheck = $true }
+                    $Params = @{ Identity = $GroupId; Member = $MemberID ; BypassSecurityGroupManagerCheck = $true }
                     $ExoBulkRequests.Add(@{
                             CmdletInput = @{
                                 CmdletName = 'Remove-DistributionGroupMember'
@@ -174,7 +177,7 @@ function Invoke-EditGroup {
                 $Member = $_.value
                 $MemberID = $_.addedFields.id
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
-                    $Params = @{ Identity = $UserObj.groupId; Member = $Member ; BypassSecurityGroupManagerCheck = $true }
+                    $Params = @{ Identity = $GroupId; Member = $Member ; BypassSecurityGroupManagerCheck = $true }
                     $ExoBulkRequests.Add(@{
                             CmdletInput = @{
                                 CmdletName = 'Remove-DistributionGroupMember'
@@ -189,7 +192,7 @@ function Invoke-EditGroup {
                     $BulkRequests.Add(@{
                             id     = "removeMember-$Member"
                             method = 'DELETE'
-                            url    = "groups/$($UserObj.groupId)/members/$MemberID/`$ref"
+                            url    = "groups/$($GroupId)/members/$MemberID/`$ref"
                         })
                     $GraphLogs.Add(@{
                             message = "Removed member $Member from $($GroupName) group"
@@ -213,7 +216,7 @@ function Invoke-EditGroup {
                     $BulkRequests.Add(@{
                             id      = "addOwner-$Owner"
                             method  = 'POST'
-                            url     = "groups/$($UserObj.groupId)/owners/`$ref"
+                            url     = "groups/$($GroupId)/owners/`$ref"
                             body    = @{
                                 '@odata.id' = $MemberODataBindString -f $ID
                             }
@@ -241,7 +244,7 @@ function Invoke-EditGroup {
                     $BulkRequests.Add(@{
                             id     = "removeOwner-$ID"
                             method = 'DELETE'
-                            url    = "groups/$($UserObj.groupId)/owners/$ID/`$ref"
+                            url    = "groups/$($GroupId)/owners/$ID/`$ref"
                         })
                     $GraphLogs.Add(@{
                             message = "Removed $($_.value) from $($GroupName) group"
@@ -255,7 +258,7 @@ function Invoke-EditGroup {
     }
 
     if ($GroupType -in @( 'Distribution List', 'Mail-Enabled Security') -and ($AddOwners -or $RemoveOwners)) {
-        $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $UserObj.groupId } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
+        $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $GroupId } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
 
         $NewManagedBy = [system.collections.generic.list[string]]::new()
         foreach ($CurrentOwner in $CurrentOwners) {
@@ -263,7 +266,7 @@ function Invoke-EditGroup {
                 $OwnerToRemove = $RemoveOwners | Where-Object { $_.addedFields.id -eq $CurrentOwner }
                 $ExoLogs.Add(@{
                         message = "Removed owner $($OwnerToRemove.label) from $($GroupName) group"
-                        target  = $UserObj.groupId
+                        target  = $GroupId
                     })
                 continue
             }
@@ -274,13 +277,13 @@ function Invoke-EditGroup {
                 $NewManagedBy.Add($NewOwner.addedFields.id)
                 $ExoLogs.Add(@{
                         message = "Added owner $($NewOwner.label) to $($GroupName) group"
-                        target  = $UserObj.groupId
+                        target  = $GroupId
                     })
             }
         }
 
         $NewManagedBy = $NewManagedBy | Sort-Object -Unique
-        $Params = @{ Identity = $UserObj.groupId; ManagedBy = $NewManagedBy }
+        $Params = @{ Identity = $GroupId; ManagedBy = $NewManagedBy }
         $ExoBulkRequests.Add(@{
                 CmdletInput = @{
                     CmdletName = 'Set-DistributionGroup'
@@ -354,16 +357,16 @@ function Invoke-EditGroup {
 
     if ($UserObj.sendCopies -eq $true) {
         try {
-            $Params = @{ Identity = $UserObj.groupId; subscriptionEnabled = $true; AutoSubscribeNewMembers = $true }
+            $Params = @{ Identity = $GroupId; subscriptionEnabled = $true; AutoSubscribeNewMembers = $true }
             New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
 
-            $MemberParams = @{ Identity = $UserObj.groupId; LinkType = 'members' }
+            $MemberParams = @{ Identity = $GroupId; LinkType = 'members' }
             $Members = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-UnifiedGroupLinks' -cmdParams $MemberParams
 
             $MemberSmtpAddresses = $Members | ForEach-Object { $_.PrimarySmtpAddress }
 
             if ($MemberSmtpAddresses) {
-                $subscriberParams = @{ Identity = $UserObj.groupId; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses | Where-Object { $_ }) }
+                $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses | Where-Object { $_ }) }
                 New-ExoRequest -tenantid $TenantId -cmdlet 'Add-UnifiedGroupLinks' -cmdParams $subscriberParams -Anchor $UserObj.mail
             }
 
