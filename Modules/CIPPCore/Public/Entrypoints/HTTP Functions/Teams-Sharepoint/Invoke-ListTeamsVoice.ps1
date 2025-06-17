@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTeamsVoice {
+function Invoke-ListTeamsVoice {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,7 +24,7 @@ Function Invoke-ListTeamsVoice {
             Write-Host "Getting page $Skip"
             $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($TenantId)/telephone-numbers?skip=$($Skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
                 Write-Host 'Reached the loop'
-                $CompleteRequest = $_ | Select-Object *, @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.AssignedTo.id } }
+                $CompleteRequest = $_ | Select-Object *, @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.TargetId } }
                 if ($CompleteRequest.AcquisitionDate) {
                     $CompleteRequest.AcquisitionDate = $_.AcquisitionDate -split 'T' | Select-Object -First 1
                 } else {
