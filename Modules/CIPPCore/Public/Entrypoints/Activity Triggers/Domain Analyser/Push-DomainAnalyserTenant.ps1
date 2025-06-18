@@ -30,6 +30,8 @@ function Push-DomainAnalyserTenant {
                 '*.signature365.net'
                 '*.myteamsconnect.io'
                 '*.teams.dstny.com'
+                '*.msteams.8x8.com'
+                '*.ucconnect.co.uk'
             )
             $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
                 $Domain = $_
