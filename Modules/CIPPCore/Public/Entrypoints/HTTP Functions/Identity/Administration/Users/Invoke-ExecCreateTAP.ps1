@@ -17,9 +17,23 @@ Function Invoke-ExecCreateTAP {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $UserID = $Request.Query.ID ?? $Request.Body.ID
+    $LifetimeInMinutes = $Request.Query.lifetimeInMinutes ?? $Request.Body.lifetimeInMinutes
+    $IsUsableOnce = $Request.Query.isUsableOnce ?? $Request.Body.isUsableOnce
+    $StartDateTime = $Request.Query.startDateTime ?? $Request.Body.startDateTime
 
     try {
-        $TAPResult = New-CIPPTAP -userid $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        # Create parameter hashtable for splatting
+        $TAPParams = @{
+            UserID            = $UserID
+            TenantFilter      = $TenantFilter
+            APIName           = $APIName
+            Headers           = $Headers
+            LifetimeInMinutes = $LifetimeInMinutes
+            IsUsableOnce      = $IsUsableOnce
+            StartDateTime     = $StartDateTime
+        }
+
+        $TAPResult = New-CIPPTAP @TAPParams
 
         # Create results array with both TAP and UserID as separate items
         $Results = @(
@@ -33,7 +47,7 @@ Function Invoke-ExecCreateTAP {
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = Get-NormalizedError -message $_.Exception.Message
+        $Results = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
