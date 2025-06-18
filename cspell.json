@@ -39,7 +39,8 @@
     "TNEF",
     "weburl",
     "winmail",
-    "Yubikey"
+    "Yubikey",
+    "DMARC"
   ],
   "ignoreWords": [
     "ACOM",
@@ -93,7 +94,9 @@
     "exo_outlookaddins",
     "exo_mailboxaudit",
     "exo_mailtipsenabled",
-    "mip_search_auditlog"
+    "mip_search_auditlog",
+    "onmicrosoft",
+    "MOERA"
   ],
   "import": []
 }
