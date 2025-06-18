@@ -34,15 +34,6 @@ Function Invoke-AddRoomList {
         PrimarySMTPAddress = $EmailAddress
     }
 
-    # Add optional parameters if they exist
-    if (![string]::IsNullOrWhiteSpace($RoomListObject.description)) {
-        $AddRoomListParams.Notes = $RoomListObject.description
-    }
-
-    if (![string]::IsNullOrWhiteSpace($RoomListObject.alias)) {
-        $AddRoomListParams.Alias = $RoomListObject.alias
-    }
-
     try {
         $AddRoomListRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-DistributionGroup' -cmdParams $AddRoomListParams
         $Results.Add("Successfully created room list: $($RoomListObject.displayName).")
