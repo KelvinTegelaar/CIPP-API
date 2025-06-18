@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAccessChecks {
+function Invoke-ExecAccessChecks {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -50,16 +50,17 @@ Function Invoke-ExecAccessChecks {
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
-                            TenantId          = $Tenant.customerId
-                            TenantName        = $Tenant.displayName
-                            DefaultDomainName = $Tenant.defaultDomainName
-                            GraphStatus       = 'Not run yet'
-                            ExchangeStatus    = 'Not run yet'
-                            GDAPRoles         = ''
-                            MissingRoles      = ''
-                            LastRun           = ''
-                            GraphTest         = ''
-                            ExchangeTest      = ''
+                            TenantId           = $Tenant.customerId
+                            TenantName         = $Tenant.displayName
+                            DefaultDomainName  = $Tenant.defaultDomainName
+                            GraphStatus        = 'Not run yet'
+                            ExchangeStatus     = 'Not run yet'
+                            GDAPRoles          = ''
+                            MissingRoles       = ''
+                            LastRun            = ''
+                            GraphTest          = ''
+                            ExchangeTest       = ''
+                            OrgManagementRoles = @()
                         }
                         if ($TenantCheck) {
                             $Data = @($TenantCheck.Data | ConvertFrom-Json -ErrorAction Stop)
@@ -70,6 +71,7 @@ Function Invoke-ExecAccessChecks {
                             $TenantResult.LastRun = $Data.LastRun
                             $TenantResult.GraphTest = $Data.GraphTest
                             $TenantResult.ExchangeTest = $Data.ExchangeTest
+                            $TenantResult.OrgManagementRoles = $Data.OrgManagementRoles
                         }
                         $TenantResult
                     }

@@ -48,14 +48,15 @@ function Test-CIPPAccessTenant {
         $ExchangeStatus = $false
 
         $Results = [PSCustomObject]@{
-            TenantName     = $Tenant.defaultDomainName
-            GraphStatus    = $false
-            GraphTest      = ''
-            ExchangeStatus = $false
-            ExchangeTest   = ''
-            GDAPRoles      = ''
-            MissingRoles   = ''
-            LastRun        = (Get-Date).ToUniversalTime()
+            TenantName         = $Tenant.defaultDomainName
+            GraphStatus        = $false
+            GraphTest          = ''
+            ExchangeStatus     = $false
+            ExchangeTest       = ''
+            GDAPRoles          = ''
+            MissingRoles       = ''
+            OrgManagementRoles = @()
+            LastRun            = (Get-Date).ToUniversalTime()
         }
 
         $AddedText = ''
@@ -105,6 +106,37 @@ function Test-CIPPAccessTenant {
             $null = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
             $ExchangeStatus = $true
             $ExchangeTest = 'Successfully connected to Exchange'
+
+            # Get the Exchange role definitions and assignments for the Organization Management role group
+            $Requests = @(
+                @{
+                    id     = 'roleDefinitions'
+                    method = 'GET'
+                    url    = 'roleManagement/exchange/roleDefinitions?$top=999'
+                }
+                @{
+                    id     = 'roleAssignments'
+                    method = 'GET'
+                    url    = "roleManagement/exchange/roleAssignments?`$filter=principalId eq '/RoleGroups/Organization Management'&`$top=999"
+                }
+            )
+
+            $ExchangeRoles = New-GraphBulkRequest -tenantid $Tenant.customerId -Requests $Requests
+
+            # Get results and expand assigments with role definitions
+            $RoleDefinitions = ($ExchangeRoles | Where-Object -Property id -EQ 'roleDefinitions').body.value | Select-Object -Property id, displayName, description, isBuiltIn, isEnabled
+            $RoleAssignments = ($ExchangeRoles | Where-Object -Property id -EQ 'roleAssignments').body.value
+            $OrgManagementAssignments = $RoleAssignments | Where-Object -Property principalId -EQ '/RoleGroups/Organization Management' | Sort-Object -Property roleDefinitionId -Unique
+            $OrgManagementRoles = $OrgManagementAssignments | ForEach-Object {
+                $RoleDefinitions | Where-Object -Property id -EQ $_.roleDefinitionId
+            } | Sort-Object -Property displayName
+
+            Write-Warning "Found $($OrgManagementRoles.Count) Organization Management role assignments in Exchange"
+            $Results.OrgManagementRoles = $OrgManagementRoles
+
+            # TODO: Get list of known good roles and compare against the found roles
+
+
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
