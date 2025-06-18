@@ -183,9 +183,10 @@ function Invoke-CIPPStandardQuarantineTemplate {
         }
 
         if ($true -in $Settings.report) {
-            # This could do with an improvement. But will work for now or else reporting could be disabled for now
             foreach ($Policy in $CompareList | Where-Object -Property report -EQ $true) {
-                Set-CIPPStandardsCompareField -FieldName "standards.QuarantineTemplate" -FieldValue $Policy.StateIsCorrect -TenantFilter $Tenant
+                # Convert displayName to hex to avoid invalid characters "/, \, #, ?" which are not allowed in RowKey, but "\, #, ?" can be used in quarantine displayName
+                $HexName = -join ($Policy.displayName.ToCharArray() | ForEach-Object { '{0:X2}' -f [int][char]$_ })
+                Set-CIPPStandardsCompareField -FieldName "standards.QuarantineTemplate.$HexName" -FieldValue $Policy.StateIsCorrect -TenantFilter $Tenant
             }
         }
     }
