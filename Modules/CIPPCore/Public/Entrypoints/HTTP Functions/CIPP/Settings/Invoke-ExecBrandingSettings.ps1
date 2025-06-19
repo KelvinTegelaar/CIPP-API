@@ -51,7 +51,6 @@ Function Invoke-ExecBrandingSettings {
                     } else {
                         $StatusCode = [HttpStatusCode]::BadRequest
                         $Results = 'Error: Invalid color format. Please use hex format (e.g., #F77F00)'
-                        break
                     }
                 }
 
@@ -68,12 +67,10 @@ Function Invoke-ExecBrandingSettings {
                             } else {
                                 $StatusCode = [HttpStatusCode]::BadRequest
                                 $Results = 'Error: Image size must be less than 2MB'
-                                break
                             }
                         } catch {
                             $StatusCode = [HttpStatusCode]::BadRequest
                             $Results = 'Error: Invalid base64 image data'
-                            break
                         }
                     } elseif ($Logo -eq $null -or $Logo -eq '') {
                         $BrandingConfig.logo = $null
