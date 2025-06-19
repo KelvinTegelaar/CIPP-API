@@ -50,17 +50,19 @@ function Invoke-ExecAccessChecks {
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
-                            TenantId           = $Tenant.customerId
-                            TenantName         = $Tenant.displayName
-                            DefaultDomainName  = $Tenant.defaultDomainName
-                            GraphStatus        = 'Not run yet'
-                            ExchangeStatus     = 'Not run yet'
-                            GDAPRoles          = ''
-                            MissingRoles       = ''
-                            LastRun            = ''
-                            GraphTest          = ''
-                            ExchangeTest       = ''
-                            OrgManagementRoles = @()
+                            TenantId                  = $Tenant.customerId
+                            TenantName                = $Tenant.displayName
+                            DefaultDomainName         = $Tenant.defaultDomainName
+                            GraphStatus               = 'Not run yet'
+                            ExchangeStatus            = 'Not run yet'
+                            GDAPRoles                 = ''
+                            MissingRoles              = ''
+                            LastRun                   = ''
+                            GraphTest                 = ''
+                            ExchangeTest              = ''
+                            OrgManagementRoles        = @()
+                            OrgManagementRolesMissing = @()
+                            OrgManagementRepairNeeded = $false
                         }
                         if ($TenantCheck) {
                             $Data = @($TenantCheck.Data | ConvertFrom-Json -ErrorAction Stop)
@@ -71,7 +73,9 @@ function Invoke-ExecAccessChecks {
                             $TenantResult.LastRun = $Data.LastRun
                             $TenantResult.GraphTest = $Data.GraphTest
                             $TenantResult.ExchangeTest = $Data.ExchangeTest
-                            $TenantResult.OrgManagementRoles = $Data.OrgManagementRoles
+                            $TenantResult.OrgManagementRoles = $Data.OrgManagementRoles ? @($Data.OrgManagementRoles) : @()
+                            $TenantResult.OrgManagementRolesMissing = $Data.OrgManagementRolesMissing ? @($Data.OrgManagementRolesMissing) : @()
+                            $TenantResult.OrgManagementRepairNeeded = $Data.OrgManagementRolesMissing.Count -gt 0
                         }
                         $TenantResult
                     }
