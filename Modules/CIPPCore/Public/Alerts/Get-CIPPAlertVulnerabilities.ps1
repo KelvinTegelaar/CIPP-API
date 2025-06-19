@@ -22,14 +22,15 @@ function Get-CIPPAlertVulnerabilities {
 
             foreach ($Group in $VulnerabilityGroups) {
                 $FirstVuln = $Group.Group | Sort-Object firstSeenTimestamp | Select-Object -First 1
-                $AffectedDevices = ($Group.Group | Select-Object -ExpandProperty deviceName -Unique) -join ', '
-                $DaysOld = [math]::Round(((Get-Date) - [datetime]$FirstVuln.firstSeenTimestamp).TotalDays)
                 $HoursOld = [math]::Round(((Get-Date) - [datetime]$FirstVuln.firstSeenTimestamp).TotalHours)
 
                 # Skip if vulnerability is not old enough
                 if ($HoursOld -lt [int]$InputValue) {
                     continue
                 }
+
+                $DaysOld = [math]::Round(((Get-Date) - [datetime]$FirstVuln.firstSeenTimestamp).TotalDays)
+                $AffectedDevices = ($Group.Group | Select-Object -ExpandProperty deviceName -Unique) -join ', '
 
                 $VulnerabilityAlert = [PSCustomObject]@{
                     CVE                  = $Group.Name
