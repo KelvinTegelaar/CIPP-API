@@ -17,6 +17,7 @@ Function Invoke-ExecSetOoO {
 
         $Username = $Request.Body.userId
         $TenantFilter = $Request.Body.tenantFilter
+        $State = $Request.Body.AutoReplyState.value
 
         if ($Request.Body.input) {
             $InternalMessage = $Request.Body.input
@@ -26,15 +27,27 @@ Function Invoke-ExecSetOoO {
             $ExternalMessage = $Request.Body.ExternalMessage
         }
         #if starttime and endtime are a number, they are unix timestamps and need to be converted to datetime, otherwise just use them.
-        $StartTime = if ($Request.Body.StartTime -match '^\d+$') { [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Body.StartTime).DateTime } else { $Request.Body.StartTime }
-        $EndTime = if ($Request.Body.EndTime -match '^\d+$') { [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Body.EndTime).DateTime } else { $Request.Body.EndTime }
+        $StartTime = $Request.Body.StartTime -match '^\d+$' ? [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Body.StartTime).DateTime : $Request.Body.StartTime
+        $EndTime = $Request.Body.EndTime -match '^\d+$' ? [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Body.EndTime).DateTime : $Request.Body.EndTime
 
 
-        if ($Request.Body.AutoReplyState.value -ne 'Scheduled') {
-            $Results = Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -State $Request.Body.AutoReplyState.value
-        } else {
-            $Results = Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -StartTime $StartTime -EndTime $EndTime -State $Request.Body.AutoReplyState.value
+        $SplatParams = @{
+            userid          = $Username
+            tenantFilter    = $TenantFilter
+            APIName         = $APIName
+            Headers         = $Headers
+            InternalMessage = $InternalMessage
+            ExternalMessage = $ExternalMessage
+            State           = $State
         }
+
+        # If the state is scheduled, add the start and end times to the splat params
+        if ($State -eq 'Scheduled') {
+            $SplatParams.StartTime = $StartTime
+            $SplatParams.EndTime = $EndTime
+        }
+
+        $Results = Set-CIPPOutOfOffice @SplatParams
 
 
     } catch {
