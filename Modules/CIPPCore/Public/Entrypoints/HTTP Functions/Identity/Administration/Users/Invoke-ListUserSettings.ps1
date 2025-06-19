@@ -20,6 +20,14 @@ function Invoke-ListUserSettings {
         $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'allUsers'"
         if (!$UserSettings) { $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Username'" }
         $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+        #Get branding settings
+        if ($UserSettings) {
+            $brandingTable = Get-CippTable -tablename 'Config'
+            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "RowKey eq 'BrandingSettings'"
+            if ($BrandingSettings) {
+                $UserSettings | Add-Member -MemberType NoteProperty -Name 'BrandingSettings' -Value $BrandingSettings -Force | Out-Null
+            }
+        }
         $StatusCode = [HttpStatusCode]::OK
         $Results = $UserSettings
     } catch {
