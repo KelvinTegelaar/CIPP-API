@@ -75,10 +75,16 @@ function Send-CIPPAlert {
             if ($Config.webhook -ne '') {
                 if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
                     switch -wildcard ($config.webhook) {
-                        '*webhook.office.com*' {
-                            $JSONBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$JSONContent`"}"
-                            Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
+                       '*webhook.office.com*' {
+                            $body = @{
+                            text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log.`n`n$JSONContent"
+                            }
+
+                            $JSONBody = $body | ConvertTo-Json -Depth 3
+
+                            Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'application/json' -Body $JSONBody
                         }
+
                         '*discord.com*' {
                             $JSONBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $JSONContent`"}"
                             Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
