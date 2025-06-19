@@ -16,39 +16,35 @@ function Set-CIPPOutOfOffice {
     )
 
     try {
-        if (-not $StartTime) {
-            $StartTime = (Get-Date).ToString()
-        }
-        if (-not $EndTime) {
-            $EndTime = (Get-Date $StartTime).AddDays(7)
-        }
+
         $CmdParams = @{
             Identity       = $UserID
             AutoReplyState = $State
         }
 
-        if (-not [string]::IsNullOrWhiteSpace($InternalMessage)) {
+        if ($PSBoundParameters.ContainsKey('InternalMessage')) {
             $CmdParams.InternalMessage = $InternalMessage
         }
 
-        if (-not [string]::IsNullOrWhiteSpace($ExternalMessage)) {
+        if ($PSBoundParameters.ContainsKey('ExternalMessage')) {
             $CmdParams.ExternalMessage = $ExternalMessage
         }
 
         if ($State -eq 'Scheduled') {
+            # If starttime or endtime are not provided, default to enabling OOO for 7 days
+            $StartTime = $StartTime ? $StartTime : (Get-Date).ToString()
+            $EndTime = $EndTime ? $EndTime : (Get-Date $StartTime).AddDays(7)
             $CmdParams.StartTime = $StartTime
             $CmdParams.EndTime = $EndTime
         }
 
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams $CmdParams -Anchor $UserID
 
-        if ($State -eq 'Scheduled') {
-            $Results = "Scheduled Out-of-office for $($UserID) between $($StartTime.toString()) and $($EndTime.toString())"
-            Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info' -tenant $TenantFilter
-        } else {
-            $Results = "Set Out-of-office for $($UserID) to $State."
-            Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info' -tenant $TenantFilter
-        }
+        $Results = $State -eq 'Scheduled' ?
+        "Scheduled Out-of-office for $($UserID) between $($StartTime.toString()) and $($EndTime.toString())" :
+        "Set Out-of-office for $($UserID) to $State."
+
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info' -tenant $TenantFilter
         return $Results
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
