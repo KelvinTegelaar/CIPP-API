@@ -67,7 +67,7 @@ function Invoke-ExecExchangeRoleRepair {
                 }
                 $Results = @{
                     state      = 'error'
-                    resultText = "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ').$(if ($PermissionError) { " This may be due to insufficient permissions. The required Graph Permission is 'RoleManagement.ReadWrite.Exchange'" })"
+                    resultText = "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ').$(if ($PermissionError) { " This may be due to insufficient permissions. The required Graph Permission is 'Application - RoleManagement.ReadWrite.Exchange'" })"
                 }
                 Write-LogMessage -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ')" -sev 'Error'
             }
