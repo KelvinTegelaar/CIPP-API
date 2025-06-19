@@ -18,7 +18,7 @@ Function Invoke-ExecBrandingSettings {
     $Results = @{}
 
     try {
-        $Table = Get-CIPPTable -TableName Settings
+        $Table = Get-CIPPTable -TableName Config
         $Filter = "PartitionKey eq 'BrandingSettings' and RowKey eq 'BrandingSettings'"
         $BrandingConfig = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
@@ -62,6 +62,7 @@ Function Invoke-ExecBrandingSettings {
                         try {
                             $ImageBytes = [Convert]::FromBase64String($Base64Data)
                             if ($ImageBytes.Length -le 2097152) {
+                                Write-Host 'updating logo'
                                 $BrandingConfig.logo = $Logo
                                 $Updated = $true
                             } else {
