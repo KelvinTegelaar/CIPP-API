@@ -21,12 +21,8 @@ Function Invoke-ListSharepointQuota {
         $UsedStoragePercentage = 'Not Supported'
     } else {
         try {
-            $TenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-
-            $SharePointToken = (Get-GraphToken -scope "https://$($TenantName)-admin.sharepoint.com/.default" -tenantid $TenantFilter)
-            $SharePointToken.Add('accept', 'application/json')
-            # Implement a try catch later to deal with SharePoint guest user settings
-            $SharePointQuota = (Invoke-RestMethod -Method 'GET' -Headers $SharePointToken -Uri "https://$($TenantName)-admin.sharepoint.com/_api/StorageQuotas()?api-version=1.3.2" -ErrorAction Stop).value | Sort-Object -Property GeoUsedStorageMB -Descending | Select-Object -First 1
+            $SharePointInfo = Get-SharePointAdminLink -Public $false
+            $SharePointQuota = (New-GraphGetRequest -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2").value | Sort-Object -Property GeoUsedStorageMB -Descending | Select-Object -First 1
 
             if ($SharePointQuota) {
                 $UsedStoragePercentage = [int](($SharePointQuota.GeoUsedStorageMB / $SharePointQuota.TenantStorageMB) * 100)

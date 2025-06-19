@@ -36,11 +36,11 @@ function Request-CIPPSPOPersonalSite {
     </ObjectPaths>
 </Request>
 "@
-    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
+
+    $SharePointInfo = Get-SharePointAdminLink -Public $false
 
     try {
-        $Request = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
+        $Request = New-GraphPostRequest -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
         if (!$Request.IsComplete) { throw }
         Write-LogMessage -headers $Headers -API $APIName -message "Requested personal site for $($UserEmails -join ', ')" -Sev 'Info' -tenant $TenantFilter
         return "Successfully requested personal site for $($UserEmails -join ', ')"

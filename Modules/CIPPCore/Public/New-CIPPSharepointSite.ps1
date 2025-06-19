@@ -65,13 +65,10 @@ function New-CIPPSharepointSite {
         $APIName = 'Create SharePoint Site',
         $Headers
     )
-    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
+
+    $SharePointInfo = Get-SharePointAdminLink -Public $false
     $SitePath = $SiteName -replace ' ' -replace '[^A-Za-z0-9-]'
-    $SiteUrl = "https://$tenantName.sharepoint.com/sites/$SitePath"
-
-
-
+    $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
 
     switch ($TemplateName) {
         'Communication' {
@@ -142,7 +139,7 @@ function New-CIPPSharepointSite {
             'accept'        = 'application/json;odata.metadata=none'
             'odata-version' = '4.0'
         }
-        $Results = New-GraphPostRequest -scope "$AdminUrl/.default" -uri "$AdminUrl/_api/SPSiteManager/create" -Body ($body | ConvertTo-Json -Compress -Depth 10) -tenantid $TenantFilter -ContentType 'application/json' -AddedHeaders $AddedHeaders
+        $Results = New-GraphPostRequest -scope "$($SharePointInfo.AdminUrl)/.default" -uri "$($SharePointInfo.AdminUrl)/_api/SPSiteManager/create" -Body ($body | ConvertTo-Json -Compress -Depth 10) -tenantid $TenantFilter -ContentType 'application/json' -AddedHeaders $AddedHeaders
     }
 
     # Check the results. This response is weird. https://learn.microsoft.com/en-us/sharepoint/dev/apis/site-creation-rest
