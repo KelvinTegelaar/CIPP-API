@@ -27,7 +27,7 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPGroups -userid $userid -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
         }
         { $_.HideFromGAL -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -hidefromgal $true -Headers $Headers -APIName $APIName
+            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
         }
         { $_.DisableSignIn -eq $true } {
             Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
@@ -42,13 +42,17 @@ function Invoke-CIPPOffboardingJob {
             $Options.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
         }
         { $_.OOO } {
-            Set-CIPPOutOfOffice -tenantFilter $TenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -Headers $Headers -APIName $APIName -state 'Enabled'
+            try {
+                Set-CIPPOutOfOffice -tenantFilter $TenantFilter -UserID $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -Headers $Headers -APIName $APIName -state 'Enabled'
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.forward } {
-            if (!$Options.keepCopy) {
+            if (!$Options.KeepCopy) {
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -Headers $Headers -APIName $APIName
             } else {
-                $KeepCopy = [boolean]$Options.keepCopy
+                $KeepCopy = [boolean]$Options.KeepCopy
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -KeepCopy $KeepCopy -Headers $Headers -APIName $APIName
             }
         }
@@ -99,7 +103,7 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
         }
         { $_.'ClearImmutableId' -eq $true } {
-            Clear-CIPPImmutableId -userid $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         }
     }
     return $Return

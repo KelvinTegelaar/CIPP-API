@@ -15,7 +15,9 @@ function Revoke-CIPPSessions {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to revoke sessions for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Revoke Session Failed: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to revoke sessions for $($username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        # TODO - needs to be changed to throw, but the rest of the functions using this cant handle anything but a return.
+        return $Result
     }
 }
