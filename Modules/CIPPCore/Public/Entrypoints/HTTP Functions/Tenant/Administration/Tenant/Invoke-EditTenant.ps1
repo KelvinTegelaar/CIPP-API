@@ -12,9 +12,9 @@ function Invoke-EditTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
+    # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
     $tenantAlias = $Request.Body.tenantAlias
     $tenantGroups = $Request.Body.tenantGroups

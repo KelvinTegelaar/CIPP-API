@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-SetUserAliases {
+Function Invoke-EditUserAliases {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,9 +12,11 @@ Function Invoke-SetUserAliases {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $ApiName -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $UserObj = $Request.Body
+    $TenantFilter = $UserObj.tenantFilter
+
     if ([string]::IsNullOrWhiteSpace($UserObj.id)) {
         $body = @{'Results' = @('Failed to manage aliases. No user ID provided') }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -31,8 +33,8 @@ Function Invoke-SetUserAliases {
     try {
         if ($Aliases -or $RemoveAliases -or $UserObj.MakePrimary) {
             # Get current mailbox
-            $CurrentMailbox = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{ Identity = $UserObj.id } -UseSystemMailbox $true
-            
+            $CurrentMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{ Identity = $UserObj.id } -UseSystemMailbox $true
+
             if (-not $CurrentMailbox) {
                 throw 'Could not find mailbox for user'
             }
@@ -40,26 +42,26 @@ Function Invoke-SetUserAliases {
             $CurrentProxyAddresses = @($CurrentMailbox.EmailAddresses)
             Write-Host "Current proxy addresses: $($CurrentProxyAddresses -join ', ')"
             $NewProxyAddresses = @($CurrentProxyAddresses)
-            
+
             # Handle setting primary address
             if ($UserObj.MakePrimary) {
                 $PrimaryAddress = $UserObj.MakePrimary
                 Write-Host "Attempting to set primary address: $PrimaryAddress"
-                
+
                 # Normalize the primary address format
                 if ($PrimaryAddress -notlike 'SMTP:*') {
                     $PrimaryAddress = "SMTP:$($PrimaryAddress -replace '^smtp:', '')"
                 }
                 Write-Host "Normalized primary address: $PrimaryAddress"
-                
+
                 # Check if the address exists in the current addresses (case-insensitive)
-                $ExistingAddress = $CurrentProxyAddresses | Where-Object { 
+                $ExistingAddress = $CurrentProxyAddresses | Where-Object {
                     $current = $_.ToLower()
                     $target = $PrimaryAddress.ToLower()
                     Write-Host "Comparing: '$current' with '$target'"
                     $current -eq $target
                 }
-                
+
                 if (-not $ExistingAddress) {
                     Write-Host "Available addresses: $($CurrentProxyAddresses -join ', ')"
                     throw "Cannot set primary address. Address $($PrimaryAddress -replace '^SMTP:', '') not found in user's addresses."
@@ -69,23 +71,22 @@ Function Invoke-SetUserAliases {
                 $NewProxyAddresses = $NewProxyAddresses | ForEach-Object {
                     if ($_ -like 'SMTP:*') {
                         $_.ToLower()
-                    }
-                    else {
+                    } else {
                         $_
                     }
                 }
 
                 # Remove any existing version of the address (case-insensitive)
-                $NewProxyAddresses = $NewProxyAddresses | Where-Object { 
-                    $_.ToLower() -ne $PrimaryAddress.ToLower() 
+                $NewProxyAddresses = $NewProxyAddresses | Where-Object {
+                    $_.ToLower() -ne $PrimaryAddress.ToLower()
                 }
                 # Add the new primary address at the beginning
                 $NewProxyAddresses = @($PrimaryAddress) + $NewProxyAddresses
-                
-                Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Set primary address for $($CurrentMailbox.DisplayName)" -Sev Info
-                $null = $results.Add('Success. Set new primary address.')
+
+                Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Set primary address for $($CurrentMailbox.DisplayName)" -Sev Info
+                $Results.Add('Success. Set new primary address.')
             }
-            
+
             # Remove specified aliases
             if ($RemoveAliases) {
                 foreach ($Alias in $RemoveAliases) {
@@ -94,12 +95,12 @@ Function Invoke-SetUserAliases {
                         $Alias = "smtp:$Alias"
                     }
                     # Remove the alias case-insensitively
-                    $NewProxyAddresses = $NewProxyAddresses | Where-Object { 
-                        $_.ToLower() -ne $Alias.ToLower() 
+                    $NewProxyAddresses = $NewProxyAddresses | Where-Object {
+                        $_.ToLower() -ne $Alias.ToLower()
                     }
                 }
-                Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Removed Aliases from $($CurrentMailbox.DisplayName)" -Sev Info
-                $null = $results.Add('Success. Removed specified aliases from user.')
+                Write-LogMessage -API $ApiName -tenant $TenantFilter -headers $Headers -message "Removed Aliases from $($CurrentMailbox.DisplayName)" -Sev Info
+                $Results.Add('Success. Removed specified aliases from user.')
             }
 
             # Add new aliases
@@ -117,8 +118,8 @@ Function Invoke-SetUserAliases {
                 }
                 if ($AliasesToAdd.Count -gt 0) {
                     $NewProxyAddresses = $NewProxyAddresses + $AliasesToAdd
-                    Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Added Aliases to $($CurrentMailbox.DisplayName)" -Sev Info
-                    $null = $results.Add('Success. Added new aliases to user.')
+                    Write-LogMessage -API $ApiName -tenant ($TenantFilter) -headers $Headers -message "Added Aliases to $($CurrentMailbox.DisplayName)" -Sev Info
+                    $Results.Add('Success. Added new aliases to user.')
                 }
             }
 
@@ -127,21 +128,18 @@ Function Invoke-SetUserAliases {
                 Identity       = $UserObj.id
                 EmailAddresses = $NewProxyAddresses
             }
-            $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Set-Mailbox' -cmdParams $Params -UseSystemMailbox $true
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams $Params -UseSystemMailbox $true
+        } else {
+            $Results.Add('No alias changes specified.')
         }
-        else {
-            $null = $results.Add('No alias changes specified.')
-        }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Alias management failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $null = $results.Add("Failed to manage aliases: $($ErrorMessage.NormalizedError)")
+        Write-LogMessage -API $ApiName -tenant ($TenantFilter) -headers $Headers -message "Alias management failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        $Results.Add("Failed to manage aliases: $($ErrorMessage.NormalizedError)")
     }
 
-    $body = @{'Results' = @($results) }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            Body       = @{'Results' = @($Results) }
         })
-} 
+}
