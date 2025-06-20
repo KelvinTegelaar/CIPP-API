@@ -14,9 +14,11 @@
     "Connectwise",
     "CPIM",
     "Datto",
+    "DMARC",
     "endswith",
     "entra",
     "Entra",
+    "exploitability",
     "gdap",
     "GDAP",
     "IMAP",
@@ -39,8 +41,7 @@
     "TNEF",
     "weburl",
     "winmail",
-    "Yubikey",
-    "DMARC"
+    "Yubikey"
   ],
   "ignoreWords": [
     "ACOM",
