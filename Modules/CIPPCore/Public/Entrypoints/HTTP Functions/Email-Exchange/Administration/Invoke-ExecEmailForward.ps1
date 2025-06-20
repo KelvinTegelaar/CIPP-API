@@ -12,15 +12,19 @@ Function Invoke-ExecEmailForward {
 
     $Tenantfilter = $request.body.tenantfilter
     $username = $request.body.userid
-    $ForwardingAddress = $request.body.ForwardInternal.value
+    if ($request.body.ForwardInternal -is [string]) {
+        $ForwardingAddress = $request.body.ForwardInternal
+    } else {($request.body.ForwardInternal.value)
+        $ForwardingAddress = $request.body.ForwardInternal.value
+    }
     $ForwardingSMTPAddress = $request.body.ForwardExternal
     $ForwardOption = $request.body.forwardOption
     $APIName = $Request.Params.CIPPEndpoint
-    [bool]$KeepCopy = if ($request.body.keepCopy -eq 'true') { $true } else { $false }
+    [bool]$KeepCopy = if ($request.body.KeepCopy -eq 'true') { $true } else { $false }
 
     if ($ForwardOption -eq 'internalAddress') {
         try {
-            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -Forward $ForwardingAddress -keepCopy $KeepCopy
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -Forward $ForwardingAddress -KeepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and not keeping a copy"
             } else {
@@ -35,7 +39,7 @@ Function Invoke-ExecEmailForward {
 
     if ($ForwardOption -eq 'ExternalAddress') {
         try {
-            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forwardingSMTPAddress $ForwardingSMTPAddress -KeepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and not keeping a copy"
             } else {
