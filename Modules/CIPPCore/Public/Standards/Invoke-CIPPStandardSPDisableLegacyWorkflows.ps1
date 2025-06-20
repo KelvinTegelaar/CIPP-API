@@ -57,9 +57,11 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Legacy Workflows are disabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Legacy Workflows are disabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Legacy Workflows are enabled' -Sev Info
+            $Message = 'SharePoint Legacy Workflows is not disabled.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPDisableLegacyWorkflows' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -Sev Info
         }
     }
 
