@@ -123,11 +123,18 @@ function Test-CIPPAccess {
         }
 
         $BaseRole = $null
-        foreach ($Role in $BaseRoles.PSObject.Properties) {
-            foreach ($UserRole in $User.userRoles) {
-                if ($Role.Name -eq $UserRole) {
-                    $BaseRole = $Role
-                    break
+
+        if ($User.userRoles -contains 'superadmin') {
+            $BaseRole = 'superadmin'
+        } elseif ($User.userRoles -contains 'admin') {
+            $BaseRole = 'admin'
+        } else {
+            foreach ($Role in $BaseRoles.PSObject.Properties) {
+                foreach ($UserRole in $User.userRoles) {
+                    if ($Role.Name -eq $UserRole) {
+                        $BaseRole = $Role
+                        break
+                    }
                 }
             }
         }
