@@ -8,11 +8,13 @@ function Get-CIPPSPOTenant {
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
-        $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
+        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+        $tenantName = $SharePointInfo.TenantName
+        $AdminUrl = $SharePointInfo.AdminUrl
     } else {
         $tenantName = $SharepointPrefix
+        $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
     }
-    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
 
     # Query tenant settings
     $XML = @'
@@ -21,7 +23,7 @@ function Get-CIPPSPOTenant {
     $AdditionalHeaders = @{
         'Accept' = 'application/json;odata=verbose'
     }
-    $Results = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+    $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
 
     $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
 }
