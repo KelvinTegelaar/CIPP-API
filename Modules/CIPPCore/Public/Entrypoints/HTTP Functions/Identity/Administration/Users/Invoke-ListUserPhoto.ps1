@@ -10,7 +10,12 @@ Function Invoke-ListUserPhoto {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $tenantFilter = $Request.Query.TenantFilter
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $tenantFilter = $Request.Query.tenantFilter
     $userId = $Request.Query.UserID
 
     $URI = "/users/$userId/photo/`$value"

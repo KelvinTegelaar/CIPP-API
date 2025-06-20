@@ -69,6 +69,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     if ($Settings.alert -eq $true) {
 
         if ($MissingExclusions) {
+            Write-StandardsAlert -message 'Exclude File Extensions from Syncing missing some extensions.' -object $MissingExclusions -tenant $Tenant -standardName 'ExcludedfileExt' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($MissingExclusions -join ',')" -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files contains $($Settings.ext)" -sev Info
