@@ -37,8 +37,7 @@ function Request-CIPPSPOPersonalSite {
 </Request>
 "@
 
-    $SharePointInfo = Get-SharePointAdminLink -Public $false
-
+    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     try {
         $Request = New-GraphPostRequest -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
         if (!$Request.IsComplete) { throw }

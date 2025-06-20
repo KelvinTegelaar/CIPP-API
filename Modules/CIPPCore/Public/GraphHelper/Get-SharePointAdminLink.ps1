@@ -4,7 +4,7 @@ function Get-SharePointAdminLink {
     Internal
     #>
     [CmdletBinding()]
-    param ($Public)
+    param ($Public, $TenantFilter)
 
     if ($Public) {
         # Do it through domain discovery, unreliable
@@ -42,10 +42,10 @@ function Get-SharePointAdminLink {
 
             # Get the onmicrosoft.com domain from the response
             $TenantDomains = $Response.Envelope.body.GetFederationInformationResponseMessage.response.Domains.Domain | Sort-Object
-            $OnMicrosoftDomains = $TenantDomains | Where-Object { $_ -like "*.onmicrosoft.com" }
+            $OnMicrosoftDomains = $TenantDomains | Where-Object { $_ -like '*.onmicrosoft.com' }
 
             if ($OnMicrosoftDomains.Count -eq 0) {
-                throw "Could not find onmicrosoft.com domain through autodiscover"
+                throw 'Could not find onmicrosoft.com domain through autodiscover'
             } elseif ($OnMicrosoftDomains.Count -gt 1) {
                 throw "Multiple onmicrosoft.com domains found through autodiscover. Cannot determine the correct one: $($OnMicrosoftDomains -join ', ')"
             } else {
@@ -61,8 +61,8 @@ function Get-SharePointAdminLink {
 
     # Return object with all needed properties
     return [PSCustomObject]@{
-        AdminUrl        = "https://$tenantName-admin.sharepoint.com"
-        TenantName      = $tenantName
-        SharePointUrl   = "https://$tenantName.sharepoint.com"
+        AdminUrl      = "https://$tenantName-admin.sharepoint.com"
+        TenantName    = $tenantName
+        SharePointUrl = "https://$tenantName.sharepoint.com"
     }
 }

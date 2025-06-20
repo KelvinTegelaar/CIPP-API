@@ -44,7 +44,7 @@ function Set-CIPPSPOTenant {
     process {
         if (!$SharepointPrefix) {
             # get sharepoint admin site
-            $SharePointInfo = Get-SharePointAdminLink -Public $false
+            $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
             $AdminUrl = $SharePointInfo.AdminUrl
         } else {
             $tenantName = $SharepointPrefix

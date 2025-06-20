@@ -8,7 +8,7 @@ function Get-CIPPSPOTenant {
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
-        $SharePointInfo = Get-SharePointAdminLink -Public $false
+        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
         $tenantName = $SharePointInfo.TenantName
         $AdminUrl = $SharePointInfo.AdminUrl
     } else {

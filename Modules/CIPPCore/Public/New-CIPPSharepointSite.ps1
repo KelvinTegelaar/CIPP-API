@@ -66,7 +66,7 @@ function New-CIPPSharepointSite {
         $Headers
     )
 
-    $SharePointInfo = Get-SharePointAdminLink -Public $false
+    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $SitePath = $SiteName -replace ' ' -replace '[^A-Za-z0-9-]'
     $SiteUrl = "https://$($SharePointInfo.TenantName).sharepoint.com/sites/$SitePath"
 

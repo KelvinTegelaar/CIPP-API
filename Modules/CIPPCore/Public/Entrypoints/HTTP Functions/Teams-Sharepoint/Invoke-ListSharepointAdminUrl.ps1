@@ -19,7 +19,7 @@ function Invoke-ListSharepointAdminUrl {
         if ($Tenant.SharepointAdminUrl) {
             $AdminUrl = $Tenant.SharepointAdminUrl
         } else {
-            $SharePointInfo = Get-SharePointAdminLink -Public $false
+            $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
             $Tenant | Add-Member -MemberType NoteProperty -Name SharepointAdminUrl -Value $SharePointInfo.AdminUrl
             $Table = Get-CIPPTable -TableName 'Tenants'
             Add-CIPPAzDataTableEntity @Table -Entity $Tenant -Force
