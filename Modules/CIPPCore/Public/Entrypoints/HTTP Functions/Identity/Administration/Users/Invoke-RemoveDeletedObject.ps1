@@ -39,11 +39,10 @@ Function Invoke-RemoveDeletedObject {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{'Results' = $Result }
         })
 
 }

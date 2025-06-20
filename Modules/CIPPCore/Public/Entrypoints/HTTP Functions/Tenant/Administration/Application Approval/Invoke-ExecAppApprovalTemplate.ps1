@@ -13,7 +13,7 @@ function Invoke-ExecAppApprovalTemplate {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -TableName 'templates'
-    $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
+    $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
@@ -58,12 +58,12 @@ function Invoke-ExecAppApprovalTemplate {
                     }
                 )
 
-                Write-LogMessage -headers $Request.Headers -API $APIName -message "App Deployment Template Saved: $($Request.Body.TemplateName)" -Sev 'Info'
+                Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Saved: $($Request.Body.TemplateName)" -Sev 'Info'
             } catch {
                 $Body = @{
                     'Results' = $_.Exception.Message
                 }
-                Write-LogMessage -headers $Request.Headers -API $APIName -message "App Deployment Template Save failed: $($_.Exception.Message)" -Sev 'Error'
+                Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Save failed: $($_.Exception.Message)" -Sev 'Error'
             }
         }
         'Delete' {
@@ -83,7 +83,7 @@ function Invoke-ExecAppApprovalTemplate {
                     $Body = @{
                         'Results' = "Successfully deleted template '$TemplateName'"
                     }
-                    Write-LogMessage -headers $Request.Headers -API $APIName -message "App Deployment Template deleted: $TemplateName" -Sev 'Info'
+                    Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template deleted: $TemplateName" -Sev 'Info'
                 } else {
                     $Body = @{
                         'Results' = 'No template found with the provided ID'
@@ -93,7 +93,7 @@ function Invoke-ExecAppApprovalTemplate {
                 $Body = @{
                     'Results' = "Failed to delete template: $($_.Exception.Message)"
                 }
-                Write-LogMessage -headers $Request.Headers -API $APIName -message "App Deployment Template Delete failed: $($_.Exception.Message)" -Sev 'Error'
+                Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Delete failed: $($_.Exception.Message)" -Sev 'Error'
             }
         }
         'Get' {
@@ -102,7 +102,7 @@ function Invoke-ExecAppApprovalTemplate {
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
                 $filter = "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$templateId'"
-                Write-LogMessage -headers $Request.Headers -API $APIName -message "Retrieved specific template: $templateId" -Sev 'Info'
+                Write-LogMessage -headers $Headers -API $APIName -message "Retrieved specific template: $templateId" -Sev 'Info'
             }
 
             $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter

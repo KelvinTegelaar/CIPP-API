@@ -366,6 +366,9 @@ function Push-ExecOnboardTenantQueue {
                 foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantesTemplate.JSON | ConvertFrom-Json
                     $NewExcludedTenants = [system.collections.generic.list[object]]::new()
+                    if (!$object.excludedTenants) {
+                        $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
+                    }
                     foreach ($Tenant in $object.excludedTenants) {
                         $NewExcludedTenants.Add($Tenant)
                     }

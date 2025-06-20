@@ -15,16 +15,17 @@ Function Invoke-ExecOneDriveShortCut {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     Try {
-        $MessageResult = New-CIPPOneDriveShortCut -username $Request.Body.username -userid $Request.Body.userid -TenantFilter $Request.Body.tenantFilter -URL $Request.Body.siteUrl.value -Headers $Request.Headers
-        $Results = [pscustomobject]@{ 'Results' = "$MessageResult" }
+        $Result = New-CIPPOneDriveShortCut -username $Request.Body.username -userid $Request.Body.userid -TenantFilter $Request.Body.tenantFilter -URL $Request.Body.siteUrl.value -Headers $Request.Headers
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "OneDrive Shortcut creation failed: $($_.Exception.Message)" }
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 
 }

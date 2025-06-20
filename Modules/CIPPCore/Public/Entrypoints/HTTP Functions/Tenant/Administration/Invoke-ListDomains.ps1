@@ -14,24 +14,20 @@ Function Invoke-ListDomains {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter | Select-Object id, isdefault, isinitial | Sort-Object isdefault -Descending
+        $Result = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter | Select-Object id, isdefault, isinitial | Sort-Object isdefault -Descending
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
-        $GraphRequest = $ErrorMessage
+        $Result = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @($GraphRequest)
+            Body       = @($Result)
         })
 
 }

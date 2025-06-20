@@ -18,26 +18,22 @@ Function Invoke-ListUserSigninLogs {
 
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
+    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=$top&`$orderby=createdDateTime desc"
+
     try {
-        $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=$top&`$orderby=createdDateTime desc"
-        Write-Host $URI
-        $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose
-        Write-Host $GraphRequest
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @($GraphRequest)
-            })
+        $Result = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = '500'
-                Body       = $(Get-NormalizedError -message $_.Exception.message)
-            })
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to retrieve Sign In report for user $UserID : Error: $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($Result)
+        })
 }

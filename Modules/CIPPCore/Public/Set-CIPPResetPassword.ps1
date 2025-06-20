@@ -29,14 +29,16 @@ function Set-CIPPResetPassword {
         Write-LogMessage -headers $Headers -API $APIName -message "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 
         if ($UserDetails.onPremisesSyncEnabled -eq $true) {
-            return [pscustomobject]@{ resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
-                copyField                        = $password
-                state                            = 'warning'
+            return [pscustomobject]@{
+                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
+                copyField  = $password
+                state      = 'warning'
             }
         } else {
-            return [pscustomobject]@{ resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
-                copyField                        = $password
-                state                            = 'success'
+            return [pscustomobject]@{
+                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
+                copyField  = $password
+                state      = 'success'
             }
         }
     } catch {

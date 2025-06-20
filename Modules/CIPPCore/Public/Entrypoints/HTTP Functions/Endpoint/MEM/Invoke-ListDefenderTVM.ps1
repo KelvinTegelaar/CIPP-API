@@ -18,21 +18,31 @@ Function Invoke-ListDefenderTVM {
 
     # Interact with query parameters or the body of the request.
     try {
-        $GraphRequest = New-GraphgetRequest -tenantid $TenantFilter -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveid
+        $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
         $GroupObj = foreach ($cve in $GraphRequest) {
-            [pscustomobject]@{
-                customerId                 = $TenantFilter
-                affectedDevicesCount       = $cve.count
-                cveId                      = $cve.name
-                affectedDevices            = ($cve.group.deviceName -join ', ')
-                osPlatform                 = ($cve.group.osplatform | Sort-Object -Unique)
-                softwareVendor             = ($cve.group.softwareVendor | Sort-Object -Unique)
-                softwareName               = ($cve.group.softwareName | Sort-Object -Unique)
-                vulnerabilitySeverityLevel = ($cve.group.vulnerabilitySeverityLevel | Sort-Object -Unique)
-                cvssScore                  = ($cve.group.cvssScore | Sort-Object -Unique)
-                securityUpdateAvailable    = ($cve.group.securityUpdateAvailable | Sort-Object -Unique)
-                exploitabilityLevel        = ($cve.group.exploitabilityLevel | Sort-Object -Unique)
+            # Start with base properties
+            $obj = [ordered]@{
+                customerId           = $TenantFilter
+                affectedDevicesCount = $cve.count
+                cveId                = $cve.name
             }
+
+            # Get all unique property names from the group
+            $allProperties = $cve.group | Get-Member -MemberType Properties | Select-Object -ExpandProperty Name | Sort-Object -Unique
+
+            # Add all properties from the group with appropriate processing
+            foreach ($property in $allProperties) {
+                if ($property -eq 'deviceName') {
+                    # Special handling for deviceName - join with comma
+                    $obj['affectedDevices'] = ($cve.group.$property -join ', ')
+                } else {
+                    # For all other properties, get unique values
+                    $obj[$property] = ($cve.group.$property | Sort-Object -Unique) | Select-Object -First 1
+                }
+            }
+
+            # Convert and output as PSCustomObject. Not really needed, but hey, why not.
+            [pscustomobject]$obj
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

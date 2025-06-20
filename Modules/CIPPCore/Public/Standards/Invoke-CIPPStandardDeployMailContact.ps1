@@ -21,11 +21,15 @@ function Invoke-CIPPStandardDeployMailContact {
         IMPACT
             Low Impact
         ADDEDDATE
-            2025-05-28
+            2024-03-19
         POWERSHELLEQUIVALENT
             New-MailContact
         RECOMMENDEDBY
             "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -100,4 +104,4 @@ function Invoke-CIPPStandardDeployMailContact {
         Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -FieldValue $($ExistingContact ? $true : $ReportData) -Tenant $Tenant
     }
-} 
+}

@@ -24,15 +24,17 @@ Function Invoke-ListCSPsku {
         } else {
             $GraphRequest = Get-SherwebCatalog -TenantFilter $TenantFilter
         }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequest = [PSCustomObject]@{
             name = @(@{value = 'Error getting catalog' })
             sku  = $_.Exception.Message
         }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($GraphRequest)
         }) -Clobber
 

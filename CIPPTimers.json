@@ -81,14 +81,6 @@
     "PreferredProcessor": "standards"
   },
   {
-    "Id": "5113c66d-c040-42df-9565-39dff90ddd55",
-    "Command": "Start-CIPPGraphSubscriptionCleanupTimer",
-    "Description": "Orchestrator to cleanup old Graph subscriptions",
-    "Cron": "0 0 0 * * *",
-    "Priority": 5,
-    "RunOnProcessor": true
-  },
-  {
     "Id": "97145a1d-28f0-4bb2-b929-5a43517d23cc",
     "Command": "Start-SchedulerOrchestrator",
     "Description": "Orchestrator to process system scheduled tasks",

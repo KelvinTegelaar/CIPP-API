@@ -11,33 +11,28 @@ Function Invoke-ListUserMailboxRules {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+    $UserID = $Request.Query.UserID
     try {
-        $TenantFilter = $Request.Query.TenantFilter
-        $UserID = $Request.Query.UserID
         $UserEmail = if ([string]::IsNullOrWhiteSpace($Request.Query.userEmail)) { $UserID } else { $Request.Query.userEmail }
-        $GraphRequest = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | Select-Object * -ExcludeProperty RuleIdentity
+        $Result = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID; IncludeHidden = $true } |
+            Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | Select-Object * -ExcludeProperty RuleIdentity
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -message "Failed to retrieve mailbox rules $($UserEmail): $($ErrorMessage.NormalizedError) " -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = '500'
-                Body       = $ErrorMessage.NormalizedError
-            })
-        exit
+        $Result = "Failed to retrieve mailbox rules for $UserEmail : Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -tenant $TenantFilter -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
+            StatusCode = $StatusCode
+            Body       = @($Result)
         })
 
 }

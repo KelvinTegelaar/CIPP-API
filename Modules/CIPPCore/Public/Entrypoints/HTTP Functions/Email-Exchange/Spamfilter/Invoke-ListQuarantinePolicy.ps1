@@ -18,8 +18,6 @@ function Invoke-ListQuarantinePolicy {
 
     $Policies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantinePolicy' -cmdParams @{QuarantinePolicyType=$QuarantinePolicyType} | Select-Object -Property * -ExcludeProperty *odata*, *data.type*
 
-    write-host $($Request | ConvertTo-Json -Depth 10)
-
     if ($QuarantinePolicyType -eq 'QuarantinePolicy') {
         # Convert the string EndUserQuarantinePermissions to individual properties
         $Policies | ForEach-Object {

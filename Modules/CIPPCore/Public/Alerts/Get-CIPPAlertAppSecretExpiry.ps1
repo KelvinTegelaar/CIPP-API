@@ -18,13 +18,22 @@ function Get-CIPPAlertAppSecretExpiry {
         return
     }
 
-    $AlertData = foreach ($App in $applist) {
+    $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    foreach ($App in $applist) {
         Write-Host "checking $($App.displayName)"
         if ($App.passwordCredentials) {
             foreach ($Credential in $App.passwordCredentials) {
                 if ($Credential.endDateTime -lt (Get-Date).AddDays(30) -and $Credential.endDateTime -gt (Get-Date).AddDays(-7)) {
                     Write-Host ("Application '{0}' has secrets expiring on {1}" -f $App.displayName, $Credential.endDateTime)
-                    @{ DisplayName = $App.displayName; Expires = $Credential.endDateTime }
+
+                    $Message = [PSCustomObject]@{
+                        AppName    = $App.displayName
+                        AppId      = $App.appId
+                        Expires    = $Credential.endDateTime
+                        Tenant     = $TenantFilter
+                    }
+                    $AlertData.Add($Message)
                 }
             }
         }

@@ -7,7 +7,7 @@ function Invoke-ExecTenantGroup {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Tenant.Config.ReadWrite
+        TenantGroups.Config.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -57,9 +57,9 @@ function Invoke-ExecTenantGroup {
                 }
                 $MemberEntity = @{
                     PartitionKey = 'Member'
-                    RowKey     = '{0}-{1}' -f $groupId, $member.value
-                    GroupId    = $groupId
-                    customerId = $member.value
+                    RowKey       = '{0}-{1}' -f $groupId, $member.value
+                    GroupId      = $groupId
+                    customerId   = $member.value
                 }
                 Add-CIPPAzDataTableEntity @MembersTable -Entity $MemberEntity -Force
                 $Adds.Add('Added member {0}' -f $member.label)

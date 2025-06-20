@@ -61,7 +61,9 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is enabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is not enabled' -Sev Alert
+            $Message = 'External User Expiration is not set to the desired value.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPExternalUserExpiration' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -Sev Alert
         }
     }
 

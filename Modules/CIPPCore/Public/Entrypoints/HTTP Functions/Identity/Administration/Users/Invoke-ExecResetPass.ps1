@@ -23,21 +23,18 @@ Function Invoke-ExecResetPass {
     $MustChange = [System.Convert]::ToBoolean($MustChange)
 
     try {
-        $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
+        $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
         if ($Result.state -eq 'Error') { throw $Result.resultText }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
-
     }
 
-    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{'Results' = $Result }
         })
 
 }
