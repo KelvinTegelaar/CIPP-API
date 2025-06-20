@@ -35,11 +35,10 @@ function Invoke-ExecBECRemediate {
         if (($Rules | Measure-Object).Count -gt 0) {
             $Rules | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
                 try {
-                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-                    "Disabled Inbox Rule '$($_.Identity)' for $Username"
+                    Set-CIPPMailboxRule -Username $Username -TenantFilter $TenantFilter -RuleId $_.Identity -RuleName $_.Name -Disable -APIName $APIName -Headers $Headers
                     $RuleDisabled++
                 } catch {
-                    "Failed to disable Inbox Rule '$($_.Identity)' for $Username"
+                    $_.Exception.Message
                     $RuleFailed++
                 }
             }
