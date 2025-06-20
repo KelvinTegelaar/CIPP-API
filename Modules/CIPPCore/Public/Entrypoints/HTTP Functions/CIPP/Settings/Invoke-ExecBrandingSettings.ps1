@@ -15,7 +15,7 @@ Function Invoke-ExecBrandingSettings {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $StatusCode = [HttpStatusCode]::OK
-    $Results = @{}
+    @{}
 
     try {
         $Table = Get-CIPPTable -TableName Config
@@ -33,9 +33,9 @@ Function Invoke-ExecBrandingSettings {
 
         $Action = if ($Request.Body.Action) { $Request.Body.Action } else { $Request.Query.Action }
 
-        switch ($Action) {
+        $Results = switch ($Action) {
             'Get' {
-                $Results = @{
+                @{
                     colour = $BrandingConfig.colour
                     logo   = $BrandingConfig.logo
                 }
@@ -50,7 +50,7 @@ Function Invoke-ExecBrandingSettings {
                         $Updated = $true
                     } else {
                         $StatusCode = [HttpStatusCode]::BadRequest
-                        $Results = 'Error: Invalid color format. Please use hex format (e.g., #F77F00)'
+                        'Error: Invalid color format. Please use hex format (e.g., #F77F00)'
                     }
                 }
 
@@ -62,18 +62,18 @@ Function Invoke-ExecBrandingSettings {
                             $ImageBytes = [Convert]::FromBase64String($Base64Data)
                             if ($ImageBytes.Length -le 2097152) {
                                 Write-Host 'updating logo'
-                                $BrandingConfig.logo = $Logo
+                                $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logo' -Value $Logo -Force
                                 $Updated = $true
                             } else {
                                 $StatusCode = [HttpStatusCode]::BadRequest
-                                $Results = 'Error: Image size must be less than 2MB'
+                                'Error: Image size must be less than 2MB'
                             }
                         } catch {
                             $StatusCode = [HttpStatusCode]::BadRequest
-                            $Results = 'Error: Invalid base64 image data'
+                            'Error: Invalid base64 image data: ' + $_.Exception.Message
                         }
                     } elseif ($Logo -eq $null -or $Logo -eq '') {
-                        $BrandingConfig.logo = $null
+                        $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logo' -Value $null -Force
                         $Updated = $true
                     }
                 }
@@ -84,10 +84,10 @@ Function Invoke-ExecBrandingSettings {
 
                     Add-CIPPAzDataTableEntity @Table -Entity $BrandingConfig -Force | Out-Null
                     Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message 'Updated branding settings' -Sev 'Info'
-                    $Results = 'Successfully updated branding settings'
+                    'Successfully updated branding settings'
                 } else {
                     $StatusCode = [HttpStatusCode]::BadRequest
-                    $Results = 'Error: No valid branding data provided'
+                    'Error: No valid branding data provided'
                 }
             }
             'Reset' {
@@ -100,17 +100,17 @@ Function Invoke-ExecBrandingSettings {
 
                 Add-CIPPAzDataTableEntity @Table -Entity $DefaultConfig -Force | Out-Null
                 Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message 'Reset branding settings to defaults' -Sev 'Info'
-                $Results = 'Successfully reset branding settings to defaults'
+                'Successfully reset branding settings to defaults'
             }
             default {
                 $StatusCode = [HttpStatusCode]::BadRequest
-                $Results = 'Error: Invalid action specified'
+                'Error: Invalid action specified'
             }
         }
     } catch {
         Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Branding Settings API failed: $($_.Exception.Message)" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
-        $Results = "Failed to process branding settings: $($_.Exception.Message)"
+        "Failed to process branding settings: $($_.Exception.Message)"
     }
 
     $body = [pscustomobject]@{'Results' = $Results }
