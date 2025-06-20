@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecBECRemediate {
+function Invoke-ExecBECRemediate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -54,7 +54,7 @@ Function Invoke-ExecBECRemediate {
             "Failed to disable $RuleFailed Inbox Rules for $Username"
         }
         $StatusCode = [HttpStatusCode]::OK
-        Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username" -sev 'Info'
+        Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username" -sev 'Info' -LogData @($Results)
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

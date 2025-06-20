@@ -10,6 +10,10 @@ Function Invoke-ListSites {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Query.TenantFilter
     $Type = $request.query.Type
     $UserUPN = $request.query.UserUPN
@@ -93,7 +97,7 @@ Function Invoke-ListSites {
             try {
                 $Requests = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body.value | Where-Object { $_.list.template -eq 'DocumentLibrary' }
             } catch {
-                Write-LogMessage -Message "Error getting auto map urls: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -API 'ListSites' -LogData (Get-CippException -Exception $_)
+                Write-LogMessage -Headers $Headers -Message "Error getting auto map urls: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -API 'ListSites' -LogData (Get-CippException -Exception $_)
             }
             $GraphRequest = foreach ($Site in $GraphRequest) {
                 $ListId = ($Requests | Where-Object { $_.parentReference.siteId -like "*$($Site.siteId)*" }).id

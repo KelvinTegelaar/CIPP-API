@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     .SYNOPSIS
         (Label) Disable Self Service Licensing
     .DESCRIPTION
-        (Helptext) This standard disables all self service licenses and enables all exclusions
-        (DocsDescription) This standard disables all self service licenses and enables all exclusions
+        (Helptext) Note: requires 'Billing Administrator' GDAP role. This standard disables all self service licenses and enables all exclusions
+        (DocsDescription) Note: requires 'Billing Administrator' GDAP role. This standard disables all self service licenses and enables all exclusions
     .NOTES
         CAT
             Entra (AAD) Standards
@@ -31,15 +31,17 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSelfServiceLicenses'
 
-    # disable for now - MS enforced role requirement
-    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Self Service Licenses cannot be disabled' -sev Error
-    return
-
     try {
         $selfServiceItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
     } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to retrieve self service products: $($_.Exception.Message)" -sev Error
-        throw "Failed to retrieve self service products: $($_.Exception.Message)"
+        if ($_.Exception.Message -like '*403*') {
+            $Message = "Failed to retrieve self service products: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Billing Administrator' role: $($_.Exception.Message)"
+        }
+        else {
+            $Message = "Failed to retrieve self service products: $($_.Exception.Message)"
+        }
+        Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error
+        throw $Message
     }
 
     if ($settings.remediate) {

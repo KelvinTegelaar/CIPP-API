@@ -52,6 +52,9 @@ function Invoke-CIPPStandardQuarantineTemplate {
             try {
                 # Create hashtable with desired Quarantine Setting
                 $EndUserQuarantinePermissions   = @{
+                    # ViewHeader and Download are set to false because the value 0 or 1 does nothing per Microsoft documentation
+                    PermissionToViewHeader = $false
+                    PermissionToDownload  = $false
                     PermissionToBlockSender = $Policy.PermissionToBlockSender
                     PermissionToDelete  = $Policy.PermissionToDelete
                     PermissionToPreview = $Policy.PermissionToPreview
@@ -64,7 +67,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                 if ($Policy.displayName.value -in $CurrentPolicies.Name) {
                     #Get the current policy and convert EndUserQuarantinePermissions from string to hashtable for compare
                     $ExistingPolicy = $CurrentPolicies | Where-Object -Property Name -eq $Policy.displayName.value
-                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
+                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue -InputObject $ExistingPolicy.EndUserQuarantinePermissions -ErrorAction Stop
 
                     #Compare the current policy
                     $StateIsCorrect = ($ExistingPolicy.Name -eq $Policy.displayName.value) -and
@@ -180,9 +183,10 @@ function Invoke-CIPPStandardQuarantineTemplate {
         }
 
         if ($true -in $Settings.report) {
-            # This could do with an improvement. But will work for now or else reporting could be disabled for now
             foreach ($Policy in $CompareList | Where-Object -Property report -EQ $true) {
-                Set-CIPPStandardsCompareField -FieldName "standards.QuarantineTemplate" -FieldValue $Policy.StateIsCorrect -TenantFilter $Tenant
+                # Convert displayName to hex to avoid invalid characters "/, \, #, ?" which are not allowed in RowKey, but "\, #, ?" can be used in quarantine displayName
+                $HexName = -join ($Policy.displayName.ToCharArray() | ForEach-Object { '{0:X2}' -f [int][char]$_ })
+                Set-CIPPStandardsCompareField -FieldName "standards.QuarantineTemplate.$HexName" -FieldValue $Policy.StateIsCorrect -TenantFilter $Tenant
             }
         }
     }

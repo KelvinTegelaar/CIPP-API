@@ -14,21 +14,17 @@ Function Invoke-ListSharepointSettings {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
+    #  XXX - Seems to be an unused endpoint? -Bobby
 
 
     # Interact with query parameters or the body of the request.
-    $tenant = $Request.Query.TenantFilter
-    $User = $Request.query.user
-    $USERToGet = $Request.query.usertoGet
-    $body = '{"isResharingByExternalUsersEnabled": "False"}'
-    $Request = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -Type patch -Body $body -ContentType 'application/json'
+    $Tenant = $Request.Query.tenantFilter
+    $Request = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
 
-    Write-LogMessage -API 'Standards' -tenant $tenantFilter -message 'Disabled Password Expiration' -sev Info
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
+            Body       = @($Request)
         })
 
 }

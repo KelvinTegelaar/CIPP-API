@@ -16,7 +16,7 @@ Function Invoke-ListUsers {
 
     $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $GraphFilter = $Request.Query.graphFilter
     $userid = $Request.Query.UserID
 
@@ -26,7 +26,7 @@ Function Invoke-ListUsers {
             $_ | Add-Member -MemberType NoteProperty -Name 'username' -Value ($_.userPrincipalName -split '@' | Select-Object -First 1) -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'Aliases' -Value ($_.ProxyAddresses -join ', ') -Force
             $SkuID = $_.AssignedLicenses.skuid
-            $_ | Add-Member -MemberType NoteProperty -Name 'LicJoined' -Value (($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ', ') -Force
+            $_ | Add-Member -MemberType NoteProperty -Name 'LicJoined' -Value (($ConvertTable | Where-Object { $_.guid -in $SkuID }).'Product_Display_Name' -join ', ') -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'primDomain' -Value @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); } -Force
             $_
         }

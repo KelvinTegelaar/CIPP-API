@@ -15,7 +15,8 @@ function New-GraphGetRequest {
         $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
-        [switch]$IncludeResponseHeaders
+        [switch]$IncludeResponseHeaders,
+        [hashtable]$extraHeaders
     )
 
     if ($NoAuthCheck -eq $false) {
@@ -35,7 +36,11 @@ function New-GraphGetRequest {
             $headers['ConsistencyLevel'] = 'eventual'
         }
         $nextURL = $uri
-
+        if ($extraHeaders) {
+            foreach ($key in $extraHeaders.Keys) {
+                $headers[$key] = $extraHeaders[$key]
+            }
+        }
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid

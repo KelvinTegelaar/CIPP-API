@@ -8,7 +8,6 @@ function Invoke-CIPPStandardExConnector {
 
     If ($Settings.remediate -eq $true) {
 
-        $APINAME = 'Standards'
         foreach ($Template in $Settings.TemplateList) {
             try {
                 $Table = Get-CippTable -tablename 'templates'
@@ -20,10 +19,10 @@ function Invoke-CIPPStandardExConnector {
                 if ($Existing) {
                     $RequestParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet "Set-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-                    Write-LogMessage -API $APINAME -tenant $Tenant -message "Updated transport rule for $($Tenant, $Settings)" -sev info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated transport rule for $($Tenant, $Settings)" -sev info
                 } else {
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-                    Write-LogMessage -API $APINAME -tenant $Tenant -message "Created transport rule for $($Tenant, $Settings)" -sev info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created transport rule for $($Tenant, $Settings)" -sev info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

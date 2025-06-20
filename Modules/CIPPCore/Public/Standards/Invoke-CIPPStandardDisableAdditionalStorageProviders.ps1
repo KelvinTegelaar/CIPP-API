@@ -33,21 +33,21 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAdditionalStorageProviders'
 
-    $AdditionalStorageProvidersState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' }
+    $AdditionalStorageProvidersState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' } -Select 'Identity, AdditionalStorageProvidersAvailable'
 
     if ($Settings.remediate -eq $true) {
 
         try {
             if ($AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable) {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{ Identity = $AdditionalStorageProvidersState.Identity; AdditionalStorageProvidersAvailable = $false } -useSystemMailbox $true
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers have been disabled.' -sev Info
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{ Identity = $AdditionalStorageProvidersState.Identity; AdditionalStorageProvidersAvailable = $false } -useSystemMailbox $true
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'OWA additional storage providers has been disabled.' -sev Info
                 $AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable = $false
             } else {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are already disabled.' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'OWA additional storage providers are already disabled.' -sev Info
             }
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable OWA additional storage providers. Error: $ErrorMessage" -sev Error
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable OWA additional storage providers. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
 
     }
@@ -55,16 +55,16 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     if ($Settings.alert -eq $true) {
         if ($AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable) {
             $Object = $AdditionalStorageProvidersState | Select-Object -Property AdditionalStorageProvidersAvailable
-            Write-StandardsAlert -message 'OWA additional storage providers are enabled' -object $Object -tenant $tenant -standardName 'DisableAdditionalStorageProviders' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are enabled' -sev Info
+            Write-StandardsAlert -message 'OWA additional storage providers are enabled' -object $Object -tenant $Tenant -standardName 'DisableAdditionalStorageProviders' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'OWA additional storage providers are enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are disabled' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'OWA additional storage providers are disabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        $state = $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled ? $false : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -FieldValue $state -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersEnabled' -FieldValue $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled -StoreAs bool -Tenant $tenant
+        $State = $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled ? $false : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -FieldValue $State -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersEnabled' -FieldValue $State -StoreAs bool -Tenant $Tenant
     }
 }

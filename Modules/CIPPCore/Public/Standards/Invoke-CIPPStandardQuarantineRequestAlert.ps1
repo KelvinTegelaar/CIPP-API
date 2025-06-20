@@ -78,7 +78,9 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is disabled' -sev Info
+            $Message = 'Quarantine Request Alert is not enabled.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'QuarantineRequestAlerts' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -sev Info
         }
     }
 

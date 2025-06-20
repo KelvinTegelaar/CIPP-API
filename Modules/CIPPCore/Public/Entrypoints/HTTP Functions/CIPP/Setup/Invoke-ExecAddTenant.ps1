@@ -22,7 +22,10 @@ function Invoke-ExecAddTenant {
         # Check if tenant already exists
         $ExistingTenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$tenantId'"
 
-        if ($ExistingTenant) {
+        if ($tenantId -eq $env:TenantID) {
+            # If the tenant is the partner tenant, return an error because you cannot add the partner tenant as direct tenant
+            $Results = @{'message' = 'You cannot add the partner tenant as a direct tenant. Please connect the tenant using the "Connect to Partner Tenant" option. '; 'severity' = 'error'; }
+        } elseif ($ExistingTenant) {
             # Update existing tenant
             $ExistingTenant.delegatedPrivilegeStatus = 'directTenant'
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenant -Force | Out-Null

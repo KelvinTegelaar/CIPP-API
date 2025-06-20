@@ -10,13 +10,15 @@ Function Invoke-EditRoomMailbox {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $Tenant = $Request.body.tenantid
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $Tenant = $Request.Body.tenantID
 
 
     $Results = [System.Collections.Generic.List[Object]]::new()
-    $MailboxObject = $Request.body
+    $MailboxObject = $Request.Body
 
     # First update the mailbox properties
     $UpdateMailboxParams = @{

@@ -8,6 +8,10 @@ function Invoke-ExecAuditLogSearch {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Query = $Request.Body
     if (!$Query.TenantFilter) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

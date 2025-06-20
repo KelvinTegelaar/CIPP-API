@@ -20,8 +20,9 @@ Function Invoke-ExecUpdateRefreshToken {
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+
             if ($env:TenantID -eq $Request.body.tenantId) {
-                $Secret.RefreshToken = $Request.body.RefreshToken
+                $Secret | Add-Member -MemberType NoteProperty -Name 'RefreshToken' -Value $Request.body.refreshtoken -Force
             } else {
                 Write-Host "$($env:TenantID) does not match $($Request.body.tenantId)"
                 $name = $Request.body.tenantId -replace '-', '_'

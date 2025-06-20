@@ -21,18 +21,17 @@ Function Invoke-ExecRevokeSessions {
 
     try {
         $Result = Revoke-CIPPSessions -UserID $ID -TenantFilter $TenantFilter -Username $Username -APIName $APIName -Headers $Request.Headers
-        if ($Result -like 'Revoke Session Failed*') { throw $Result }
+        if ($Result -match '^Failed') { throw $Result }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{'Results' = $Result }
         })
 
 }

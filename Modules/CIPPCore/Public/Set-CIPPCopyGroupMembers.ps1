@@ -31,7 +31,7 @@ function Set-CIPPCopyGroupMembers {
     $CurrentMemberships = ($Results | Where-Object { $_.id -eq 'UserMembership' }).body.value
     $CopyFromMemberships = ($Results | Where-Object { $_.id -eq 'CopyFromMembership' }).body.value
 
-    Write-Information ($Results | ConvertTo-Json -Depth 10)
+    # Write-Information ($Results | ConvertTo-Json -Depth 10) # For debugging
 
     $ODataBind = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $User.id
     $AddMemberBody = @{
@@ -40,12 +40,16 @@ function Set-CIPPCopyGroupMembers {
 
     $Success = [System.Collections.Generic.List[object]]::new()
     $Errors = [System.Collections.Generic.List[object]]::new()
-    $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and $_.groupTypes -notcontains 'DynamicMembership' -and $_.onPremisesSyncEnabled -ne $true -and $_.visibility -ne 'Public' -and $CurrentMemberships.id -notcontains $_.id }
+    $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and
+        $_.groupTypes -notcontains 'DynamicMembership' -and
+        $_.onPremisesSyncEnabled -ne $true -and
+        $_.visibility -ne 'Public' -and
+        $CurrentMemberships.id -notcontains $_.id }
     $ScheduleExchangeGroupTask = $false
     foreach ($MailGroup in $Memberships) {
         try {
             if ($PSCmdlet.ShouldProcess($MailGroup.displayName, "Add $UserId to group")) {
-                if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
+                if ($MailGroup.MailEnabled -and $MailGroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
                     $Params = @{ Identity = $MailGroup.id; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
                     try {
                         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true

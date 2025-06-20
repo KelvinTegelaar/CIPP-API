@@ -11,19 +11,23 @@ Function Invoke-ListOoO {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Tenantfilter = $request.query.tenantFilter
-    try {
-        $Body = Get-CIPPOutOfOffice -UserID $Request.query.userid -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers
-    } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Body = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $TenantFilter = $Request.Query.tenantFilter
+    $UserID = $Request.Query.userid
+    try {
+        $Results = Get-CIPPOutOfOffice -UserID $UserID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $Results = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            StatusCode = $StatusCode
+            Body       = $Results
         })
 
 }

@@ -33,8 +33,6 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
 
     If ($Settings.remediate -eq $true) {
 
-        $APINAME = 'Standards'
-
         foreach ($Setting in $Settings) {
             try {
 

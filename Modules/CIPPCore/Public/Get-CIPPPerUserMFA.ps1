@@ -2,23 +2,23 @@ function Get-CIPPPerUserMFA {
     [CmdletBinding()]
     param(
         $TenantFilter,
-        $userId,
+        $UserId,
         $Headers,
         $AllUsers = $false
     )
     try {
         if ($AllUsers -eq $true) {
-            $AllUsers = New-graphGetRequest -Uri "https://graph.microsoft.com/v1.0/users?`$top=999&`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $tenantfilter
+            $AllUsers = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/users?`$top=999&`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $TenantFilter
             return $AllUsers
         } else {
-            $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/v1.0/users/$($userId)?`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $tenantfilter
+            $MFAState = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/users/$($UserId)?`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $TenantFilter
             return [PSCustomObject]@{
                 PerUserMFAState   = $MFAState.perUserMfaState
-                UserPrincipalName = $userId
+                UserPrincipalName = $UserId
             }
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        "Failed to get MFA State for $id : $ErrorMessage"
+        throw "Failed to get MFA State for $UserId : $ErrorMessage"
     }
 }

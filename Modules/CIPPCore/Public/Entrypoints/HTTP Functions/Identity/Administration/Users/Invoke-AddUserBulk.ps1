@@ -10,9 +10,12 @@ function Invoke-AddUserBulk {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'AddUserBulk'
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $TenantFilter = $Request.body.TenantFilter
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with body parameters or the body of the request.
+    $TenantFilter = $Request.Body.tenantFilter
 
     $BulkUsers = $Request.Body.BulkUser
     $AssignedLicenses = $Request.Body.licenses
@@ -78,7 +81,7 @@ function Invoke-AddUserBulk {
                 # Add all other properties
                 foreach ($key in $User.PSObject.Properties.Name) {
                     if ($key -notin @('displayName', 'mailNickName', 'domain', 'password', 'usageLocation', 'businessPhones')) {
-                        if (![string]::IsNullOrEmpty($User.$key) -and $UserBody.$key -eq $null) {
+                        if (![string]::IsNullOrEmpty($User.$key) -and $null -eq $UserBody.$key) {
                             $UserBody.$key = $User.$key
                         }
                     }

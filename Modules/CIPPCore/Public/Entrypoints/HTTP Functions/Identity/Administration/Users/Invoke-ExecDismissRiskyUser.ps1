@@ -29,8 +29,8 @@ function Invoke-ExecDismissRiskyUser {
 
     try {
         $GraphResults = New-GraphPostRequest @GraphRequest
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Dismissed user risk for $userDisplayName" -sev 'Info'
         $Result = "Successfully dismissed User Risk for user $userDisplayName. $GraphResults"
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Result -sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

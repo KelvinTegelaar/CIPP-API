@@ -61,7 +61,7 @@ function Receive-CippHttpTrigger {
         } catch {
             Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::Forbidden
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = $_.Exception.Message
                 })
         }

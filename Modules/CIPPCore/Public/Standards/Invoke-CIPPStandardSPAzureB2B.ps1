@@ -58,7 +58,9 @@ function Invoke-CIPPStandardSPAzureB2B {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Azure B2B is enabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Azure B2B is not enabled' -Sev Alert
+            $Message = 'SharePoint Azure B2B is not enabled.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPAzureB2B' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -Sev Alert
         }
     }
 

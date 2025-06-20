@@ -18,16 +18,31 @@ Function Invoke-EditCAPolicy {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $ID = $Request.Query.GUID ?? $Request.Body.GUID
     $State = $Request.Query.State ?? $Request.Body.State
+    $DisplayName = $Request.Query.newDisplayName ?? $Request.Body.newDisplayName
 
     try {
-        $EditBody = "{`"state`": `"$($State)`"}"
-        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta//identity/conditionalAccess/policies/$($ID)" -tenantid $TenantFilter -type PATCH -body $EditBody -asapp $true
-        $Result = "Successfully set CA policy $($ID) to $($State)"
+        $properties = @{}
+
+        # Conditionally add properties
+        if ($State) {
+            $properties["state"] = $State
+        }
+
+        if ($DisplayName) {
+            $properties["displayName"] = $DisplayName
+        }
+
+        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta//identity/conditionalAccess/policies/$($ID)" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
+
+        $Result = "Successfully updated CA policy $($ID)"
+        if ($State) { $Result += " state to $($State)" }
+        if ($DisplayName) { $Result += " name to '$($DisplayName)'" }
+
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to set CA policy $($ID) to $($State): $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to update CA policy $($ID): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

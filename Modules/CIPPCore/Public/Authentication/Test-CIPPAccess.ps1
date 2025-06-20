@@ -123,6 +123,12 @@ function Test-CIPPAccess {
         }
 
         $BaseRole = $null
+
+        if ($User.userRoles -contains 'superadmin') {
+            $User.userRoles = @('superadmin')
+        } elseif ($User.userRoles -contains 'admin') {
+            $User.userRoles = @('admin')
+        }
         foreach ($Role in $BaseRoles.PSObject.Properties) {
             foreach ($UserRole in $User.userRoles) {
                 if ($Role.Name -eq $UserRole) {
@@ -131,6 +137,7 @@ function Test-CIPPAccess {
                 }
             }
         }
+
     }
 
     # Check base role permissions before continuing to custom roles

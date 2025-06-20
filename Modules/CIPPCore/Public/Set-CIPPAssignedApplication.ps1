@@ -9,7 +9,7 @@ function Set-CIPPAssignedApplication {
         $APIName = 'Assign Application',
         $Headers
     )
-
+    Write-Host "GroupName: $GroupName Intent: $Intent AppType: $AppType ApplicationId: $ApplicationId TenantFilter: $TenantFilter APIName: $APIName"
     try {
         $MobileAppAssignment = switch ($GroupName) {
             'AllUsers' {
