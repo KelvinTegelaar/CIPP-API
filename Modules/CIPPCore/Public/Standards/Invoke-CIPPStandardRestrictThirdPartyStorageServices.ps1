@@ -52,6 +52,16 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
         } else {
             # Disable the service principal to restrict third-party storage services
             try {
+                # Create the service principal if it does not exist
+                if ($null -eq $CurrentState){
+                    $CreateBody = @{
+                        appId = $AppId
+                    } | ConvertTo-Json -Depth 10 -Compress
+
+                    $CreateUri = "https://graph.microsoft.com/beta/servicePrincipals"
+                    $null = New-GraphPOSTRequest -uri $CreateUri -tenantid $Tenant -Body $CreateBody
+                }
+
                 $DisableBody = @{
                     accountEnabled = $false
                 } | ConvertTo-Json -Depth 10 -Compress
