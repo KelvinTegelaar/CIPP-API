@@ -99,7 +99,6 @@ Function Invoke-ListRoomLists {
             # Get all room lists (original functionality)
             $RoomLists = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{RecipientTypeDetails = 'RoomList'; ResultSize = 'Unlimited' } |
                 Select-Object Guid, DisplayName, PrimarySmtpAddress, Alias, Phone, Identity, Notes, Description, Id -ExcludeProperty *data.type*
-            $RoomLists | Add-Member -MemberType NoteProperty -Name groupType -Value 'Room List'
             $StatusCode = [HttpStatusCode]::OK
             $ResponseBody = @{ Results = @($RoomLists | Sort-Object DisplayName) }
         }
