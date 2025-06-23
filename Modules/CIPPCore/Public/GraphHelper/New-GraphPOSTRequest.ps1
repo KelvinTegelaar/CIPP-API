@@ -7,7 +7,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         if ($AddedHeaders) {
-            foreach ($header in $AddedHeaders.getenumerator()) {
+            foreach ($header in $AddedHeaders.GetEnumerator()) {
                 $headers.Add($header.Key, $header.Value)
             }
         }

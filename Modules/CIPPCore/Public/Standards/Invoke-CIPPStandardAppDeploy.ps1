@@ -69,15 +69,15 @@ function Invoke-CIPPStandardAppDeploy {
 
             foreach ($AppId in $AppIds) {
                 if ($AppId -notin $AppExists.appId) {
-                    Write-Information "Adding $($AppId) to tenant $($Tenant)."
-                    $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body "{ `"appId`": `"$($Item.appId)`" }"
-                    Write-LogMessage -message "Added $($Item.AppId) to tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
+                    Write-Information "Adding $AppId to tenant $Tenant."
+                    $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$AppId`" }"
+                    Write-LogMessage -message "Added $AppId to tenant $Tenant" -tenant $Tenant -API 'Add Multitenant App' -sev Info
                 }
             }
             foreach ($TemplateId in $TemplateIds) {
                 try {
-                    Add-CIPPApplicationPermission -TemplateId $TemplateId -Tenantfilter $Tenant
-                    Add-CIPPDelegatedPermission -TemplateId $TemplateId -Tenantfilter $Tenant
+                    Add-CIPPApplicationPermission -TemplateId $TemplateId -TenantFilter $Tenant
+                    Add-CIPPDelegatedPermission -TemplateId $TemplateId -TenantFilter $Tenant
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application(s) from template $($TemplateName) and updated it's permissions" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -14,11 +14,8 @@ Function Invoke-ListUserDevices {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
 
     function Get-EPMID {
@@ -33,8 +30,8 @@ Function Invoke-ListUserDevices {
         }
     }
     try {
-        $EPMDevices = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/managedDevices" -Tenantid $tenantfilter
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/ownedDevices?`$top=999" -Tenantid $tenantfilter | Select-Object @{ Name = 'ID'; Expression = { $_.'id' } },
+        $EPMDevices = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/managedDevices" -Tenantid $TenantFilter
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/ownedDevices?`$top=999" -Tenantid $TenantFilter | Select-Object @{ Name = 'ID'; Expression = { $_.'id' } },
         @{ Name = 'accountEnabled'; Expression = { $_.'accountEnabled' } },
         @{ Name = 'approximateLastSignInDateTime'; Expression = { $_.'approximateLastSignInDateTime' | Out-String } },
         @{ Name = 'createdDateTime'; Expression = { $_.'createdDateTime' | Out-String } },
