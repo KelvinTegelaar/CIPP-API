@@ -14,7 +14,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
             Entra (AAD) Standards
         TAG
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.UserPreferredLanguage.preferredLanguage","label":"Preferred Language","api":{"url":"/languageList.json","labelField":"language","valueField":"tag"}}
+            {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.UserPreferredLanguage.preferredLanguage","label":"Preferred Language","api":{"url":"/languageList.json","labelField":"tag","valueField":"tag"}}
         IMPACT
             High Impact
         ADDEDDATE
