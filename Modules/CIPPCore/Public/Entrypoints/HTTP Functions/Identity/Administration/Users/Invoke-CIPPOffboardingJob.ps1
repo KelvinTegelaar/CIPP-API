@@ -113,7 +113,11 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Schedule
         }
         { $_.DeleteUser -eq $true } {
-            Remove-CIPPUser -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPUser -UserID $userid -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveRules -eq $true } {
             Write-Host "Removing rules for $username"
