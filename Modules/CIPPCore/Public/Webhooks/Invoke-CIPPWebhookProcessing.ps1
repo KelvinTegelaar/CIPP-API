@@ -26,7 +26,11 @@ function Invoke-CippWebhookProcessing {
         Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress)"
         switch ($action) {
             'disableUser' {
-                Set-CIPPSignInState -TenantFilter $TenantFilter -User $Data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
+                try {
+                    Set-CIPPSignInState -TenantFilter $TenantFilter -User $Data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to disable user $($Data.UserId)`: $($_.Exception.Message)"
+                }
             }
             'becremediate' {
                 $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Data.UserId)" -tenantid $TenantFilter).UserPrincipalName
@@ -35,7 +39,11 @@ function Invoke-CippWebhookProcessing {
                 } catch {
                     Write-Host "Failed to reset password for $Username`: $($_.Exception.Message)"
                 }
-                Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                try {
+                    Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to disable sign-in for $Username`: $($_.Exception.Message)"
+                }
                 try {
                     Revoke-CIPPSessions -userid $Username -username $Username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
                 } catch {

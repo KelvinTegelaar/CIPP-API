@@ -46,7 +46,11 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.DisableSignIn -eq $true } {
-            Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.OnedriveAccess } {
             $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointPerms -tenantFilter $TenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName }
