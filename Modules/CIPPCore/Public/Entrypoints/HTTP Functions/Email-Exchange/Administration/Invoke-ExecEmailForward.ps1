@@ -27,33 +27,37 @@ Function Invoke-ExecEmailForward {
     $ForwardOption = $Request.Body.forwardOption
     [bool]$KeepCopy = if ($Request.Body.KeepCopy -eq 'true') { $true } else { $false }
 
-    if ($ForwardOption -eq 'internalAddress') {
-        try {
-            $Results = Set-CIPPForwarding -UserID $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -Forward $ForwardingAddress -KeepCopy $KeepCopy
-            $StatusCode = [HttpStatusCode]::OK
-        } catch {
-            $Results = $_.Exception.Message
-            $StatusCode = [HttpStatusCode]::InternalServerError
+    # Process the forwarding option based on the type selected
+    switch ($ForwardOption) {
+        'internalAddress' {
+            # Set up internal forwarding to another mailbox within the organization
+            try {
+                $Results = Set-CIPPForwarding -UserID $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -Forward $ForwardingAddress -KeepCopy $KeepCopy
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $Results = $_.Exception.Message
+                $StatusCode = [HttpStatusCode]::InternalServerError
+            }
         }
-    }
-
-    if ($ForwardOption -eq 'ExternalAddress') {
-        try {
-            $Results = Set-CIPPForwarding -UserID $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ForwardingSMTPAddress $ForwardingSMTPAddress -KeepCopy $KeepCopy
-            $StatusCode = [HttpStatusCode]::OK
-        } catch {
-            $Results = $_.Exception.Message
-            $StatusCode = [HttpStatusCode]::InternalServerError
+        'ExternalAddress' {
+            # Set up external forwarding to an SMTP address outside the organization
+            try {
+                $Results = Set-CIPPForwarding -UserID $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ForwardingSMTPAddress $ForwardingSMTPAddress -KeepCopy $KeepCopy
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $Results = $_.Exception.Message
+                $StatusCode = [HttpStatusCode]::InternalServerError
+            }
         }
-    }
-
-    if ($ForwardOption -eq 'disabled') {
-        try {
-            $Results = Set-CIPPForwarding -UserID $Username -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Disable $true
-            $StatusCode = [HttpStatusCode]::OK
-        } catch {
-            $Results = $_.Exception.Message
-            $StatusCode = [HttpStatusCode]::InternalServerError
+        'disabled' {
+            # Disable email forwarding for the specified user
+            try {
+                $Results = Set-CIPPForwarding -UserID $Username -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Disable $true
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $Results = $_.Exception.Message
+                $StatusCode = [HttpStatusCode]::InternalServerError
+            }
         }
     }
 
