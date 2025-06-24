@@ -121,7 +121,11 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.RemoveRules -eq $true } {
             Write-Host "Removing rules for $username"
-            Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -RemoveAllRules
+            try {
+                Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -RemoveAllRules
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveMobile -eq $true } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
