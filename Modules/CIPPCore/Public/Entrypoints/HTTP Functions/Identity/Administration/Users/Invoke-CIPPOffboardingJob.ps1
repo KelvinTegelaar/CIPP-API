@@ -166,7 +166,11 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.RemoveMFADevices -eq $true } {
-            Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
+            try {
+                Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.ClearImmutableId -eq $true } {
             try {
