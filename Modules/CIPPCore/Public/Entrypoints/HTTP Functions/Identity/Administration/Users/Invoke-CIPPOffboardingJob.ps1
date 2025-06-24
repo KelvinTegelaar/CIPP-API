@@ -165,11 +165,15 @@ function Invoke-CIPPOffboardingJob {
                 "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
             }
         }
-        { $_.'RemoveMFADevices' } {
+        { $_.RemoveMFADevices -eq $true } {
             Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
         }
-        { $_.'ClearImmutableId' -eq $true } {
-            Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+        { $_.ClearImmutableId -eq $true } {
+            try {
+                Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
     }
     return $Return
