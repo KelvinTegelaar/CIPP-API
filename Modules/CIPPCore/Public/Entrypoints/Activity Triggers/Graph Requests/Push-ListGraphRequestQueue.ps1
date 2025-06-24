@@ -21,9 +21,9 @@ function Push-ListGraphRequestQueue {
         Write-Information "Queue Table: $TableName"
         $Table = Get-CIPPTable -TableName $TableName
 
-        $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Item.TenantFilter
+        $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}')" -f $PartitionKey, $Item.TenantFilter
         Write-Information "Filter: $Filter"
-        $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
+        $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, OriginalEntityId
         if ($Existing) {
             $null = Remove-AzDataTableEntity -Force @Table -Entity $Existing
         }
@@ -39,28 +39,33 @@ function Push-ListGraphRequestQueue {
         }
 
         $RawGraphRequest = try {
-            Get-GraphRequestList @GraphRequestParams
+            $Results = Get-GraphRequestList @GraphRequestParams
+            if ($Results[-1].PSObject.Properties.Name -contains 'nextLink') {
+                $Results | Select-Object -First ($Results.Count - 1)
+            } else {
+                $Results
+            }
         } catch {
+            $CippException = Get-CippException -Exception $_.Exception
             [PSCustomObject]@{
-                Tenant     = $Item.TenantFilter
-                CippStatus = "Could not connect to tenant. $($_.Exception.message)"
+                Tenant        = $Item.TenantFilter
+                CippStatus    = "Could not connect to tenant. $($CippException.NormalizedMessage)"
+                CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
             }
         }
-        $GraphResults = foreach ($Request in $RawGraphRequest) {
-            $Json = ConvertTo-Json -Depth 10 -Compress -InputObject $Request
-            $RowKey = $Request.id ?? (New-Guid).Guid
-            [PSCustomObject]@{
-                Tenant       = [string]$Item.TenantFilter
-                QueueId      = [string]$Item.QueueId
-                QueueType    = [string]$Item.QueueType
-                RowKey       = [string]$RowKey
-                PartitionKey = [string]$PartitionKey
-                Data         = [string]$Json
-            }
+        $Json = ConvertTo-Json -Depth 10 -Compress -InputObject $RawGraphRequest
+        $GraphResults = [PSCustomObject]@{
+            PartitionKey = [string]$PartitionKey
+            RowKey       = [string]$Item.TenantFilter
+            QueueId      = [string]$Item.QueueId
+            QueueType    = [string]$Item.QueueType
+            Data         = [string]$Json
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        return $true
     } catch {
-        Write-Information "Queue Error: $($_.Exception.Message)"
+        Write-Warning "Queue Error: $($_.Exception.Message)"
+        #Write-Information ($GraphResults | ConvertTo-Json -Depth 10 -Compress)
         throw $_
     }
 }

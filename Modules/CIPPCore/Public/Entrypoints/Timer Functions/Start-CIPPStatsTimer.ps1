@@ -9,7 +9,7 @@ function Start-CIPPStatsTimer {
     #We will never ship any data that is related to your instance, all we care about is the number of tenants, and the version of the API you are running, and if you completed setup.
 
     if ($PSCmdlet.ShouldProcess('Start-CIPPStatsTimer', 'Starting CIPP Stats Timer')) {
-        if ($ENV:ApplicationID -ne 'LongApplicationID') {
+        if ($env:ApplicationID -ne 'LongApplicationID') {
             $SetupComplete = $true
         }
         $TenantCount = (Get-Tenants -IncludeAll).count
@@ -40,6 +40,8 @@ function Start-CIPPStatsTimer {
             haloPSA             = $RawExt.haloPSA.Enabled
             HIBP                = $RawExt.HIBP.Enabled
             PWPush              = $RawExt.PWPush.Enabled
+            CFZTNA              = $RawExt.CFZTNA.Enabled
+            GitHub              = $RawExt.GitHub.Enabled
         } | ConvertTo-Json
 
         Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'

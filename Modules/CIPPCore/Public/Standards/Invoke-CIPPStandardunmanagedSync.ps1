@@ -5,58 +5,68 @@ function Invoke-CIPPStandardunmanagedSync {
     .COMPONENT
         (APIName) unmanagedSync
     .SYNOPSIS
-        (Label) Only allow users to sync OneDrive from AAD joined devices
+        (Label) Restrict access to SharePoint and OneDrive from unmanaged devices
     .DESCRIPTION
-        (Helptext) The unmanaged Sync standard has been temporarily disabled and does nothing.
-        (DocsDescription) The unmanaged Sync standard has been temporarily disabled and does nothing.
+        (Helptext) Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect.
+        (DocsDescription) Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect. 0 = Allow Access, 1 = Allow limited, web-only access, 2 = Block access. All information about this can be found in Microsofts documentation [here.](https://learn.microsoft.com/en-us/sharepoint/control-access-from-unmanaged-devices)
     .NOTES
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
+            {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.unmanagedSync.state","label":"State","options":[{"label":"Allow limited, web-only access","value":"1"},{"label":"Block access","value":"2"}],"required":false}
         IMPACT
             High Impact
+        ADDEDDATE
+            2025-06-13
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Set-SPOTenant -ConditionalAccessPolicy AllowFullAccess \| AllowLimitedAccess \| BlockAccess
         RECOMMENDEDBY
+            "CIS"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#high-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'unmanagedSync'
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
+
+    $WantedState = [int]($Settings.state.value ?? 2) # Default to 2 (Block Access) if not set, for pre v8.0.3 standard compatibility
+    $Label = $Settings.state.label ?? 'Block Access' # Default label if not set, for pre v8.0.3 standard compatibility
+    $StateIsCorrect = ($CurrentState.ConditionalAccessPolicy -eq $WantedState)
 
     If ($Settings.remediate -eq $true) {
 
-        if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $false) {
-            try {
-                #$body = '{"isUnmanagedSyncAppForTenantRestricted": true}'
-                #$null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'The unmanaged Sync standard has been temporarily disabled.' -sev Info
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Sync for unmanaged devices: $ErrorMessage" -sev Error
-            }
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sync for unmanaged devices is already correctly set to: $Label" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is already disabled' -sev Info
+            try {
+                $CurrentState | Set-CIPPSPOTenant -Properties @{ConditionalAccessPolicy = $WantedState }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set the unmanaged Sync state to: $Label" -sev Info
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Sync for unmanaged devices: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is disabled' -sev Info
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sync for unmanaged devices is correctly set to: $Label" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Alert
+            Write-StandardsAlert -message "Sync for unmanaged devices is not correctly set to $Label, but instead $($CurrentState.ConditionalAccessPolicy)" -object $CurrentState -tenant $Tenant -standardName 'unmanagedSync' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sync for unmanaged devices is not correctly set to $Label, but instead $($CurrentState.ConditionalAccessPolicy)" -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $CurrentInfo.isUnmanagedSyncAppForTenantRestricted -StoreAs bool -Tenant $tenant
+
+        $State = $StateIsCorrect ? $true : $CurrentState.ConditionalAccessPolicy
+        Set-CIPPStandardsCompareField -FieldName 'standards.unmanagedSync' -FieldValue $State -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

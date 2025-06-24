@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddScheduledItem {
+function Invoke-AddScheduledItem {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,17 +9,33 @@ Function Invoke-AddScheduledItem {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    if ($null -eq $Request.query.hidden) {
+    if ($null -eq $Request.Query.hidden) {
         $hidden = $false
     } else {
         $hidden = $true
     }
-    $Result = Add-CIPPScheduledTask -Task $Request.body -hidden $hidden -DisallowDuplicateName $Request.query.DisallowDuplicateName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Result -Sev 'Info'
 
+    if ($Request.Body.RunNow -eq $true) {
+        try {
+            $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+            $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
+            $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            if ($ExistingTask) {
+                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Request.Headers
+            } else {
+                $Result = "Task with id $($Request.Body.RowKey) does not exist"
+            }
+        } catch {
+            Write-Warning "Error scheduling task: $($_.Exception.Message)"
+            Write-Information $_.InvocationInfo.PositionMessage
+            $Result = "Error scheduling task: $($_.Exception.Message)"
+        }
+    } else {
+        $Result = Add-CIPPScheduledTask -Task $Request.Body -Headers $Request.Headers -hidden $hidden -DisallowDuplicateName $Request.Query.DisallowDuplicateName
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Info'
+    }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ Results = $Result }
         })
-
 }

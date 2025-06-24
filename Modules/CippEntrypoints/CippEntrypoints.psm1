@@ -2,13 +2,25 @@ using namespace System.Net
 
 function Receive-CippHttpTrigger {
     <#
+    .SYNOPSIS
+        Execute HTTP trigger function
+    .DESCRIPTION
+        Execute HTTP trigger function from an azure function app
+    .PARAMETER Request
+        The request object from the function app
+    .PARAMETER TriggerMetadata
+        The trigger metadata object from the function app
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
     #>
-    Param(
+    param(
         $Request,
         $TriggerMetadata
     )
+
+    if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+        Write-Information '** Function app cold start detected **'
+    }
 
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
@@ -35,17 +47,21 @@ function Receive-CippHttpTrigger {
         TriggerMetadata = $TriggerMetadata
     }
 
-    if (Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) {
+    if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
         try {
             $Access = Test-CIPPAccess -Request $Request
+            if ($FunctionName -eq 'Invoke-Me') {
+                return
+            }
+
             Write-Information "Access: $Access"
             if ($Access) {
                 & $FunctionName @HttpTrigger
             }
         } catch {
-            Write-Information $_.Exception.Message
+            Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::Forbidden
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = $_.Exception.Message
                 })
         }
@@ -55,9 +71,20 @@ function Receive-CippHttpTrigger {
                 Body       = 'Endpoint not found'
             })
     }
+    return
 }
 
 function Receive-CippOrchestrationTrigger {
+    <#
+    .SYNOPSIS
+        Execute durable orchestrator function
+    .DESCRIPTION
+        Execute orchestrator from azure function app
+    .PARAMETER Context
+        The context object from the function app
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Context)
 
     try {
@@ -67,7 +94,7 @@ function Receive-CippOrchestrationTrigger {
             $OrchestratorInput = $Context.Input
         }
         Write-Information "Orchestrator started $($OrchestratorInput.OrchestratorName)"
-
+        Write-Warning "Receive-CippOrchestrationTrigger - $($OrchestratorInput.OrchestratorName)"
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
             MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
@@ -125,10 +152,22 @@ function Receive-CippOrchestrationTrigger {
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
     }
+    return $true
 }
 
 function Receive-CippActivityTrigger {
-    Param($Item)
+    <#
+    .SYNOPSIS
+        Execute durable activity function
+    .DESCRIPTION
+        Execute durable activity function from an orchestrator
+    .PARAMETER Item
+        The item to process
+    .FUNCTIONALITY
+        Entrypoint
+    #>
+    param($Item)
+    Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Start = Get-Date
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
@@ -153,8 +192,9 @@ function Receive-CippActivityTrigger {
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
+                Write-Warning "Activity starting Function: $FunctionName."
                 Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
-
+                Write-Warning "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
                     $null = Set-CippQueueTask @QueueTask
@@ -195,9 +235,20 @@ function Receive-CippActivityTrigger {
             $null = Set-CippQueueTask @QueueTask
         }
     }
+    return $true
 }
 
 function Receive-CIPPTimerTrigger {
+    <#
+    .SYNOPSIS
+        This function is used to execute timer functions based on the cron schedule.
+    .DESCRIPTION
+        This function is used to execute timer functions based on the cron schedule.
+    .PARAMETER Timer
+        The timer trigger object from the function app
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Timer)
 
     $UtcNow = (Get-Date).ToUniversalTime()
@@ -251,6 +302,7 @@ function Receive-CIPPTimerTrigger {
 
         Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
     }
+    return $true
 }
 
 Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')

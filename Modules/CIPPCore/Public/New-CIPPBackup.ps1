@@ -1,12 +1,12 @@
 function New-CIPPBackup {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         $backupType,
         $StorageOutput = 'default',
         $TenantFilter,
         $ScheduledBackupValues,
         $APIName = 'CIPP Backup',
-        $ExecutingUser
+        $Headers
     )
 
     $BackupData = switch ($backupType) {
@@ -14,8 +14,17 @@ function New-CIPPBackup {
         'CIPP' {
             try {
                 $BackupTables = @(
+                    'AppPermissions'
+                    'AccessRoleGroups'
+                    'ApiClients'
+                    'CustomData'
+                    'CustomRoles'
                     'Config'
+                    'CommunityRepos'
                     'Domains'
+                    'GraphPresets'
+                    'GDAPRoles'
+                    'GDAPRoleTemplates'
                     'ExcludedLicenses'
                     'templates'
                     'standards'
@@ -23,10 +32,11 @@ function New-CIPPBackup {
                     'Extensions'
                     'WebhookRules'
                     'ScheduledTasks'
+                    'TenantProperties'
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-AzDataTableEntity @Table | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+                    Get-AzDataTableEntity @Table | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag, Results | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
                 $CSVfile
@@ -39,17 +49,19 @@ function New-CIPPBackup {
                 }
                 $Table = Get-CippTable -tablename 'CIPPBackup'
                 try {
-                    $Result = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
+                    if ($PSCmdlet.ShouldProcess('CIPP Backup', 'Create')) {
+                        $null = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+                        Write-LogMessage -headers $Headers -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
+                    }
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for CIPP: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create backup for CIPP: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                     [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
                 }
 
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create backup: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
             }
         }
@@ -64,21 +76,24 @@ function New-CIPPBackup {
                 RowKey       = $RowKey
                 TenantFilter = $TenantFilter
             }
-            Write-Host "Scheduled backup value psproperties: $(([pscustomobject]$ScheduledBackupValues).psobject.Properties)"
+            Write-Information "Scheduled backup value psproperties: $(([pscustomobject]$ScheduledBackupValues).psobject.Properties)"
             foreach ($ScheduledBackup in ([pscustomobject]$ScheduledBackupValues).psobject.Properties.Name) {
-                $BackupResult = New-CIPPBackupTask -Task $ScheduledBackup -TenantFilter $TenantFilter | ConvertTo-Json -Depth 100 -Compress | Out-String
-                $entity[$ScheduledBackup] = "$BackupResult"
+                try {
+                    $BackupResult = New-CIPPBackupTask -Task $ScheduledBackup -TenantFilter $TenantFilter | ConvertTo-Json -Depth 100 -Compress | Out-String
+                    $entity[$ScheduledBackup] = "$BackupResult"
+                } catch {
+                    Write-Information "Failed to create backup for $ScheduledBackup - $($_.Exception.Message)"
+                }
             }
             $Table = Get-CippTable -tablename 'ScheduledBackup'
             try {
-                $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                $null = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                Write-LogMessage -headers $Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $State = 'Backup finished succesfully'
-                $Result
             } catch {
                 $State = 'Failed to write backup to table storage'
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create tenant backup: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
             }
         }

@@ -10,39 +10,40 @@ Function Invoke-ExecCSPLicense {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.body.TenantFilter
-    $Action = $Request.body.Action
+    $TenantFilter = $Request.Body.tenantFilter
+    $Action = $Request.Body.Action
+    $SKU = $Request.Body.SKU
+
     try {
         if ($Action -eq 'Add') {
-            $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku -add $Request.body.Add
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
         }
 
         if ($Action -eq 'Remove') {
-            $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku -remove $Request.body.Remove
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
         }
 
         if ($Action -eq 'NewSub') {
-            $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku.value -Quantity $Request.body.Quantity
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
         }
         if ($Action -eq 'Cancel') {
-            $GraphRequest = Remove-SherwebSubscription -tenantFilter $TenantFilter -SubscriptionIds $Request.body.SubscriptionIds
+            $null = Remove-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
         }
-        $Message = 'License change executed successfully.'
+        $Result = 'License change executed successfully.'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Message = "Failed to execute license change. Error: $_"
+        $Result = "Failed to execute license change. Error: $_"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    #If #GraphRequest is a GUID, the subscription was edited succesfully, and return that its done.
+    # If $GraphRequest is a GUID, the subscription was edited successfully, and return that it's done.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Message
+            StatusCode = $StatusCode
+            Body       = $Result
         }) -Clobber
 
 }

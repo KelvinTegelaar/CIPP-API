@@ -13,60 +13,77 @@ function Invoke-CIPPStandardsharingCapability {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"label":"Select Sharing Level","name":"standards.sharingCapability.Level","options":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}
+            {"type":"autoComplete","multiple":false,"label":"Select Sharing Level","name":"standards.sharingCapability.Level","options":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminSharepointSetting
+            Update-MgBetaAdminSharePointSetting
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#high-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'sharingCapability'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $Tenant
     }
+
+    # Get level value using null-coalescing operator
+    $level = $Settings.Level.value ?? $Settings.Level
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.Level -or $Settings.Level -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true))) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
-        Return
+    if (([string]::IsNullOrWhiteSpace($level) -or $level -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
+        return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
-        if ($CurrentInfo.sharingCapability -eq $Settings.Level) {
-            Write-Host "Sharing level is already set to $($Settings.Level)"
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is already set to $($Settings.Level)" -sev Info
+        if ($CurrentInfo.sharingCapability -eq $level) {
+            Write-Host "Sharing level is already set to $level"
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is already set to $level" -sev Info
         } else {
-            Write-Host "Setting sharing level to $($Settings.Level) from $($CurrentInfo.sharingCapability)"
+            Write-Host "Setting sharing level to $level from $($CurrentInfo.sharingCapability)"
             try {
-                $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body "{`"sharingCapability`":`"$($Settings.Level)`"}" -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set sharing level to $($Settings.Level) from $($CurrentInfo.sharingCapability)" -sev Info
+                $body = @{
+                    sharingCapability = $level
+                }
+                $bodyJson = ConvertTo-Json -InputObject $body -Compress
+                $null = New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $bodyJson -ContentType 'application/json'
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set sharing level to $level from $($CurrentInfo.sharingCapability)" -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set sharing level to $($Settings.Level): $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set sharing level to $level : $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
-
-        if ($CurrentInfo.sharingCapability -eq $Settings.Level) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is set to $($Settings.Level)" -sev Info
+        if ($CurrentInfo.sharingCapability -eq $level) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is set to $level" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is not set to $($Settings.Level)" -sev Alert
+            Write-StandardsAlert -message "Sharing level is not set to $level" -object $CurrentInfo -tenant $Tenant -standardName 'sharingCapability' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is not set to $level" -sev Info
         }
+    }
+
+    if ($Settings.report -eq $true) {
+        if ($CurrentInfo.sharingCapability -eq $level) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentInfo | Select-Object -Property sharingCapability
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.sharingCapability' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

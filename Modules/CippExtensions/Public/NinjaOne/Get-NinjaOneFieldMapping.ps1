@@ -109,7 +109,7 @@ function Get-NinjaOneFieldMapping {
         CIPPFields        = $CIPPFields
         CIPPFieldHeaders  = $CIPPFieldHeaders
         IntegrationFields = @($Unset) + @($NinjaCustomFieldsOrg) + @($NinjaCustomFieldsNode)
-        Mappings          = $Mappings
+        Mappings          = @($Mappings)
     }
 
     return $MappingObj

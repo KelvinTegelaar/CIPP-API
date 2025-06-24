@@ -8,8 +8,9 @@ function Invoke-ExecDurableFunctions {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecDurableStats'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Collect info
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
@@ -115,7 +116,7 @@ function Invoke-ExecDurableFunctions {
                 }
 
                 $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
-                $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "Status eq 'Running'" -Property RowKey, PartitionKey, Status
+                $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and Status eq 'Running'" -Property RowKey, PartitionKey, Status
                 if (($RunningTasks | Measure-Object).Count -gt 0) {
                     if ($PSCmdlet.ShouldProcess('Tasks', 'Mark Failed')) {
                         $UpdatedTasks = foreach ($Task in $RunningTasks) {

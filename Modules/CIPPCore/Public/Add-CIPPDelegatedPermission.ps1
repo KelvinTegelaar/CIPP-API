@@ -2,6 +2,7 @@ function Add-CIPPDelegatedPermission {
     [CmdletBinding()]
     param(
         $RequiredResourceAccess,
+        $TemplateId,
         $ApplicationId,
         $NoTranslateRequired,
         $Tenantfilter
@@ -9,7 +10,7 @@ function Add-CIPPDelegatedPermission {
     Write-Host 'Adding Delegated Permissions'
     Set-Location (Get-Item $PSScriptRoot).FullName
 
-    if ($ApplicationId -eq $ENV:ApplicationID -and $Tenantfilter -eq $env:TenantID) {
+    if ($ApplicationId -eq $env:ApplicationID -and $Tenantfilter -eq $env:TenantID) {
         #return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')
         $RequiredResourceAccess = 'CIPPDefaults'
     }
@@ -40,7 +41,34 @@ function Add-CIPPDelegatedPermission {
             # remove the partner center permission if not pushing to partner tenant
             $RequiredResourceAccess = $RequiredResourceAccess | Where-Object { $_.resourceAppId -ne 'fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd' }
         }
+    } else {
+        if (!$RequiredResourceAccess -and $TemplateId) {
+            Write-Information "Adding delegated permissions for template $TemplateId"
+            $TemplateTable = Get-CIPPTable -TableName 'templates'
+            $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
+            $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $ApplicationId = $Template.AppId
+            $Permissions = $Template.Permissions
+            $NoTranslateRequired = $true
+            $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+            foreach ($AppId in $Permissions.PSObject.Properties.Name) {
+                $DelegatedPermissions = @($Permissions.$AppId.delegatedPermissions)
+                $ResourceAccess = [System.Collections.Generic.List[object]]::new()
+                foreach ($Permission in $DelegatedPermissions) {
+                    $ResourceAccess.Add(@{
+                            id   = $Permission.value
+                            type = 'Scope'
+                        })
+                }
+                $Resource = @{
+                    resourceAppId  = $AppId
+                    resourceAccess = @($ResourceAccess)
+                }
+                $RequiredResourceAccess.Add($Resource)
+            }
+        }
     }
+
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property appId -EQ $ApplicationId
@@ -66,6 +94,7 @@ function Add-CIPPDelegatedPermission {
         }
 
         $DelegatedScopes = $App.resourceAccess | Where-Object -Property type -EQ 'Scope'
+
         if ($NoTranslateRequired) {
             $NewScope = @($DelegatedScopes | ForEach-Object { $_.id } | Sort-Object -Unique) -join ' '
         } else {
@@ -85,6 +114,10 @@ function Add-CIPPDelegatedPermission {
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {
+            if ([string]::IsNullOrEmpty($NewScope) -or $NewScope -eq ' ') {
+                $Results.add("No delegated permissions to add for $($svcPrincipalId.displayName)")
+                continue
+            }
             try {
                 $Createbody = @{
                     clientId    = $ourSVCPrincipal.id
@@ -118,6 +151,13 @@ function Add-CIPPDelegatedPermission {
                 $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)")
                 continue
             }
+
+            if ([string]::IsNullOrEmpty($NewScope) -or $NewScope -eq ' ') {
+                # No permissions to update
+                $Results.add("No delegated permissions to update for $($svcPrincipalId.displayName)")
+                continue
+            }
+
             $Patchbody = @{
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress

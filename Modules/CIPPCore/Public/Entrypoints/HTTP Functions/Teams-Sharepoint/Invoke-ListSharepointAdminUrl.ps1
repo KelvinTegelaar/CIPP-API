@@ -19,9 +19,8 @@ function Invoke-ListSharepointAdminUrl {
         if ($Tenant.SharepointAdminUrl) {
             $AdminUrl = $Tenant.SharepointAdminUrl
         } else {
-            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-            $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
-            $Tenant | Add-Member -MemberType NoteProperty -Name SharepointAdminUrl -Value $AdminUrl
+            $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+            $Tenant | Add-Member -MemberType NoteProperty -Name SharepointAdminUrl -Value $SharePointInfo.AdminUrl
             $Table = Get-CIPPTable -TableName 'Tenants'
             Add-CIPPAzDataTableEntity @Table -Entity $Tenant -Force
         }

@@ -10,31 +10,36 @@ Function Invoke-ListTenantDetails {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    $tenantfilter = $Request.Query.TenantFilter
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        $org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenantfilter | Select-Object displayName, id, city, country, countryLetterCode, street, state, postalCode,
+        $org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter | Select-Object displayName, id, city, country, countryLetterCode, street, state, postalCode,
         @{ Name = 'businessPhones'; Expression = { $_.businessPhones -join ', ' } },
         @{ Name = 'technicalNotificationMails'; Expression = { $_.technicalNotificationMails -join ', ' } },
         tenantType, createdDateTime, onPremisesLastPasswordSyncDateTime, onPremisesLastSyncDateTime, onPremisesSyncEnabled, assignedPlans
 
-        # Respond with the successful output
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $org
-            })
-    } catch {
-        # Log the exception message
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Error: $($_.Exception.Message)" -Sev 'Error'
+        $customProperties = Get-TenantProperties -customerId $TenantFilter
+        $org | Add-Member -MemberType NoteProperty -Name 'customProperties' -Value $customProperties
 
-        # Respond with a 500 error and include the exception message in the response body
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::InternalServerError
-                Body       = Get-NormalizedError -message $_.Exception.Message
-            })
+        $Groups = (Get-TenantGroups -TenantFilter $TenantFilter) ?? @()
+        $org | Add-Member -MemberType NoteProperty -Name 'Groups' -Value @($Groups)
+        $StatusCode = [HttpStatusCode]::OK
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $org = "Failed to retrieve tenant details: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $org -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
+
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = $org
+        })
 }

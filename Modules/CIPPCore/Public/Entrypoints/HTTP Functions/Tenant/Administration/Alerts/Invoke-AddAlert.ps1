@@ -9,30 +9,34 @@ Function Invoke-AddAlert {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenants = $request.body.tenantFilter
-    $Conditions = $request.body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $Tenants = $Request.Body.tenantFilter
+    $Conditions = $Request.Body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $TenantsJson = $Tenants | ConvertTo-Json -Compress -Depth 10 | Out-String
-    $Actions = $request.body.actions | ConvertTo-Json -Compress -Depth 10 | Out-String
-    $RowKey = $Request.body.RowKey ? $Request.body.RowKey : (New-Guid).ToString()
+    $excludedTenantsJson = $Request.Body.excludedTenants | ConvertTo-Json -Compress -Depth 10 | Out-String
+    $Actions = $Request.Body.actions | ConvertTo-Json -Compress -Depth 10 | Out-String
+    $RowKey = $Request.Body.RowKey ? $Request.Body.RowKey : (New-Guid).ToString()
     $CompleteObject = @{
-        Tenants      = [string]$TenantsJson
-        Conditions   = [string]$Conditions
-        Actions      = [string]$Actions
-        type         = $request.body.logbook.value
-        RowKey       = $RowKey
-        PartitionKey = 'Webhookv2'
+        Tenants         = [string]$TenantsJson
+        excludedTenants = [string]$excludedTenantsJson
+        Conditions      = [string]$Conditions
+        Actions         = [string]$Actions
+        type            = $Request.Body.logbook.value
+        RowKey          = $RowKey
+        PartitionKey    = 'Webhookv2'
     }
-    $WebhookTable = get-cipptable -TableName 'WebhookRules'
+    $WebhookTable = Get-CippTable -TableName 'WebhookRules'
     Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force
     $Results = "Added Audit Log Alert for $($Tenants.count) tenants. It may take up to four hours before Microsoft starts delivering these alerts."
-    $body = [pscustomobject]@{'Results' = @($results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{ 'Results' = @($Results) }
         })
 
 }

@@ -5,5 +5,5 @@ function Push-CIPPAccessTenantTest {
     #>
     Param($Item)
 
-    Test-CIPPAccessTenant -Tenant $Item.customerId -ExecutingUser 'CIPP'
+    Test-CIPPAccessTenant -Tenant $Item.customerId -Headers 'CIPP'
 }

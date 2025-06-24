@@ -3,15 +3,21 @@ function Invoke-PublicWebhooks {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        Public
     #>
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $WebhookTable = Get-CIPPTable -TableName webhookTable
     $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
     Write-Host 'Received request'
-    $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
+    $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
     $CIPPURL = [string]$url
     Write-Host $url
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
@@ -19,22 +25,22 @@ function Invoke-PublicWebhooks {
         $body = 'This webhook is not authorized, its an old entry.'
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    if ($Request.query.ValidationToken) {
+    if ($Request.Query.ValidationToken) {
         Write-Host 'Validation token received - query ValidationToken'
-        $body = $request.query.ValidationToken
+        $body = $Request.Query.ValidationToken
         $StatusCode = [HttpStatusCode]::OK
-    } elseif ($Request.body.validationCode) {
+    } elseif ($Request.Body.validationCode) {
         Write-Host 'Validation token received - body validationCode'
-        $body = $request.body.validationCode
+        $body = $Request.Body.validationCode
         $StatusCode = [HttpStatusCode]::OK
-    } elseif ($Request.query.validationCode) {
+    } elseif ($Request.Query.validationCode) {
         Write-Host 'Validation token received - query validationCode'
-        $body = $request.query.validationCode
+        $body = $Request.Query.validationCode
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.CIPPID -in $Webhooks.RowKey) {
         Write-Host 'Found matching CIPPID'
-        $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-        $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
+        $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
+        $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.Query.CIPPID
 
         if ($Request.Query.Type -eq 'GraphSubscription') {
             # Graph Subscriptions

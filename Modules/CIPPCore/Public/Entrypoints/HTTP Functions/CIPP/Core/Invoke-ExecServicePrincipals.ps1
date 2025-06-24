@@ -1,12 +1,16 @@
 function Invoke-ExecServicePrincipals {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $env:TenantID
 
@@ -16,17 +20,32 @@ function Invoke-ExecServicePrincipals {
     try {
         switch ($Request.Query.Action) {
             'Create' {
+                $BlockList = @(
+                    'e9a7fea1-1cc0-4cd9-a31b-9137ca5deedd', # eM Client
+                    'ff8d92dc-3d82-41d6-bcbd-b9174d163620', # PerfectData Software
+                    'a245e8c0-b53c-4b67-9b45-751d1dff8e6b', # Newsletter Software Supermailer
+                    'b15665d9-eda6-4092-8539-0eec376afd59', # rclone
+                    'a43e5392-f48b-46a4-a0f1-098b5eeb4757', # CloudSponge
+                    'caffae8c-0882-4c81-9a27-d1803af53a40'  # SigParser
+                )
                 $Action = 'Create'
+
                 if ($Request.Query.AppId -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
-                    $Body = @{
-                        'appId' = $Request.Query.AppId
-                    } | ConvertTo-Json -Compress
-                    try {
-                        $ServicePrincipal = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
-                        $Results = "Created service principal for $($ServicePrincipal.displayName) ($($ServicePrincipal.appId))"
-                    } catch {
-                        $Results = "Unable to create service principal: $($_.Exception.Message)"
+
+                    if ($BlockList -contains $Request.Query.AppId) {
+                        $Results = 'Service Principal creation is blocked for this AppId'
                         $Success = $false
+                    } else {
+                        $Body = @{
+                            'appId' = $Request.Query.AppId
+                        } | ConvertTo-Json -Compress
+                        try {
+                            $ServicePrincipal = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
+                            $Results = "Created service principal for $($ServicePrincipal.displayName) ($($ServicePrincipal.appId))"
+                        } catch {
+                            $Results = "Unable to create service principal: $($_.Exception.Message)"
+                            $Success = $false
+                        }
                     }
                 } else {
                     $Results = 'Invalid AppId'

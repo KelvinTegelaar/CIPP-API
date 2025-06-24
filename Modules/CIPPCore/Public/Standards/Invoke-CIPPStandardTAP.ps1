@@ -13,45 +13,63 @@ function Invoke-CIPPStandardTAP {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"label":"Select TAP Lifetime","name":"standards.TAP.config","options":[{"label":"Only Once","value":"true"},{"label":"Multiple Logons","value":"false"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select TAP Lifetime","name":"standards.TAP.config","options":[{"label":"Only Once","value":"true"},{"label":"Multiple Logons","value":"false"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-03-15
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TAP'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant
-    if ($null -eq $Settings.config) { $Settings.config = $True }
-    $StateIsCorrect =   ($CurrentState.state -eq 'enabled') -and
-                        ([System.Convert]::ToBoolean($CurrentState.isUsableOnce) -eq [System.Convert]::ToBoolean($Settings.config))
 
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
-    }
+    # Get config value using null-coalescing operator
+    $config = $Settings.config.value ?? $Settings.config
+    if ($null -eq $config) { $config = $True }
 
-    If ($Settings.remediate -eq $true) {
+    $StateIsCorrect = ($CurrentState.state -eq 'enabled') -and
+    ([System.Convert]::ToBoolean($CurrentState.isUsableOnce) -eq [System.Convert]::ToBoolean($config))
+
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is already enabled.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is already enabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $Settings.config
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $Tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $config
+            } catch {
+            }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is enabled.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is not enabled.' -sev Alert
+            $Object = $CurrentState | Select-Object -Property state, isUsableOnce, defaultLifetimeInMinutes, defaultLength, maximumLifetimeInMinutes
+            Write-StandardsAlert -message 'Temporary Access Passwords is not enabled.' -object $Object -tenant $Tenant -standardName 'TAP' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is not enabled.' -sev Info
         }
+    }
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState | Select-Object state, isUsableOnce
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TAP' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

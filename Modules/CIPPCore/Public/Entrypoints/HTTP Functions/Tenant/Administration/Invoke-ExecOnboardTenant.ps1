@@ -9,8 +9,11 @@ function Invoke-ExecOnboardTenant {
     #>
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecOnboardTenant'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
     $Id = $Request.Body.id
     if ($Id) {
         try {
@@ -84,6 +87,7 @@ function Invoke-ExecOnboardTenant {
                         Batch            = @($Item)
                     }
                     $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                    Write-LogMessage -headers $Headers -API $APIName -message "Onboarding job $Id started" -Sev 'Info' -LogData @{ 'InstanceId' = $InstanceId }
                 }
 
                 $Steps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json

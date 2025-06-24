@@ -5,7 +5,7 @@ function Request-CIPPSPOPersonalSite {
         [string]$TenantFilter,
         [Parameter(Mandatory = $true)]
         [string[]]$UserEmails,
-        [string]$ExecutingUser = 'CIPP',
+        [string]$Headers = 'CIPP',
         [string]$APIName = 'Request-CIPPSPOPersonalSite'
     )
     $UserList = [System.Collections.Generic.List[string]]::new()
@@ -36,17 +36,17 @@ function Request-CIPPSPOPersonalSite {
     </ObjectPaths>
 </Request>
 "@
-    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
 
+    $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     try {
-        $Request = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
+        $Request = New-GraphPostRequest -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
         if (!$Request.IsComplete) { throw }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Requested personal site for $($UserEmails -join ', ')" -Sev 'Info' -tenant $TenantFilter
-        return "Requested personal site for $($UserEmails -join ', ')"
+        Write-LogMessage -headers $Headers -API $APIName -message "Requested personal site for $($UserEmails -join ', ')" -Sev 'Info' -tenant $TenantFilter
+        return "Successfully requested personal site for $($UserEmails -join ', ')"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Could not request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to request personal site for $($UserEmails -join ', '). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

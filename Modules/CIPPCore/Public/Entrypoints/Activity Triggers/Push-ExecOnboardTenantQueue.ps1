@@ -1,4 +1,4 @@
-Function Push-ExecOnboardTenantQueue {
+function Push-ExecOnboardTenantQueue {
     <#
     .FUNCTIONALITY
     Entrypoint
@@ -44,7 +44,7 @@ Function Push-ExecOnboardTenantQueue {
             @{ Name = 'Cloud App Security Administrator'; Id = '892c5842-a9a6-463a-8041-72aa08ca3cf6' },
             @{ Name = 'Cloud Device Administrator'; Id = '7698a772-787b-4ac8-901f-60d6b08affd2' },
             @{ Name = 'Teams Administrator'; Id = '69091246-20e8-4a56-aa4d-066075b2a7a8' },
-            @{ Name = 'Sharepoint Administrator'; Id = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
+            @{ Name = 'SharePoint Administrator'; Id = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
             @{ Name = 'Authentication Policy Administrator'; Id = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
             @{ Name = 'Privileged Role Administrator'; Id = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
             @{ Name = 'Privileged Authentication Administrator'; Id = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' }
@@ -229,25 +229,25 @@ Function Push-ExecOnboardTenantQueue {
             if ($AccessAssignments.status -notcontains 'pending') {
                 $OnboardingSteps.Step3.Message = 'Group check: Access assignments are mapped and active'
                 $OnboardingSteps.Step3.Status = 'succeeded'
-                if ($Item.AddMissingGroups -eq $true) {
-                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
-                    $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id").id
-                    $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName"
-                    foreach ($Role in $Item.Roles) {
-                        if ($CurrentMemberships.id -notcontains $Role.GroupId) {
-                            $PostBody = @{
-                                '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
-                            } | ConvertTo-Json -Compress
-                            try {
-                                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Role.GroupId)/members/`$ref" -body $PostBody -AsApp $true -NoAuthCheck $true
-                                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($Role.GroupName)" })
-                            } catch {
-                                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($Role.GroupName) - $($_.Exception.Message)" })
-                            }
+
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
+                $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id" -NoAuthCheck $true).id
+                $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName" -NoAuthCheck $true
+                $ExpectedCippRoles = $Item.Roles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.roleDefinitionId }
+                foreach ($Role in $ExpectedCippRoles) {
+                    if ($CurrentMemberships.id -notcontains $Role.GroupId) {
+                        $PostBody = @{
+                            '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
+                        } | ConvertTo-Json -Compress
+                        try {
+                            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Role.GroupId)/members/`$ref" -body $PostBody -AsApp $true -NoAuthCheck $true
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($Role.GroupName)" })
+                        } catch {
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($Role.GroupName) - $($_.Exception.Message)" })
                         }
                     }
-                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'SAM user group check completed' })
                 }
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'SAM user group check completed' })
             } else {
                 $OnboardingSteps.Step3.Message = 'Group check: Access assignments are still pending, try again later'
                 $OnboardingSteps.Step3.Status = 'failed'
@@ -316,8 +316,8 @@ Function Push-ExecOnboardTenantQueue {
                     $LastCPVError = ''
                     do {
                         try {
-                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
-                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {
@@ -354,22 +354,32 @@ Function Push-ExecOnboardTenantQueue {
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
             if ($Item.StandardsExcludeAllTenants -eq $true) {
                 $AddExclusionObj = [PSCustomObject]@{
-                    label       = $Tenant.defaultDomainName
+                    label       = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
                     value       = $Tenant.defaultDomainName
-                    addedFields = @{}
+                    addedFields = @{
+                        customerId        = $Tenant.customerId
+                        defaultDomainName = $Tenant.defaultDomainName
+                    }
                 }
                 $Table = Get-CippTable -tablename 'templates'
                 $ExistingTemplates = Get-CippazDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
-                foreach ($AllTenantesTemplate in $ExistingTemplates) {
+                foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantesTemplate.JSON | ConvertFrom-Json
-                    $NewExcludedTenants = $object.excludedTenants + $AddExclusionObj
+                    $NewExcludedTenants = [system.collections.generic.list[object]]::new()
+                    if (!$object.excludedTenants) {
+                        $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
+                    }
+                    foreach ($Tenant in $object.excludedTenants) {
+                        $NewExcludedTenants.Add($Tenant)
+                    }
+                    $NewExcludedTenants.Add($AddExclusionObj)
                     $object.excludedTenants = $NewExcludedTenants
                     $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
                     $Table.Force = $true
                     Add-CIPPAzDataTableEntity @Table -Entity @{
                         JSON         = "$JSON"
-                        RowKey       = $AllTenantesTemplate.RowKey
-                        GUID         = $AllTenantesTemplate.GUID
+                        RowKey       = $AllTenantsTemplate.RowKey
+                        GUID         = $AllTenantsTemplate.GUID
                         PartitionKey = 'StandardsTemplateV2'
                     }
                 }

@@ -6,23 +6,31 @@ function Invoke-ExecPerUserMFA {
     .ROLE
     Identity.User.ReadWrite
     #>
-    Param(
-        $Request,
-        $TriggerMetadata
-    )
+    Param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Request = @{
-        userId        = $Request.Body.userId
-        TenantFilter  = $Request.Body.TenantFilter
-        State         = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
-        executingUser = $Request.Headers.'x-ms-client-principal'
+        userId       = $Request.Body.userId
+        TenantFilter = $Request.Body.tenantFilter
+        State        = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
+        Headers      = $Headers
+        APIName      = $APIName
     }
-    $Result = Set-CIPPPerUserMFA @Request
-    $Body = @{
-        Results = @($Result)
+    try {
+        $Result = Set-CIPPPerUserMFA @Request
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
+
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            StatusCode = $StatusCode
+            Body       = @{ 'Results' = @($Result) }
         })
 }

@@ -87,7 +87,7 @@ function Invoke-NinjaOneOrgMapping {
                 IntegrationName = "$($MatchedOrg.name)"
             }
             Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
-            Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
+            Write-LogMessage -API 'NinjaOneAutoMap_Queue'  -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
         }
     }
 

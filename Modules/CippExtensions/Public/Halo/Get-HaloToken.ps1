@@ -12,7 +12,6 @@ function Get-HaloToken {
             client_secret = $Secret
             scope         = 'all'
         }
-        Write-Host ($body | ConvertTo-Json)
         if ($Configuration.Tenant -ne 'None') { $Tenant = "?tenant=$($Configuration.Tenant)" }
         $token = Invoke-RestMethod -Uri "$($Configuration.AuthURL)/token$Tenant" -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
         return $token

@@ -9,15 +9,16 @@ function Invoke-ListAppConsentRequests {
     #>
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $TenantFilter = $Request.Query.TenantFilter
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        if ($Request.Query.TenantFilter -eq 'AllTenants') {
+        if ($TenantFilter -eq 'AllTenants') {
             throw 'AllTenants is not yet supported'
-        } else {
-            $TenantFilter = $Request.Query.TenantFilter
         }
 
         $appConsentRequests = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests' -tenantid $TenantFilter # Need the beta endpoint to get consentType
@@ -49,9 +50,10 @@ function Invoke-ListAppConsentRequests {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $StatusCode = [HttpStatusCode]::OK
-        Write-LogMessage -user $ExecutingUser -API $APIName -message 'app consent request list failed' -Sev 'Error' -tenant $TenantFilter
-        $Results = @{ appDisplayName = "Error: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        Write-LogMessage -Headers $Headers -API $APIName -message 'app consent request list failed' -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Results = @{ appDisplayName = "Error: $($ErrorMessage.NormalizedError)" }
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

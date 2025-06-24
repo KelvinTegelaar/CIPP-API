@@ -1,49 +1,58 @@
 using namespace System.Net
 
-Function Invoke-ListScheduledItems {
+function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+
+    # Interact with query parameters or the body of the request.
+    $ShowHidden = $Request.Query.ShowHidden ?? $Request.Body.ShowHidden
+    $Name = $Request.Query.Name ?? $Request.Body.Name
+    $Type = $Request.Query.Type ?? $Request.Body.Type
 
     $ScheduledItemFilter = [System.Collections.Generic.List[string]]::new()
     $ScheduledItemFilter.Add("PartitionKey eq 'ScheduledTask'")
 
-    if ($Request.Query.ShowHidden) {
+    if ($ShowHidden -eq $true) {
         $ScheduledItemFilter.Add('Hidden eq true')
     } else {
         $ScheduledItemFilter.Add('Hidden eq false')
     }
 
-    if ($Request.Query.Name) {
-        $ScheduledItemFilter.Add("Name eq '$($Request.Query.Name)'")
+    if ($Name) {
+        $ScheduledItemFilter.Add("Name eq '$($Name)'")
     }
 
     $Filter = $ScheduledItemFilter -join ' and '
 
     Write-Host "Filter: $Filter"
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-    if ($Request.Query.Showhidden -eq $true) {
+    if ($ShowHidden -eq $true) {
         $HiddenTasks = $false
     } else {
         $HiddenTasks = $true
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Hidden -ne $HiddenTasks }
-    if ($Request.Query.Type) {
-        $tasks.Command
-        $Tasks = $Tasks | Where-Object { $_.command -eq $Request.Query.Type }
+    if ($Type) {
+        $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+
     if ($AllowedTenants -notcontains 'AllTenants') {
-        $Tasks = $Tasks | Where-Object -Property TenantId -In $AllowedTenants
+        $TenantList = Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName
+        $AllowedTenantDomains = $TenantList | Where-Object -Property customerId -In $AllowedTenants | Select-Object -ExpandProperty defaultDomainName
+        $Tasks = $Tasks | Where-Object -Property Tenant -In $AllowedTenantDomains
     }
     $ScheduledTasks = foreach ($Task in $tasks) {
         if ($Task.Parameters) {
@@ -51,13 +60,22 @@ Function Invoke-ListScheduledItems {
         } else {
             $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
         }
+        if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
+            $Task.Recurrence = 'Once'
+        }
+        try {
+            $Task.ExecutedTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ExecutedTime).UtcDateTime
+        } catch {}
+        try {
+            $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
+        } catch {}
         $Task
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($ScheduledTasks)
+            Body       = @($ScheduledTasks | Sort-Object -Property ExecutedTime -Descending)
         })
 
 }

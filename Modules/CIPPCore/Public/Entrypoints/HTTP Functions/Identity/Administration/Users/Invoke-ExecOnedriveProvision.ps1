@@ -10,19 +10,24 @@ Function Invoke-ExecOneDriveProvision {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $Params = $Request.Body ?? $Request.Query
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $UserPrincipalName = $Request.Body.UserPrincipalName ?? $Request.Query.UserPrincipalName
+    $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
+
     try {
-        $State = Request-CIPPSPOPersonalSite -TenantFilter $Params.TenantFilter -UserEmails $Params.UserPrincipalName -ExecutingUser $Request.Headers.'x-ms-client-principal' -APIName $APINAME
-        $Results = [pscustomobject]@{'Results' = "$State" }
+        $Result = Request-CIPPSPOPersonalSite -TenantFilter $TenantFilter -UserEmails $UserPrincipalName -Headers $Headers -APIName $APIName
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Results = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 }

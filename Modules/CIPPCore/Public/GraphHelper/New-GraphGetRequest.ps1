@@ -4,7 +4,7 @@ function New-GraphGetRequest {
     Internal
     #>
     [CmdletBinding()]
-    Param(
+    param(
         [string]$uri,
         [string]$tenantid,
         [string]$scope,
@@ -15,7 +15,8 @@ function New-GraphGetRequest {
         $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
-        [switch]$IncludeResponseHeaders
+        [switch]$IncludeResponseHeaders,
+        [hashtable]$extraHeaders
     )
 
     if ($NoAuthCheck -eq $false) {
@@ -26,8 +27,7 @@ function New-GraphGetRequest {
 
     if ($NoAuthCheck -eq $true -or $IsAuthorised) {
         if ($scope -eq 'ExchangeOnline') {
-            $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-            $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
+            $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
         } else {
             $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
@@ -36,7 +36,11 @@ function New-GraphGetRequest {
             $headers['ConsistencyLevel'] = 'eventual'
         }
         $nextURL = $uri
-
+        if ($extraHeaders) {
+            foreach ($key in $extraHeaders.Keys) {
+                $headers[$key] = $extraHeaders[$key]
+            }
+        }
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
@@ -67,7 +71,7 @@ function New-GraphGetRequest {
                     $NextURL = $null
                 } else {
                     if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
-                    if ($noPagination) {
+                    if ($noPagination -eq $true) {
                         if ($Caller -eq 'Get-GraphRequestList') {
                             @{ 'nextLink' = $data.'@odata.nextLink' }
                         }

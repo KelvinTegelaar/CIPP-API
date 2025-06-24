@@ -10,26 +10,26 @@ Function Invoke-ExecResetMFA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $UserID = $Request.Query.ID
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $UserID = $Request.Query.ID ?? $Request.Body.ID
     try {
-
-        $Body = @{
-            Results = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
-        }
+        $Result = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -Headers $Headers
+        if ($Result -match '^Failed') { throw $Result }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Body = [pscustomobject]@{'Results' = "Failed to reset MFA methods for $($Request.Query.ID): $(Get-NormalizedError -message $_.Exception.Message)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to reset MFA for user $($Request.Query.ID): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            StatusCode = $StatusCode
+            Body       = @{ 'Results' = $Result }
         })
 
 }

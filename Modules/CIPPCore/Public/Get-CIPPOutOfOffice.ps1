@@ -1,14 +1,14 @@
 function Get-CIPPOutOfOffice {
     [CmdletBinding()]
     param (
-        $userid,
+        $UserID,
         $TenantFilter,
         $APIName = 'Get Out of Office',
-        $ExecutingUser
+        $Headers
     )
 
     try {
-        $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $userid } -Anchor $userid
+        $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $UserID } -Anchor $UserID
         $Results = @{
             AutoReplyState  = $OutOfOffice.AutoReplyState
             StartTime       = $OutOfOffice.StartTime.ToString('yyyy-MM-dd HH:mm')
@@ -18,7 +18,9 @@ function Get-CIPPOutOfOffice {
         } | ConvertTo-Json
         return $Results
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        return "Could not retrieve out of office message for $($userid). Error: $ErrorMessage"
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = "Could not retrieve out of office message for $($UserID). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+        throw $Results
     }
 }

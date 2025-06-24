@@ -8,7 +8,24 @@ function Start-UpdatePermissionsOrchestrator {
 
     try {
         Write-Information 'Updating Permissions'
-        $Tenants = Get-Tenants -IncludeAll | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
+
+        $PartnerTenant = @{
+            'customerId'        = $env:TenantID
+            'defaultDomainName' = 'PartnerTenant'
+            'displayName'       = '*Partner Tenant'
+        }
+
+        $TenantList = Get-Tenants -IncludeAll | Where-Object { $_.Excluded -eq $false }
+
+        $Tenants = [System.Collections.Generic.List[object]]::new()
+        foreach ($Tenant in $TenantList) {
+            $Tenants.Add($Tenant)
+        }
+
+        if ($Tenants.customerId -notcontains $env:TenantID) {
+            $Tenants.Add($PartnerTenant)
+        }
+
         $CPVTable = Get-CIPPTable -TableName cpvtenants
         $CPVRows = Get-CIPPAzDataTableEntity @CPVTable
         $LastCPV = ($CPVRows | Sort-Object -Property Timestamp -Descending | Select-Object -First 1).Timestamp.DateTime

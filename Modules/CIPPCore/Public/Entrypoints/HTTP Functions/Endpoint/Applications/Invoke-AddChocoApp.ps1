@@ -10,34 +10,34 @@ Function Invoke-AddChocoApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $ChocoApp = $request.body
-    $intuneBody = Get-Content 'AddChocoApp\choco.app.json' | ConvertFrom-Json
-    $assignTo = $Request.body.AssignTo
+    $ChocoApp = $Request.Body
+    $intuneBody = Get-Content 'AddChocoApp\Choco.app.json' | ConvertFrom-Json
+    $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
     $intuneBody.description = $ChocoApp.description
-    $intuneBody.displayName = $chocoapp.ApplicationName
+    $intuneBody.displayName = $ChocoApp.ApplicationName
     $intuneBody.installExperience.runAsAccount = if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $intuneBody.installExperience.deviceRestartBehavior = if ($ChocoApp.DisableRestart) { 'suppress' } else { 'allow' }
-    $intuneBody.installCommandLine = "powershell.exe -executionpolicy bypass .\Install.ps1 -InstallChoco -Packagename $($chocoapp.PackageName)"
+    $intuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $($ChocoApp.PackageName)"
     if ($ChocoApp.customrepo) {
-        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomRepo $($chocoapp.CustomRepo)"
+        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomRepo $($ChocoApp.CustomRepo)"
     }
-    $intuneBody.UninstallCommandLine = "powershell.exe -executionpolicy bypass .\Uninstall.ps1 -Packagename $($chocoapp.PackageName)"
-    $intunebody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
-    $intunebody.detectionRules[0].fileOrFolderName = "$($chocoapp.PackageName)"
+    $intuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $($ChocoApp.PackageName)"
+    $intuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
+    $intuneBody.detectionRules[0].fileOrFolderName = "$($ChocoApp.PackageName)"
 
-    $Tenants = $Request.body.selectedTenants.defaultDomainName
-    $Results = foreach ($Tenant in $tenants) {
+    $Tenants = $Request.Body.selectedTenants.defaultDomainName
+    $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{
-                tenant             = $tenant
-                Applicationname    = $ChocoApp.ApplicationName
-                assignTo           = $assignTo
-                InstallationIntent = $request.body.InstallationIntent
-                IntuneBody         = $intunebody
+                tenant             = $Tenant
+                ApplicationName    = $ChocoApp.ApplicationName
+                assignTo           = $AssignTo
+                InstallationIntent = $Request.Body.InstallationIntent
+                IntuneBody         = $intuneBody
             } | ConvertTo-Json -Depth 15
             $Table = Get-CippTable -tablename 'apps'
             $Table.Force = $true
@@ -47,14 +47,14 @@ Function Invoke-AddChocoApp {
                 PartitionKey = 'apps'
             }
             "Successfully added Choco App for $($Tenant) to queue."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Choco App $($intunebody.Displayname) to queue" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Successfully added Choco App $($intuneBody.DisplayName) to queue" -Sev 'Info'
         } catch {
             "Failed adding Choco App for $($Tenant) to queue"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to add Chocolatey Application $($intuneBody.DisplayName) to queue" -Sev 'Error'
         }
     }
 
-    $body = [pscustomobject]@{'Results' = $results }
+    $body = [PSCustomObject]@{'Results' = $Results }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

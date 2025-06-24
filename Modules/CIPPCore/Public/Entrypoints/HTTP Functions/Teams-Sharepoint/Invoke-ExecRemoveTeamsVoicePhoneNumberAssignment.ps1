@@ -10,22 +10,30 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $tenantFilter = $Request.Body.TenantFilter
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Body.tenantFilter
+    $AssignedTo = $Request.Body.AssignedTo
+    $PhoneNumber = $Request.Body.PhoneNumber
+    $PhoneNumberType = $Request.Body.PhoneNumberType
+
     try {
-        $null = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Remove-CsPhoneNumberAssignment' -CmdParams @{Identity = $Request.Body.AssignedTo; PhoneNumber = $Request.Body.PhoneNumber; PhoneNumberType = $Request.Body.PhoneNumberType; ErrorAction = 'stop'}
-        $Results = [pscustomobject]@{'Results' = "Successfully unassigned $($Request.Body.PhoneNumber) from $($Request.Body.AssignedTo)"}
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Info'
+        $null = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Remove-CsPhoneNumberAssignment' -CmdParams @{Identity = $AssignedTo; PhoneNumber = $PhoneNumber; PhoneNumberType = $PhoneNumberType; ErrorAction = 'Stop' }
+        $Result = "Successfully unassigned $PhoneNumber from $AssignedTo"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Results = [pscustomobject]@{'Results' = $ErrorMessage}
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to unassign $PhoneNumber from $AssignedTo. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 }

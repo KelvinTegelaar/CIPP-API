@@ -1,5 +1,5 @@
 function Set-CIPPGroupGAL(
-    [string]$ExecutingUser,
+    [string]$Headers,
     [string]$GroupType,
     [string]$Id,
     [string]$HiddenString,
@@ -15,15 +15,15 @@ function Set-CIPPGroupGAL(
         } elseif ($GroupType -eq 'Microsoft 365') {
             New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-UnifiedGroup' -cmdParams @{Identity = $Id; HiddenFromAddressListsEnabled = $Hidden }
         } elseif ($GroupType -eq 'Security') {
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message 'This setting cannot be set on a security group.' -Sev 'Error'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message 'This setting cannot be set on a security group.' -Sev 'Error'
             return "$GroupType's group cannot have this setting changed"
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return "Failed. $($ErrorMessage.NormalizedError)"
     }
 
-    Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL" -Sev 'Info'
+    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL" -Sev 'Info'
     return "Successfully $messageSuffix $GroupType group $Id from GAL."
 }

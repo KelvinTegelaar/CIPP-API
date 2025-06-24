@@ -3,23 +3,24 @@ using namespace System.Net
 Function Invoke-ListGDAPInvite {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    # Interact with query parameters or the body of the request.
+    $RelationshipId = $Request.Query.RelationshipId
 
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
-    if (![string]::IsNullOrEmpty($Request.Query.RelationshipId)) {
-        $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.RelationshipId)'"
+    if (![string]::IsNullOrEmpty($RelationshipId)) {
+        $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($RelationshipId)'"
     } else {
         $Invite = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
             $_.RoleMappings = @(try { $_.RoleMappings | ConvertFrom-Json } catch { $_.RoleMappings })

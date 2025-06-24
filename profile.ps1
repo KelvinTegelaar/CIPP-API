@@ -13,7 +13,7 @@
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 
 # Import modules
-@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts') | ForEach-Object {
+@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzBobbyTables') | ForEach-Object {
     try {
         $Module = $_
         Import-Module -Name $_ -ErrorAction Stop
@@ -38,7 +38,7 @@ try {
 } catch {}
 
 try {
-    if (!$ENV:SetFromProfile) {
+    if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"
         $Auth = Get-CIPPAuthentication
     }
@@ -62,7 +62,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
             Version      = $CurrentVersion
         }
     }
-    Update-AzDataTableEntity @Table -Entity $LastStartup -Force
+    Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
     try {
         Clear-CippDurables
     } catch {

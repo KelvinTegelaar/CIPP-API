@@ -10,20 +10,19 @@ Function Invoke-AddCAPolicy {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = $Request.body.tenantFilter.value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
 
     $results = foreach ($Tenant in $tenants) {
         try {
-            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.body.replacename -Overwrite $request.body.overwrite -TenantFilter $tenant -state $request.body.NewState -RawJSON $Request.body.RawJSON -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev 'Info'
-            "Successfully added Conditional Access Policy for $($Tenant)"
+            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.Body.replacename -Overwrite $request.Body.overwrite -TenantFilter $Tenant -state $Request.Body.NewState -RawJSON $Request.Body.RawJSON -APIName $APIName -Headers $Headers
+            "$CAPolicy"
         } catch {
-            "Failed to add policy for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed to add Conditional Access Policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            "$($_.Exception.Message)"
             continue
         }
 

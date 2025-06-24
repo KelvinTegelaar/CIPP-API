@@ -3,11 +3,11 @@ function Test-CIPPAccessPermissions {
     param (
         $TenantFilter,
         $APIName = 'Access Check',
-        $ExecutingUser
+        $Headers
     )
 
     $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
+    Write-LogMessage -Headers $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $ErrorMessages = [System.Collections.Generic.List[string]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
@@ -34,11 +34,13 @@ function Test-CIPPAccessPermissions {
         if ($env:MSI_SECRET) {
             try {
                 Disable-AzContextAutosave -Scope Process | Out-Null
-                $AzSession = Connect-AzAccount -Identity
+                $null = Connect-AzAccount -Identity
+                $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+                $null = Set-AzContext -SubscriptionId $SubscriptionId
 
-                $KV = $ENV:WEBSITE_DEPLOYMENT_ID
+                $KV = $env:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
-                if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
+                if ($env:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
                     $ErrorMessages.Add('Your refresh token does not match key vault, wait 30 minutes for the function app to update.') | Out-Null
                 } else {
@@ -46,7 +48,7 @@ function Test-CIPPAccessPermissions {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Key vault exception: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -Headers $User -API $APINAME -tenant $tenant -message "Key vault exception: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
             }
         } else {
             $Messages.Add('Your refresh token matches key vault.') | Out-Null
@@ -60,7 +62,7 @@ function Test-CIPPAccessPermissions {
                 Name        = ''
                 AuthMethods = @()
             }
-            Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -Headers $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
             $Success = $false
         }
 
@@ -128,14 +130,17 @@ function Test-CIPPAccessPermissions {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
-        $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.DateTime, [DateTimeKind]::Utc)
+        $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
+        $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
+
+        $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.ToString('yyyy-MM-ddTHH:mm:ssZ'), [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
         $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
         $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
         $CPVSuccess = $true
         foreach ($Tenant in $TenantList) {
-            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -EQ $Tenant.customerId }).Timestamp.DateTime
+            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -eq $Tenant.customerId }).Timestamp.DateTime
             if ($LastRefresh -lt $LastUpdate) {
                 $CPVSuccess = $false
                 $CPVRefreshList.Add([PSCustomObject]@{
@@ -152,8 +157,21 @@ function Test-CIPPAccessPermissions {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($ErrorMessage.NormalizedError)") | Out-Null
+
+        try {
+            $MFAServicePolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mfaServicePolicy' -tenantid $env:TenantID -AsApp $true -NoAuthCheck $true
+            if ($MFAServicePolicy.rememberMfaOnTrustedDevice.isEnabled -eq $true -and $MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays -gt 0) {
+                $ErrorMessages.Add("MFA Service Policy has a session lifetime of $($MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays) days. This may cause authentication issues for your service account.") | Out-Null
+                $Links.Add([PSCustomObject]@{
+                        Text = 'Troubleshooting'
+                        Href = 'https://docs.cipp.app/troubleshooting/troubleshooting#multi-factor-authentication-troubleshooting'
+                    }
+                ) | Out-Null
+            }
+        } catch {}
+
         $Success = $false
     }
 
@@ -162,13 +180,14 @@ function Test-CIPPAccessPermissions {
     }
 
     $AccessCheck = [PSCustomObject]@{
-        AccessTokenDetails = $AccessTokenDetails
-        Messages           = @($Messages)
-        ErrorMessages      = @($ErrorMessages)
-        MissingPermissions = @($MissingPermissions)
-        CPVRefreshList     = @($CPVRefreshList)
-        Links              = @($Links)
-        Success            = $Success
+        AccessTokenDetails      = $AccessTokenDetails
+        ApplicationTokenDetails = $ApplicationTokenDetails
+        Messages                = @($Messages)
+        ErrorMessages           = @($ErrorMessages)
+        MissingPermissions      = @($MissingPermissions)
+        CPVRefreshList          = @($CPVRefreshList)
+        Links                   = @($Links)
+        Success                 = $Success
     }
 
     $Table = Get-CIPPTable -TableName AccessChecks

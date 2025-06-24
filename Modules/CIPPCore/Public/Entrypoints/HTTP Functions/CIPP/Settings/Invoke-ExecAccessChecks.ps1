@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAccessChecks {
+function Invoke-ExecAccessChecks {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,22 +10,27 @@ Function Invoke-ExecAccessChecks {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -tablename 'AccessChecks'
     $LastRun = (Get-Date).ToUniversalTime()
+    $4HoursAgo = (Get-Date).AddHours(-1).ToUniversalTime()
+    $TimestampFilter = $4HoursAgo.ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+
+
     switch ($Request.Query.Type) {
         'Permissions' {
             if ($Request.Query.SkipCache -ne 'true' -or $Request.Query.SkipCache -ne $true) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
-                    $Results = $Cache.Data | ConvertFrom-Json
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp and Timestamp ge datetime'$TimestampFilter'"
+                    $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     $Results = $null
                 }
                 if (!$Results) {
-                    $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                    $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
                 } else {
                     try {
                         $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
@@ -34,30 +39,33 @@ Function Invoke-ExecAccessChecks {
                     }
                 }
             } else {
-                $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
             }
         }
         'Tenants' {
             $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
             if (!$Request.Body.TenantId) {
                 try {
-                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $ENV:TenantID }
+                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID }
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
-                            TenantId          = $Tenant.customerId
-                            TenantName        = $Tenant.displayName
-                            DefaultDomainName = $Tenant.defaultDomainName
-                            GraphStatus       = 'Not run yet'
-                            ExchangeStatus    = 'Not run yet'
-                            GDAPRoles         = ''
-                            MissingRoles      = ''
-                            LastRun           = ''
-                            GraphTest         = ''
-                            ExchangeTest      = ''
+                            TenantId                  = $Tenant.customerId
+                            TenantName                = $Tenant.displayName
+                            DefaultDomainName         = $Tenant.defaultDomainName
+                            GraphStatus               = 'Not run yet'
+                            ExchangeStatus            = 'Not run yet'
+                            GDAPRoles                 = ''
+                            MissingRoles              = ''
+                            LastRun                   = ''
+                            GraphTest                 = ''
+                            ExchangeTest              = ''
+                            OrgManagementRoles        = @()
+                            OrgManagementRolesMissing = @()
+                            OrgManagementRepairNeeded = $false
                         }
                         if ($TenantCheck) {
-                            $Data = @($TenantCheck.Data | ConvertFrom-Json)
+                            $Data = @($TenantCheck.Data | ConvertFrom-Json -ErrorAction Stop)
                             $TenantResult.GraphStatus = $Data.GraphStatus
                             $TenantResult.ExchangeStatus = $Data.ExchangeStatus
                             $TenantResult.GDAPRoles = $Data.GDAPRoles
@@ -65,6 +73,9 @@ Function Invoke-ExecAccessChecks {
                             $TenantResult.LastRun = $Data.LastRun
                             $TenantResult.GraphTest = $Data.GraphTest
                             $TenantResult.ExchangeTest = $Data.ExchangeTest
+                            $TenantResult.OrgManagementRoles = $Data.OrgManagementRoles ? @($Data.OrgManagementRoles) : @()
+                            $TenantResult.OrgManagementRolesMissing = $Data.OrgManagementRolesMissing ? @($Data.OrgManagementRolesMissing) : @()
+                            $TenantResult.OrgManagementRepairNeeded = $Data.OrgManagementRolesMissing.Count -gt 0
                         }
                         $TenantResult
                     }
@@ -75,19 +86,23 @@ Function Invoke-ExecAccessChecks {
                     } catch {
                         $LastRun = $null
                     }
+
+                    if (!$Results) {
+                        $Results = @()
+                    }
                 } catch {
-                    Write-Host $_.Exception.Message
+                    Write-Warning "Error running tenant access check - $($_.Exception.Message)"
                     $Results = @()
                 }
             }
 
-            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true) {
-                $Message = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
+            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true -or $LastRun -lt $4HoursAgo) {
+                $Message = Test-CIPPAccessTenant -Headers $Request.Headers
             }
 
             if ($Request.Body.TenantId) {
                 $Tenant = Get-Tenants -TenantFilter $Request.Body.TenantId
-                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -Headers $Request.Headers
                 $Results = "Refreshing tenant $($Tenant.displayName)"
             }
 
@@ -95,8 +110,8 @@ Function Invoke-ExecAccessChecks {
         'GDAP' {
             if (!$Request.Query.SkipCache -eq 'true' -or !$Request.Query.SkipCache -eq $true) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
-                    $Results = $Cache.Data | ConvertFrom-Json
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships' and Timestamp ge datetime'$TimestampFilter'"
+                    $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     $Results = $null
                 }

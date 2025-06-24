@@ -8,7 +8,7 @@ function Send-CIPPAlert {
         $JSONContent,
         $TenantFilter,
         $APIName = 'Send Alert',
-        $ExecutingUser,
+        $Headers,
         $TableName,
         $RowKey = [string][guid]::NewGuid()
     )
@@ -106,9 +106,9 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
         }
     }
-    Write-Information 'Trying to send to PSA'
 
     if ($Type -eq 'psa') {
+        Write-Information 'Trying to send to PSA'
         if ($config.sendtoIntegration) {
             if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
                 try {
@@ -119,7 +119,6 @@ function Send-CIPPAlert {
                     }
                     New-CippExtAlert -Alert $Alert
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
-
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"

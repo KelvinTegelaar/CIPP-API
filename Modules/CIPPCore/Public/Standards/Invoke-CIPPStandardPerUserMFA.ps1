@@ -13,37 +13,24 @@ function Invoke-CIPPStandardPerUserMFA {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-06-14
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#high-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PerUserMFA'
 
-
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,accountEnabled&`$filter=userType eq 'Member' and accountEnabled eq true and displayName ne 'On-Premises Directory Synchronization Service Account'&`$count=true" -tenantid $Tenant -ComplexFilter
-    $int = 0
-    $Requests = foreach ($id in $GraphRequest.userPrincipalName) {
-        @{
-            id     = $int++
-            method = 'GET'
-            url    = "/users/$id/authentication/requirements"
-        }
-    }
-    if ($Requests) {
-        $UsersWithoutMFA = (New-GraphBulkRequest -tenantid $tenant -Requests @($Requests) -asapp $true).body | Where-Object { $_.perUserMfaState -ne 'enforced' } | Select-Object peruserMFAState, @{Name = 'userPrincipalName'; Expression = { [System.Web.HttpUtility]::UrlDecode($_.'@odata.context'.split("'")[1]) } }
-    } else {
-        $UsersWithoutMFA = @()
-    }
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,accountEnabled,perUserMfaState&`$filter=userType eq 'Member' and accountEnabled eq true and displayName ne 'On-Premises Directory Synchronization Service Account'&`$count=true" -tenantid $Tenant -ComplexFilter
+    $UsersWithoutMFA = $GraphRequest | Where-Object -Property perUserMfaState -NE 'enforced' | Select-Object -Property userPrincipalName, displayName, accountEnabled, perUserMfaState
 
     If ($Settings.remediate -eq $true) {
         if (($UsersWithoutMFA | Measure-Object).Count -gt 0) {
@@ -58,12 +45,15 @@ function Invoke-CIPPStandardPerUserMFA {
     }
     if ($Settings.alert -eq $true) {
         if (($UsersWithoutMFA.userPrincipalName | Measure-Object).Count -gt 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -sev Alert
+            Write-StandardsAlert -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -object $UsersWithoutMFA -tenant $tenant -standardName 'PerUserMFA' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'No accounts do not have legacy per user MFA Enforced' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
+        $State = $UsersWithoutMFA ? $UsersWithoutMFA : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.PerUserMFA' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }
