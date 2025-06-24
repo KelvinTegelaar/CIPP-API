@@ -347,7 +347,8 @@ function Invoke-EditGroup {
     # Only process allowExternal if it was explicitly sent
     if ($null -ne $UserObj.allowExternal -and $GroupType -ne 'Security') {
         try {
-            Set-CIPPGroupAuthentication -ID $UserObj.mail -OnlyAllowInternal (!$UserObj.allowExternal) -GroupType $GroupType -tenantFilter $TenantId -APIName $APIName -Headers $Headers
+            $OnlyAllowInternal = $UserObj.allowExternal -eq $true ? $false : $true
+            Set-CIPPGroupAuthentication -ID $UserObj.mail -OnlyAllowInternal $OnlyAllowInternal -GroupType $GroupType -tenantFilter $TenantId -APIName $APIName -Headers $Headers
             if ($UserObj.allowExternal -eq $true) {
                 $Results.Add("Allowed external senders to send to $($UserObj.mail).")
             } else {
@@ -369,15 +370,16 @@ function Invoke-EditGroup {
                 $MemberParams = @{ Identity = $GroupId; LinkType = 'members' }
                 $Members = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-UnifiedGroupLinks' -cmdParams $MemberParams
 
-                $MemberSmtpAddresses = $Members | ForEach-Object { $_.ExternalDirectoryObjectId }
-
-                if ($MemberSmtpAddresses) {
-                    $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses | Where-Object { $_ }) }
+                $MembershipIds = $Members | ForEach-Object { $_.ExternalDirectoryObjectId }
+                if ($MembershipIds) {
+                    $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MembershipIds | Where-Object { $_ }) }
 
                     try {
                         New-ExoRequest -tenantid $TenantId -cmdlet 'Add-UnifiedGroupLinks' -cmdParams $subscriberParams -Anchor $UserObj.mail
                     } catch {
-                        Write-Warning "Error and fuckery in SendCopies: Add-UnifiedGroupLinks $($_.Exception.Message) - $($_.InvocationInfo.ScriptLineNumber)"
+                        $ErrorMessage = Get-CippException -Exception $_
+                        Write-Warning "Error in SendCopies: Add-UnifiedGroupLinks $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+                        throw "Error in SendCopies: Add-UnifiedGroupLinks $($ErrorMessage.NormalizedError)"
                     }
 
                 }
