@@ -39,7 +39,11 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPGroups -userid $UserID -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username $Username
         }
         { $_.HideFromGAL -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.DisableSignIn -eq $true } {
             Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
