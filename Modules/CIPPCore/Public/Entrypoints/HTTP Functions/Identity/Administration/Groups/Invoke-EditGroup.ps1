@@ -369,7 +369,7 @@ function Invoke-EditGroup {
                 $MemberParams = @{ Identity = $GroupId; LinkType = 'members' }
                 $Members = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-UnifiedGroupLinks' -cmdParams $MemberParams
 
-                $MemberSmtpAddresses = $Members | ForEach-Object { $_.PrimarySmtpAddress }
+                $MemberSmtpAddresses = $Members | ForEach-Object { $_.ExternalDirectoryObjectId }
 
                 if ($MemberSmtpAddresses) {
                     $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses | Where-Object { $_ }) }
