@@ -135,7 +135,11 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.removeCalendarInvites -eq $true } {
-            Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPCalendarInvites -UserID $userid -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.removePermissions } {
             if ($RunScheduled) {
