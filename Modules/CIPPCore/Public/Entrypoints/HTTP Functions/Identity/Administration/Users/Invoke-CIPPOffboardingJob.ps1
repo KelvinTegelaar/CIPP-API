@@ -11,20 +11,24 @@ function Invoke-CIPPOffboardingJob {
     if ($Options -is [string]) {
         $Options = $Options | ConvertFrom-Json
     }
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)?`$select=id" -tenantid $TenantFilter).id
-    Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
+    $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id" -tenantid $TenantFilter).id
+    Write-Host "Running offboarding job for $Username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
         { $_.ConvertToShared -eq $true } {
-            Set-CIPPMailboxType -Headers $Headers -tenantFilter $TenantFilter -userid $username -username $username -MailboxType 'Shared' -APIName $APIName
+            try {
+                Set-CIPPMailboxType -Headers $Headers -tenantFilter $TenantFilter -userid $UserID -username $Username -MailboxType 'Shared' -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RevokeSessions -eq $true } {
-            Revoke-CIPPSessions -tenantFilter $TenantFilter -username $username -userid $userid -Headers $Headers -APIName $APIName
+            Revoke-CIPPSessions -tenantFilter $TenantFilter -username $Username -userid $UserID -Headers $Headers -APIName $APIName
         }
         { $_.ResetPass -eq $true } {
             Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
         }
         { $_.RemoveGroups -eq $true } {
-            Remove-CIPPGroups -userid $userid -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
+            Remove-CIPPGroups -userid $UserID -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
         }
         { $_.HideFromGAL -eq $true } {
             Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
