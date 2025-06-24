@@ -30,7 +30,11 @@ function Invoke-CippWebhookProcessing {
             }
             'becremediate' {
                 $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Data.UserId)" -tenantid $TenantFilter).UserPrincipalName
-                Set-CIPPResetPassword -UserID $Username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                try {
+                    Set-CIPPResetPassword -UserID $Username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to reset password for $Username`: $($_.Exception.Message)"
+                }
                 Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
                 try {
                     Revoke-CIPPSessions -userid $Username -username $Username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
@@ -38,18 +42,18 @@ function Invoke-CippWebhookProcessing {
                     Write-Host "Failed to revoke sessions for $Username`: $($_.Exception.Message)"
                 }
                 $RuleDisabled = 0
-                New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
-                    $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-                    "Disabled Inbox Rule $($_.Identity) for $username"
+                New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
+                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
+                    "Disabled Inbox Rule $($_.Identity) for $Username"
                     $RuleDisabled++
                 }
                 if ($RuleDisabled) {
-                    "Disabled $RuleDisabled Inbox Rules for $username"
+                    "Disabled $RuleDisabled Inbox Rules for $Username"
                 } else {
-                    "No Inbox Rules found for $username. We have not disabled any rules."
+                    "No Inbox Rules found for $Username. We have not disabled any rules."
                 }
-                "Completed BEC Remediate for $username"
-                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $username" -sev 'Info'
+                "Completed BEC Remediate for $Username"
+                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $Username" -sev 'Info'
             }
             'cippcommand' {
                 $CommandSplat = @{}

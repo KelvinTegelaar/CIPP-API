@@ -29,10 +29,14 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.ResetPass -eq $true } {
-            Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveGroups -eq $true } {
-            Remove-CIPPGroups -userid $UserID -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
+            Remove-CIPPGroups -userid $UserID -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username $Username
         }
         { $_.HideFromGAL -eq $true } {
             Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
