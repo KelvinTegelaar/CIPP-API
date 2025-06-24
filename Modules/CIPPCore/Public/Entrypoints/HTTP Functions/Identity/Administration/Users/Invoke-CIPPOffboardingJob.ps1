@@ -53,13 +53,31 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.OnedriveAccess } {
-            $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointPerms -tenantFilter $TenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName }
+            $Options.OnedriveAccess | ForEach-Object {
+                try {
+                    Set-CIPPSharePointPerms -tenantFilter $TenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.AccessNoAutomap } {
-            $Options.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
+            $Options.AccessNoAutomap | ForEach-Object {
+                try {
+                    Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.AccessAutomap } {
-            $Options.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
+            $Options.AccessAutomap | ForEach-Object {
+                try {
+                    Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.OOO } {
             try {
