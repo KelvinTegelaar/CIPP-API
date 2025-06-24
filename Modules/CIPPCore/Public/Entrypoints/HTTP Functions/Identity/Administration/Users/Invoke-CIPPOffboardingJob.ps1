@@ -128,7 +128,11 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.RemoveMobile -eq $true } {
-            Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.removeCalendarInvites -eq $true } {
             Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
