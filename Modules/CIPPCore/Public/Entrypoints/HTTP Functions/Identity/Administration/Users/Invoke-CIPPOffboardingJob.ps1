@@ -22,7 +22,11 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.RevokeSessions -eq $true } {
-            Revoke-CIPPSessions -tenantFilter $TenantFilter -username $Username -userid $UserID -Headers $Headers -APIName $APIName
+            try {
+                Revoke-CIPPSessions -tenantFilter $TenantFilter -username $Username -userid $UserID -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.ResetPass -eq $true } {
             Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
