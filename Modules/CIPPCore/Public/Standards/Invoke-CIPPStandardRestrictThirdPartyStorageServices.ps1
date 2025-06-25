@@ -52,16 +52,6 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
         } else {
             # Disable the service principal to restrict third-party storage services
             try {
-                # Create the service principal if it does not exist
-                if ($null -eq $CurrentState){
-                    $CreateBody = @{
-                        appId = $AppId
-                    } | ConvertTo-Json -Depth 10 -Compress
-
-                    $CreateUri = "https://graph.microsoft.com/beta/servicePrincipals"
-                    $null = New-GraphPOSTRequest -uri $CreateUri -tenantid $Tenant -Body $CreateBody
-                }
-
                 $DisableBody = @{
                     accountEnabled = $false
                 } | ConvertTo-Json -Depth 10 -Compress
@@ -69,7 +59,7 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
                 # Normal /servicePrincipal/AppId does not find the service principal, so gotta use the Upsert method. Also handles if the service principal does not exist nicely.
                 # https://learn.microsoft.com/en-us/graph/api/serviceprincipal-upsert?view=graph-rest-beta&tabs=http
                 $UpdateUri = "https://graph.microsoft.com/beta/servicePrincipals(appId='$AppId')"
-                $null = New-GraphPostRequest -Uri $UpdateUri -Body $DisableBody -TenantID $Tenant -Type PATCH
+                $null = New-GraphPostRequest -Uri $UpdateUri -Body $DisableBody -TenantID $Tenant -Type PATCH -AddedHeaders @{'Prefer' = 'create-if-missing'}
 
                 # Refresh the current state after disabling
                 $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant | Select-Object displayName, accountEnabled, appId
