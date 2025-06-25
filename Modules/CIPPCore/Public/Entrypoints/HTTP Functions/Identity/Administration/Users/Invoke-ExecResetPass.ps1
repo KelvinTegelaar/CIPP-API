@@ -24,7 +24,6 @@ Function Invoke-ExecResetPass {
 
     try {
         $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
-        if ($Result.state -eq 'Error') { throw $Result.resultText }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message

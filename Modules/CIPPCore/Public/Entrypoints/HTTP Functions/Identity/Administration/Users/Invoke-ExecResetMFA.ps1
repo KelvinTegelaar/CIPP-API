@@ -19,7 +19,6 @@ Function Invoke-ExecResetMFA {
     $UserID = $Request.Query.ID ?? $Request.Body.ID
     try {
         $Result = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -Headers $Headers
-        if ($Result -match '^Failed') { throw $Result }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
