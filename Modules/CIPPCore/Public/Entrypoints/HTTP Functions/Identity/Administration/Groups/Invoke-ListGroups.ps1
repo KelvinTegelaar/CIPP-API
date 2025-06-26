@@ -23,8 +23,8 @@ function Invoke-ListGroups {
 
     $BulkRequestArrayList = [System.Collections.Generic.List[object]]::new()
 
-    if ($GroupID) {
-        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName'
+    if ($Request.Query.GroupID) {
+        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName,onPremisesSyncEnabled'
         $BulkRequestArrayList.add(@{
                 id     = 1
                 method = 'GET'
