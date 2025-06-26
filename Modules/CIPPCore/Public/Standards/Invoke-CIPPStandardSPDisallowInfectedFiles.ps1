@@ -33,7 +33,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     param($Tenant, $Settings)
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DisallowInfectedFileDownload
+        Select-Object -Property _ObjectIdentity_, TenantFilter, DisallowInfectedFileDownload
 
     $StateIsCorrect = ($CurrentState.DisallowInfectedFileDownload -eq $true)
 
@@ -46,7 +46,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Successfully disallowed downloading SharePoint infected files.' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

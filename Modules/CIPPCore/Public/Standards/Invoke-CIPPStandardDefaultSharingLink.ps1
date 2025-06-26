@@ -30,7 +30,7 @@ function Invoke-CIPPStandardDefaultSharingLink {
     param($Tenant, $Settings)
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DefaultSharingLinkType, DefaultLinkPermission
+        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
 
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq 2) -and ($CurrentState.DefaultLinkPermission -eq 1)
 
@@ -44,11 +44,11 @@ function Invoke-CIPPStandardDefaultSharingLink {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set default sharing link settings' -Sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set default sharing link settings. Error: $ErrorMessage" -Sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set default sharing link settings. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             }
         }
     }
@@ -57,7 +57,9 @@ function Invoke-CIPPStandardDefaultSharingLink {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Default sharing link settings are configured correctly' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Default sharing link settings are not configured correctly' -Sev Alert
+            $Message = 'Default sharing link settings are not configured correctly'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'DefaultSharingLink' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -Sev Alert
         }
     }
 
