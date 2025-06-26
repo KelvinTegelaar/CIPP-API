@@ -32,5 +32,5 @@ function Invoke-CIPPStandardSPDirectSharing {
 
     param($Tenant, $Settings)
 
-    Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'This standard has been deprecated in favor of the Set Default Sharing Link Settings standard. Please update your standards to use new standard.' -Sev Error
+    Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'This standard has been deprecated in favor of the Set Default Sharing Link Settings standard. Please update your standards to use new standard.' -Sev Alert
 }
