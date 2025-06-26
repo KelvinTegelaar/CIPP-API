@@ -40,9 +40,7 @@ function Invoke-CIPPStandardDefaultSharingLink {
         'Internal' = 2
         'Anyone'   = 3
     }
-
     $DesiredSharingLinkTypeValue = $SharingLinkTypeMap[$DesiredSharingLinkType]
-    Write-Warning "DesiredSharingLinkTypeValue: $DesiredSharingLinkTypeValue"
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
