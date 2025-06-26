@@ -15,7 +15,8 @@ function Invoke-EditGroup {
     $Results = [System.Collections.Generic.List[string]]@()
     $UserObj = $Request.Body
     $GroupType = $UserObj.groupId.addedFields.groupType ? $UserObj.groupId.addedFields.groupType : $UserObj.groupType
-    $GroupName = $UserObj.groupName ? $UserObj.groupName : $UserObj.groupId.addedFields.groupName
+    # groupName is used in the Add to Group user action, displayName is used in the Edit Group page
+    $GroupName = $UserObj.groupName ?? $UserObj.displayName ?? $UserObj.groupId.addedFields.groupName
     $GroupId = $UserObj.groupId.value ?? $UserObj.groupId
     $OrgGroup = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter
 
@@ -403,6 +404,28 @@ function Invoke-EditGroup {
             $action = if ($UserObj.sendCopies -eq $true) { 'enable' } else { 'disable' }
             $Results.Add("Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail).")
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        }
+    }
+
+    # Only process hideFromOutlookClients if it was explicitly sent and is a Microsoft 365 group
+    if ($null -ne $UserObj.hideFromOutlookClients -and $GroupType -eq 'Microsoft 365') {
+        try {
+            $Params = @{ Identity = $GroupId; HiddenFromExchangeClientsEnabled = $UserObj.hideFromOutlookClients }
+            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
+
+            if ($UserObj.hideFromOutlookClients -eq $true) {
+                $Results.Add("Successfully hidden group mailbox from Outlook for $($GroupName).")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Successfully hidden group mailbox from Outlook for $($GroupName)." -Sev 'Info'
+            } else {
+                $Results.Add("Successfully made group mailbox visible in Outlook for $($GroupName).")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Successfully made group mailbox visible in Outlook for $($GroupName)." -Sev 'Info'
+            }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Warning "Error in hideFromOutlookClients: $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+            $action = if ($UserObj.hideFromOutlookClients -eq $true) { 'hide' } else { 'show' }
+            $Results.Add("Failed to $action group mailbox in Outlook for $($GroupName).")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to $action group mailbox in Outlook for $($GroupName). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
