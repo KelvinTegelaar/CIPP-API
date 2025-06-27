@@ -147,7 +147,7 @@ function New-CippAuditLogSearch {
     if ($IPAddressFilters) {
         $SearchParams.ipAddressFilters = @($IPAddressFilters)
     }
-    if ($ObjectIdFilterss) {
+    if ($ObjectIdFilters) {
         $SearchParams.objectIdFilters = @($ObjectIdFilters)
     }
     if ($AdministrativeUnitFilters) {
