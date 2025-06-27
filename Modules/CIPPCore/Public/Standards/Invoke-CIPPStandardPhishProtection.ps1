@@ -51,6 +51,17 @@ function Invoke-CIPPStandardPhishProtection {
 "@
     if ($Settings.remediate -eq $true) {
 
+        $malformedCSSPattern = '\.ext-sign-in-box\s*\{\s*background-image:\s*url\(https://clone\.cipp\.app/api/PublicPhishingCheck\?Tenantid=[^&]*&URL=\);\s*\}'
+        if ($currentBody -match $malformedCSSPattern) {
+            if ($Settings.remediate -eq $true) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Attempting to fix malformed PhishProtection CSS by removing the problematic pattern' -sev Info
+                # Remove the malformed CSS pattern
+                $currentBody = $currentBody -replace $malformedCSSPattern, ''
+                # Clean up any duplicate .ext-sign-in-box entries
+                #$currentBody = $currentBody -replace '\.ext-sign-in-box\s*\{[^}]*\}\s*\.ext-sign-in-box', '.ext-sign-in-box'
+            }
+        }
+
         try {
             if (!$currentBody) {
                 $AddedHeaders = @{'Accept-Language' = 0 }
