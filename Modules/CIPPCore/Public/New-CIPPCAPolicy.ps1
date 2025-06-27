@@ -117,9 +117,9 @@ function New-CIPPCAPolicy {
         }
     }
 
-
     #for each of the locations, check if they exist, if not create them. These are in $jsonobj.LocationInfo
     $LocationLookupTable = foreach ($locations in $jsonobj.LocationInfo) {
+        if (!$locations) { continue }
         foreach ($location in $locations) {
             if (!$location.displayName) { continue }
             $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true
@@ -233,7 +233,7 @@ function New-CIPPCAPolicy {
         $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -asApp $true | Where-Object -Property displayName -EQ $displayname
         if ($CheckExististing) {
             if ($Overwrite -ne $true) {
-                Throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
+                throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
                 return $false
             } else {
                 Write-Information "overwriting $($CheckExististing.id)"
