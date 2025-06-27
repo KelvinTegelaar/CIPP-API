@@ -226,6 +226,11 @@
         "Description": "Allows the app to read and write the organization and related resources, on your behalf. Related resources include things like subscribed skus and tenant branding information."
       },
       {
+        "Id": "346c19ff-3fb2-4e81-87a0-bac9e33990c1",
+        "Name": "OrgSettings-Forms.ReadWrite.All",
+        "Description": "Allows the app to read and write organization-wide Microsoft Forms settings on your behalf."
+      },
+      {
         "Id": "e67e6727-c080-415e-b521-e3f35d5248e9",
         "Name": "PeopleSettings.ReadWrite.All",
         "Description": "Allows the application to read and write tenant-wide people settings on your behalf."
@@ -578,6 +583,11 @@
         "Description": "Allows the app to read and write the organization and related resources, without a signed-in user. Related resources include things like subscribed skus and tenant branding information."
       },
       {
+        "Id": "2cb92fee-97a3-4034-8702-24a6f5d0d1e9",
+        "Name": "OrgSettings-Forms.ReadWrite.All",
+        "Description": "Allows the app to read and write organization-wide Microsoft Forms settings, without a signed-in user."
+      },
+      {
         "Id": "b6890674-9dd5-4e42-bb15-5af07f541ae1",
         "Name": "PeopleSettings.ReadWrite.All",
         "Description": "Allows the application to read and write tenant-wide people settings without a signed-in user."
@@ -636,6 +646,11 @@
         "Id": "2a60023f-3219-47ad-baa4-40e17cd02a1d",
         "Name": "ReportSettings.ReadWrite.All",
         "Description": "Allows the app to read and update all admin report settings, such as whether to display concealed information in reports, without a signed-in user."
+      },
+      {
+        "Id": "025d3225-3f02-4882-b4c0-cd5b541a4e80",
+        "Name": "RoleManagement.ReadWrite.Exchange",
+        "Description": "Allows the app to read and manage the role-based access control (RBAC) settings for your organization's Exchange Online service, without a signed-in user. This includes reading, creating, updating, and deleting Exchange management role definitions, role groups, role group membership, role assignments, management scopes, and role assignment policies."
       },
       {
         "Id": "04c55753-2244-4c25-87fc-704ab82a4f69",
