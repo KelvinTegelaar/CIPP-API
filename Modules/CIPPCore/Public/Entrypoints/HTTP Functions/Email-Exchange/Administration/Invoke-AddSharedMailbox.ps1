@@ -29,7 +29,7 @@ Function Invoke-AddSharedMailbox {
             Shared             = $true
         }
         $AddSharedRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-Mailbox' -cmdParams $BodyToShip
-        $Body = $Results.Add("Successfully created shared mailbox: $Email.")
+        $Body = $Results.Add("Successfully created shared mailbox: $Email")
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message "Created shared mailbox $($MailboxObject.displayName) with email $Email" -Sev 'Info'
 
         # Block sign-in for the mailbox
@@ -38,7 +38,7 @@ Function Invoke-AddSharedMailbox {
             $Body = $Results.Add("Blocked sign-in for shared mailbox $Email")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            $Message = "Failed to block sign-in for shared mailbox $Email. Error: $($ErrorMessage.NormalizedError)"
+            $Message = "Failed to block sign-in for shared mailbox $Email Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
             $Body = $Results.Add($Message)
         }
