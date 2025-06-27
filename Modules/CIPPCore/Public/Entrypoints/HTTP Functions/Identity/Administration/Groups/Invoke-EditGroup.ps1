@@ -55,7 +55,7 @@ function Invoke-EditGroup {
             Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
             if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
             try {
-                $patch = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
+                $null = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
                 $Results.Add("Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes.")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Edited group properties for $($GroupName) group" -Sev 'Info'
             } catch {
@@ -134,7 +134,7 @@ function Invoke-EditGroup {
                         })
                 } else {
                     Write-LogMessage -API $APIName -tenant $TenantId -headers $Headers -message 'You cannot add a Contact to a Security Group or a M365 Group' -Sev 'Error'
-                    $null = $Results.Add('Error - You cannot add a contact to a Security Group or a M365 Group')
+                    $Results.Add('Error - You cannot add a contact to a Security Group or a M365 Group')
                 }
             } catch {
                 Write-Warning "Error in AddContacts: $($_.Exception.Message)"
@@ -162,7 +162,7 @@ function Invoke-EditGroup {
                         })
                 } else {
                     Write-LogMessage -API $APIName-tenant $TenantId -headers $Headers -message 'You cannot remove a contact from a Security Group' -Sev 'Error'
-                    $null = $Results.Add('You cannot remove a contact from a Security Group')
+                    $Results.Add('You cannot remove a contact from a Security Group')
                 }
             }
         }
@@ -260,7 +260,7 @@ function Invoke-EditGroup {
     if ($GroupType -in @( 'Distribution List', 'Mail-Enabled Security') -and ($AddOwners -or $RemoveOwners)) {
         $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $GroupId } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
 
-        $NewManagedBy = [system.collections.generic.list[string]]::new()
+        $NewManagedBy = [System.Collections.Generic.List[string]]::new()
         foreach ($CurrentOwner in $CurrentOwners) {
             if ($RemoveOwners -and $RemoveOwners.addedFields.id -contains $CurrentOwner) {
                 $OwnerToRemove = $RemoveOwners | Where-Object { $_.addedFields.id -eq $CurrentOwner }
@@ -330,7 +330,7 @@ function Invoke-EditGroup {
         foreach ($ExoError in $LastError.error) {
             $Sev = 'Error'
             $Results.Add("Error - $ExoError")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Message -Sev $Sev
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $ExoError -Sev $Sev
         }
 
         foreach ($ExoLog in $ExoLogs) {
@@ -344,39 +344,65 @@ function Invoke-EditGroup {
         }
     }
 
-    if ($UserObj.allowExternal -eq $true -and $GroupType -ne 'Security') {
+    # Only process allowExternal if it was explicitly sent
+    if ($null -ne $UserObj.allowExternal -and $GroupType -ne 'Security') {
         try {
-            Set-CIPPGroupAuthentication -ID $UserObj.mail -OnlyAllowInternal (!$UserObj.allowExternal) -GroupType $GroupType -tenantFilter $TenantId -APIName $APIName -Headers $Headers
-            $body = $Results.Add("Allowed external senders to send to $($UserObj.mail).")
+            $OnlyAllowInternal = $UserObj.allowExternal -eq $true ? $false : $true
+            Set-CIPPGroupAuthentication -ID $UserObj.mail -OnlyAllowInternal $OnlyAllowInternal -GroupType $GroupType -tenantFilter $TenantId -APIName $APIName -Headers $Headers
+            if ($UserObj.allowExternal -eq $true) {
+                $Results.Add("Allowed external senders to send to $($UserObj.mail).")
+            } else {
+                $Results.Add("Blocked external senders from sending to $($UserObj.mail).")
+            }
         } catch {
-            $body = $Results.Add("Failed to allow external senders to send to $($UserObj.mail).")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to allow external senders for $($UserObj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
+            $action = if ($UserObj.allowExternal -eq $true) { 'allow' } else { 'block' }
+            $Results.Add("Failed to $action external senders for $($UserObj.mail).")
         }
-
     }
 
-    if ($UserObj.sendCopies -eq $true) {
+    # Only process sendCopies if it was explicitly sent
+    if ($null -ne $UserObj.sendCopies) {
         try {
-            $Params = @{ Identity = $GroupId; subscriptionEnabled = $true; AutoSubscribeNewMembers = $true }
-            New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
+            if ($UserObj.sendCopies -eq $true) {
+                $Params = @{ Identity = $GroupId; subscriptionEnabled = $true; AutoSubscribeNewMembers = $true }
+                New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
 
-            $MemberParams = @{ Identity = $GroupId; LinkType = 'members' }
-            $Members = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-UnifiedGroupLinks' -cmdParams $MemberParams
+                $MemberParams = @{ Identity = $GroupId; LinkType = 'members' }
+                $Members = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-UnifiedGroupLinks' -cmdParams $MemberParams
 
-            $MemberSmtpAddresses = $Members | ForEach-Object { $_.PrimarySmtpAddress }
+                $MembershipIds = $Members | ForEach-Object { $_.ExternalDirectoryObjectId }
+                if ($MembershipIds) {
+                    $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MembershipIds | Where-Object { $_ }) }
 
-            if ($MemberSmtpAddresses) {
-                $subscriberParams = @{ Identity = $GroupId; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses | Where-Object { $_ }) }
-                New-ExoRequest -tenantid $TenantId -cmdlet 'Add-UnifiedGroupLinks' -cmdParams $subscriberParams -Anchor $UserObj.mail
+                    try {
+                        New-ExoRequest -tenantid $TenantId -cmdlet 'Add-UnifiedGroupLinks' -cmdParams $subscriberParams -Anchor $UserObj.mail
+                    } catch {
+                        $ErrorMessage = Get-CippException -Exception $_
+                        Write-Warning "Error in SendCopies: Add-UnifiedGroupLinks $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+                        throw "Error in SendCopies: Add-UnifiedGroupLinks $($ErrorMessage.NormalizedError)"
+                    }
+
+                }
+
+                $Results.Add("Send Copies of team emails and events to team members inboxes for $($UserObj.mail) enabled.")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Send Copies of team emails and events to team members inboxes for $($UserObj.mail) enabled." -Sev 'Info'
+            } else {
+                # Disable send copies. Has to be done in 2 calls, otherwise it fails saying AutoSubscribeNewMembers cannot be true when subscriptionEnabled is false.
+                # Why this happens and can't be done in one call, only Bill Gates and the mystical gods of Exchange knows.
+                $Params = @{ Identity = $GroupId; AutoSubscribeNewMembers = $false }
+                $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
+                $Params = @{ Identity = $GroupId; subscriptionEnabled = $false }
+                $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
+
+                $Results.Add("Send Copies of team emails and events to team members inboxes for $($UserObj.mail) disabled.")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Send Copies of team emails and events to team members inboxes for $($UserObj.mail) disabled." -Sev 'Info'
             }
-
-            $body = $Results.Add("Send Copies of team emails and events to team members inboxes for $($UserObj.mail) enabled.")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Send Copies of team emails and events to team members inboxes for $($UserObj.mail) enabled." -Sev 'Info'
         } catch {
-            Write-Warning "Error in SendCopies: $($_.Exception.Message) - $($_.InvocationInfo.ScriptLineNumber)"
-            Write-Warning ($_.InvocationInfo.PositionMessage)
-            $body = $Results.Add("Failed to Send Copies of team emails and events to team members inboxes for $($UserObj.mail).")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to Send Copies of team emails and events to team members inboxes for $($UserObj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Warning "Error in SendCopies: $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+            $action = if ($UserObj.sendCopies -eq $true) { 'enable' } else { 'disable' }
+            $Results.Add("Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail).")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 

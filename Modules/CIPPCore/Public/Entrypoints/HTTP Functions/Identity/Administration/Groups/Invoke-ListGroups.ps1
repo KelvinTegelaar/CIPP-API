@@ -14,38 +14,42 @@ function Invoke-ListGroups {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
+    $GroupID = $Request.Query.groupID
+    $GroupType = $Request.Query.groupType
+    $Members = $Request.Query.members
+    $Owners = $Request.Query.owners
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName&$expand=members($select=userPrincipalName)'
 
     $BulkRequestArrayList = [System.Collections.Generic.List[object]]::new()
 
     if ($Request.Query.GroupID) {
-        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName'
+        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName,onPremisesSyncEnabled'
         $BulkRequestArrayList.add(@{
                 id     = 1
                 method = 'GET'
-                url    = "groups/$($Request.Query.GroupID)?`$select=$SelectString"
+                url    = "groups/$($GroupID)?`$select=$SelectString"
             })
     }
-    if ($Request.Query.members) {
+    if ($Members) {
         $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
         $BulkRequestArrayList.add(@{
                 id     = 2
                 method = 'GET'
-                url    = "groups/$($Request.Query.GroupID)/members?`$top=999&select=$SelectString"
+                url    = "groups/$($GroupID)/members?`$top=999&select=$SelectString"
             })
     }
 
-    if ($Request.Query.owners) {
-        if ($Request.Query.groupType -ne 'Distribution List' -and $Request.Query.groupType -ne 'Mail-Enabled Security') {
+    if ($Owners) {
+        if ($GroupType -ne 'Distribution List' -and $GroupType -ne 'Mail-Enabled Security') {
             $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
             $BulkRequestArrayList.add(@{
                     id     = 3
                     method = 'GET'
-                    url    = "groups/$($Request.Query.GroupID)/owners?`$top=999&select=$SelectString"
+                    url    = "groups/$($GroupID)/owners?`$top=999&select=$SelectString"
                 })
         } else {
-            $OwnerIds = New-ExoRequest -cmdlet 'Get-DistributionGroup' -tenantid $TenantFilter -cmdParams @{Identity = $Request.Query.GroupID } -useSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
+            $OwnerIds = New-ExoRequest -cmdlet 'Get-DistributionGroup' -tenantid $TenantFilter -cmdParams @{Identity = $GroupID } -Select 'ManagedBy' -useSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
 
             $BulkRequestArrayList.add(@{
                     id      = 3
@@ -61,23 +65,18 @@ function Invoke-ListGroups {
         }
     }
 
-    if ($Request.Query.groupType -eq 'Distribution List' -or $Request.Query.groupType -eq 'Mail-Enabled Security') {
+    if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
         # get the outside the organization RequireSenderAuthenticationEnabled setting
-        $OnlyAllowInternal = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $Request.Query.GroupID } -useSystemMailbox $true | Select-Object -ExpandProperty RequireSenderAuthenticationEnabled
+        $OnlyAllowInternal = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled' -useSystemMailbox $true | Select-Object -ExpandProperty RequireSenderAuthenticationEnabled
     } elseif ($GroupType -eq 'Microsoft 365') {
-        $OnlyAllowInternal = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $Request.Query.GroupID } -useSystemMailbox $true | Select-Object -ExpandProperty RequireSenderAuthenticationEnabled
+        $UnifiedGroup = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers' -useSystemMailbox $true
+        $OnlyAllowInternal = $UnifiedGroup.RequireSenderAuthenticationEnabled
     } else {
         $OnlyAllowInternal = $null
     }
 
-    if ($Request.Query.groupType -eq 'Microsoft 365') {
-        $UnifiedGroup = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $Request.Query.GroupID } -useSystemMailbox $true | Select-Object -Property subscriptionEnabled, AutoSubscribeNewMembers
-
-        if ($UnifiedGroup.subscriptionEnabled -eq $true -and $UnifiedGroup.AutoSubscribeNewMembers -eq $true) {
-            $SendCopies = $true
-        } else {
-            $SendCopies = $false
-        }
+    if ($GroupType -eq 'Microsoft 365') {
+        if ($UnifiedGroup.subscriptionEnabled -eq $true -and $UnifiedGroup.AutoSubscribeNewMembers -eq $true) { $SendCopies = $true } else { $SendCopies = $false }
     } else {
         $SendCopies = $null
     }

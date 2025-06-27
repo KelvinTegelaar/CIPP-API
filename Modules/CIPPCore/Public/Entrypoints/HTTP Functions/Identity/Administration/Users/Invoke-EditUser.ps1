@@ -98,7 +98,7 @@ function Invoke-EditUser {
                         value = 'Set-CIPPUserLicense'
                     }
                     Parameters    = [pscustomobject]@{
-                        userId      = $UserObj.id
+                        UserId      = $UserObj.id
                         APIName     = 'Sherweb License Assignment'
                         AddLicenses = $licenses
                     }

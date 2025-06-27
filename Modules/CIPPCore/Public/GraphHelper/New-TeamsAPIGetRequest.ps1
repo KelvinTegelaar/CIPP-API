@@ -17,7 +17,7 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                     'x-ms-correlation-id'    = [guid]::NewGuid()
                     'X-Requested-With'       = 'XMLHttpRequest'
                     'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9'
-
+                    'Accept'                 = 'application/json'
                 }
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }

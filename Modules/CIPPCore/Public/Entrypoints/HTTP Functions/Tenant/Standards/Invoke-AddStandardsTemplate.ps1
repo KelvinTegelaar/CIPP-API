@@ -30,6 +30,15 @@ function Invoke-AddStandardsTemplate {
         PartitionKey = 'StandardsTemplateV2'
         GUID         = "$GUID"
     }
+
+    $AddObject = @{
+        PartitionKey = 'InstanceProperties'
+        RowKey       = 'CIPPURL'
+        Value        = [string]([System.Uri]$Headers.'x-ms-original-url').Host
+    }
+    $ConfigTable = Get-CIPPTable -tablename 'Config'
+    Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
+
     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Standards Template $($Request.body.templateName) with GUID $GUID added/edited." -Sev 'Info'
     $body = [pscustomobject]@{'Results' = 'Successfully added template'; Metadata = @{id = $GUID } }
 

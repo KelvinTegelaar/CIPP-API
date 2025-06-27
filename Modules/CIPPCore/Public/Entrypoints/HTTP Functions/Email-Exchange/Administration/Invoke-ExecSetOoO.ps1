@@ -30,8 +30,8 @@ Function Invoke-ExecSetOoO {
         # User action uses input, edit exchange uses InternalMessage and ExternalMessage
         # User action disable OoO doesn't send any input
         if ($Request.Body.input) {
-            $InternalMessage = $Request.Body.input
-            $ExternalMessage = $Request.Body.input
+            $SplatParams.InternalMessage = $Request.Body.input
+            $SplatParams.ExternalMessage = $Request.Body.input
         } else {
             $InternalMessage = $Request.Body.InternalMessage
             $ExternalMessage = $Request.Body.ExternalMessage

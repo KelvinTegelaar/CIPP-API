@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecOffboardUser {
+function Invoke-ExecOffboardUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -30,7 +30,7 @@ Function Invoke-ExecOffboardUser {
                         options      = $Request.Body
                         RunScheduled = $true
                     }
-                    ScheduledTime = $Request.Body.scheduled.date
+                    ScheduledTime = $Request.Body.Scheduled.date
                     PostExecution = @{
                         Webhook = [bool]$Request.Body.PostExecution.webhook
                         Email   = [bool]$Request.Body.PostExecution.email
