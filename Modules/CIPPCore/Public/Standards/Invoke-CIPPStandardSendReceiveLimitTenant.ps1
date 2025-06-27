@@ -43,8 +43,10 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     }
 
     $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
-    $MaxSendSize = $Settings.SendLimit * 1MB
-    $MaxReceiveSize = $Settings.ReceiveLimit * 1MB
+    $MaxSendSize = "$($Settings.SendLimit)MB"
+    $MaxReceiveSize = "$($Settings.ReceiveLimit)MB"
+    $MaxSendSizeBytes = $Settings.SendLimit * 1MB
+    $MaxReceiveSizeBytes = $Settings.ReceiveLimit * 1MB
 
     $NotSetCorrectly = foreach ($MailboxPlan in $AllMailBoxPlans) {
         if ($MailboxPlan.MaxSendSize -eq 'Unlimited') {
@@ -59,7 +61,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
             $PlanMaxReceiveSize = [int64]($MailboxPlan.MaxReceiveSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
         }
 
-        if ($PlanMaxSendSize -ne $MaxSendSize -or $PlanMaxReceiveSize -ne $MaxReceiveSize) {
+        if ($PlanMaxSendSize -ne $MaxSendSizeBytes -or $PlanMaxReceiveSize -ne $MaxReceiveSizeBytes) {
             $MailboxPlan
         }
     }
