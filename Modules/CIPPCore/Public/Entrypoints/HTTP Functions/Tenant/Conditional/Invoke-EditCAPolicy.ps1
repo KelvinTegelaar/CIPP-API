@@ -32,7 +32,7 @@ Function Invoke-EditCAPolicy {
             $properties["displayName"] = $DisplayName
         }
 
-        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta//identity/conditionalAccess/policies/$($ID)" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
+        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($ID)" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
 
         $Result = "Successfully updated CA policy $($ID)"
         if ($State) { $Result += " state to $($State)" }
