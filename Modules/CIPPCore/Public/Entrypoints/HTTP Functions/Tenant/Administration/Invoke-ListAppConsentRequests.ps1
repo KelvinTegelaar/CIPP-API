@@ -15,14 +15,34 @@ function Invoke-ListAppConsentRequests {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    $RequestStatus = $Request.Query.RequestStatus
+    $Filter = $Request.Query.Filter
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
             throw 'AllTenants is not yet supported'
         }
 
-        $appConsentRequests = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests' -tenantid $TenantFilter # Need the beta endpoint to get consentType
-        $AllResults = foreach ($app in $appConsentRequests) {
+        # Apply server-side filtering if requested
+        $Uri = 'https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests' # Need the beta endpoint to get consentType
+        if ($Filter -eq $true -and $RequestStatus) {
+            switch ($RequestStatus) {
+                'InProgress' {
+                    $FilterQuery = "userConsentRequests/any (u:u/status eq '$RequestStatus')"
+                    $Uri = "$Uri`?`$filter=$([System.Web.HttpUtility]::UrlEncode($FilterQuery))"
+                    Write-Host "Applying server-side filter for RequestStatus: $RequestStatus"
+                    $ServerSideFilteringApplied = $true
+                }
+                default {
+                    # All the other values are not supported yet even if the Graph API docs say they are. -Bobby
+                    $ServerSideFilteringApplied = $false
+                }
+            }
+        }
+
+        $appConsentRequests = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter
+
+        $Results = foreach ($app in $appConsentRequests) {
             $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($app.id)/userConsentRequests" -tenantid $TenantFilter
             $userConsentRequests | ForEach-Object {
                 [pscustomobject]@{
@@ -49,26 +69,18 @@ function Invoke-ListAppConsentRequests {
             }
         }
 
-        # Apply filtering if requested
-        if ($Request.Query.Filter -eq $true) {
-            Write-Host 'Applying filters to app consent requests'
-            $RequestStatus = $Request.Query.RequestStatus
-
+        # Apply filtering if requested. Has to be done before and after the foreach loop, as the serverside filter is only supported for InProgress.
+        if ($Filter -eq $true -and $ServerSideFilteringApplied -eq $false) {
             if ($RequestStatus) {
                 Write-Host "Filtering by RequestStatus: $RequestStatus"
-                $Results = $AllResults | Where-Object { $_.requestStatus -eq $RequestStatus }
-            } else {
-                $Results = $AllResults
+                $Results = $Results | Where-Object { $_.requestStatus -eq $RequestStatus }
             }
-        } else {
-            $Results = $AllResults
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $StatusCode = [HttpStatusCode]::InternalServerError
-        Write-LogMessage -Headers $Headers -API $APIName -message 'app consent request list failed' -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        $Results = @{ appDisplayName = "Error: $($ErrorMessage.NormalizedError)" }
+        $Results = "Error: $($ErrorMessage.NormalizedError)"
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
