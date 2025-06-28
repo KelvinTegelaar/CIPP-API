@@ -22,7 +22,7 @@ function Invoke-ListAppConsentRequests {
         }
 
         $appConsentRequests = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests' -tenantid $TenantFilter # Need the beta endpoint to get consentType
-        $Results = foreach ($app in $appConsentRequests) {
+        $AllResults = foreach ($app in $appConsentRequests) {
             $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($app.id)/userConsentRequests" -tenantid $TenantFilter
             $userConsentRequests | ForEach-Object {
                 [pscustomobject]@{
@@ -47,6 +47,21 @@ function Invoke-ListAppConsentRequests {
                     }
                 }
             }
+        }
+
+        # Apply filtering if requested
+        if ($Request.Query.Filter -eq $true) {
+            Write-Host 'Applying filters to app consent requests'
+            $RequestStatus = $Request.Query.RequestStatus
+
+            if ($RequestStatus) {
+                Write-Host "Filtering by RequestStatus: $RequestStatus"
+                $Results = $AllResults | Where-Object { $_.requestStatus -eq $RequestStatus }
+            } else {
+                $Results = $AllResults
+            }
+        } else {
+            $Results = $AllResults
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
