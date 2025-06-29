@@ -32,7 +32,7 @@ function Invoke-CIPPStandardSPAzureB2B {
     param($Tenant, $Settings)
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property EnableAzureADB2BIntegration
+        Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAzureADB2BIntegration
 
     $StateIsCorrect = ($CurrentState.EnableAzureADB2BIntegration -eq $true)
 
@@ -45,7 +45,7 @@ function Invoke-CIPPStandardSPAzureB2B {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set the SharePoint Azure B2B to enabled' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
