@@ -18,6 +18,7 @@ Function Invoke-AddDefenderDeployment {
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
     $Compliance = $Request.Body.Compliance
     $PolicySettings = $Request.Body.Policy
+    $DefenderExclusions = $Request.Body.Exclusion
     $ASR = $Request.Body.ASR
     $EDR = $Request.Body.EDR
     $results = foreach ($tenant in $Tenants) {
@@ -117,7 +118,7 @@ Function Invoke-AddDefenderDeployment {
                     if ($PolicySettings.AssignTo -ne 'None') {
                         $AssignBody = if ($PolicySettings.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($PolicySettings.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($PolicySettings.AssignTo)" -Sev 'Info'
+                        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($PolicySettings.AssignTo)" -Sev 'Info'
                     }
                     "$($tenant): Successfully set Default AV Policy settings"
                 }
@@ -175,7 +176,7 @@ Function Invoke-AddDefenderDeployment {
                         if ($ASR.AssignTo -and $ASR.AssignTo -ne 'none') {
                             $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
+                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
                         }
                         "$($tenant): Successfully added ASR Settings"
                     }
@@ -252,15 +253,109 @@ Function Invoke-AddDefenderDeployment {
                         if ($ASR -and $ASR.AssignTo -ne 'none') {
                             $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenant) -message "Assigned EDR policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
+                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned EDR policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
                         }
                         "$($tenant): Successfully added EDR Settings"
                     }
                 }
             }
+            # Exclusion Policy Section
+            $ExclusionToggle = $Request.Body.showExclusionPolicy
+            $ExcludedExtensions = $Request.Body.Exclusion.excludedExtensions
+            $ExcludedPaths = $Request.Body.Exclusion.excludedPaths
+            $ExcludedProcesses = $Request.Body.Exclusion.excludedProcesses
+            $ExclusionAssignTo = $Request.Body.Exclusion.AssignTo
+            if ($ExclusionToggle -and $DefenderExclusions) {
+                function Escape-ExclusionValue($val) {
+                    $escaped = $val -replace '\\', '\\\\' # Escape backslashes
+                    if ($escaped -match ' ' -and -not ($escaped -match '^".*"$')) {
+                        $escaped = '"' + $escaped + '"'
+                    }
+                    return $escaped
+                }
+                $extArr = @()
+                if ($ExcludedExtensions) {
+                    $extArr = $ExcludedExtensions | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+                    }
+                }
+                $pathArr = @()
+                if ($ExcludedPaths) {
+                    $pathArr = $ExcludedPaths | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+                    }
+                }
+                $procArr = @()
+                if ($ExcludedProcesses) {
+                    $procArr = $ExcludedProcesses | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+                    }
+                }
+                $ExclusionSettings = @()
+                if ($extArr.Count -gt 0) {
+                    $ExclusionSettings = $ExclusionSettings + @(@{
+                            id              = '2'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedextensions'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'c203725b-17dc-427b-9470-673a2ce9cd5e' }
+                                simpleSettingCollectionValue     = @($extArr)
+                            }
+                        })
+                }
+                if ($pathArr.Count -gt 0) {
+                    $ExclusionSettings = $ExclusionSettings + @(@{
+                            id              = '1'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedpaths'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'aaf04adc-c639-464f-b4a7-152e784092e8' }
+                                simpleSettingCollectionValue     = @($pathArr)
+                            }
+                        })
+                }
+                if ($procArr.Count -gt 0) {
+                    $ExclusionSettings = $ExclusionSettings + @(@{
+                            id              = '0'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedprocesses'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = '96b046ed-f138-4250-9ae0-b0772a93d16f' }
+                                simpleSettingCollectionValue     = @($procArr)
+                            }
+                        })
+                }
+                if ($ExclusionSettings.Count -gt 0) {
+                    $ExclusionBody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+                        name              = 'Default AV Exclusion Policy'
+                        displayName       = 'Default AV Exclusion Policy'
+                        settings          = $ExclusionSettings
+                        platforms         = 'windows10'
+                        technologies      = 'mdm,microsoftSense'
+                        templateReference = @{
+                            templateId             = '45fea5e9-280d-4da1-9792-fb5736da0ca9_1'
+                            templateFamily         = 'endpointSecurityAntivirus'
+                            templateDisplayName    = 'Microsoft Defender Antivirus exclusions'
+                            templateDisplayVersion = 'Version 1'
+                        }
+                    }
+                    $CheckExistingExclusion = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
+                    if ('Default AV Exclusion Policy' -in $CheckExistingExclusion.Name) {
+                        "$($tenant): Exclusion Policy already exists. Skipping"
+                    } else {
+                        $ExclusionRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $ExclusionBody
+                        if ($ExclusionAssignTo -and $ExclusionAssignTo -ne 'none') {
+                            $AssignBody = if ($ExclusionAssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($ExclusionAssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExclusionRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned Exclusion policy to $($ExclusionAssignTo)" -Sev 'Info'
+                        }
+                        "$($tenant): Successfully set Default AV Exclusion Policy settings"
+                    }
+                }
+            }
         } catch {
             "Failed to add policy for $($tenant): $($_.Exception.Message)"
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenant) -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 
