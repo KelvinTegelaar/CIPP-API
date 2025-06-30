@@ -21,43 +21,45 @@ Function Invoke-AddDefenderDeployment {
     $DefenderExclusions = $Request.Body.Exclusion
     $ASR = $Request.Body.ASR
     $EDR = $Request.Body.EDR
-    $results = foreach ($tenant in $Tenants) {
+    $Results = foreach ($tenant in $Tenants) {
         try {
-            $SettingsObject = @{
-                id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
-                androidEnabled                                      = [bool]$Compliance.ConnectAndroid
-                iosEnabled                                          = [bool]$Compliance.ConnectIos
-                windowsEnabled                                      = [bool]$Compliance.Connectwindows
-                macEnabled                                          = [bool]$Compliance.ConnectMac
-                partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
-                partnerUnresponsivenessThresholdInDays              = 7
-                allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
-                allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
-                androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
-                iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
-                microsoftDefenderForEndpointAttachEnabled           = [bool]$true
-            }
-            $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
-            try {
-                $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
-
-                # Check if any setting doesn't match
-                foreach ($key in $SettingsObject.Keys) {
-                    if ($ExistingSettings.$key -ne $SettingsObject[$key]) {
-                        $ExistingSettings = $false
-                        break
-                    }
+            if ($Compliance) {
+                $SettingsObject = @{
+                    id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
+                    androidEnabled                                      = [bool]$Compliance.ConnectAndroid
+                    iosEnabled                                          = [bool]$Compliance.ConnectIos
+                    windowsEnabled                                      = [bool]$Compliance.Connectwindows
+                    macEnabled                                          = [bool]$Compliance.ConnectMac
+                    partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
+                    partnerUnresponsivenessThresholdInDays              = 7
+                    allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
+                    allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
+                    androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
+                    iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
+                    microsoftDefenderForEndpointAttachEnabled           = [bool]$true
                 }
-            } catch {
-                $ExistingSettings = $false
+                $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
+                try {
+                    $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
+
+                    # Check if any setting doesn't match
+                    foreach ($key in $SettingsObject.Keys) {
+                        if ($ExistingSettings.$key -ne $SettingsObject[$key]) {
+                            $ExistingSettings = $false
+                            break
+                        }
+                    }
+                } catch {
+                    $ExistingSettings = $false
+                }
+                if ($ExistingSettings) {
+                    "Defender Intune Configuration already correct and active for $($tenant). Skipping"
+                } else {
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
+                    "$($tenant): Successfully set Defender Compliance and Reporting settings. Please remember to enable the Intune Connector in the Defender portal."
+                }
             }
 
-            if ($ExistingSettings) {
-                "Defender Intune Configuration already correct and active for $($tenant). Skipping"
-            } else {
-                $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
-                "$($tenant): Successfully set Defender Compliance and Reporting settings. Please remember to enable the Intune Connector in the Defender portal."
-            }
 
             if ($PolicySettings) {
                 $Settings = switch ($PolicySettings) {
@@ -260,68 +262,54 @@ Function Invoke-AddDefenderDeployment {
                 }
             }
             # Exclusion Policy Section
-            $ExclusionToggle = $Request.Body.showExclusionPolicy
-            $ExcludedExtensions = $Request.Body.Exclusion.excludedExtensions
-            $ExcludedPaths = $Request.Body.Exclusion.excludedPaths
-            $ExcludedProcesses = $Request.Body.Exclusion.excludedProcesses
-            $ExclusionAssignTo = $Request.Body.Exclusion.AssignTo
-            if ($ExclusionToggle -and $DefenderExclusions) {
-                function Escape-ExclusionValue($val) {
-                    $escaped = $val -replace '\\', '\\\\' # Escape backslashes
-                    if ($escaped -match ' ' -and -not ($escaped -match '^".*"$')) {
-                        $escaped = '"' + $escaped + '"'
-                    }
-                    return $escaped
-                }
-                $extArr = @()
-                if ($ExcludedExtensions) {
-                    $extArr = $ExcludedExtensions | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
-                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+            if ($DefenderExclusions) {
+                $ExclusionAssignTo = $DefenderExclusions.AssignTo
+                if ($DefenderExclusions.excludedExtensions) {
+                    $ExcludedExtensions = $DefenderExclusions.excludedExtensions | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
                     }
                 }
-                $pathArr = @()
-                if ($ExcludedPaths) {
-                    $pathArr = $ExcludedPaths | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
-                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+                if ($DefenderExclusions.excludedPaths) {
+                    $ExcludedPaths = $DefenderExclusions.excludedPaths | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
                     }
                 }
-                $procArr = @()
-                if ($ExcludedProcesses) {
-                    $procArr = $ExcludedProcesses | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
-                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = (Escape-ExclusionValue $_) }
+                if ($DefenderExclusions.excludedProcesses) {
+                    $ExcludedProcesses = $DefenderExclusions.excludedProcesses | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
                     }
                 }
-                $ExclusionSettings = @()
-                if ($extArr.Count -gt 0) {
-                    $ExclusionSettings = $ExclusionSettings + @(@{
+                $ExclusionSettings = [System.Collections.Generic.List[System.Object]]::new()
+                if ($ExcludedExtensions.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
                             id              = '2'
                             settingInstance = @{
                                 '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
                                 settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedextensions'
                                 settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'c203725b-17dc-427b-9470-673a2ce9cd5e' }
-                                simpleSettingCollectionValue     = @($extArr)
+                                simpleSettingCollectionValue     = @($ExcludedExtensions)
                             }
                         })
                 }
-                if ($pathArr.Count -gt 0) {
-                    $ExclusionSettings = $ExclusionSettings + @(@{
+                if ($ExcludedPaths.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
                             id              = '1'
                             settingInstance = @{
                                 '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
                                 settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedpaths'
                                 settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'aaf04adc-c639-464f-b4a7-152e784092e8' }
-                                simpleSettingCollectionValue     = @($pathArr)
+                                simpleSettingCollectionValue     = @($ExcludedPaths)
                             }
                         })
                 }
-                if ($procArr.Count -gt 0) {
-                    $ExclusionSettings = $ExclusionSettings + @(@{
+                if ($ExcludedProcesses.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
                             id              = '0'
                             settingInstance = @{
                                 '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
                                 settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedprocesses'
                                 settingInstanceTemplateReference = @{ settingInstanceTemplateId = '96b046ed-f138-4250-9ae0-b0772a93d16f' }
-                                simpleSettingCollectionValue     = @($procArr)
+                                simpleSettingCollectionValue     = @($ExcludedProcesses)
                             }
                         })
                 }
@@ -329,7 +317,7 @@ Function Invoke-AddDefenderDeployment {
                     $ExclusionBody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
                         name              = 'Default AV Exclusion Policy'
                         displayName       = 'Default AV Exclusion Policy'
-                        settings          = $ExclusionSettings
+                        settings          = @($ExclusionSettings)
                         platforms         = 'windows10'
                         technologies      = 'mdm,microsoftSense'
                         templateReference = @{
@@ -347,7 +335,7 @@ Function Invoke-AddDefenderDeployment {
                         if ($ExclusionAssignTo -and $ExclusionAssignTo -ne 'none') {
                             $AssignBody = if ($ExclusionAssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($ExclusionAssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExclusionRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned Exclusion policy to $($ExclusionAssignTo)" -Sev 'Info'
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Assigned Exclusion policy to $($ExclusionAssignTo)" -Sev 'Info'
                         }
                         "$($tenant): Successfully set Default AV Exclusion Policy settings"
                     }
@@ -355,18 +343,17 @@ Function Invoke-AddDefenderDeployment {
             }
         } catch {
             "Failed to add policy for $($tenant): $($_.Exception.Message)"
-            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 
     }
 
-    $body = [pscustomobject]@{'Results' = @($results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = @($Results) }
         })
 
 }
