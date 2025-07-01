@@ -90,7 +90,7 @@ function Get-CippAllowedPermissions {
             foreach ($Exclude in $BaseRole.Value.exclude) {
                 $ExcludedPermissions = $BasePermissions | Where-Object { $_ -like $Exclude }
                 foreach ($Permission in $ExcludedPermissions) {
-                    $BasePermissions.Remove($Permission)
+                    $BasePermissions.Remove($Permission) | Out-Null
                 }
             }
 
