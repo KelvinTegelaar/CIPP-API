@@ -26,27 +26,25 @@ function Set-CIPPResetPassword {
         if ($PasswordLink) {
             $password = $PasswordLink
         }
-        Write-LogMessage -headers $Headers -API $APIName -message "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 
         if ($UserDetails.onPremisesSyncEnabled -eq $true) {
             return [pscustomobject]@{
-                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
+                resultText = "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
                 copyField  = $password
                 state      = 'warning'
             }
         } else {
             return [pscustomobject]@{
-                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
+                resultText = "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
                 copyField  = $password
                 state      = 'success'
             }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return [pscustomobject]@{
-            resultText = "Could not reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)"
-            state      = 'Error'
-        }
+        $Message = "Failed to reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Message
     }
 }
