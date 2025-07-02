@@ -5,7 +5,7 @@ Function Invoke-ExecCSPLicense {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Directory.Read
+        Tenant.Directory.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

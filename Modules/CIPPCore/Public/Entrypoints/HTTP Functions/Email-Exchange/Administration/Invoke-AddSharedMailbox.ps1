@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSharedMailbox {
+function Invoke-AddSharedMailbox {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,7 +17,7 @@ Function Invoke-AddSharedMailbox {
     $Results = [System.Collections.Generic.List[string]]::new()
     $MailboxObject = $Request.Body
     $Tenant = $MailboxObject.tenantID
-    $Aliases = $MailboxObject.addedAliases -Split '\n'
+    $Aliases = $MailboxObject.addedAliases -split '\n'
 
     try {
 
@@ -38,7 +38,7 @@ Function Invoke-AddSharedMailbox {
             $Results.Add("Blocked sign-in for shared mailbox $Email")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            $Message = "Failed to block sign-in for shared mailbox $Email. Error: $($ErrorMessage.NormalizedError)"
+            $Message = "Failed to block sign-in for shared mailbox $Email Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
             $Results.Add($Message)
         }

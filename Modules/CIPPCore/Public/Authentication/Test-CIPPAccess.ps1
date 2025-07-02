@@ -15,19 +15,6 @@ function Test-CIPPAccess {
     # Check help for role
     $APIRole = $Help.Role
 
-    if ($APIRole -eq 'Public') {
-        return $true
-    }
-
-    # Get default roles from config
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
-
-    if ($APIRole -eq 'Public') {
-        return $true
-    }
-
     # Get default roles from config
     $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
@@ -37,11 +24,6 @@ function Test-CIPPAccess {
     if ($APIRole -eq 'Public') {
         return $true
     }
-
-    # Get default roles from config
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
 
     if ($Request.Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Request.Headers.'x-ms-client-principal-name' -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
         $Type = 'APIClient'
@@ -91,6 +73,22 @@ function Test-CIPPAccess {
             $CustomRoles = @('cipp-api')
             Write-Information "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
         }
+        if ($Request.Params.CIPPEndpoint -eq 'me') {
+            $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = (
+                        @{
+                            'clientPrincipal' = @{
+                                appId   = $Request.Headers.'x-ms-client-principal-name'
+                                appRole = $CustomRoles
+                            }
+                            'permissions'     = $Permissions
+                        } | ConvertTo-Json -Depth 5)
+                })
+            return
+        }
+
     } else {
         $Type = 'User'
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
@@ -103,9 +101,14 @@ function Test-CIPPAccess {
         #Write-Information ($User | ConvertTo-Json -Depth 5)
         # Return user permissions
         if ($Request.Params.CIPPEndpoint -eq 'me') {
+            $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
-                    Body       = (@{ 'clientPrincipal' = $User } | ConvertTo-Json -Depth 5)
+                    Body       = (
+                        @{
+                            'clientPrincipal' = $User
+                            'permissions'     = $Permissions
+                        } | ConvertTo-Json -Depth 5)
                 })
             return
         }

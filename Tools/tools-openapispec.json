@@ -1,0 +1,665 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CIPP Tools API",
+    "description": "API for Tools in Cloud Identity and Policy Platform (CIPP)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "CIPP API Server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "Results": {
+            "type": "object",
+            "description": "The results of the operation"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/ListBreachesAccount": {
+      "get": {
+        "summary": "List Breaches for Account",
+        "description": "Retrieves a list of breaches for a specific account (email or domain)",
+        "tags": [
+          "Breach Lookup"
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "description": "Email address or domain name to check for breaches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Breaches retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Title": {
+                        "type": "string",
+                        "description": "Title of the breach"
+                      },
+                      "LogoPath": {
+                        "type": "string",
+                        "description": "Path to the breach logo"
+                      },
+                      "password": {
+                        "type": "string",
+                        "description": "Partial password if available"
+                      },
+                      "Description": {
+                        "type": "string",
+                        "description": "Description of the breach"
+                      },
+                      "Domain": {
+                        "type": "string",
+                        "description": "Domain associated with the breach"
+                      },
+                      "DataClasses": {
+                        "type": "array",
+                        "description": "Types of data leaked in the breach",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListBreachesTenant": {
+      "get": {
+        "summary": "List Breaches for Tenant",
+        "description": "Retrieves a list of breaches for a specific tenant",
+        "tags": [
+          "Breach Lookup"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant ID to filter breaches",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant breaches retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "description": "Email address associated with the breach"
+                      },
+                      "password": {
+                        "type": "string",
+                        "description": "Partial password if available"
+                      },
+                      "sources": {
+                        "type": "string",
+                        "description": "Sources of the breach data"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecBreachSearch": {
+      "get": {
+        "summary": "Execute Breach Search",
+        "description": "Executes a breach search for a tenant",
+        "tags": [
+          "Breach Lookup"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant ID to search for breaches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Breach search executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListExtensionsConfig": {
+      "get": {
+        "summary": "List Extensions Configuration",
+        "description": "Retrieves the configuration for extensions",
+        "tags": [
+          "Community Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Extensions configuration retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "GitHub": {
+                      "type": "object",
+                      "properties": {
+                        "Enabled": {
+                          "type": "boolean",
+                          "description": "Whether GitHub integration is enabled"
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "Enabled": {
+                        "type": "boolean",
+                        "description": "Whether the extension is enabled"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecGitHubAction": {
+      "get": {
+        "summary": "Execute GitHub Action (GET)",
+        "description": "Executes a GitHub action with GET method",
+        "tags": [
+          "Community Repositories"
+        ],
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "description": "Action to perform",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["GetBranches", "GetFileTree", "GetFileContents", "GetOrgs"]
+            }
+          },
+          {
+            "name": "FullName",
+            "in": "query",
+            "description": "Full name of the repository (owner/repo)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Branch",
+            "in": "query",
+            "description": "Branch name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Path",
+            "in": "query",
+            "description": "File path",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GitHub action executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Execute GitHub Action (POST)",
+        "description": "Executes a GitHub action with POST method",
+        "tags": [
+          "Community Repositories"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "Action"
+                ],
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Action to perform",
+                    "enum": ["CreateRepo", "Search", "GetFileContents"]
+                  },
+                  "Type": {
+                    "type": "string",
+                    "description": "Type of repository (user or org)",
+                    "enum": ["user", "org", "repositories"]
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "Repository name"
+                  },
+                  "Org": {
+                    "type": "string",
+                    "description": "Organization name"
+                  },
+                  "Description": {
+                    "type": "string",
+                    "description": "Repository description"
+                  },
+                  "Private": {
+                    "type": "boolean",
+                    "description": "Whether the repository is private"
+                  },
+                  "Repository": {
+                    "type": "string",
+                    "description": "Repository name for search"
+                  },
+                  "User": {
+                    "type": "string",
+                    "description": "User name for search"
+                  },
+                  "SearchTerm": {
+                    "type": "array",
+                    "description": "Search terms",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "FullName": {
+                    "type": "string",
+                    "description": "Full name of the repository (owner/repo)"
+                  },
+                  "Path": {
+                    "type": "string",
+                    "description": "File path"
+                  },
+                  "Branch": {
+                    "type": "string",
+                    "description": "Branch name"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "GitHub action executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListCommunityRepos": {
+      "get": {
+        "summary": "List Community Repositories",
+        "description": "Retrieves a list of community repositories",
+        "tags": [
+          "Community Repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Community repositories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Name": {
+                            "type": "string",
+                            "description": "Repository name"
+                          },
+                          "Owner": {
+                            "type": "string",
+                            "description": "Repository owner"
+                          },
+                          "URL": {
+                            "type": "string",
+                            "description": "Repository URL"
+                          },
+                          "Visibility": {
+                            "type": "string",
+                            "description": "Repository visibility (public/private)"
+                          },
+                          "WriteAccess": {
+                            "type": "boolean",
+                            "description": "Whether the user has write access to the repository"
+                          },
+                          "UploadBranch": {
+                            "type": "string",
+                            "description": "Branch used for uploads"
+                          },
+                          "FullName": {
+                            "type": "string",
+                            "description": "Full name of the repository (owner/repo)"
+                          },
+                          "DefaultBranch": {
+                            "type": "string",
+                            "description": "Default branch of the repository"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecCommunityRepo": {
+      "post": {
+        "summary": "Execute Community Repository Operation",
+        "description": "Executes an operation on a community repository",
+        "tags": [
+          "Community Repositories"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "Action"
+                ],
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Action to perform",
+                    "enum": ["Add", "Delete", "SetBranch", "ImportTemplate"]
+                  },
+                  "Id": {
+                    "type": "string",
+                    "description": "Repository ID"
+                  },
+                  "Branch": {
+                    "type": "string",
+                    "description": "Branch name"
+                  },
+                  "FullName": {
+                    "type": "string",
+                    "description": "Full name of the repository (owner/repo)"
+                  },
+                  "Path": {
+                    "type": "string",
+                    "description": "File path for template import"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Community repository operation executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/AddScheduledItem": {
+      "post": {
+        "summary": "Add Scheduled Item",
+        "description": "Adds a new scheduled item",
+        "tags": [
+          "Template Library"
+        ],
+        "parameters": [
+          {
+            "name": "DisallowDuplicateName",
+            "in": "query",
+            "description": "Whether to disallow duplicate names",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "TenantFilter": {
+                    "type": "string",
+                    "description": "Tenant to apply the scheduled item to"
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "Name of the scheduled item"
+                  },
+                  "Command": {
+                    "type": "object",
+                    "description": "Command to execute",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Command value"
+                      }
+                    }
+                  },
+                  "Parameters": {
+                    "type": "object",
+                    "description": "Parameters for the command",
+                    "properties": {
+                      "TemplateSettings": {
+                        "type": "object",
+                        "description": "Template settings"
+                      }
+                    }
+                  },
+                  "ScheduledTime": {
+                    "type": "integer",
+                    "description": "When the job is scheduled to run (Unix timestamp)"
+                  },
+                  "Recurrence": {
+                    "type": "object",
+                    "description": "How often the job recurs",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Recurrence value"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scheduled item added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  }
+}
