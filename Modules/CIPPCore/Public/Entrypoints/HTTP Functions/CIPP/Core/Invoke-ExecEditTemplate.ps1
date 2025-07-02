@@ -16,7 +16,7 @@ function Invoke-ExecEditTemplate {
 
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $guid = $request.body.guid
+        $guid = $request.body.id
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.body | Select-Object * -ExcludeProperty GUID)
         $Type = $request.query.Type
 
@@ -24,7 +24,7 @@ function Invoke-ExecEditTemplate {
             Write-Host 'Intune Template'
             $OriginalTemplate = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
             $OriginalTemplate = ($OriginalTemplate.JSON | ConvertFrom-Json -Depth 100)
-            $RawJSON = $OriginalTemplate.RAWJson
+            $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.body.parsedRAWJson
             Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Request.Headers
         } else {
             $Table.Force = $true
