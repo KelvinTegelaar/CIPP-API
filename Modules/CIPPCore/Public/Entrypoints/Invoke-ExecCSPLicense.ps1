@@ -11,7 +11,7 @@ function Invoke-ExecCSPLicense {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Directory.Read
+        Tenant.Directory.ReadWrite
         
     .NOTES
     Group: CSP Management

@@ -13,10 +13,9 @@ function Invoke-ExecGraphExplorerPreset {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-    #UNDOREPLACE
     $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
-    $Action = $Request.Body.Action ?? ''
+    $Action = $Request.Body.action ?? ''
 
     Write-Information ($Request.Body | ConvertTo-Json -Depth 10)
 
@@ -48,8 +47,10 @@ function Invoke-ExecGraphExplorerPreset {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = $StatusCode
                 Body       = @{
-                    Results = $Message
-                    Success = $false
+                    Results = @{
+                        resultText = $Message
+                        state      = 'error'
+                    }
                 }
             })
         return
@@ -61,8 +62,10 @@ function Invoke-ExecGraphExplorerPreset {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = $StatusCode
                 Body       = @{
-                    Results = $Message
-                    Success = $false
+                    Results = @{
+                        resultText = $Message
+                        state      = 'error'
+                    }
                 }
             })
         return
@@ -111,8 +114,10 @@ function Invoke-ExecGraphExplorerPreset {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{
-                Results = $Message
-                Success = $Success
+                Results = @{
+                    resultText = $Message
+                    state      = if ($Success) { 'success' } else { 'error' }
+                }
             }
         })
 }

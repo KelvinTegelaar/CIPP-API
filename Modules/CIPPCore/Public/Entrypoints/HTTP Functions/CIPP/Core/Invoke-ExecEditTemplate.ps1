@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecEditTemplate {
+function Invoke-ExecEditTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -18,7 +18,7 @@ Function Invoke-ExecEditTemplate {
         $Table = Get-CippTable -tablename 'templates'
         $guid = $request.body.guid
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.body | Select-Object * -ExcludeProperty GUID)
-        $Type = $request.Body.Type
+        $Type = $request.query.Type
 
         if ($Type -eq 'IntuneTemplate') {
             Write-Host 'Intune Template'
@@ -28,7 +28,6 @@ Function Invoke-ExecEditTemplate {
             Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Request.Headers
         } else {
             $Table.Force = $true
-
             Add-CIPPAzDataTableEntity @Table -Entity @{
                 JSON         = "$JSON"
                 RowKey       = "$GUID"

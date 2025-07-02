@@ -46,7 +46,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully disabled Legacy Workflows' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
