@@ -1,13 +1,42 @@
 function Invoke-ExecCommunityRepo {
     <#
     .SYNOPSIS
-        Make changes to a community repository
+    Make changes to a community repository
+    
     .DESCRIPTION
-        This function makes changes to a community repository in table storage
+    Performs various operations on community repositories in table storage including adding, updating, deleting, uploading templates, and managing branches.
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
+        
+    .NOTES
+    Group: Tools
+    Summary: Exec Community Repo
+    Description: Performs various operations on community repositories in table storage including adding, updating, deleting, uploading templates, and managing branches through GitHub API integration.
+    Tags: Tools,GitHub,Community,Repositories,Templates
+    Parameter: Action (string) [body] - Action to perform: Add, Update, Delete, UploadTemplate, SetBranch, ImportTemplate
+    Parameter: Id (string) [body] - Repository ID (alternative to FullName)
+    Parameter: FullName (string) [body] - Repository full name (owner/repo) (alternative to Id)
+    Parameter: GUID (string) [body] - Template GUID for UploadTemplate action
+    Parameter: Message (string) [body] - Commit message for UploadTemplate action
+    Parameter: Branch (string) [body] - Branch name for SetBranch and ImportTemplate actions
+    Parameter: Path (string) [body] - File path for ImportTemplate action
+    Response: Returns an object with the following properties:
+    Response: - Results (array): Array containing a single result object with:
+    Response: - resultText (string): Success or error message
+    Response: - state (string): Success or error state
+    Response: On success: { "Results": [{ "resultText": "Operation completed", "state": "success" }] }
+    Response: On error: { "Results": [{ "resultText": "Error message", "state": "error" }] }
+    Example: {
+      "Results": [
+        {
+          "resultText": "Community repository 'cipp-standards' added",
+          "state": "success"
+        }
+      ]
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,9 +45,11 @@ function Invoke-ExecCommunityRepo {
     $Id = $Request.Body.Id
     if ($Request.Body.Id) {
         $Filter = "PartitionKey eq 'CommunityRepos' and RowKey eq '$($Id)'"
-    } elseif ($Request.Body.FullName) {
+    }
+    elseif ($Request.Body.FullName) {
         $Filter = "PartitionKey eq 'CommunityRepos' and FullName eq '$($Request.Body.FullName)'"
-    } else {
+    }
+    else {
         $Results = @(
             @{
                 resultText = 'Id or FullName required'
@@ -87,7 +118,8 @@ function Invoke-ExecCommunityRepo {
                     resultText = "Repository $($Repo.name) updated"
                     state      = 'success'
                 }
-            } else {
+            }
+            else {
                 $Results = @{
                     resultText = "Repository $($Repo.name) not found"
                     state      = 'error'
@@ -128,7 +160,8 @@ function Invoke-ExecCommunityRepo {
                     resultText = "Template '$($DisplayName)' uploaded"
                     state      = 'success'
                 }
-            } else {
+            }
+            else {
                 $Results = @{
                     resultText = "Template '$($GUID)' not found"
                     state      = 'error'
@@ -141,11 +174,13 @@ function Invoke-ExecCommunityRepo {
                     resultText = "Repository $($Id) not found"
                     state      = 'error'
                 }
-            } else {
+            }
+            else {
                 $Branch = $Request.Body.Branch
                 if (!$RepoEntity.UploadBranch) {
                     $RepoEntity | Add-Member -NotePropertyName 'UploadBranch' -NotePropertyValue $Branch
-                } else {
+                }
+                else {
                     $RepoEntity.UploadBranch = $Branch
                 }
                 $null = Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force
@@ -178,7 +213,8 @@ function Invoke-ExecCommunityRepo {
                     resultText = 'Template imported'
                     state      = 'success'
                 }
-            } catch {
+            }
+            catch {
                 $Results = @{
                     resultText = "Error importing template: $($_.Exception.Message)"
                     state      = 'error'

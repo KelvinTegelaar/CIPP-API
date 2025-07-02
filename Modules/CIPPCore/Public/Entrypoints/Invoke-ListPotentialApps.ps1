@@ -1,11 +1,39 @@
 using namespace System.Net
 
-Function Invoke-ListPotentialApps {
+function Invoke-ListPotentialApps {
     <#
+    .SYNOPSIS
+    List potential applications from package managers
+    
+    .DESCRIPTION
+    Searches for potential applications from WinGet and Chocolatey package managers based on search criteria.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Endpoint.Application.Read
+        
+    .NOTES
+    Group: Device Management
+    Summary: List Potential Apps
+    Description: Searches for potential applications from WinGet and Chocolatey package managers based on search criteria, returning application names and package identifiers.
+    Tags: Device Management,Applications,WinGet,Chocolatey,Package Managers
+    Parameter: type (string) [body] - Package manager type ('WinGet' or 'Choco')
+    Parameter: SearchString (string) [body] - Search term to find applications
+    Response: Returns an array of application objects with the following properties:
+    Response: - applicationName (string): Display name of the application
+    Response: - packagename (string): Package identifier for the application
+    Response: On success: Array of applications with HTTP 200 status
+    Example: [
+      {
+        "applicationName": "Microsoft Teams",
+        "packagename": "Microsoft.Teams"
+      },
+      {
+        "applicationName": "Visual Studio Code",
+        "packagename": "Microsoft.VisualStudioCode"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,13 +1,56 @@
 function Invoke-ListCommunityRepos {
     <#
     .SYNOPSIS
-        List community repositories in Table Storage
+    List community repositories from GitHub integration
+    
     .DESCRIPTION
-        This function lists community repositories in Table Storage
+    Retrieves a list of community repositories from Table Storage with optional filtering and default repository management
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+        
+    .NOTES
+    Group: Tools
+    Summary: List Community Repos
+    Description: Retrieves a list of community repositories from Table Storage with support for write access filtering and automatic default repository management
+    Tags: Tools,GitHub,Community
+    Parameter: WriteAccess (boolean) [query] - Filter repositories to only show those with write access
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of repository objects with the following properties:
+    Response: - Id (string): Repository unique identifier
+    Response: - Name (string): Repository name
+    Response: - Description (string): Repository description
+    Response: - URL (string): Repository URL
+    Response: - FullName (string): Repository full name (owner/repo)
+    Response: - Owner (string): Repository owner
+    Response: - Visibility (string): Repository visibility (public, private)
+    Response: - WriteAccess (boolean): Whether write access is available
+    Response: - DefaultBranch (string): Default branch name
+    Response: - UploadBranch (string): Branch used for uploads
+    Response: - RepoPermissions (object): Repository permissions configuration
+    Example: {
+      "Results": [
+        {
+          "Id": "cipp-standards",
+          "Name": "CIPP Standards",
+          "Description": "Community-driven security standards for Microsoft 365",
+          "URL": "https://github.com/community/cipp-standards",
+          "FullName": "community/cipp-standards",
+          "Owner": "community",
+          "Visibility": "public",
+          "WriteAccess": true,
+          "DefaultBranch": "main",
+          "UploadBranch": "main",
+          "RepoPermissions": {
+            "admin": true,
+            "push": true,
+            "pull": true
+          }
+        }
+      ]
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +59,8 @@ function Invoke-ListCommunityRepos {
 
     if ($Request.Query.WriteAccess -eq 'true') {
         $Filter = "PartitionKey eq 'CommunityRepos' and WriteAccess eq true"
-    } else {
+    }
+    else {
         $Filter = ''
     }
 

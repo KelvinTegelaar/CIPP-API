@@ -2,11 +2,56 @@ using namespace System.Net
 
 function Invoke-ListFunctionParameters {
     <#
+    .SYNOPSIS
+    List function parameters and documentation for CIPP modules
+    
+    .DESCRIPTION
+    Retrieves function parameters, types, descriptions, and documentation for CIPP modules including Exchange Online Management.
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+        
+    .NOTES
+    Group: Development
+    Summary: List Function Parameters
+    Description: Retrieves detailed function information including parameters, types, descriptions, and documentation for CIPP modules and Exchange Online Management cmdlets.
+    Tags: Development,Documentation,Parameters
+    Parameter: Module (string) [query] - Module name to list functions from (e.g., 'ExchangeOnlineManagement')
+    Parameter: Function (string) [query] - Specific function name to get parameters for
+    Parameter: Compliance (boolean) [query] - Whether to include compliance cmdlets for Exchange Online Management
+    Response: Returns an array of function objects with the following properties:
+    Response: - Function (string): Function name
+    Response: - Synopsis (string): Function synopsis from help documentation
+    Response: - Parameters (array): Array of parameter objects with the following properties:
+    Response: - Name (string): Parameter name
+    Response: - Type (string): Parameter type (full .NET type name)
+    Response: - Description (string): Parameter description from help documentation
+    Response: - Required (boolean): Whether the parameter is mandatory
+    Example: [
+      {
+        "Function": "Get-CIPPUser",
+        "Synopsis": "Retrieves user information from Microsoft 365",
+        "Parameters": [
+          {
+            "Name": "UserID",
+            "Type": "System.String",
+            "Description": "User ID or email address to retrieve",
+            "Required": true
+          },
+          {
+            "Name": "TenantFilter",
+            "Type": "System.String",
+            "Description": "Tenant to query",
+            "Required": false
+          }
+        ]
+      }
+    ]
+    Error: Returns error details if the operation fails to retrieve function parameters.
     #>
+    [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
@@ -39,11 +84,12 @@ function Invoke-ListFunctionParameters {
             }
             $Functions = New-ExoRequest @ExoRequest
             #Write-Host $Functions
-        } else {
+        }
+        else {
             $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }
         }
         $Results = foreach ($Function in $Functions) {
-            if ($Function -In $TemporaryBlacklist) { continue }
+            if ($Function -in $TemporaryBlacklist) { continue }
             $GetHelp = @{
                 Name = $Function
             }
@@ -74,7 +120,8 @@ function Invoke-ListFunctionParameters {
         }
         $StatusCode = [HttpStatusCode]::OK
         $Results
-    } catch {
+    }
+    catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }

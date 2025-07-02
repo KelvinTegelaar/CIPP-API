@@ -1,4 +1,25 @@
 function Invoke-CustomDataSync {
+    <#
+    .SYNOPSIS
+    Synchronize custom data mappings to directory objects
+    
+    .DESCRIPTION
+    Synchronizes custom data from CIPP extension cache to directory objects (e.g., users) in Microsoft Graph, based on mapping configuration.
+    
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        CIPP.Extension.ReadWrite
+        
+    .NOTES
+    Group: Custom Data
+    Summary: Custom Data Sync
+    Description: Synchronizes custom data from CIPP extension cache to directory objects (e.g., users) in Microsoft Graph, based on mapping configuration. Supports bulk PATCH operations and flexible mapping logic.
+    Tags: Custom Data,Directory,Graph API,Sync
+    Parameter: TenantFilter (string) [parameter] - Target tenant identifier for synchronization
+    Response: No direct response. Writes progress and error information to logs. Performs PATCH requests to Microsoft Graph for each mapped object.
+    Example: Synchronizes extension attributes for users in a tenant based on custom mapping configuration.
+    #>
     param(
         $TenantFilter
     )
@@ -45,7 +66,8 @@ function Invoke-CustomDataSync {
         $SyncConfig
         if ($DirectoryObjectQueries | Where-Object { $_.id -eq $Query.id }) {
             continue
-        } else {
+        }
+        else {
             $DirectoryObjectQueries.Add($Query)
         }
     }
@@ -91,7 +113,8 @@ function Invoke-CustomDataSync {
                         break
                     }
                 }
-            } else {
+            }
+            else {
                 $DirectoryObject = $DirectoryObjects | Where-Object { $_.$DestinationMatchProperty -eq $Row.$SourceMatchProperty }
             }
 
@@ -118,10 +141,12 @@ function Invoke-CustomDataSync {
                             Write-Host "Creating new object for $($Props[1])"
                             $PatchObjects[$ObjectUrl][$Props[0]][$Props[1]] = $Row.$ExtensionSyncProperty
                         }
-                    } else {
+                    }
+                    else {
                         $PatchObjects[$ObjectUrl][$CustomDataAttribute] = $Row.$ExtensionSyncProperty
                     }
-                } elseif ($DatasetConfig.type -eq 'array') {
+                }
+                elseif ($DatasetConfig.type -eq 'array') {
                     Write-Warning "Processing array data for $($CustomDataAttribute) on $($DirectoryObject.id) - found $($Row.Count) entries"
                     #Write-Information ($Row | ConvertTo-Json -Depth 10)
                     if ($DatasetConfig.select) {
@@ -134,7 +159,8 @@ function Invoke-CustomDataSync {
 
                     $Data = if ($DatasetConfig.storeAs -eq 'json') {
                         $Row | ConvertTo-Json -Depth 5 -Compress
-                    } else {
+                    }
+                    else {
                         $Row
                     }
 

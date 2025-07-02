@@ -1,11 +1,34 @@
 using namespace System.Net
 
-Function Invoke-ExecCSPLicense {
+function Invoke-ExecCSPLicense {
     <#
+    .SYNOPSIS
+    Execute CSP license operations through Sherweb
+    
+    .DESCRIPTION
+    Manages Cloud Solution Provider (CSP) licenses through Sherweb integration including adding, removing, creating new subscriptions, and canceling subscriptions
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+        
+    .NOTES
+    Group: CSP Management
+    Summary: Exec CSP License
+    Description: Manages Cloud Solution Provider (CSP) licenses through Sherweb integration with support for adding, removing, creating new subscriptions, and canceling subscriptions
+    Tags: CSP,Licenses,Sherweb,Subscriptions
+    Parameter: tenantFilter (string) [body] - Target tenant identifier
+    Parameter: Action (string) [body] - Action to perform: Add, Remove, NewSub, or Cancel
+    Parameter: SKU (string) [body] - License SKU identifier
+    Parameter: Add (number) [body] - Number of licenses to add (for Add action)
+    Parameter: Remove (number) [body] - Number of licenses to remove (for Remove action)
+    Parameter: Quantity (number) [body] - Quantity for new subscription (for NewSub action)
+    Parameter: SubscriptionIds (array) [body] - Array of subscription IDs to cancel (for Cancel action)
+    Response: Returns a string message indicating success or failure
+    Response: On success: "License change executed successfully." with HTTP 200 status
+    Response: On error: Error message with HTTP 500 status
+    Example: "License change executed successfully."
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -36,7 +59,8 @@ Function Invoke-ExecCSPLicense {
         }
         $Result = 'License change executed successfully.'
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $Result = "Failed to execute license change. Error: $_"
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

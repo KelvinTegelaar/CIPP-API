@@ -2,10 +2,53 @@ using namespace System.Net
 
 function Invoke-ExecJITAdmin {
     <#
+    .SYNOPSIS
+    Manage Just-In-Time (JIT) admin access for users across tenants
+    
+    .DESCRIPTION
+    Lists, creates, and manages Just-In-Time (JIT) admin access for users in Microsoft Entra ID (Azure AD) across single or multiple tenants, supporting cache, queue, and TAP creation.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.Role.ReadWrite
+    
+    .NOTES
+    Group: Identity Management
+    Summary: Exec JIT Admin
+    Description: Lists, creates, and manages Just-In-Time (JIT) admin access for users in Microsoft Entra ID (Azure AD) across single or multiple tenants, supporting cache, queue, and TAP creation. Handles both listing and creation scenarios with robust error handling.
+    Tags: Identity,JIT Admin,Azure AD,Entra ID,Roles
+    Parameter: tenantFilter (string) [query/body] - Target tenant identifier or 'AllTenants'
+    Parameter: Action (string) [query] - Action to perform: 'List' or 'Create'
+    Parameter: existingUser (string) [body] - Existing user ID for JIT admin assignment
+    Parameter: useraction (string) [body] - User action: 'Create' or other
+    Parameter: Username, FirstName, LastName, Domain (string) [body] - User details for creation
+    Parameter: StartDate, EndDate (int) [body] - Start and end times (Unix timestamp)
+    Parameter: UseTAP (bool) [body] - Whether to create a Temporary Access Pass
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of user JIT admin objects or status messages
+    Response: - Metadata (object): Additional metadata (e.g., queue status)
+    Response: On success: List of users with JIT admin status or creation results
+    Response: On error: Error message or queue status
+    Example: {
+      "Results": [
+        {
+          "id": "12345678-1234-1234-1234-123456789012",
+          "displayName": "John Doe",
+          "userPrincipalName": "john.doe@contoso.com",
+          "accountEnabled": true,
+          "jitAdminEnabled": true,
+          "jitAdminExpiration": "2024-01-15T12:00:00Z",
+          "memberOf": [
+            { "displayName": "Global Admin", "id": "role-123" }
+          ]
+        }
+      ],
+      "Metadata": {
+        "QueueMessage": "Loading JIT Admin data for all tenants. Please check back in a few minutes."
+      }
+    }
+    Error: Returns error details or queue status if the operation fails.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -59,7 +102,8 @@ function Invoke-ExecJITAdmin {
                     Parameters = $Query.Parameters
                 }
             }
-        } else {
+        }
+        else {
             # AllTenants logic
             $Results = [System.Collections.Generic.List[object]]::new()
             $Metadata = @{}
@@ -76,7 +120,8 @@ function Invoke-ExecJITAdmin {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading JIT Admin data for all tenants. Please check back in a few more minutes.'
                 }
-            } elseif (!$Rows -and !$RunningQueue) {
+            }
+            elseif (!$Rows -and !$RunningQueue) {
                 $TenantList = Get-Tenants -IncludeErrors
                 $Queue = New-CippQueueEntry -Name 'JIT Admin List - All Tenants' -Link '/identity/administration/jit-admin?tenantFilter=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
 
@@ -96,7 +141,8 @@ function Invoke-ExecJITAdmin {
                     SkipLog          = $true
                 }
                 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-            } else {
+            }
+            else {
                 # There is data in the cache, so we will use that
                 Write-Information "Found $($Rows.Count) rows in the cache"
                 foreach ($row in $Rows) {
@@ -120,7 +166,8 @@ function Invoke-ExecJITAdmin {
                 Metadata = $Metadata
             }
         }
-    } else {
+    }
+    else {
 
         if ($Request.Body.existingUser.value -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
@@ -162,7 +209,8 @@ function Invoke-ExecJITAdmin {
                         startDateTime = [System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate).DateTime
                     }
                     $TapBody = ConvertTo-Json -Depth 5 -InputObject $TapParams
-                } else {
+                }
+                else {
                     $TapBody = '{}'
                 }
                 # Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
@@ -172,7 +220,8 @@ function Invoke-ExecJITAdmin {
                 do {
                     try {
                         $TapRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Username)/authentication/temporaryAccessPassMethods" -tenantid $TenantFilter -type POST -body $TapBody
-                    } catch {
+                    }
+                    catch {
                         Start-Sleep -Seconds 2
                         Write-Information "ERROR: Run $Retries of $MAX_TAP_RETRIES : Failed to create TAP, retrying"
                         # Write-Information ( ConvertTo-Json -Depth 5 -InputObject (Get-CippException -Exception $_))
@@ -188,7 +237,8 @@ function Invoke-ExecJITAdmin {
 
                 $Results.Add("Temporary Access Pass: $Password")
                 $Results.Add("This TAP is usable starting at $($TapRequest.startDateTime) UTC for the next $PasswordExpiration minutes")
-            } catch {
+            }
+            catch {
                 $Results.Add('Failed to create TAP, if this is not yet enabled, use the Standards to push the settings to the tenant.')
                 Write-Information (Get-CippException -Exception $_ | ConvertTo-Json -Depth 5)
                 if ($Password) {
@@ -228,7 +278,8 @@ function Invoke-ExecJITAdmin {
                 Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration
             }
             $Results.Add("Scheduling JIT Admin enable task for $Username")
-        } else {
+        }
+        else {
             $Results.Add("Executing JIT Admin enable task for $Username")
             Set-CIPPUserJITAdmin @Parameters
         }

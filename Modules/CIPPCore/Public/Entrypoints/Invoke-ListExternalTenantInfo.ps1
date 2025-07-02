@@ -1,11 +1,43 @@
 using namespace System.Net
 
-Function Invoke-ListExternalTenantInfo {
+function Invoke-ListExternalTenantInfo {
     <#
+    .SYNOPSIS
+    List external tenant information and federation domains
+    
+    .DESCRIPTION
+    Retrieves external tenant information using Microsoft Graph API and Exchange Online Autodiscover to get federation domains and tenant details.
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+        
+    .NOTES
+    Group: Tenant Management
+    Summary: List External Tenant Info
+    Description: Retrieves external tenant information using Microsoft Graph API and Exchange Online Autodiscover service to get federation domains, tenant details, and domain information.
+    Tags: Tenant Management,External,Federation,Autodiscover
+    Parameter: tenant (string) [query] - Tenant domain or identifier to look up
+    Parameter: tenantFilter (string) [query] - Source tenant identifier for the request
+    Response: Returns an object with the following properties:
+    Response: - GraphRequest (object): Tenant information from Microsoft Graph API including defaultDomainName and other tenant properties
+    Response: - Domains (array): Array of federation domains retrieved from Exchange Online Autodiscover
+    Response: On success: Tenant information and domains with HTTP 200 status
+    Response: On error: May return null or error information
+    Example: {
+      "GraphRequest": {
+        "tenantId": "12345678-1234-1234-1234-123456789012",
+        "defaultDomainName": "contoso.com",
+        "displayName": "Contoso Corporation",
+        "tenantType": "AAD"
+      },
+      "Domains": [
+        "contoso.com",
+        "contoso.onmicrosoft.com"
+      ]
+    }
+    Error: Returns error details if the operation fails to retrieve external tenant information.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

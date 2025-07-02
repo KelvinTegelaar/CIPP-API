@@ -1,11 +1,34 @@
 using namespace System.Net
 
-Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
+function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
     <#
+    .SYNOPSIS
+    Execute Teams voice phone number removal
+    
+    .DESCRIPTION
+    Removes phone number assignments from Teams users using Teams PowerShell cmdlets
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Teams.Voice.ReadWrite
+        
+    .NOTES
+    Group: Teams & SharePoint
+    Summary: Exec Remove Teams Voice Phone Number Assignment
+    Description: Removes phone number assignments from Teams users using Teams PowerShell cmdlets with support for different phone number types
+    Tags: Teams,Voice,Phone Numbers,Removal
+    Parameter: tenantFilter (string) [body] - Target tenant identifier
+    Parameter: AssignedTo (string) [body] - User identity to remove phone number from
+    Parameter: PhoneNumber (string) [body] - Phone number to remove
+    Parameter: PhoneNumberType (string) [body] - Type of phone number (User, Service, etc.)
+    Response: Returns an object with the following properties:
+    Response: - Results (string): Success or error message
+    Response: On success: Success message with HTTP 200 status
+    Response: On error: Error message with HTTP 500 status
+    Example: {
+      "Results": "Successfully unassigned +1234567890 from user@contoso.com"
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -25,7 +48,8 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
         $Result = "Successfully unassigned $PhoneNumber from $AssignedTo"
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to unassign $PhoneNumber from $AssignedTo. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage

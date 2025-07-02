@@ -1,11 +1,46 @@
 using namespace System.Net
 
-Function Invoke-ListPendingWebhooks {
+function Invoke-ListPendingWebhooks {
     <#
+    .SYNOPSIS
+    List pending webhook notifications
+    
+    .DESCRIPTION
+    Retrieves pending webhook notifications from the webhook queue, processing JSON properties for proper formatting.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.Alert.Read
+        
+    .NOTES
+    Group: Webhooks
+    Summary: List Pending Webhooks
+    Description: Retrieves pending webhook notifications from the webhook queue, processing JSON properties for proper formatting and excluding system properties.
+    Tags: Webhooks,Notifications,Queue
+    Response: Returns an object with the following properties:
+    Response: - Results (array): Array of webhook objects with processed JSON properties
+    Response: - Metadata (object): Contains Count of webhooks returned
+    Response: On success: Array of webhook objects with HTTP 200 status
+    Response: On error: Empty array with HTTP 200 status
+    Example: {
+      "Results": [
+        {
+          "id": "webhook-123",
+          "type": "security.breach",
+          "data": {
+            "tenantId": "12345678-1234-1234-1234-123456789012",
+            "breachType": "password",
+            "severity": "high"
+          },
+          "timestamp": "2024-01-15T10:30:00Z"
+        }
+      ],
+      "Metadata": {
+        "Count": 1
+      }
+    }
+    Error: Returns empty results array if the operation fails to retrieve webhooks.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -26,7 +61,8 @@ Function Invoke-ListPendingWebhooks {
             }
             $Result
         }
-    } catch {
+    }
+    catch {
         $PendingWebhooks = @()
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

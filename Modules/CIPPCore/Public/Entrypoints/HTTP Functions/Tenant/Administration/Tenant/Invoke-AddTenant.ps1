@@ -1,9 +1,56 @@
 function Invoke-AddTenant {
     <#
+    .SYNOPSIS
+    Add new tenants to Microsoft 365 partner center
+    
+    .DESCRIPTION
+    Creates new Microsoft 365 tenants through the partner center with domain validation and address verification
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Config.ReadWrite
+        
+    .NOTES
+    Group: Tenant Management
+    Summary: Add Tenant
+    Description: Creates new Microsoft 365 tenants through partner center with support for domain validation, address verification, and organization profile retrieval
+    Tags: Tenant,Administration,Partner Center
+    Parameter: Action (string) [body/query] - Action to perform: ValidateDomain, GetOrganizationProfile, AddTenant, ValidateAddress
+    Parameter: TenantName (string) [body/query] - Name for the new tenant (without .onmicrosoft.com)
+    Parameter: CompanyName (string) [body] - Company name for the new tenant
+    Parameter: FirstName (string) [body] - First name of the billing contact
+    Parameter: LastName (string) [body] - Last name of the billing contact
+    Parameter: Email (string) [body] - Email address of the billing contact
+    Parameter: Country (string) [body] - Country for billing address
+    Parameter: City (string) [body] - City for billing address
+    Parameter: State (string) [body] - State/province for billing address
+    Parameter: AddressLine1 (string) [body] - Primary address line
+    Parameter: AddressLine2 (string) [body] - Secondary address line
+    Parameter: PostalCode (string) [body] - Postal/ZIP code
+    Parameter: PhoneNumber (string) [body] - Phone number for billing contact
+    Response: Returns different response objects based on the Action parameter:
+    Response: For ValidateDomain:
+    Response: - Success (boolean): Whether the domain is available
+    Response: - Message (string): Status message about domain availability
+    Response: For GetOrganizationProfile:
+    Response: - Results (object): Organization profile information from partner center
+    Response: For AddTenant:
+    Response: - Results (array): Array containing success/error messages and credentials
+    Response: For ValidateAddress:
+    Response: - Status (string): Validation status
+    Response: - OriginalAddress (object): Original address submitted
+    Response: - SuggestedAddresses (array): Suggested address corrections
+    Response: - ValidationStatus (string): Address validation result
+    Example: {
+      "Results": [
+        {
+          "state": "success",
+          "resultText": "Tenant created successfully. Username is admin@contoso.onmicrosoft.com. Click copy to retrieve the password.",
+          "copyField": "TempPass123!"
+        }
+      ]
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -32,7 +79,8 @@ function Invoke-AddTenant {
                     Success = $false
                     Message = "The domain '$Domain' is already in use."
                 }
-            } catch {
+            }
+            catch {
                 $Body = @{
                     Success = $true
                 }
@@ -51,7 +99,8 @@ function Invoke-AddTenant {
                 $Body = @{
                     Results = $OrgResponse
                 }
-            } catch {
+            }
+            catch {
                 $Body = @{
                     Results = @(@{
                             state      = 'error'
@@ -74,7 +123,8 @@ function Invoke-AddTenant {
                 $AssociatedPartnerId = $MpnId.items[0].keyValue
                 Write-Host "Tier 2 CSP - Associated Partner ID: $AssociatedPartnerId"
                 $CanCreateCustomers = $true
-            } elseif ($PartnerType -eq 'resellerPartnerDelegatedAdmin') {
+            }
+            elseif ($PartnerType -eq 'resellerPartnerDelegatedAdmin') {
                 # Tier 1 CSP
                 $CanCreateCustomers = $true
             }
@@ -86,7 +136,8 @@ function Invoke-AddTenant {
                             resultText = 'You do not have permission to create customers. You must be a Tier 1 or Tier 2 CSP.'
                         })
                 }
-            } else {
+            }
+            else {
                 $Payload = @{
                     enableGDAPByDefault   = $false
                     Id                    = $null
@@ -156,7 +207,8 @@ function Invoke-AddTenant {
                                 copyField  = $Response.userCredentials.password
                             })
                     }
-                } catch {
+                }
+                catch {
                     $Body = @{
                         Results = @(@{
                                 state      = 'error'
@@ -187,7 +239,8 @@ function Invoke-AddTenant {
                     SuggestedAddresses = $Response.suggestedAddresses
                     ValidationStatus   = $Response.status
                 }
-            } catch {
+            }
+            catch {
                 return @{
                     state      = 'Error'
                     resultText = "Address validation failed: $($_.Exception.Message)"

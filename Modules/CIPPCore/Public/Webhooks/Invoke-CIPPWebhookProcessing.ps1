@@ -1,4 +1,42 @@
 function Invoke-CippWebhookProcessing {
+    <#
+    .SYNOPSIS
+    Process webhook data and execute automated remediation actions
+    
+    .DESCRIPTION
+    Processes incoming webhook data, executes automated remediation actions, and generates alerts and notifications
+    
+    .FUNCTIONALITY
+        Webhook Processing
+    .ROLE
+        Webhook.Process
+        
+    .NOTES
+    Group: Webhooks
+    Summary: Process Webhook
+    Description: Processes webhook data from various sources, executes automated remediation actions including user disable, BEC remediation, and custom commands, then generates alerts and notifications
+    Tags: Webhooks,Automation,Remediation,Alerts
+    Parameter: TenantFilter (string) - Target tenant identifier
+    Parameter: Data (object) - Webhook data containing user information and action details
+    Parameter: Resource (string) - Resource type being processed
+    Parameter: Operations (array) - Array of operations to perform
+    Parameter: CIPPURL (string) - Base URL for CIPP application
+    Parameter: APIName (string) - Name of the API being called (default: 'Process webhook')
+    Parameter: Headers (object) - Request headers
+    Response: No direct response - processes webhook data and generates alerts
+    Response: Actions performed based on CIPPAction:
+    Response: - disableUser: Disables the user account
+    Response: - becremediate: Performs BEC remediation including password reset, account disable, session revocation, and inbox rule disable
+    Response: - cippcommand: Executes custom CIPP commands with parameter substitution
+    Response: - generatemail: Sends email alert with HTML content
+    Response: - generatePSA: Sends PSA alert with HTML content
+    Response: - generateWebhook: Sends webhook alert with JSON content
+    Example: The function processes webhook data and performs actions like:
+    Example: - Disabling compromised user accounts
+    Example: - Resetting passwords and revoking sessions
+    Example: - Disabling suspicious inbox rules
+    Example: - Generating and sending alerts via email, PSA, or webhook
+    #>
     [CmdletBinding()]
     param (
         $TenantFilter,
@@ -41,7 +79,8 @@ function Invoke-CippWebhookProcessing {
                 }
                 if ($RuleDisabled) {
                     "Disabled $RuleDisabled Inbox Rules for $username"
-                } else {
+                }
+                else {
                     "No Inbox Rules found for $username. We have not disabled any rules."
                 }
                 "Completed BEC Remediate for $username"

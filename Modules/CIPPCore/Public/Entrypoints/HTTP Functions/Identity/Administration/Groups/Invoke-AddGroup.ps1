@@ -2,10 +2,34 @@ using namespace System.Net
 
 function Invoke-AddGroup {
     <#
+    .SYNOPSIS
+    Create a new group in Microsoft 365 or Exchange Online for one or more tenants
+    
+    .DESCRIPTION
+    Creates a new group (security, Microsoft 365, dynamic, or distribution) in Microsoft 365 or Exchange Online for one or more tenants, supporting both static and dynamic membership, owners, and members.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.Group.ReadWrite
+    
+    .NOTES
+    Group: Identity Management
+    Summary: Add Group
+    Description: Creates a new group (security, Microsoft 365, dynamic, or distribution) in Microsoft 365 or Exchange Online for one or more tenants, supporting static/dynamic membership, owners, and members. Handles both Graph API and Exchange Online scenarios.
+    Tags: Identity,Groups,Microsoft 365,Exchange Online
+    Parameter: body (object) [body] - Group object containing displayName, username, groupType, description, owners, members, membershipRules, primDomain, tenantFilter
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of status messages for each tenant
+    Response: On success: "Successfully created group [displayName] for [tenant]"
+    Response: On error: "Failed to create group. [displayName] for [tenant] [error details]"
+    Example: {
+      "Results": [
+        "Successfully created group Marketing for contoso.onmicrosoft.com",
+        "Failed to create group Sales for fabrikam.onmicrosoft.com [error details]"
+      ]
+    }
+    Error: Returns error details if the operation fails to create the group for any tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -36,12 +60,14 @@ function Invoke-AddGroup {
                     if ($GroupObject.groupType -eq 'm365') {
                         $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified', 'DynamicMembership')
                         $BodyParams.mailEnabled = $true
-                    } else {
+                    }
+                    else {
                         $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
                     }
                     # Skip adding static members if we're using dynamic membership
                     $SkipStaticMembers = $true
-                } elseif ($GroupObject.groupType -eq 'm365') {
+                }
+                elseif ($GroupObject.groupType -eq 'm365') {
                     $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                     $BodyParams.mailEnabled = $true
                 }
@@ -54,7 +80,8 @@ function Invoke-AddGroup {
                     $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyParams -Depth 10) -Verbose
-            } else {
+            }
+            else {
                 if ($GroupObject.groupType -eq 'dynamicDistribution') {
                     $ExoParams = @{
                         Name               = $GroupObject.displayName
@@ -62,7 +89,8 @@ function Invoke-AddGroup {
                         PrimarySmtpAddress = $Email
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $ExoParams
-                } else {
+                }
+                else {
                     $ExoParams = @{
                         Name                               = $GroupObject.displayName
                         Alias                              = $GroupObject.username
@@ -84,7 +112,8 @@ function Invoke-AddGroup {
             "Successfully created group $($GroupObject.displayName) for $($tenant)"
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
             $StatusCode = [HttpStatusCode]::OK
-        } catch {
+        }
+        catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Group creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"

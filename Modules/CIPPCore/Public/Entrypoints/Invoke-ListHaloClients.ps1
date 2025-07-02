@@ -1,11 +1,38 @@
 using namespace System.Net
 
-Function Invoke-ListHaloClients {
+function Invoke-ListHaloClients {
     <#
+    .SYNOPSIS
+    List HaloPSA clients from the PSA integration
+    
+    .DESCRIPTION
+    Retrieves a list of clients from HaloPSA using the configured integration settings with pagination support
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.Extension.Read
+        
+    .NOTES
+    Group: Extensions
+    Summary: List Halo Clients
+    Description: Retrieves a list of clients from HaloPSA using the configured integration settings with pagination support and token-based authentication
+    Tags: Extensions,HaloPSA,PSA,Clients
+    Response: Returns an array of HaloPSA client objects with the following properties:
+    Response: - label (string): Client name for display
+    Response: - value (string): Client ID for programmatic use
+    Response: On success: Array of client objects with HTTP 200 status
+    Response: On error: Error message with HTTP 403 status
+    Example: [
+      {
+        "label": "Contoso Corporation",
+        "value": "123"
+      },
+      {
+        "label": "Fabrikam Inc",
+        "value": "456"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -35,7 +62,8 @@ Function Invoke-ListHaloClients {
         }
         Write-Host "Found $($HaloClients.Count) Halo Clients"
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
         $HaloClients = $ErrorMessage

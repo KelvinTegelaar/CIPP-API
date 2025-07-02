@@ -1,11 +1,37 @@
 using namespace System.Net
 
-Function Invoke-ListKnownIPDb {
+function Invoke-ListKnownIPDb {
     <#
+    .SYNOPSIS
+    List known IP addresses and locations from the database
+    
+    .DESCRIPTION
+    Retrieves known IP addresses and location information from the knownlocationdbv2 table for a specific tenant
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.Core.Read
+        
+    .NOTES
+    Group: Security
+    Summary: List Known IP Database
+    Description: Retrieves known IP addresses and location information from the knownlocationdbv2 table for a specific tenant for security and location tracking
+    Tags: Security,IP Database,Location Tracking
+    Parameter: tenantFilter (string) [query] - Target tenant identifier
+    Response: Returns an array of known IP location objects from the knownlocationdbv2 table
+    Response: Each object contains IP address and location information for the specified tenant
+    Response: Example: [
+      {
+        "PartitionKey": "KnownLocations",
+        "RowKey": "192.168.1.100",
+        "Tenant": "contoso.onmicrosoft.com",
+        "IPAddress": "192.168.1.100",
+        "Location": "Office Building A",
+        "Description": "Main office network",
+        "LastSeen": "2024-01-15T10:30:00Z"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,11 +1,52 @@
 using namespace System.Net
 
-Function Invoke-ListLicenses {
+function Invoke-ListLicenses {
     <#
+    .SYNOPSIS
+    List Microsoft 365 licenses for tenants
+    
+    .DESCRIPTION
+    Retrieves license information including usage, availability, and term details for Microsoft 365 tenants
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+        
+    .NOTES
+    Group: Tenant Reports
+    Summary: List Licenses
+    Description: Retrieves comprehensive license information including usage statistics, availability, and term details for Microsoft 365 tenants
+    Tags: Tenant,Reports,Licenses
+    Parameter: tenantFilter (string) [query] - The tenant to retrieve license information for (use 'AllTenants' for all tenants)
+    Response: Returns an array of license objects with the following properties:
+    Response: - Tenant (string): Tenant identifier or domain name
+    Response: - License (string): License name or SKU identifier
+    Response: - TermInfo (object): License term information including start date, end date, and renewal details
+    Response: - TotalUnits (number): Total number of licenses purchased
+    Response: - ConsumedUnits (number): Number of licenses currently in use
+    Response: - AvailableUnits (number): Number of licenses available for assignment
+    Response: - WarningUnits (number): Number of licenses in warning state
+    Response: - ErrorUnits (number): Number of licenses in error state
+    Response: When tenantFilter='AllTenants' and data is loading:
+    Response: - Tenant (string): Loading message
+    Response: - License (string): Loading message
+    Example: [
+      {
+        "Tenant": "contoso.onmicrosoft.com",
+        "License": "Microsoft 365 Business Premium",
+        "TermInfo": {
+          "StartDate": "2024-01-01T00:00:00Z",
+          "EndDate": "2024-12-31T23:59:59Z",
+          "RenewalDate": "2024-12-31T23:59:59Z"
+        },
+        "TotalUnits": 100,
+        "ConsumedUnits": 75,
+        "AvailableUnits": 25,
+        "WarningUnits": 0,
+        "ErrorUnits": 0
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,7 +64,8 @@ Function Invoke-ListLicenses {
             $_.TermInfo = $TermInfo
             $_
         }
-    } else {
+    }
+    else {
         $Table = Get-CIPPTable -TableName cachelicenses
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
@@ -45,12 +87,14 @@ Function Invoke-ListLicenses {
                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
-        } else {
+        }
+        else {
             $GraphRequest = $Rows | Where-Object { $_.License } | ForEach-Object {
                 if ($_.TermInfo) {
                     $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
                     $_.TermInfo = $TermInfo
-                } else {
+                }
+                else {
                     $_ | Add-Member -NotePropertyName TermInfo -NotePropertyValue $null
                 }
                 $_

@@ -87,7 +87,8 @@ function Invoke-ExecCombinedSetup {
                 if ($Request.Body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.Body.ApplicationSecret }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                 $Results.add('Manual credentials have been set in the DevSecrets table.')
-            } else {
+            }
+            else {
                 if ($Request.Body.tenantId) {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $Request.Body.tenantId -AsPlainText -Force)
                     $Results.add('Set tenant ID in Key Vault.')
@@ -108,7 +109,8 @@ function Invoke-ExecCombinedSetup {
         $Results.add('Setup is now complete. You may navigate away from this page and start using CIPP.')
         #one more force of reauth so env vars update.
         $auth = Get-CIPPAuthentication
-    } catch {
+    }
+    catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
     }
 

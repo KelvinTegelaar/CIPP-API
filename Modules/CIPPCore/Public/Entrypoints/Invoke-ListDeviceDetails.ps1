@@ -1,11 +1,62 @@
 using namespace System.Net
 
-Function Invoke-ListDeviceDetails {
+function Invoke-ListDeviceDetails {
     <#
+    .SYNOPSIS
+    List detailed device information including groups, compliance policies, and detected apps
+    
+    .DESCRIPTION
+    Retrieves comprehensive device information including device groups, compliance policies, and detected applications using Microsoft Graph API with bulk requests for efficiency.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.Device.Read
+        
+    .NOTES
+    Group: Device Management
+    Summary: List Device Details
+    Description: Retrieves comprehensive device information including device groups, compliance policies, and detected applications using Microsoft Graph API with bulk requests for efficiency.
+    Tags: Device Management,Compliance,Applications,Graph API
+    Parameter: tenantFilter (string) [query] - Target tenant identifier
+    Parameter: DeviceID (string) [query] - Device unique identifier
+    Parameter: DeviceName (string) [query] - Device name for searching
+    Parameter: DeviceSerial (string) [query] - Device serial number for searching
+    Response: Returns a device object with the following properties:
+    Response: - Standard device properties (id, deviceName, serialNumber, etc.)
+    Response: - DetectedApps (array): Array of detected applications with id, displayName, and version
+    Response: - CompliancePolicies (array): Array of compliance policies with id, displayName, UserPrincipalName, and state
+    Response: - DeviceGroups (array): Array of device groups with id, displayName, and description
+    Response: On error: Error message with HTTP 403 status
+    Example: {
+      "id": "12345678-1234-1234-1234-123456789012",
+      "deviceName": "DESKTOP-ABC123",
+      "serialNumber": "ABC123456789",
+      "azureADDeviceId": "87654321-4321-4321-4321-210987654321",
+      "DetectedApps": [
+        {
+          "id": "app-123",
+          "displayName": "Microsoft Teams",
+          "version": "1.0.0.0"
+        }
+      ],
+      "CompliancePolicies": [
+        {
+          "id": "policy-123",
+          "displayName": "Windows 10 Compliance Policy",
+          "UserPrincipalName": "john.doe@contoso.com",
+          "state": "compliant"
+        }
+      ],
+      "DeviceGroups": [
+        {
+          "id": "group-123",
+          "displayName": "Windows Devices",
+          "description": "All Windows devices"
+        }
+      ]
+    }
+    Error: Returns error details if the operation fails to retrieve device details.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -25,7 +76,8 @@ Function Invoke-ListDeviceDetails {
     try {
         if ($DeviceID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceID" -Tenantid $TenantFilter
-        } elseif ($DeviceSerial -or $DeviceName) {
+        }
+        elseif ($DeviceSerial -or $DeviceName) {
             $Found = $False
             if ($DeviceSerial -and $DeviceName) {
                 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$filter=serialnumber eq '$DeviceSerial' and deviceName eq '$DeviceName'" -Tenantid $TenantFilter
@@ -86,7 +138,8 @@ Function Invoke-ListDeviceDetails {
         }
 
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
