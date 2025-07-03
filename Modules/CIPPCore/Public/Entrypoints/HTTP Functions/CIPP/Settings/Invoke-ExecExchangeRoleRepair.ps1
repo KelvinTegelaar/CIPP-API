@@ -66,7 +66,7 @@ function Invoke-ExecExchangeRoleRepair {
                 $PermissionError = $false
                 if ($RepairResults.status -in (401, 403, 500)) {
                     $PermissionError = $true
-                    $LogData = $RepairResults | Where-Object { $_.status -in (401, 403, 500) } | Select-Object -Property id, status, error
+                    $LogData = $RepairResults | Where-Object { $_.status -in (401, 403, 500) } | Select-Object -Property id, status, body
                 }
                 $Results = @{
                     state      = 'error'
