@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveContact {
+function Invoke-RemoveContact {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,33 +11,29 @@ Function Invoke-RemoveContact {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $GUID = $Request.query.GUID ?? $Request.body.GUID
     $Mail = $Request.query.Mail ?? $Request.body.Mail
 
     try {
-        $Params = @{
-            Identity = $GUID
-        }
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailContact' -cmdParams $Params -UseSystemMailbox $true
-        Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Deleted contact $GUID" -sev Debug
-        $Result = "Deleted $Mail"
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailContact' -cmdParams @{Identity = $GUID } -UseSystemMailbox $true
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted contact $Mail - $GUID" -Sev Info
+        $Result = "Deleted contact $Mail - $GUID"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete contact $GUID. $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Results = [pscustomobject]@{'Results' = $Result }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Results
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{Results = $Result }
+    }
 
 }

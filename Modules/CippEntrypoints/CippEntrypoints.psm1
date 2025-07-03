@@ -49,15 +49,22 @@ function Receive-CippHttpTrigger {
 
     if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
         try {
-            $Access = Test-CIPPAccess -Request $Request
+            $null = Test-CIPPAccess -Request $Request
             if ($FunctionName -eq 'Invoke-Me') {
                 return
             }
 
-            Write-Information "Access: $Access"
-            if ($Access) {
-                & $FunctionName @HttpTrigger
+            # This is a temporary workaround to handle the output binding while we migrate to the output binding only being pushed in this function.
+            $Response = & $FunctionName @HttpTrigger
+            $Output = Get-OutputBinding -Name Response | Where-Object { $null -ne $_.Response }
+            if ($Output) {
+                Write-Information 'Output binding FOUND so just returning response in the entrypoint' 
+                $Response
+            } else {
+                Write-Information 'Output binding NOT found so executing Push-OutputBinding in the entrypoint'
+                Push-OutputBinding -Name Response -Value ([HttpResponseContext]$Response)
             }
+
         } catch {
             Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

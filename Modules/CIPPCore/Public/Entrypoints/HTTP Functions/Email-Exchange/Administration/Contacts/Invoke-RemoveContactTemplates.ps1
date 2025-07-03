@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveContactTemplates {
+function Invoke-RemoveContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -10,9 +10,9 @@ Function Invoke-RemoveContactTemplates {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $ID = $request.query.ID ?? $request.body.ID
 
     try {
@@ -20,18 +20,18 @@ Function Invoke-RemoveContactTemplates {
         $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+
         $Result = "Removed Contact Template with ID $ID."
-        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Contact template with ID $ID. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }
