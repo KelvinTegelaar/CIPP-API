@@ -67,7 +67,7 @@ function Invoke-ExecExchangeRoleRepair {
                 if ($RepairResults.status -in (401, 403, 500)) {
                     $PermissionError = $true
                 }
-                $LogData = $RepairResults | Where-Object { $_.status -in (401, 403, 500) } | Select-Object -Property id, status, body
+                $LogData = $RepairResults | Select-Object -Property id, status, body
                 $Results = @{
                     state      = 'error'
                     resultText = "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ').$(if ($PermissionError) { " This may be due to insufficient permissions. The required Graph Permission is 'Application - RoleManagement.ReadWrite.Exchange'" })"
