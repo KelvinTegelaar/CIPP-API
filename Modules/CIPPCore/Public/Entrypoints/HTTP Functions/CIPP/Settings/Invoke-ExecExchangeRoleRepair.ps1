@@ -28,6 +28,8 @@ function Invoke-ExecExchangeRoleRepair {
         Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
         $MissingOrgMgmtRoles = $AvailableRoles | Where-Object { $OrgManagementRoles.Role -notcontains $_.displayName }
 
+        $Group = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-RoleGroup' -cmdParams @{ Identity = 'Organization Management' }
+
         if ($MissingOrgMgmtRoles.Count -gt 0) {
             $Requests = foreach ($Role in $MissingOrgMgmtRoles) {
                 [PSCustomObject]@{
@@ -35,7 +37,7 @@ function Invoke-ExecExchangeRoleRepair {
                     method  = 'POST'
                     url     = 'roleManagement/exchange/roleAssignments'
                     body    = @{
-                        principalId      = '/RoleGroups/Organization Management'
+                        principalId      = $Group.Guid
                         roleDefinitionId = $Role.id
                         directoryScopeId = '/'
                         appScopeId       = $null
