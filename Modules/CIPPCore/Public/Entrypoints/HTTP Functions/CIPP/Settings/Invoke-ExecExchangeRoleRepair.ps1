@@ -15,7 +15,7 @@ function Invoke-ExecExchangeRoleRepair {
 
     try {
         Write-Information "Starting Exchange Organization Management role repair for tenant: $($Tenant.defaultDomainName)"
-        $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ RoleAssignee = 'Organization Management'; Delegating = $false } | Select-Object -Property Role, Guid
+        $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ Delegating = $false } | Where-Object { $_.RoleAssigneeName -eq 'Organization Management' } | Select-Object -Property Role, Guid
         Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
 
         $RoleDefinitions = New-GraphGetRequest -tenantid $Tenant.customerId -uri 'https://graph.microsoft.com/beta/roleManagement/exchange/roleDefinitions'
@@ -37,7 +37,7 @@ function Invoke-ExecExchangeRoleRepair {
                     method  = 'POST'
                     url     = 'roleManagement/exchange/roleAssignments'
                     body    = @{
-                        principalId      = $Group.Guid
+                        principalId      = '/RoleGroups/Organization Management'
                         roleDefinitionId = $Role.id
                         directoryScopeId = '/'
                         appScopeId       = $null
