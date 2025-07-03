@@ -1,11 +1,35 @@
 using namespace System.Net
 
-Function Invoke-ExecSendOrgMessage {
+function Invoke-ExecSendOrgMessage {
     <#
+    .SYNOPSIS
+    Send organizational messages to Microsoft 365 devices
+    
+    .DESCRIPTION
+    Sends organizational messages to Microsoft 365 devices using Microsoft Graph API with support for different message types and targeting
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Tenant.Directory.ReadWrite
+        
+    .NOTES
+    Group: Device Management
+    Summary: Exec Send Org Message
+    Description: Sends organizational messages to Microsoft 365 devices using Microsoft Graph API with support for taskbar notifications, notifications, and get-started messages
+    Tags: Device Management,Organizational Messages,Graph API
+    Parameter: TenantFilter (string) [query] - Target tenant identifier
+    Parameter: ID (string) [query] - Azure AD group ID for targeting devices
+    Parameter: type (string) [query] - Message type: taskbar, notification, or getStarted
+    Parameter: freq (string) [query] - Message frequency setting
+    Parameter: URL (string) [query] - Click URL for the message
+    Response: Returns the result of the Graph API call to create organizational message details
+    Response: On success: Returns the created organizational message object
+    Response: On failure: Returns error message with HTTP 403 status
+    Example: The function creates organizational messages with different types:
+    Example: - taskbar: Creates taskbar notifications with click URLs
+    Example: - notification: Creates system notifications with click URLs
+    Example: - getStarted: Creates get-started messages with multiple cards and buttons
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -110,7 +134,8 @@ Function Invoke-ExecSendOrgMessage {
 
         $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails' -tenantid $tenantfilter -body $tmpbody
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage

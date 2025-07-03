@@ -1,11 +1,42 @@
 using namespace System.Net
 
-Function Invoke-ListNotificationConfig {
+function Invoke-ListNotificationConfig {
     <#
+    .SYNOPSIS
+    List CIPP notification configuration settings
+    
+    .DESCRIPTION
+    Retrieves CIPP notification configuration settings from the SchedulerConfig table including email, webhook, and severity settings
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.AppSettings.Read
+        
+    .NOTES
+    Group: Notifications
+    Summary: List Notification Config
+    Description: Retrieves CIPP notification configuration settings from the SchedulerConfig table including email, webhook, severity settings, and logs to include in notifications
+    Tags: Notifications,Configuration,Settings
+    Response: Returns a notification configuration object with the following properties:
+    Response: - email (string): Email address for notifications
+    Response: - webhook (string): Webhook URL for notifications
+    Response: - onepertenant (boolean): Whether to send one notification per tenant
+    Response: - sendtoIntegration (boolean): Whether to send to integration
+    Response: - logsToInclude (array): Array of log types to include in notifications
+    Response: - Severity (array): Array of severity levels to include (Alert, Info, Error)
+    Response: - schedule (string): Notification schedule
+    Response: - type (string): Notification type
+    Example: {
+      "email": "admin@contoso.com",
+      "webhook": "https://webhook.office.com/webhookb2/...",
+      "onepertenant": true,
+      "sendtoIntegration": false,
+      "logsToInclude": ["AuditLogs", "SignInLogs", "DirectoryLogs"],
+      "Severity": ["Alert", "Error"],
+      "schedule": "daily",
+      "type": "email"
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +50,8 @@ Function Invoke-ListNotificationConfig {
     $Config = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if ($Config) {
         $Config = $Config | ConvertTo-Json -Depth 10 | ConvertFrom-Json -Depth 10 -AsHashtable
-    } else {
+    }
+    else {
         $Config = @{}
     }
     #$config | Add-Member -NotePropertyValue @() -NotePropertyName 'logsToInclude' -Force
@@ -29,7 +61,8 @@ Function Invoke-ListNotificationConfig {
     }
     if (!$config.Severity) {
         $config.Severity = @('Alert')
-    } else {
+    }
+    else {
         $config.Severity = $config.Severity -split ','
     }
     $body = [PSCustomObject]$Config

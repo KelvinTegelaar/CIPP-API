@@ -1,9 +1,40 @@
 function Invoke-ExecAppApprovalTemplate {
     <#
+    .SYNOPSIS
+    Manage application approval templates for multi-tenant deployments
+    
+    .DESCRIPTION
+    Manages application approval templates for multi-tenant deployments, supporting saving, deleting, retrieving, and listing templates. Handles metadata, logging, and error handling for template operations.
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Application.ReadWrite
+    
+    .NOTES
+    Group: Application Management
+    Summary: Exec App Approval Template
+    Description: Manages application approval templates for multi-tenant deployments, supporting saving, deleting, retrieving, and listing templates. Handles metadata, logging, and error handling for template operations.
+    Tags: Application,Template,Approval,Multi-Tenant,Deployment
+    Parameter: Action (string) [query/body] - Action to perform: 'Save', 'Delete', 'Get', or default (list)
+    Parameter: TemplateId (string) [query/body] - Template ID for retrieval or deletion
+    Parameter: TemplateName (string) [body] - Name of the template
+    Parameter: selectedTemplate (object) [body] - Template object for saving or deploying
+    Response: Returns a response object with the following properties:
+    Response: - Results (string): Status message for the operation
+    Response: - Metadata (object): Metadata about the template (name, ID, timestamp)
+    Response: On success: Status message and metadata
+    Response: On error: Error message with HTTP 400/500 status
+    Example: [
+      {
+        "Results": "Template Saved",
+        "Metadata": {
+          "TemplateName": "My App Template",
+          "TemplateId": "12345678-1234-1234-1234-123456789012"
+        }
+      }
+    ]
+    Error: Returns error details if the operation fails to manage the template.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -59,7 +90,8 @@ function Invoke-ExecAppApprovalTemplate {
                 )
 
                 Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template Saved: $($Request.Body.TemplateName)" -Sev 'Info'
-            } catch {
+            }
+            catch {
                 $Body = @{
                     'Results' = $_.Exception.Message
                 }
@@ -84,12 +116,14 @@ function Invoke-ExecAppApprovalTemplate {
                         'Results' = "Successfully deleted template '$TemplateName'"
                     }
                     Write-LogMessage -headers $Headers -API $APIName -message "App Deployment Template deleted: $TemplateName" -Sev 'Info'
-                } else {
+                }
+                else {
                     $Body = @{
                         'Results' = 'No template found with the provided ID'
                     }
                 }
-            } catch {
+            }
+            catch {
                 $Body = @{
                     'Results' = "Failed to delete template: $($_.Exception.Message)"
                 }

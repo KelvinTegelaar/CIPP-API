@@ -2,10 +2,61 @@ using namespace System.Net
 
 function Invoke-EditUser {
     <#
+    .SYNOPSIS
+    Edit existing users in Microsoft 365 tenants
+    
+    .DESCRIPTION
+    Modifies user properties, licenses, aliases, and group memberships for existing users in Microsoft 365 tenants
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.User.ReadWrite
+        
+    .NOTES
+    Group: Identity Management
+    Summary: Edit User
+    Description: Modifies user properties including personal information, licenses, aliases, group memberships, and password settings
+    Tags: Identity,Users,Administration
+    Parameter: id (string) [body] - User's unique identifier (required)
+    Parameter: username (string) [body] - Username portion of the email address
+    Parameter: displayName (string) [body] - User's display name
+    Parameter: givenName (string) [body] - User's first name
+    Parameter: surname (string) [body] - User's last name
+    Parameter: Department (string) [body] - User's department
+    Parameter: usageLocation (object) [body] - User's usage location for licensing
+    Parameter: City (string) [body] - User's city
+    Parameter: Country (string) [body] - User's country
+    Parameter: jobTitle (string) [body] - User's job title
+    Parameter: MobilePhone (string) [body] - User's mobile phone number
+    Parameter: streetAddress (string) [body] - User's street address
+    Parameter: PostalCode (string) [body] - User's postal code
+    Parameter: CompanyName (string) [body] - User's company name
+    Parameter: businessPhones (array) [body] - Array of business phone numbers
+    Parameter: otherMails (array) [body] - Array of additional email addresses
+    Parameter: MustChangePass (boolean) [body] - Whether user must change password on next sign-in
+    Parameter: password (string) [body] - New password for the user
+    Parameter: licenses (object) [body] - License assignment configuration
+    Parameter: AddedAliases (string) [body] - Space-separated list of email aliases to add
+    Parameter: AddToGroups (array) [body] - Array of groups to add user to
+    Parameter: RemoveFromGroups (array) [body] - Array of groups to remove user from
+    Parameter: CopyFrom.value (string) [body] - User ID to copy group memberships from
+    Parameter: defaultAttributes (object) [body] - Additional custom attributes to set
+    Parameter: tenantFilter (string) [body] - Target tenant identifier
+    Parameter: PostExecution.Webhook (boolean) [body] - Send webhook notification after execution
+    Parameter: PostExecution.Email (boolean) [body] - Send email notification after execution
+    Parameter: PostExecution.PSA (boolean) [body] - Send PSA notification after execution
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of result messages indicating success or failure for each operation
+    Response: Example: {
+      "Results": [
+        "Success. The user has been edited.",
+        "Success. The password has been set to NewPass123!",
+        "Success. User license is already correct.",
+        "Success. Added aliases to user.",
+        "Success. John Doe has been added to Marketing group"
+      ]
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -77,7 +128,8 @@ function Invoke-EditUser {
             $Results.Add("Success. The password has been set to $($UserObj.password)")
             Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
         }
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "User edit API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
@@ -110,17 +162,20 @@ function Invoke-EditUser {
                     }
                 }
                 Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
-            } else {
+            }
+            else {
                 $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter
                 #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
                 if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
                     Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
                     $Results.Add( 'Success. User license is already correct.' )
-                } else {
+                }
+                else {
                     if ($UserObj.removeLicenses) {
                         $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Headers
                         $Results.Add($licResults)
-                    } else {
+                    }
+                    else {
                         #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
                         $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
                         $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $headers
@@ -131,7 +186,8 @@ function Invoke-EditUser {
             }
         }
 
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
@@ -151,7 +207,8 @@ function Invoke-EditUser {
             $null = $Results.Add( 'Success. Added aliases to user.')
         }
 
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to add aliases to user $($UserObj.DisplayName). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -API $APIName -tenant ($UserObj.tenantFilter) -headers $Headers -message $Message -Sev Error -LogData $ErrorMessage
@@ -176,7 +233,8 @@ function Invoke-EditUser {
                     Write-Host 'Adding to group via Add-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
-                } else {
+                }
+                else {
                     Write-Host 'Adding to group via Graph'
                     $UserBody = [PSCustomObject]@{
                         '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($UserObj.id)"
@@ -186,7 +244,8 @@ function Invoke-EditUser {
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Added $($UserObj.DisplayName) to $GroupName group" -Sev Info
                 $null = $Results.Add("Success. $($UserObj.DisplayName) has been added to $GroupName")
-            } catch {
+            }
+            catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Message = "Failed to add member $($UserObj.DisplayName) to $GroupName. Error: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message $Message -Sev Error -LogData $ErrorMessage
@@ -208,13 +267,15 @@ function Invoke-EditUser {
                     Write-Host 'Removing From group via Remove-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
-                } else {
+                }
+                else {
                     Write-Host 'Removing From group via Graph'
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/$($UserObj.id)/`$ref" -tenantid $UserObj.tenantFilter -type DELETE
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Removed $($UserObj.DisplayName) from $GroupName group" -Sev Info
                 $null = $Results.Add("Success. $($UserObj.DisplayName) has been removed from $GroupName")
-            } catch {
+            }
+            catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Message = "Failed to remove member $($UserObj.DisplayName) from $GroupName. Error: $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message $Message -Sev Error -LogData $ErrorMessage

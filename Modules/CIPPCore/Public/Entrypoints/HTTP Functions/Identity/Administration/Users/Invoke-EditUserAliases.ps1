@@ -1,11 +1,40 @@
 using namespace System.Net
 
-Function Invoke-EditUserAliases {
+function Invoke-EditUserAliases {
     <#
+    .SYNOPSIS
+    Manage user email aliases in Microsoft 365/Exchange Online
+    
+    .DESCRIPTION
+    Adds, removes, or sets the primary email alias for a user in Microsoft 365/Exchange Online, supporting validation, normalization, and error handling.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.User.ReadWrite
+    
+    .NOTES
+    Group: Identity Management
+    Summary: Edit User Aliases
+    Description: Adds, removes, or sets the primary email alias for a user in Microsoft 365/Exchange Online, supporting validation, normalization, and error handling. Handles mailbox lookup, proxy address management, and logs all actions.
+    Tags: Identity,User,Aliases,Exchange Online,Microsoft 365
+    Parameter: id (string) [body] - User ID to manage aliases for
+    Parameter: tenantFilter (string) [body] - Target tenant identifier
+    Parameter: AddedAliases (string) [body] - Comma-separated list of aliases to add
+    Parameter: RemovedAliases (string) [body] - Comma-separated list of aliases to remove
+    Parameter: MakePrimary (string) [body] - Email address to set as primary
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of status messages for each alias operation
+    Response: On success: Array of success messages for each operation
+    Response: On error: Error message with HTTP 400 status
+    Example: {
+      "Results": [
+        "Success. Set new primary address.",
+        "Success. Added new aliases to user.",
+        "Success. Removed specified aliases from user."
+      ]
+    }
+    Error: Returns error details if the operation fails to manage aliases.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -71,7 +100,8 @@ Function Invoke-EditUserAliases {
                 $NewProxyAddresses = $NewProxyAddresses | ForEach-Object {
                     if ($_ -like 'SMTP:*') {
                         $_.ToLower()
-                    } else {
+                    }
+                    else {
                         $_
                     }
                 }
@@ -129,10 +159,12 @@ Function Invoke-EditUserAliases {
                 EmailAddresses = $NewProxyAddresses
             }
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams $Params -UseSystemMailbox $true
-        } else {
+        }
+        else {
             $Results.Add('No alias changes specified.')
         }
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($TenantFilter) -headers $Headers -message "Alias management failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Results.Add("Failed to manage aliases: $($ErrorMessage.NormalizedError)")

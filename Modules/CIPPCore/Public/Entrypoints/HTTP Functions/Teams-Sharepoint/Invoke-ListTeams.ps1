@@ -1,11 +1,49 @@
 using namespace System.Net
 
-Function Invoke-ListTeams {
+function Invoke-ListTeams {
     <#
+    .SYNOPSIS
+    List Microsoft Teams and their detailed information
+    
+    .DESCRIPTION
+    Retrieves Microsoft Teams information including team details, channels, members, owners, and installed apps using Microsoft Graph API
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Teams.Group.Read
+        
+    .NOTES
+    Group: Teams & SharePoint
+    Summary: List Teams
+    Description: Retrieves Microsoft Teams information including team details, channels, members, owners, and installed apps using Microsoft Graph API with support for list view and detailed team view
+    Tags: Teams,Channels,Members,Apps,Graph API
+    Parameter: TenantFilter (string) [query] - Target tenant identifier
+    Parameter: type (string) [query] - Query type: List (for team list) or Team (for detailed team info)
+    Parameter: ID (string) [query] - Team ID for detailed team information (required when type=Team)
+    Response: Returns different responses based on type parameter:
+    Response: For type=List: Returns array of team objects with basic information
+    Response: - id (string): Team unique identifier
+    Response: - displayName (string): Team display name
+    Response: - description (string): Team description
+    Response: - visibility (string): Team visibility (Private, Public)
+    Response: - mailNickname (string): Team mail nickname
+    Response: For type=Team: Returns detailed team object with:
+    Response: - Name (string): Team display name
+    Response: - TeamInfo (array): Detailed team information
+    Response: - ChannelInfo (array): Team channels
+    Response: - Members (array): Team members (non-owners)
+    Response: - Owners (array): Team owners
+    Response: - InstalledApps (array): Installed team apps
+    Example: [
+      {
+        "id": "12345678-1234-1234-1234-123456789012",
+        "displayName": "Project Alpha",
+        "description": "Team for Project Alpha development",
+        "visibility": "Private",
+        "mailNickname": "projectalpha"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

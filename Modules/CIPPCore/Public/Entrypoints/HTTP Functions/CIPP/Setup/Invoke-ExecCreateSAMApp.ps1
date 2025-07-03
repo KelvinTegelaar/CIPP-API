@@ -2,10 +2,31 @@ using namespace System.Net
 
 function Invoke-ExecCreateSAMApp {
     <#
+    .SYNOPSIS
+    Create or update SAM (Service Account Management) application registration
+    
+    .DESCRIPTION
+    Creates or updates a SAM application registration in Microsoft Graph for CIPP setup, including required service principals and secrets
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
+        
+    .NOTES
+    Group: CIPP Setup
+    Summary: Create SAM App Registration
+    Description: Creates or updates a SAM application registration in Microsoft Graph for CIPP setup, including required service principals (Defender, Teams, O365 Management, Partner Center) and stores secrets in Azure Key Vault or development storage
+    Tags: CIPP,SAM,App Registration,Setup,Graph API
+    Parameter: Request.body (object) - Contains access token for Microsoft Graph authentication
+    Response: Returns an object with the following properties:
+    Response: - message (string): Success message with application ID and status
+    Response: - severity (string): Success or failed status
+    Example: {
+      "message": "Successfully created the application registration. The application ID is 12345678-1234-1234-1234-123456789012. You may continue to the next step.",
+      "severity": "success"
+    }
+    Error: Returns error details if the operation fails
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
@@ -31,7 +52,8 @@ function Invoke-ExecCreateSAMApp {
                 $app.web.redirectUris = @("$($url)/authredirect")
                 $app = ConvertTo-Json -Depth 15 -Compress -InputObject $app
                 Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method PATCH -Body $app -ContentType 'application/json'
-            } else {
+            }
+            else {
                 $state = 'created'
                 $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
                 $SamManifestFile = Get-Item (Join-Path $ModuleBase 'Public\SAMManifest.json')
@@ -44,28 +66,33 @@ function Invoke-ExecCreateSAMApp {
                     try {
                         try {
                             $SPNDefender = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
-                        } catch {
+                        }
+                        catch {
                             Write-Information "didn't deploy spn for defender, probably already there."
                         }
                         try {
                             $SPNTeams = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
-                        } catch {
+                        }
+                        catch {
                             Write-Information "didn't deploy spn for Teams, probably already there."
                         }
                         try {
                             $SPNO365Manage = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"c5393580-f805-4401-95e8-94b7a6ef2fc2`" }" -ContentType 'application/json')
-                        } catch {
+                        }
+                        catch {
                             Write-Information "didn't deploy spn for O365 Management, probably already there."
                         }
                         try {
                             $SPNPartnerCenter = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd`" }" -ContentType 'application/json')
-                        } catch {
+                        }
+                        catch {
                             Write-Information "didn't deploy spn for PartnerCenter, probably already there."
                         }
                         $SPN = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
                         Start-Sleep 2
                         $attempt ++
-                    } catch {
+                    }
+                    catch {
                         $attempt ++
                     }
                 } until ($attempt -gt 3)
@@ -83,7 +110,8 @@ function Invoke-ExecCreateSAMApp {
                 $Secret | Add-Member -MemberType NoteProperty -Name 'applicationsecret' -Value $AppPassword -Force
                 Write-Information ($Secret | ConvertTo-Json -Depth 5)
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
-            } else {
+            }
+            else {
 
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
@@ -100,7 +128,8 @@ function Invoke-ExecCreateSAMApp {
             $Results = @{'message' = "Succesfully $state the application registration. The application ID is $($AppId.appid). You may continue to the next step."; severity = 'success' }
         }
 
-    } catch {
+    }
+    catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
     }
 

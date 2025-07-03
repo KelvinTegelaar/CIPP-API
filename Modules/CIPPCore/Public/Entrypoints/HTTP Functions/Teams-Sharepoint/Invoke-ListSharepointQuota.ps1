@@ -1,11 +1,37 @@
 using namespace System.Net
 
-Function Invoke-ListSharepointQuota {
+function Invoke-ListSharepointQuota {
     <#
+    .SYNOPSIS
+    List SharePoint storage quota and usage information
+    
+    .DESCRIPTION
+    Retrieves SharePoint storage quota and usage information for a tenant including used storage, total storage, and percentage usage
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Sharepoint.Admin.Read
+        
+    .NOTES
+    Group: Teams & SharePoint
+    Summary: List Sharepoint Quota
+    Description: Retrieves SharePoint storage quota and usage information for a tenant including used storage, total storage, and percentage usage through SharePoint Admin API
+    Tags: SharePoint,Storage,Quota,Usage
+    Parameter: tenantFilter (string) [query] - Target tenant identifier (use 'AllTenants' for all tenants)
+    Response: Returns an object with the following properties:
+    Response: - GeoUsedStorageMB (number): Used storage in megabytes
+    Response: - TenantStorageMB (number): Total tenant storage in megabytes
+    Response: - Percentage (string/number): Used storage percentage or status message
+    Response: - Dashboard (string): Formatted dashboard display string
+    Response: For AllTenants: Returns "Not Supported" for percentage
+    Response: On error: Returns "Not available" for percentage
+    Example: {
+      "GeoUsedStorageMB": 10240,
+      "TenantStorageMB": 102400,
+      "Percentage": 10,
+      "Dashboard": "10 / 100"
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +45,8 @@ Function Invoke-ListSharepointQuota {
 
     if ($TenantFilter -eq 'AllTenants') {
         $UsedStoragePercentage = 'Not Supported'
-    } else {
+    }
+    else {
         try {
             $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
             $extraHeaders = @{
@@ -30,7 +57,8 @@ Function Invoke-ListSharepointQuota {
             if ($SharePointQuota) {
                 $UsedStoragePercentage = [int](($SharePointQuota.GeoUsedStorageMB / $SharePointQuota.TenantStorageMB) * 100)
             }
-        } catch {
+        }
+        catch {
             $UsedStoragePercentage = 'Not available'
         }
     }

@@ -1,9 +1,33 @@
 Function Invoke-ExecBulkLicense {
     <#
+    .SYNOPSIS
+    Perform bulk license operations for users in Microsoft Entra ID (Azure AD)
+    
+    .DESCRIPTION
+    Performs bulk license operations (add, remove, replace) for users in Microsoft Entra ID (Azure AD) across one or more tenants, supporting error handling and logging for each user.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.User.ReadWrite
+    
+    .NOTES
+    Group: Identity Management
+    Summary: Exec Bulk License
+    Description: Performs bulk license operations (add, remove, replace) for users in Microsoft Entra ID (Azure AD) across one or more tenants, supporting error handling and logging for each user. Handles grouping by tenant and supports removing all licenses.
+    Tags: Identity,Licenses,Bulk,Azure AD,Entra ID
+    Parameter: Body (array) [body] - Array of user license operation objects, each containing userIds, LicenseOperation, RemoveAllLicenses, Licenses, tenantFilter
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of status messages for each user
+    Response: On success: Array of success messages for each user
+    Response: On error: Array of error messages for each user
+    Example: {
+      "Results": [
+        "Successfully processed licenses for user john.doe@contoso.com",
+        "Failed to process licenses for user jane.smith@contoso.com. Error: [error details]"
+      ]
+    }
+    Error: Returns error details if the operation fails for any user.
     #>
     [CmdletBinding()]
     param (

@@ -1,11 +1,35 @@
 using namespace System.Net
 
-Function Invoke-AddAlert {
+function Invoke-AddAlert {
     <#
+    .SYNOPSIS
+    Add an audit log alert for one or more tenants
+    
+    .DESCRIPTION
+    Adds an audit log alert for one or more tenants by creating a webhook rule in the CIPP storage. Supports specifying tenants, conditions, actions, and exclusions.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.Alert.ReadWrite
+    
+    .NOTES
+    Group: Alerts
+    Summary: Add Alert
+    Description: Adds an audit log alert for one or more tenants by creating a webhook rule in the CIPP storage. Supports specifying tenants, conditions, actions, and exclusions. Alerts may take up to four hours to become active.
+    Tags: Alerts,Audit,Webhook,Tenants
+    Parameter: tenantFilter (array) [body] - Array of tenant identifiers to apply the alert to
+    Parameter: conditions (object) [body] - Conditions for triggering the alert
+    Parameter: actions (object) [body] - Actions to perform when the alert is triggered
+    Parameter: excludedTenants (array) [body] - Array of tenant identifiers to exclude from the alert
+    Parameter: logbook (object) [body] - Logbook type for the alert
+    Response: Returns a response object with the following properties:
+    Response: - Results (string): Success message
+    Response: On success: "Added Audit Log Alert for [count] tenants. It may take up to four hours before Microsoft starts delivering these alerts."
+    Error: Returns error details if the operation fails to add the alert.
+    Example: {
+      "Results": "Added Audit Log Alert for 3 tenants. It may take up to four hours before Microsoft starts delivering these alerts."
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

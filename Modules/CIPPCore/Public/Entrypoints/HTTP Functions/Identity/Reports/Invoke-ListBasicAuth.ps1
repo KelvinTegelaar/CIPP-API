@@ -1,11 +1,35 @@
 using namespace System.Net
 
-Function Invoke-ListBasicAuth {
+function Invoke-ListBasicAuth {
     <#
+    .SYNOPSIS
+    List sign-ins using basic authentication for a tenant or all tenants
+    
+    .DESCRIPTION
+    Retrieves sign-in events using basic authentication for a specified tenant or all tenants, supporting filtering, queueing, and cached results. Useful for identifying legacy authentication usage.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.AuditLog.Read
+    
+    .NOTES
+    Group: Identity Reports
+    Summary: List Basic Auth
+    Description: Retrieves sign-in events using basic authentication for a specified tenant or all tenants, supporting filtering, queueing, and cached results. Useful for identifying legacy authentication usage and compliance.
+    Tags: Identity,Basic Auth,Sign-Ins,Audit,Legacy Authentication
+    Parameter: tenantFilter (string) [query] - Target tenant identifier or 'AllTenants'
+    Response: Returns an array of sign-in objects or a queue/cached status object
+    Response: On success: Array of sign-in objects with userPrincipalName, clientAppUsed, and status
+    Response: On error: Error message or queue status
+    Example: [
+      {
+        "userPrincipalName": "john.doe@contoso.com",
+        "clientAppUsed": "Exchange ActiveSync",
+        "status": { "errorCode": 0, "additionalDetails": null }
+      }
+    ]
+    Error: Returns error details or queue status if the operation fails to retrieve sign-in events.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -36,7 +60,8 @@ Function Invoke-ListBasicAuth {
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($response)
                 })
-        } catch {
+        }
+        catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
             # Associate values to output bindings by calling 'Push-OutputBinding'.
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -44,7 +69,8 @@ Function Invoke-ListBasicAuth {
                     Body       = $(Get-NormalizedError -message $_.Exception.message)
                 })
         }
-    } else {
+    }
+    else {
         $Table = Get-CIPPTable -TableName cachebasicauth
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
@@ -72,7 +98,8 @@ Function Invoke-ListBasicAuth {
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($GraphRequest)
                 })
-        } else {
+        }
+        else {
             $GraphRequest = $Rows
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK

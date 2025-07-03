@@ -1,11 +1,25 @@
 using namespace System.Net
 
-Function Invoke-ListGenericTestFunction {
+function Invoke-ListGenericTestFunction {
     <#
+    .SYNOPSIS
+    Generic test function for API endpoint validation
+    
+    .DESCRIPTION
+    A simple test function that returns the base URL of the API endpoint for validation and testing purposes
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         CIPP.Core.Read
+        
+    .NOTES
+    Group: Testing
+    Summary: List Generic Test Function
+    Description: A simple test function that extracts and returns the base URL from the x-ms-original-url header for API endpoint validation and testing purposes
+    Tags: Testing,Validation,API
+    Response: Returns the base URL of the API endpoint
+    Response: Example: "https://contoso.azurewebsites.net"
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,11 +1,39 @@
 using namespace System.Net
 
-Function Invoke-ExecModifyMBPerms {
+function Invoke-ExecModifyMBPerms {
     <#
+    .SYNOPSIS
+    Modify mailbox permissions in Exchange Online
+    
+    .DESCRIPTION
+    Adds or removes various mailbox permissions including FullAccess, SendAs, SendOnBehalf, and other granular permissions
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Exchange.Mailbox.ReadWrite
+        
+    .NOTES
+    Group: Email & Exchange
+    Summary: Modify Mailbox Permissions
+    Description: Modifies mailbox permissions in Exchange Online including FullAccess, SendAs, SendOnBehalf, ReadPermission, and other granular permissions
+    Tags: Exchange,Mailbox,Permissions,Administration
+    Parameter: userID (string) [body] - User ID or email address of the mailbox owner
+    Parameter: tenantfilter (string) [body] - Target tenant identifier
+    Parameter: permissions (array) [body] - Array of permission objects to modify
+    Parameter: permissions[].PermissionLevel (string) [body] - Permission level: FullAccess, SendAs, SendOnBehalf, ReadPermission, ExternalAccount, DeleteItem, ChangePermission, ChangeOwner
+    Parameter: permissions[].Modification (string) [body] - Action to perform: Add or Remove
+    Parameter: permissions[].UserID (string/array) [body] - Target user(s) to modify permissions for
+    Parameter: permissions[].AutoMap (boolean) [body] - Whether to enable automapping for FullAccess permissions (default: true)
+    Response: Returns a response object with the following properties:
+    Response: - Results (array): Array of result messages indicating success or failure for each permission modification
+    Response: Example: {
+      "Results": [
+        "Granted john.doe@contoso.com access to shared@contoso.com Mailbox (FullAccess) with automapping set to true",
+        "Granted jane.smith@contoso.com access to shared@contoso.com with Send As permissions",
+        "Removed temp.user@contoso.com from shared@contoso.com Send on Behalf Permissions"
+      ]
+    }
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -38,7 +66,7 @@ Function Invoke-ExecModifyMBPerms {
         $AutoMap = if ($Permission.PSObject.Properties.Name -contains 'AutoMap') { $Permission.AutoMap } else { $true }
 
         # Handle multiple permission levels separated by commas
-        if ($PermissionLevels -like "*,*") {
+        if ($PermissionLevels -like '*,*') {
             $PermissionLevelArray = $PermissionLevels -split ',' | ForEach-Object { $_.Trim() }
         }
         else {

@@ -1,11 +1,55 @@
 using namespace System.Net
 
-Function Invoke-ListExtensionsConfig {
+function Invoke-ListExtensionsConfig {
     <#
+    .SYNOPSIS
+    List CIPP extensions configuration
+    
+    .DESCRIPTION
+    Retrieves the configuration for CIPP extensions including PSA integrations, webhook settings, and custom integrations.
+    
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
+        
+    .NOTES
+    Group: Extensions
+    Summary: List Extensions Config
+    Description: Retrieves the configuration for CIPP extensions including PSA integrations like HaloPSA, webhook settings, and other custom integrations.
+    Tags: Extensions,Configuration,PSA
+    Response: Returns a configuration object with the following properties:
+    Response: - HaloPSA (object): HaloPSA integration configuration including ticket type settings
+    Response: - NinjaOne (object): NinjaOne integration configuration
+    Response: - Hudu (object): Hudu integration configuration
+    Response: - Webhooks (object): Webhook configuration settings
+    Response: - Other integrations (object): Configuration for other enabled extensions
+    Response: When HaloPSA.TicketType is configured, it includes:
+    Response: - label (string): Display name of the ticket type
+    Response: - value (string): Ticket type identifier
+    Example: {
+      "HaloPSA": {
+        "enabled": true,
+        "apiKey": "encrypted-api-key",
+        "url": "https://contoso.halopsa.com",
+        "TicketType": {
+          "label": "Security Incident",
+          "value": "123"
+        }
+      },
+      "NinjaOne": {
+        "enabled": false,
+        "apiKey": "",
+        "url": ""
+      },
+      "Webhooks": {
+        "enabled": true,
+        "endpoints": [
+          "https://webhook.site/123456"
+        ]
+      }
+    }
+    Error: Returns error details if the operation fails to retrieve extension configuration.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -30,7 +74,8 @@ Function Invoke-ListExtensionsConfig {
                 }
             }
         }
-    } catch {
+    }
+    catch {
         Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
         $Body = @{}
     }

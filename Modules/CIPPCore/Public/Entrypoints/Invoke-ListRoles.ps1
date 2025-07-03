@@ -1,11 +1,40 @@
 using namespace System.Net
 
-Function Invoke-ListRoles {
+function Invoke-ListRoles {
     <#
+    .SYNOPSIS
+    List directory roles and their members
+    
+    .DESCRIPTION
+    Retrieves directory roles and their members from Microsoft Graph API, including role descriptions and member details.
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.Role.Read
+        
+    .NOTES
+    Group: Identity Management
+    Summary: List Roles
+    Description: Retrieves directory roles and their members from Microsoft Graph API, including role descriptions and member details with display names and user principal names.
+    Tags: Identity,Roles,Directory,Graph API
+    Parameter: tenantFilter (string) [query] - Target tenant identifier
+    Response: Returns an array of role objects with the following properties:
+    Response: - DisplayName (string): Role display name
+    Response: - Description (string): Role description
+    Response: - Members (string): Comma-separated list of members with display names and user principal names
+    Example: [
+      {
+        "DisplayName": "Global Administrator",
+        "Description": "Can manage all aspects of Azure AD and Microsoft services that use Azure AD identities.",
+        "Members": " John Doe (john.doe@contoso.com), Jane Smith (jane.smith@contoso.com)"
+      },
+      {
+        "DisplayName": "User Administrator",
+        "Description": "Can manage all aspects of users and groups.",
+        "Members": "none"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

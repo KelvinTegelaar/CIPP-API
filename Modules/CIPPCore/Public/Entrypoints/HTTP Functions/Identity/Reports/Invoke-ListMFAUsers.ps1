@@ -1,11 +1,52 @@
 using namespace System.Net
 
-Function Invoke-ListMFAUsers {
+function Invoke-ListMFAUsers {
     <#
+    .SYNOPSIS
+    List Multi-Factor Authentication (MFA) users and their status
+    
+    .DESCRIPTION
+    Retrieves MFA status and methods for users in Microsoft 365 tenants with support for single tenant or all tenants with caching
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.User.Read
+        
+    .NOTES
+    Group: Identity Management
+    Summary: List MFA Users
+    Description: Retrieves Multi-Factor Authentication (MFA) status and methods for users in Microsoft 365 tenants with support for single tenant queries or all tenants with background processing and caching
+    Tags: Identity,MFA,Authentication,Reports
+    Parameter: tenantFilter (string) [query] - Target tenant identifier (use 'AllTenants' for all tenants)
+    Response: Returns an array of MFA user objects with the following properties:
+    Response: - UPN (string): User Principal Name
+    Response: - DisplayName (string): User display name
+    Response: - MFAMethods (array): Array of MFA methods configured for the user
+    Response: - CAPolicies (array): Conditional Access policies affecting the user
+    Response: - MFAStatus (string): Overall MFA status (Enabled, Disabled, etc.)
+    Response: - LastSignIn (string): Last sign-in date and time
+    Response: For AllTenants with no cache: Returns loading message and initiates background processing
+    Example: [
+      {
+        "UPN": "john.doe@contoso.com",
+        "DisplayName": "John Doe",
+        "MFAMethods": [
+          {
+            "methodType": "Microsoft Authenticator",
+            "default": true
+          }
+        ],
+        "CAPolicies": [
+          {
+            "displayName": "Require MFA for all users",
+            "state": "enabled"
+          }
+        ],
+        "MFAStatus": "Enabled",
+        "LastSignIn": "2024-01-15T10:30:00Z"
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +60,8 @@ Function Invoke-ListMFAUsers {
 
     if ($TenantFilter -ne 'AllTenants') {
         $GraphRequest = Get-CIPPMFAState -TenantFilter $TenantFilter
-    } else {
+    }
+    else {
         $Table = Get-CIPPTable -TableName cachemfa
 
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
@@ -45,7 +87,8 @@ Function Invoke-ListMFAUsers {
                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
-        } else {
+        }
+        else {
             $Rows = foreach ($Row in $Rows) {
                 if ($Row.CAPolicies) {
                     $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { $Row.CAPolicies }
