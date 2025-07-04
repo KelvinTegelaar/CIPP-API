@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListBasicAuth {
+function Invoke-ListBasicAuth {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -28,21 +28,18 @@ Function Invoke-ListBasicAuth {
 
         try {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -ErrorAction Stop | Select-Object userPrincipalName, clientAppUsed, Status | Sort-Object -Unique -Property userPrincipalName
-            $response = $GraphRequest
             Write-LogMessage -headers $Headers -API $APIName -message 'Retrieved basic authentication report' -Sev 'Debug' -tenant $TenantFilter
 
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @($response)
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($GraphRequest)
+            }
         } catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = '500'
-                    Body       = $(Get-NormalizedError -message $_.Exception.message)
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $(Get-NormalizedError -message $_.Exception.message)
+            }
         }
     } else {
         $Table = Get-CIPPTable -TableName cachebasicauth
@@ -68,16 +65,16 @@ Function Invoke-ListBasicAuth {
                 MetaData = 'Loading data for all tenants. Please check back in 10 minutes'
             }
 
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @($GraphRequest)
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($GraphRequest)
+            }
         } else {
             $GraphRequest = $Rows
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @($GraphRequest)
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($GraphRequest)
+            }
         }
     }
 

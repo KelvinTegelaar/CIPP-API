@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserMailboxRules {
+function Invoke-ListUserMailboxRules {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,10 +29,8 @@ Function Invoke-ListUserMailboxRules {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Result)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Result)
+    }
 }

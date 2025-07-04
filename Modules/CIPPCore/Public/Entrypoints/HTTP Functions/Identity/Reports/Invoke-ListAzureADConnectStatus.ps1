@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListAzureADConnectStatus {
+function Invoke-ListAzureADConnectStatus {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -61,19 +61,19 @@ Function Invoke-ListAzureADConnectStatus {
         }
     }
     if ($DataToReturn -eq 'AzureADConnectSettings') {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $AzureADConnectSettings
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $AzureADConnectSettings
+        }
     } elseif ($DataToReturn -eq 'AzureADObjectsInError') {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @($ObjectsInError)
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @($ObjectsInError)
+        }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @($FinalObject)
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @($FinalObject)
+        }
     }
 }

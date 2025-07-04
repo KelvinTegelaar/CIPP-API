@@ -114,13 +114,10 @@ function Invoke-ExecSendPush {
 
     }
 
-    $Results = [pscustomobject]@{'Results' = @{ resultText = $Body; state = $State } }
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
+    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @{ resultText = $Body; state = $State } }
+    }
 }

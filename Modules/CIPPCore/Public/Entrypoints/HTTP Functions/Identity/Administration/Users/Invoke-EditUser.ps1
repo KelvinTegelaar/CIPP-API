@@ -16,12 +16,11 @@ function Invoke-EditUser {
 
     $UserObj = $Request.Body
     if ([string]::IsNullOrWhiteSpace($UserObj.id)) {
-        $body = @{'Results' = @('Failed to edit user. No user ID provided') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $Body
-            })
-        return
+        $StatusCode = [HttpStatusCode]::BadRequest
+        return @{
+            StatusCode = $StatusCode
+            Body       = @{ Results = @('Failed to edit user. No user ID provided') }
+        }
     }
     $Results = [System.Collections.Generic.List[object]]::new()
     $licenses = ($UserObj.licenses).value
@@ -239,10 +238,8 @@ function Invoke-EditUser {
         $Results.Add("Success. Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)")
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = @($Results) }
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 }

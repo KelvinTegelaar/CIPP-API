@@ -86,7 +86,7 @@ function Invoke-ListGroups {
             $RawGraphRequest = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($BulkRequestArrayList) -asapp $true
             $GraphRequest = [PSCustomObject]@{
                 groupInfo              = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
-                @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true } else { $false } } },
+                @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true } else { $false } } },
                 @{Name = 'calculatedGroupType'; Expression = {
                         if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
                         if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
@@ -120,13 +120,11 @@ function Invoke-ListGroups {
     } catch {
         Write-Warning $_.InvocationInfo.PositionMessage
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $GraphRequest
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $GraphRequest
+    }
 }

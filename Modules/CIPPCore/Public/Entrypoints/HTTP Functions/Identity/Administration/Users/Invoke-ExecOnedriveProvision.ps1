@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecOneDriveProvision {
+function Invoke-ExecOneDriveProvision {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,9 +25,8 @@ Function Invoke-ExecOneDriveProvision {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

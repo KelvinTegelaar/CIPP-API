@@ -9,11 +9,12 @@ function Invoke-ExecOffboardUser {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
     $AllUsers = $Request.Body.user.value
     $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
     $Results = foreach ($username in $AllUsers) {
         try {
-            $APIName = 'ExecOffboardUser'
+            $APIName = $Request.Params.CIPPEndpoint
             $Headers = $Request.Headers
             Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
@@ -48,10 +49,9 @@ function Invoke-ExecOffboardUser {
             $_.Exception.message
         }
     }
-    $body = [pscustomobject]@{'Results' = @($Results) }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

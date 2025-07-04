@@ -1,4 +1,4 @@
-Function Invoke-ExecBECCheck {
+function Invoke-ExecBECCheck {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -56,9 +56,8 @@ Function Invoke-ExecBECCheck {
     }
 
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $body
+    }
 }

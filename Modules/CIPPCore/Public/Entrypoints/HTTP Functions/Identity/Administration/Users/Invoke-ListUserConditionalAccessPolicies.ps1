@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserConditionalAccessPolicies {
+function Invoke-ListUserConditionalAccessPolicies {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -37,16 +37,15 @@ Function Invoke-ListUserConditionalAccessPolicies {
         $JSONBody = ConvertTo-Json -Depth 10 -InputObject $ConditionalAccessWhatIfDefinition -Compress
 
         $GraphRequest = (New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $TenantFilter -type POST -body $JsonBody -AsApp $true).value
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequest = @{}
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Write-Host $GraphRequest
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

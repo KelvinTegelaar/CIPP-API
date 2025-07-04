@@ -57,23 +57,22 @@
     try {
         switch ($Action) {
             'Delete' {
-                $ActionResult = New-GraphPOSTRequest -uri $Url -type DELETE -tenantid $TenantFilter
+                $null = New-GraphPOSTRequest -uri $Url -type DELETE -tenantid $TenantFilter
             }
             'Disable' {
-                $ActionResult = New-GraphPOSTRequest -uri $Url -type PATCH -tenantid $TenantFilter -body '{"accountEnabled": false }'
+                $null = New-GraphPOSTRequest -uri $Url -type PATCH -tenantid $TenantFilter -body '{"accountEnabled": false }'
             }
             'Enable' {
-                $ActionResult = New-GraphPOSTRequest -uri $Url -type PATCH -tenantid $TenantFilter -body '{"accountEnabled": true }'
+                $null = New-GraphPOSTRequest -uri $Url -type PATCH -tenantid $TenantFilter -body '{"accountEnabled": true }'
             }
         }
-        Write-Host $ActionResult
-        Write-LogMessage -headers $Headers -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
-        return "Executed action $($Action) on $($DeviceID)"
+        $Result = "Successfully executed action $($Action) on $($DeviceID)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -tenant $TenantFilter -Sev Info
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        throw "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -tenant $TenantFilter -Sev Error -LogData $ErrorMessage
+        throw $Result
     }
-
-
 }

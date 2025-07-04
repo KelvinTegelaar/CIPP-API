@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMFAUsers {
+function Invoke-ListMFAUsers {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -58,10 +58,9 @@ Function Invoke-ListMFAUsers {
             $GraphRequest = $Rows
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($GraphRequest)
+    }
 }
