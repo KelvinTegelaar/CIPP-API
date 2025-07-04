@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddAutopilotConfig {
+function Invoke-AddAutopilotConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,18 +15,16 @@ Function Invoke-AddAutopilotConfig {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-
-
     # Input bindings are passed in via param block.
-    $Tenants = $Request.body.selectedTenants.value
-    $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
-    $Profbod = [pscustomobject]$Request.body
-    $usertype = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
+    $Tenants = $Request.Body.selectedTenants.value
+    $AssignTo = if ($Request.Body.Assignto -ne 'on') { $Request.Body.Assignto }
+    $Profbod = [pscustomobject]$Request.Body
+    $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
     $DeploymentMode = if ($profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
     $profileParams = @{
-        displayname        = $request.body.Displayname
-        description        = $request.body.Description
-        usertype           = $usertype
+        displayname        = $Request.Body.Displayname
+        description        = $Request.Body.Description
+        usertype           = $UserType
         DeploymentMode     = $DeploymentMode
         assignto           = $AssignTo
         devicenameTemplate = $Profbod.deviceNameTemplate
@@ -37,19 +35,15 @@ Function Invoke-AddAutopilotConfig {
         hideTerms          = $Profbod.hideTerms
         Autokeyboard       = $Profbod.Autokeyboard
         Language           = $ProfBod.languages.value
+        Headers            = $Headers
     }
-    $results = foreach ($Tenant in $tenants) {
-        $profileParams['tenantFilter'] = $Tenant
+    $Results = foreach ($Tenant in $Tenants) {
+        $profileParams['TenantFilter'] = $Tenant
         Set-CIPPDefaultAPDeploymentProfile @profileParams
     }
-    $body = [pscustomobject]@{'Results' = $results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
-
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

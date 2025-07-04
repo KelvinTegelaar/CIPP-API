@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSetAPDeviceGroupTag {
+function Invoke-ExecSetAPDeviceGroupTag {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,9 +12,9 @@ Function Invoke-ExecSetAPDeviceGroupTag {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-    $TenantFilter = $Request.Body.tenantFilter
 
     try {
+        $TenantFilter = $Request.Body.tenantFilter
         $DeviceId = $Request.Body.deviceId
         $SerialNumber = $Request.Body.serialNumber
         $GroupTag = $Request.Body.groupTag
@@ -42,12 +42,11 @@ Function Invoke-ExecSetAPDeviceGroupTag {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not update group tag for device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($GroupTag)'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

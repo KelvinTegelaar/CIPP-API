@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListAPDevices {
+function Invoke-ListAPDevices {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,9 +14,6 @@ Function Invoke-ListAPDevices {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
@@ -28,10 +25,8 @@ Function Invoke-ListAPDevices {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

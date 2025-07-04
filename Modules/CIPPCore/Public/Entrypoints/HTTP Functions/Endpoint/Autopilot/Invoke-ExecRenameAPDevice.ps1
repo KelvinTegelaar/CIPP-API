@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRenameAPDevice {
+function Invoke-ExecRenameAPDevice {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,10 +12,9 @@ Function Invoke-ExecRenameAPDevice {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-    $TenantFilter = $Request.Body.tenantFilter
-
 
     try {
+        $TenantFilter = $Request.Body.tenantFilter
         $DeviceId = $Request.Body.deviceId
         $SerialNumber = $Request.Body.serialNumber
         $DisplayName = $Request.Body.displayName
@@ -41,21 +40,18 @@ Function Invoke-ExecRenameAPDevice {
 
             New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
             $Result = "Successfully renamed device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'"
-            Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev Info
+            Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
             $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not rename device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

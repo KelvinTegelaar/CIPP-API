@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListDevices {
+function Invoke-ListDevices {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,12 +15,10 @@ Function Invoke-ListDevices {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
-        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDevices' -Tenantid $tenantfilter
+        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDevices' -Tenantid $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -28,10 +26,9 @@ Function Invoke-ListDevices {
         $GraphRequest = $ErrorMessage
 
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }
