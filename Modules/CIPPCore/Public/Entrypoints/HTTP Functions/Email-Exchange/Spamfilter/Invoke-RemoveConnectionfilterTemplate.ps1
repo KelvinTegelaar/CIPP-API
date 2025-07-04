@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveConnectionfilterTemplate {
+function Invoke-RemoveConnectionfilterTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -27,15 +27,11 @@ Function Invoke-RemoveConnectionfilterTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Connection Filter template with ID $ID. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

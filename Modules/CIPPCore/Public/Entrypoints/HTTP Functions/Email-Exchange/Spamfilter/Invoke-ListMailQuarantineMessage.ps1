@@ -31,10 +31,8 @@ function Invoke-ListMailQuarantineMessage {
         $Body = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

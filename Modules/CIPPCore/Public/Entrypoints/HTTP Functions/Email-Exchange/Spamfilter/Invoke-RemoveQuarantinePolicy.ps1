@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveQuarantinePolicy {
+function Invoke-RemoveQuarantinePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,7 +19,7 @@ Function Invoke-RemoveQuarantinePolicy {
 
     try {
         $Params = @{
-            Identity = ($Identity -eq "00000000-0000-0000-0000-000000000000" ? $PolicyName : $Identity)
+            Identity = ($Identity -eq '00000000-0000-0000-0000-000000000000' ? $PolicyName : $Identity)
         }
 
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-QuarantinePolicy' -cmdParams $Params -useSystemMailbox $true
@@ -31,15 +31,11 @@ Function Invoke-RemoveQuarantinePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Quarantine policy '$($PolicyName)' - $($ErrorMessage.NormalizedError -replace '\|Microsoft.Exchange.Management.Tasks.ValidationException\|', '')"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $StatusCode = [HttpStatusCode]::OK
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

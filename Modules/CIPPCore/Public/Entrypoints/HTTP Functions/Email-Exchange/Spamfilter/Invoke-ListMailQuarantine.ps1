@@ -72,17 +72,16 @@ function Invoke-ListMailQuarantine {
         $GraphRequest = $ErrorMessage
     }
 
-    if (!$body) {
+    if (!$Body) {
         $StatusCode = [HttpStatusCode]::OK
-        $body = [PSCustomObject]@{
+        $Body = [PSCustomObject]@{
             Results  = @($GraphRequest | Where-Object -Property Identity -NE $null | Sort-Object -Property ReceivedTime -Descending )
             Metadata = $Metadata
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

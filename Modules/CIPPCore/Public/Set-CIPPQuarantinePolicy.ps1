@@ -35,6 +35,9 @@ function Set-CIPPQuarantinePolicy {
     .PARAMETER IncludeMessagesFromBlockedSenderAddress
     Whether to include messages from blocked sender address or not.
 
+    .PARAMETER Headers
+    Headers for logging purposes.
+
     #>
     [CmdletBinding(DefaultParameterSetName = 'QuarantinePolicy')]
     param(
@@ -44,7 +47,7 @@ function Set-CIPPQuarantinePolicy {
         [string]$identity,
 
         [Parameter(Mandatory, ParameterSetName = 'QuarantinePolicy')]
-        [ValidateSet("Add", "New", "Create", "Edit", "Set", "Update")]
+        [ValidateSet('Add', 'New', 'Create', 'Edit', 'Set', 'Update')]
         [string]$action,
 
         [Parameter(Mandatory, ParameterSetName = 'QuarantinePolicy')]
@@ -60,41 +63,51 @@ function Set-CIPPQuarantinePolicy {
         [TimeSpan]$EndUserSpamNotificationFrequency,
 
         [Parameter(ParameterSetName = 'GlobalQuarantinePolicy')]
-        [string]$EndUserSpamNotificationCustomFromAddress = "",
+        [string]$EndUserSpamNotificationCustomFromAddress = '',
 
         [Parameter(ParameterSetName = 'GlobalQuarantinePolicy')]
         [bool]$OrganizationBrandingEnabled = $false,
 
         [Parameter(Mandatory)]
         [string]$tenantFilter,
-        [string]$APIName = 'QuarantinePolicy'
+        [string]$APIName = 'QuarantinePolicy',
+        $Headers
     )
 
     try {
 
         switch ($PSCmdlet.ParameterSetName) {
-            "GlobalQuarantinePolicy" {
+            'GlobalQuarantinePolicy' {
                 $cmdParams = @{
-                    Identity = $identity
-                    EndUserSpamNotificationFrequency = $EndUserSpamNotificationFrequency.ToString()
+                    Identity                                 = $identity
+                    EndUserSpamNotificationFrequency         = $EndUserSpamNotificationFrequency.ToString()
                     EndUserSpamNotificationCustomFromAddress = $EndUserSpamNotificationCustomFromAddress
-                    OrganizationBrandingEnabled = $OrganizationBrandingEnabled
+                    OrganizationBrandingEnabled              = $OrganizationBrandingEnabled
                     # QuarantinePolicyType = 'GlobalQuarantinePolicy'
                 }
                 $cmdLet = 'Set-QuarantinePolicy'
-             }
-            "QuarantinePolicy" {
+            }
+            'QuarantinePolicy' {
                 $cmdParams = @{
-                    EndUserQuarantinePermissionsValue = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
-                    ESNEnabled = $ESNEnabled
+                    EndUserQuarantinePermissionsValue       = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
+                    ESNEnabled                              = $ESNEnabled
                     IncludeMessagesFromBlockedSenderAddress = $IncludeMessagesFromBlockedSenderAddress
                 }
 
                 switch ($action) {
-                    {$_ -in @("Add", "New", "Create")} { $cmdParams.Add("Name", $identity) ; $cmdLet = 'New-QuarantinePolicy' }
-                    {$_ -in @("Edit", "Set", "Update")} { $cmdParams.Add("Identity", $identity) ; $cmdLet = 'Set-QuarantinePolicy' }
-                    Default {
-                        throw "Invalid action specified. Valid actions are: Add, New, Edit, Set, Update."
+                    { $_ -in @('Add', 'New', 'Create') } {
+                        $cmdParams.Add('Name', $identity)
+                        $cmdLet = 'New-QuarantinePolicy'
+                        $actionText = 'Created'
+                    }
+                    { $_ -in @('Edit', 'Set', 'Update') } {
+                        $cmdParams.Add('Identity', $identity)
+                        $cmdLet = 'Set-QuarantinePolicy'
+                        $actionText = 'Updated'
+                    }
+                    default {
+                        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Invalid action specified. Valid actions are: Add, New, Edit, Set, Update.' -sev 'Error'
+                        throw 'Invalid action specified. Valid actions are: Add, New, Edit, Set, Update.'
                     }
                 }
             }
@@ -102,8 +115,14 @@ function Set-CIPPQuarantinePolicy {
 
         $null = New-ExoRequest -tenantid $tenantFilter -cmdlet $cmdLet -cmdParams $cmdParams -useSystemMailbox $true
 
+        $Message = "$actionText Quarantine policy '$($identity)' for tenant '$($tenantFilter)'"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Info'
+        return $Message
+
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+        $Message = "Failed to create Quarantine policy '$($identity)' for tenant '$($tenantFilter)' - $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error' -LogData $ErrorMessage
         throw ($ErrorMessage.NormalizedError -replace '\|Microsoft.Exchange.Management.Tasks.ValidationException\|', '')
     }
 }
