@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListSharepointSettings {
+function Invoke-ListSharepointSettings {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,15 +16,12 @@ Function Invoke-ListSharepointSettings {
 
     #  XXX - Seems to be an unused endpoint? -Bobby
 
+    $TenantFilter = $Request.Query.tenantFilter
+    $Request = New-GraphGetRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
 
-    # Interact with query parameters or the body of the request.
-    $Tenant = $Request.Query.tenantFilter
-    $Request = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Request)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Request)
+    }
 
 }

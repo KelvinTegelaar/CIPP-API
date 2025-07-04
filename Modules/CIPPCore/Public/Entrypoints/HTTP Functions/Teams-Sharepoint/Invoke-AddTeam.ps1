@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddTeam {
+function Invoke-AddTeam {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -44,21 +44,19 @@ Function Invoke-AddTeam {
 
         $null = New-GraphPostRequest -AsApp $true -uri 'https://graph.microsoft.com/beta/teams' -tenantid $TenantID -type POST -body $TeamsSettings -Verbose
         $Message = "Successfully created Team: '$($TeamObj.displayName)'"
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantID -message $Message -Sev Info
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantID -message $Message -Sev Info
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to create Team: '$($TeamObj.displayName)'. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantID -message $Message -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantID -message $Message -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Message }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Message }
+    }
 }

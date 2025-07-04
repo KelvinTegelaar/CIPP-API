@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListSites {
+function Invoke-ListSites {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,24 +14,22 @@ Function Invoke-ListSites {
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Query.TenantFilter
-    $Type = $request.query.Type
-    $UserUPN = $request.query.UserUPN
+    $TenantFilter = $Request.Query.tenantFilter
+    $Type = $Request.Query.Type
+    # $UserUPN = $Request.Query.UserUPN
 
     if (!$TenantFilter) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'TenantFilter is required'
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'TenantFilter is required'
+        }
     }
 
     if (!$Type) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'Type is required'
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'Type is required'
+        }
     }
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
@@ -116,10 +114,8 @@ Function Invoke-ListSites {
         $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest | Sort-Object -Property displayName)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest | Sort-Object -Property displayName)
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTeamsLisLocation {
+function Invoke-ListTeamsLisLocation {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,7 +15,7 @@ Function Invoke-ListTeamsLisLocation {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
         $EmergencyLocations = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Get-CsOnlineLisLocation'
         $StatusCode = [HttpStatusCode]::OK
@@ -24,10 +24,9 @@ Function Invoke-ListTeamsLisLocation {
         $StatusCode = [HttpStatusCode]::Forbidden
         $EmergencyLocations = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($EmergencyLocations)
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($EmergencyLocations)
+    }
 }

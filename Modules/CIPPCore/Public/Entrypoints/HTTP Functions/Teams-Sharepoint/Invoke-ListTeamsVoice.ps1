@@ -46,9 +46,9 @@ function Invoke-ListTeamsVoice {
     }
     Write-Host "Graph request is: $($GraphRequest)"
     Write-Host 'Returning the response'
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

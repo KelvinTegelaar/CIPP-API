@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTeamsActivity {
+function Invoke-ListTeamsActivity {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,17 +17,23 @@ Function Invoke-ListTeamsActivity {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $type = $request.Query.Type
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D30')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
-    @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
-    @{ Name = 'TeamsChat'; Expression = { $_.'Team Chat Message Count' } },
-    @{ Name = 'CallCount'; Expression = { $_.'Call Count' } },
-    @{ Name = 'MeetingCount'; Expression = { $_.'Meeting Count' } }
+    try {
+        $Type = $Request.Query.Type
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($Type)Detail(period='D30')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
+        @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
+        @{ Name = 'TeamsChat'; Expression = { $_.'Team Chat Message Count' } },
+        @{ Name = 'CallCount'; Expression = { $_.'Call Count' } },
+        @{ Name = 'MeetingCount'; Expression = { $_.'Meeting Count' } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $GraphRequest = $ErrorMessage
+    }
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }
