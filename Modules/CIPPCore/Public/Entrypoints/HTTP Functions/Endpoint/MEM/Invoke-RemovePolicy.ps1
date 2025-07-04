@@ -21,8 +21,6 @@ function Invoke-RemovePolicy {
 
     if (!$PolicyId) { exit }
     try {
-
-        # $unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
         $Results = "Successfully deleted the policy with ID: $($PolicyId)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev Info -tenant $TenantFilter
@@ -32,7 +30,7 @@ function Invoke-RemovePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not delete policy: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return @{
