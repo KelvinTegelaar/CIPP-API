@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListEquipment {
+function Invoke-ListEquipment {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,7 +15,7 @@ Function Invoke-ListEquipment {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $EquipmentId = $Request.Query.EquipmentId
-    $Tenant = $Request.Query.TenantFilter
+    $Tenant = $Request.Query.tenantFilter
 
     try {
         if ($EquipmentId) {
@@ -86,14 +86,13 @@ Function Invoke-ListEquipment {
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = $ErrorMessage
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results | Sort-Object displayName)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results | Sort-Object displayName)
+    }
 }

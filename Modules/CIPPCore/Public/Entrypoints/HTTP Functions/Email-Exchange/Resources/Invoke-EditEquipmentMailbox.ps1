@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditEquipmentMailbox {
+function Invoke-EditEquipmentMailbox {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,6 +13,7 @@ Function Invoke-EditEquipmentMailbox {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Tenant = $Request.Body.tenantID
 
     $Results = [System.Collections.Generic.List[Object]]::new()
@@ -102,14 +103,11 @@ Function Invoke-EditEquipmentMailbox {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to update equipment: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to update Equipment mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Body = [pscustomobject]@{ 'Results' = @($Results) }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

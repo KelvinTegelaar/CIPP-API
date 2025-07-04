@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditRoomList {
+function Invoke-EditRoomList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -169,9 +169,8 @@ Function Invoke-EditRoomList {
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to edit room list: $($_.Exception.Message)" -Sev 'Error'
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = @($Results) }
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 }

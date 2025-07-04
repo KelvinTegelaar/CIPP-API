@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddEquipmentMailbox {
+function Invoke-AddEquipmentMailbox {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -48,14 +48,11 @@ Function Invoke-AddEquipmentMailbox {
         $Message = "Failed to create equipment mailbox: $($MailboxObject.displayName). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Body = [pscustomobject]@{ 'Results' = @($Results) }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }
