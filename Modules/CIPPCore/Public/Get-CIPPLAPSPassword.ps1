@@ -2,14 +2,14 @@
 function Get-CIPPLapsPassword {
     [CmdletBinding()]
     param (
-        $device,
+        $Device,
         $TenantFilter,
         $APIName = 'Get LAPS Password',
         $Headers
     )
 
     try {
-        $GraphRequest = (New-GraphGetRequest -noauthcheck $true -uri "https://graph.microsoft.com/beta/directory/deviceLocalCredentials/$($device)?`$select=credentials" -tenantid $TenantFilter).credentials | Select-Object -First 1 | ForEach-Object {
+        $GraphRequest = (New-GraphGetRequest -NoAuthCheck $true -uri "https://graph.microsoft.com/beta/directory/deviceLocalCredentials/$($Device)?`$select=credentials" -tenantid $TenantFilter).credentials | Select-Object -First 1 | ForEach-Object {
             $PlainText = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.passwordBase64))
             $date = $_.BackupDateTime
             [PSCustomObject]@{
@@ -18,12 +18,10 @@ function Get-CIPPLapsPassword {
                 state      = 'success'
             }
         }
-        if ($GraphRequest) { return $GraphRequest } else { return "No LAPS password found for $device" }
+        if ($GraphRequest) { return $GraphRequest } else { return "No LAPS password found for $Device" }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not retrieve LAPS password for $($Device). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw "Could not retrieve LAPS password for $($Device). Error: $($ErrorMessage.NormalizedError)"
     }
 }
-
-

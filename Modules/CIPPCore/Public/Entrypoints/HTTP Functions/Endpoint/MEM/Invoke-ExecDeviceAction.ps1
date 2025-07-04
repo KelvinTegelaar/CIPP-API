@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecDeviceAction {
+function Invoke-ExecDeviceAction {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -30,7 +30,7 @@ Function Invoke-ExecDeviceAction {
                 Write-Host "ActionBody: $ActionBody"
                 break
             }
-            Default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
+            default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
         }
 
         $cmdParams = @{
@@ -41,19 +41,17 @@ Function Invoke-ExecDeviceAction {
             Headers      = $Headers
             APINAME      = $APIName
         }
-        $ActionResult = New-CIPPDeviceAction @cmdParams
+        $Results = New-CIPPDeviceAction @cmdParams
 
         $StatusCode = [HttpStatusCode]::OK
-        $Results = "$ActionResult"
 
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = "$($_.Exception.Message)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Results }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

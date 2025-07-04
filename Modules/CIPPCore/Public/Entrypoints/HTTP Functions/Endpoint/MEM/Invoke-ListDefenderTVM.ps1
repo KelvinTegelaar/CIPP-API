@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListDefenderTVM {
+function Invoke-ListDefenderTVM {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,12 +11,11 @@ Function Invoke-ListDefenderTVM {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $Request.Query.tenantFilter
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
     try {
         $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
         $GroupObj = foreach ($cve in $GraphRequest) {
@@ -47,14 +46,12 @@ Function Invoke-ListDefenderTVM {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
         $GroupObj = $ErrorMessage
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GroupObj)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GroupObj)
+    }
 }

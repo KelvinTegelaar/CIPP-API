@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditIntunePolicy {
+function Invoke-EditIntunePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,7 +25,7 @@ Function Invoke-EditIntunePolicy {
 
         # Only add displayName if it's provided
         if ($DisplayName) {
-            $properties["displayName"] = $DisplayName
+            $properties['displayName'] = $DisplayName
         }
 
         # Update the policy
@@ -43,9 +43,8 @@ Function Invoke-EditIntunePolicy {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddDefenderDeployment {
+function Invoke-AddDefenderDeployment {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -349,11 +349,8 @@ Function Invoke-AddDefenderDeployment {
 
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = @($Results) }
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 }
