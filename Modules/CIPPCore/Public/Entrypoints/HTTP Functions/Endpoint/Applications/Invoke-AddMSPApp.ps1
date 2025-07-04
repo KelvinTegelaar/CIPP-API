@@ -80,17 +80,14 @@ function Invoke-AddMSPApp {
             "Successfully added MSP App for $($Tenant.defaultDomainName) to queue. "
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant.defaultDomainName -message "MSP Application $($intuneBody.DisplayName) added to queue" -Sev 'Info'
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant.defaultDomainName -message "Failed to add MSP Application $($intuneBody.DisplayName) to queue" -Sev 'Error'
-            "Failed to add MSP app for $($Tenant.defaultDomainName) to queue"
+            $ErrorMessage = Get-CippException -Exception $_
+            "Failed to add MSP app for $($Tenant.defaultDomainName) to queue. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant.defaultDomainName -message "Failed to add MSP Application $($intuneBody.DisplayName) to queue. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
-
-    $body = [PSCustomObject]@{'Results' = $Results }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }
