@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSafeLinksPolicyFromTemplate {
+function Invoke-AddSafeLinksPolicyFromTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,7 +29,10 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
         $Templates = $RequestBody.TemplateList | ForEach-Object { $_.value }
 
         if (-not $Templates -or $Templates.Count -eq 0) {
-            throw "No templates provided in TemplateList"
+            return @{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'No templates provided in TemplateList' }
+            }
         }
 
         # Helper function to process array fields with cleaner logic
@@ -108,17 +111,17 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
 
             # Policy configuration mapping
             $PolicyMappings = @{
-                'EnableSafeLinksForEmail' = 'EnableSafeLinksForEmail'
-                'EnableSafeLinksForTeams' = 'EnableSafeLinksForTeams'
-                'EnableSafeLinksForOffice' = 'EnableSafeLinksForOffice'
-                'TrackClicks' = 'TrackClicks'
-                'AllowClickThrough' = 'AllowClickThrough'
-                'ScanUrls' = 'ScanUrls'
-                'EnableForInternalSenders' = 'EnableForInternalSenders'
-                'DeliverMessageAfterScan' = 'DeliverMessageAfterScan'
-                'DisableUrlRewrite' = 'DisableUrlRewrite'
-                'AdminDisplayName' = 'AdminDisplayName'
-                'CustomNotificationText' = 'CustomNotificationText'
+                'EnableSafeLinksForEmail'    = 'EnableSafeLinksForEmail'
+                'EnableSafeLinksForTeams'    = 'EnableSafeLinksForTeams'
+                'EnableSafeLinksForOffice'   = 'EnableSafeLinksForOffice'
+                'TrackClicks'                = 'TrackClicks'
+                'AllowClickThrough'          = 'AllowClickThrough'
+                'ScanUrls'                   = 'ScanUrls'
+                'EnableForInternalSenders'   = 'EnableForInternalSenders'
+                'DeliverMessageAfterScan'    = 'DeliverMessageAfterScan'
+                'DisableUrlRewrite'          = 'DisableUrlRewrite'
+                'AdminDisplayName'           = 'AdminDisplayName'
+                'CustomNotificationText'     = 'CustomNotificationText'
                 'EnableOrganizationBranding' = 'EnableOrganizationBranding'
             }
 
@@ -138,13 +141,13 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
 
             # Create rule parameters
             $RuleParams = @{
-                Name = $RuleName
+                Name            = $RuleName
                 SafeLinksPolicy = $PolicyName
             }
 
             # Rule configuration mapping
             $RuleMappings = @{
-                'Priority' = 'Priority'
+                'Priority'            = 'Priority'
                 'TemplateDescription' = 'Comments'
             }
 
@@ -156,11 +159,11 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
 
             # Add array parameters if they have values
             $ArrayMappings = @{
-                'SentTo' = $SentTo
-                'SentToMemberOf' = $SentToMemberOf
-                'RecipientDomainIs' = $RecipientDomainIs
-                'ExceptIfSentTo' = $ExceptIfSentTo
-                'ExceptIfSentToMemberOf' = $ExceptIfSentToMemberOf
+                'SentTo'                    = $SentTo
+                'SentToMemberOf'            = $SentToMemberOf
+                'RecipientDomainIs'         = $RecipientDomainIs
+                'ExceptIfSentTo'            = $ExceptIfSentTo
+                'ExceptIfSentToMemberOf'    = $ExceptIfSentToMemberOf
                 'ExceptIfRecipientDomainIs' = $ExceptIfRecipientDomainIs
             }
 
@@ -175,11 +178,11 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Created SafeLinks rule '$RuleName'" -Sev 'Info'
 
             # Handle rule state
-            $StateMessage = ""
+            $StateMessage = ''
             if ($null -ne $Template.State) {
                 $IsState = switch ($Template.State) {
-                    "Enabled" { $true }
-                    "Disabled" { $false }
+                    'Enabled' { $true }
+                    'Disabled' { $false }
                     $true { $true }
                     $false { $false }
                     default { $null }
@@ -200,8 +203,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
             foreach ($Template in $Templates) {
                 try {
                     New-SafeLinksPolicyFromTemplate -TenantFilter $TenantFilter -Template $Template
-                }
-                catch {
+                } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     $ErrorDetail = "Failed to deploy template '$($Template.TemplateName)' to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
@@ -211,17 +213,15 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
         }
 
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to process template deployment request. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Return response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return @{
         StatusCode = $StatusCode
-        Body = @{ Results = $Results }
-    })
+        Body       = @{ Results = $Results }
+    }
 }

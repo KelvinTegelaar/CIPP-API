@@ -1,5 +1,5 @@
 using namespace System.Net
-Function Invoke-ListSafeLinksPolicyTemplateDetails {
+function Invoke-ListSafeLinksPolicyTemplateDetails {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -22,7 +22,10 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
 
     try {
         if (-not $ID) {
-            throw "Template ID is required"
+            return @{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Template ID is required' }
+            }
         }
 
         # Get the specific template from Azure Table Storage
@@ -31,7 +34,10 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Template) {
-            throw "Template with ID '$ID' not found"
+            return @{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = @{ Results = "Template with ID '$ID' not found" }
+            }
         }
 
         # Parse the JSON data and add metadata
@@ -41,17 +47,15 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
         $Result = $TemplateData
         $StatusCode = [HttpStatusCode]::OK
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully retrieved template details for ID '$ID'" -Sev 'Info'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to retrieve template details for ID '$ID'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

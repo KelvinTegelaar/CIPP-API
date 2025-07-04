@@ -76,23 +76,18 @@ function Invoke-ExecNewSafeLinksPolicy {
             foreach ($item in $Field) {
                 if ($item -is [string]) {
                     $result.Add($item) | Out-Null
-                }
-                elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
+                } elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
                     # Extract value from object
                     if ($null -ne $item.value) {
                         $result.Add($item.value) | Out-Null
-                    }
-                    elseif ($null -ne $item.userPrincipalName) {
+                    } elseif ($null -ne $item.userPrincipalName) {
                         $result.Add($item.userPrincipalName) | Out-Null
-                    }
-                    elseif ($null -ne $item.id) {
+                    } elseif ($null -ne $item.id) {
                         $result.Add($item.id) | Out-Null
-                    }
-                    else {
+                    } else {
                         $result.Add($item.ToString()) | Out-Null
                     }
-                }
-                else {
+                } else {
                     $result.Add($item.ToString()) | Out-Null
                 }
             }
@@ -169,7 +164,7 @@ function Invoke-ExecNewSafeLinksPolicy {
 
         # Build command parameters for rule
         $ruleParams = @{
-            Name = $RuleName
+            Name            = $RuleName
             SafeLinksPolicy = $PolicyName
         }
 
@@ -212,17 +207,15 @@ function Invoke-ExecNewSafeLinksPolicy {
 
         $Result = "Successfully created new SafeLinks policy '$PolicyName'and rule '$RuleName'"
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed creating new SafeLinks policy '$PolicyName'and rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

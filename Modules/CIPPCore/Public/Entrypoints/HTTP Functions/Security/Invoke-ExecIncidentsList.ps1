@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecIncidentsList {
+function Invoke-ExecIncidentsList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -107,9 +107,8 @@ Function Invoke-ExecIncidentsList {
             Metadata = $Metadata
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

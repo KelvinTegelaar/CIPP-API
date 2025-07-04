@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditSafeLinksPolicyTemplate {
+function Invoke-EditSafeLinksPolicyTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -20,7 +20,10 @@ Function Invoke-EditSafeLinksPolicyTemplate {
         $ID = $Request.Body.ID
 
         if (-not $ID) {
-            throw "Template ID is required"
+            return @{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Template ID is required' }
+            }
         }
 
         # Check if template exists
@@ -29,28 +32,31 @@ Function Invoke-EditSafeLinksPolicyTemplate {
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingTemplate) {
-            throw "Template with ID '$ID' not found"
+            return @{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = @{ Results = "Template with ID '$ID' not found" }
+            }
         }
 
         # Create a new ordered hashtable to store selected properties
         $policyObject = [ordered]@{}
 
         # Set name and comments
-        $policyObject["TemplateName"] = $Request.body.TemplateName
-        $policyObject["TemplateDescription"] = $Request.body.TemplateDescription
+        $policyObject['TemplateName'] = $Request.body.TemplateName
+        $policyObject['TemplateDescription'] = $Request.body.TemplateDescription
 
         # Copy specific properties we want to keep
         $propertiesToKeep = @(
             # Policy properties
-            "PolicyName", "EnableSafeLinksForEmail", "EnableSafeLinksForTeams", "EnableSafeLinksForOffice",
-            "TrackClicks", "AllowClickThrough", "ScanUrls", "EnableForInternalSenders",
-            "DeliverMessageAfterScan", "DisableUrlRewrite", "DoNotRewriteUrls",
-            "AdminDisplayName", "CustomNotificationText", "EnableOrganizationBranding",
+            'PolicyName', 'EnableSafeLinksForEmail', 'EnableSafeLinksForTeams', 'EnableSafeLinksForOffice',
+            'TrackClicks', 'AllowClickThrough', 'ScanUrls', 'EnableForInternalSenders',
+            'DeliverMessageAfterScan', 'DisableUrlRewrite', 'DoNotRewriteUrls',
+            'AdminDisplayName', 'CustomNotificationText', 'EnableOrganizationBranding',
 
             # Rule properties
-            "RuleName", "Priority", "State", "Comments",
-            "SentTo", "SentToMemberOf", "RecipientDomainIs",
-            "ExceptIfSentTo", "ExceptIfSentToMemberOf", "ExceptIfRecipientDomainIs"
+            'RuleName', 'Priority', 'State', 'Comments',
+            'SentTo', 'SentToMemberOf', 'RecipientDomainIs',
+            'ExceptIfSentTo', 'ExceptIfSentToMemberOf', 'ExceptIfRecipientDomainIs'
         )
 
         # Copy each property if it exists
@@ -71,19 +77,18 @@ Function Invoke-EditSafeLinksPolicyTemplate {
             PartitionKey = 'SafeLinksTemplate'
         }
 
-        Write-LogMessage -Headers $Headers -API $APINAME -message "Updated SafeLinks Policy Template $($policyObject.TemplateName) with ID $ID" -Sev Info
-        $body = [pscustomobject]@{'Results' = "Updated SafeLinks Policy Template $($policyObject.TemplateName) with ID $ID" }
+        $Result = "Updated SafeLinks Policy Template $($policyObject.TemplateName) with ID $ID"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to update SafeLinks policy template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $body = [pscustomobject]@{'Results' = "Failed to update SafeLinks policy template: $($ErrorMessage.NormalizedError)" }
+        $Result = "Failed to update SafeLinks policy template: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }
