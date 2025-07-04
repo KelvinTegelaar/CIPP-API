@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMessageTrace {
+function Invoke-ListMessageTrace {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -54,13 +54,13 @@ Function Invoke-ListMessageTrace {
         }
 
         if ($Request.Body.recipient) {
-            $Searchparams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
+            $SearchParams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
         }
         if ($Request.Body.sender) {
-            $Searchparams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
+            $SearchParams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
         }
 
-        $trace = if ($Request.Body.traceDetail) {
+        $Trace = if ($Request.Body.traceDetail) {
             $CmdParams = @{
                 MessageTraceId   = $Request.Body.ID
                 RecipientAddress = $Request.Body.recipient
@@ -70,18 +70,18 @@ Function Invoke-ListMessageTrace {
             Write-Information ($SearchParams | ConvertTo-Json)
 
             New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTrace' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
-
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
         }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev 'Error'
-        $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Failed executing message trace. Error: $ErrorMessage" -Sev 'Error'
+        $Trace = @{Status = "Failed to retrieve message trace: $ErrorMessage" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($trace)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Trace)
+    }
 }

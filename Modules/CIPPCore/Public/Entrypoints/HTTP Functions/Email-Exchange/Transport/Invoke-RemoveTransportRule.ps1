@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveTransportRule {
+function Invoke-RemoveTransportRule {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,16 +14,12 @@ Function Invoke-RemoveTransportRule {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
-    $Identity = $Request.Query.guid ?? $Request.body.guid
-
-    $Params = @{
-        Identity = $Identity
-    }
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $Identity = $Request.Query.guid ?? $Request.Body.guid
 
     try {
         $cmdlet = 'Remove-TransportRule'
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $cmdlet -cmdParams $Params -UseSystemMailbox $true
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $cmdlet -cmdParams @{Identity = $Identity } -UseSystemMailbox $true
         $Result = "Deleted $($Identity)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted transport rule $($Identity)" -Sev Info
         $StatusCode = [HttpStatusCode]::OK
@@ -34,9 +30,8 @@ Function Invoke-RemoveTransportRule {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

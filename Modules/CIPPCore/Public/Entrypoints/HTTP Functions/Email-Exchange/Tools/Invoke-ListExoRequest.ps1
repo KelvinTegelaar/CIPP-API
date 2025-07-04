@@ -1,4 +1,10 @@
 function Invoke-ListExoRequest {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
@@ -44,11 +50,10 @@ function Invoke-ListExoRequest {
                     $Body = [pscustomobject]@{
                         Results = "Invalid cmdlet: $Cmdlet"
                     }
-                    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                            StatusCode = [HttpStatusCode]::BadRequest
-                            Body       = $Body
-                        })
-                    return
+                    return @{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = $Body
+                    }
                 }
                 $ExoParams = @{
                     Cmdlet    = $Cmdlet
@@ -88,6 +93,7 @@ function Invoke-ListExoRequest {
                     }
                 }
             } else {
+                # TODO: Figure out why this else is needed when it's impossible to get here.
                 $Body = [pscustomobject]@{
                     Results = "Invalid tenant: $TenantFilter"
                 }
@@ -96,8 +102,9 @@ function Invoke-ListExoRequest {
     } catch {
         Write-Information "ExoRequest Error: $($_.Exception.Message)"
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ConvertTo-Json -InputObject $Body -Compress
-        })
+
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ConvertTo-Json -InputObject $Body -Compress
+    }
 }

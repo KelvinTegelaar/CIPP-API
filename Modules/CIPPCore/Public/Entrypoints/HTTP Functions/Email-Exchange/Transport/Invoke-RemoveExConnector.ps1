@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveExConnector {
+function Invoke-RemoveExConnector {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,9 +12,9 @@ Function Invoke-RemoveExConnector {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    $TenantFilter = $request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     try {
         $Type = $Request.Query.Type ?? $Request.Body.Type
         $Guid = $Request.Query.GUID ?? $Request.Body.GUID
@@ -30,10 +30,9 @@ Function Invoke-RemoveExConnector {
         $Result = $ErrorMessage.NormalizedError
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

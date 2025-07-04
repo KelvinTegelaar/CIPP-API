@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTransportRules {
+function Invoke-ListTransportRules {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -68,7 +68,7 @@ Function Invoke-ListTransportRules {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = $ErrorMessage
     }
 
@@ -80,9 +80,8 @@ Function Invoke-ListTransportRules {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

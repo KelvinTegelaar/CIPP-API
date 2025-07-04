@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListExConnectorTemplates {
+function Invoke-ListExConnectorTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -13,27 +13,29 @@ Function Invoke-ListExConnectorTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-    $Table = Get-CippTable -tablename 'templates'
 
-    #List new policies
-    $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'ExConnectorTemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $GUID = $_.RowKey
-        $Direction = $_.direction
-        $data = $_.JSON | ConvertFrom-Json
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
-        $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction -Force
-        $data
-    } | Sort-Object -Property displayName
+    try {
+        $Table = Get-CippTable -tablename 'templates'
+        $Filter = "PartitionKey eq 'ExConnectorTemplate'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $GUID = $_.RowKey
+            $Direction = $_.direction
+            $data = $_.JSON | ConvertFrom-Json
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
+            $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction -Force
+            $data
+        } | Sort-Object -Property displayName
 
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
+        if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
 
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $ErrorMessage
+    }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Templates)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Templates)
+    }
 }

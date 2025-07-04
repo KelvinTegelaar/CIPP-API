@@ -1,5 +1,5 @@
 using namespace System.Net
-Function Invoke-ExecMailTest {
+function Invoke-ExecMailTest {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -82,9 +82,8 @@ Function Invoke-ExecMailTest {
             Results = @($ErrorMessage)
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }
