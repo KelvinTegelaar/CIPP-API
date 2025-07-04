@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function invoke-ListEmptyResults {
+function invoke-ListEmptyResults {
     <#
     .SYNOPSIS
      - Purposely lists an empty result
@@ -16,10 +16,9 @@ Function invoke-ListEmptyResults {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @()
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @()
+    }
 
 }

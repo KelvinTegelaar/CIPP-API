@@ -6,30 +6,27 @@ function Invoke-PublicPing {
         Public
     #>
     [CmdletBinding()]
-    Param(
-        $Request,
-        $TriggerMetadata
-    )
+    param($Request, $TriggerMetadata)
 
-    $KeepaliveTable = Get-CippTable -tablename 'CippKeepAlive'
-    $LastKeepalive = Get-CippAzDataTableEntity @KeepaliveTable -Filter "PartitionKey eq 'Ping' and RowKey eq 'Ping'"
+    $KeepAliveTable = Get-CippTable -tablename 'CippKeepAlive'
+    $LastKeepAlive = Get-CippAzDataTableEntity @KeepAliveTable -Filter "PartitionKey eq 'Ping' and RowKey eq 'Ping'"
 
-    if ($LastKeepalive.Timestamp) {
-        $LastKeepalive = $LastKeepalive.Timestamp.DateTime.ToUniversalTime()
+    if ($LastKeepAlive.Timestamp) {
+        $LastKeepAlive = $LastKeepAlive.Timestamp.DateTime.ToUniversalTime()
     } else {
-        $LastKeepalive = (Get-Date).AddSeconds(-600).ToUniversalTime()
+        $LastKeepAlive = (Get-Date).AddSeconds(-600).ToUniversalTime()
     }
-    $KeepaliveInterval = -300
-    $NextKeepAlive = (Get-Date).AddSeconds($KeepaliveInterval).ToUniversalTime()
+    $KeepAliveInterval = -300
+    $NextKeepAlive = (Get-Date).AddSeconds($KeepAliveInterval).ToUniversalTime()
 
     $IsColdStart = $Request.Headers.'x-ms-coldstart' -eq 1
 
-    if ($LastKeepalive -le $NextKeepAlive -or $IsColdStart) {
-        $Keepalive = @{
+    if ($LastKeepAlive -le $NextKeepAlive -or $IsColdStart) {
+        $KeepAlive = @{
             PartitionKey = 'Ping'
             RowKey       = 'Ping'
         }
-        Add-AzDataTableEntity @KeepaliveTable -Entity $Keepalive -Force
+        Add-AzDataTableEntity @KeepAliveTable -Entity $KeepAlive -Force
 
         if ($IsColdStart) {
             $Milliseconds = 500
@@ -49,8 +46,8 @@ function Invoke-PublicPing {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ($Body | ConvertTo-Json -Depth 5)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ($Body | ConvertTo-Json -Depth 5)
+    }
 }

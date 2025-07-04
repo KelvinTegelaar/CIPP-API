@@ -13,6 +13,7 @@ function Invoke-listStandardTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     # Interact with query parameters or the body of the request.
     $ID = $Request.Query.id
 
@@ -45,10 +46,9 @@ function Invoke-listStandardTemplates {
     } | Sort-Object -Property templateName
 
     if ($ID) { $Templates = $Templates | Where-Object GUID -EQ $ID }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Templates)
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Templates)
+    }
 }

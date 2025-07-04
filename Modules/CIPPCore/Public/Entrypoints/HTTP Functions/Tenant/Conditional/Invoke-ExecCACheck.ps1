@@ -21,7 +21,7 @@ function Invoke-ExecCaCheck {
     } else {
         $IncludeApplications = '67ad5377-2d78-4ac2-a867-6300cda00e85'
     }
-    $results = try {
+    $Results = try {
         $CAContext = @{
             '@odata.type'         = '#microsoft.graph.applicationContext'
             'includeApplications' = @($IncludeApplications)
@@ -43,19 +43,13 @@ function Invoke-ExecCaCheck {
         if ($Request.body.IpAddress) { $whatIfConditions.ipAddress = $Request.body.IpAddress.value }
 
         $JSONBody = $ConditionalAccessWhatIfDefinition | ConvertTo-Json -Depth 10
-        Write-Host $JSONBody
-        $Request = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $tenant -type POST -body $JsonBody -AsApp $true
-        $Request
+        New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $Tenant -type POST -body $JsonBody -AsApp $true
     } catch {
         "Failed to execute check: $($_.Exception.Message)"
     }
 
-    $body = [pscustomobject]@{'Results' = $results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

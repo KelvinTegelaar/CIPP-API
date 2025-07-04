@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddCATemplate {
+function Invoke-AddCATemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,21 +29,18 @@ Function Invoke-AddCATemplate {
             GUID         = "$GUID"
         }
         $Result = "Created CA Template $($Name) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message "Created CA Template $($Name) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create CA Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to create CA Template: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = "$Result" }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-BestPracticeAnalyser_List {
+function Invoke-BestPracticeAnalyser_List {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -27,10 +27,9 @@ Function Invoke-BestPracticeAnalyser_List {
         }
     }
     Write-Host ($Tenants | ConvertTo-Json)
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @(($Results | Where-Object -Property RowKey -In $Tenants.customerId))
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @(($Results | Where-Object -Property RowKey -In $Tenants.customerId))
+    }
 }

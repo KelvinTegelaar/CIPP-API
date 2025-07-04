@@ -59,8 +59,8 @@ function Invoke-ListAppApprovalTemplates {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
+    }
 }

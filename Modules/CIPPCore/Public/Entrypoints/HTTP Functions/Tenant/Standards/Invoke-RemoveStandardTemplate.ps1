@@ -22,6 +22,7 @@ function Invoke-RemoveStandardTemplate {
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, JSON
         $TemplateName = (ConvertFrom-Json -InputObject $ClearRow.JSON).templateName
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+
         $Result = "Removed Standards Template named: '$($TemplateName)' with id: $($ID)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK
@@ -32,9 +33,8 @@ function Invoke-RemoveStandardTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

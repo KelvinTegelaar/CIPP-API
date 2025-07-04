@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListOAuthApps {
+function Invoke-ListOAuthApps {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,7 +15,7 @@ Function Invoke-ListOAuthApps {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     if ($TenantFilter -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = $TenantFilter }
 
     try {
@@ -44,10 +44,8 @@ Function Invoke-ListOAuthApps {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

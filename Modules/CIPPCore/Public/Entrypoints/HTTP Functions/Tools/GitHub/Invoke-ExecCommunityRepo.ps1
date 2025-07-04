@@ -12,6 +12,10 @@ function Invoke-ExecCommunityRepo {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Action = $Request.Body.Action
     $Id = $Request.Body.Id
     if ($Request.Body.Id) {
@@ -29,11 +33,10 @@ function Invoke-ExecCommunityRepo {
             Results = $Results
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Body
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        }
     }
 
     $Table = Get-CIPPTable -TableName CommunityRepos
@@ -197,8 +200,8 @@ function Invoke-ExecCommunityRepo {
         Results = @($Results)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

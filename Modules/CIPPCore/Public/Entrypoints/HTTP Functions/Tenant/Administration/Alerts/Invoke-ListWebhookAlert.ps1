@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListWebhookAlert {
+function Invoke-ListWebhookAlert {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,8 +22,8 @@ Function Invoke-ListWebhookAlert {
         $Webhook
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($WebhookRow)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($WebhookRow)
+    }
 }

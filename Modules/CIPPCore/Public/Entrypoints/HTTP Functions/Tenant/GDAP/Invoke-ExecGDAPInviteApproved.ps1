@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGDAPInviteApproved {
+function Invoke-ExecGDAPInviteApproved {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -16,11 +16,8 @@ Function Invoke-ExecGDAPInviteApproved {
 
     Set-CIPPGDAPInviteGroups
 
-    $body = @{Results = @('Processing recently activated GDAP relationships') }
-
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @('Processing recently activated GDAP relationships') }
+    }
 }

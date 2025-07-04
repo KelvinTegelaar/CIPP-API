@@ -12,6 +12,10 @@ function Invoke-ListCommunityRepos {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CIPPTable -TableName CommunityRepos
 
     if ($Request.Query.WriteAccess -eq 'true') {
@@ -73,8 +77,8 @@ function Invoke-ListCommunityRepos {
         Results = @($Repos | Sort-Object -Property FullName)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

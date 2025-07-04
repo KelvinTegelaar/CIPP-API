@@ -5,7 +5,7 @@ function Invoke-ListAuditLogSearches {
     .ROLE
         Tenant.Alert.Read
     #>
-    Param($Request, $TriggerMetadata)
+    param($Request, $TriggerMetadata)
 
 
     $APIName = $Request.Params.CIPPEndpoint
@@ -22,7 +22,7 @@ function Invoke-ListAuditLogSearches {
     if ($TenantFilter) {
         switch ($Type) {
             'Searches' {
-                $Results = Get-CippAuditLogSearches -TenantFilter $TenantFilter
+                $Results = Get-CIPPAuditLogSearches -TenantFilter $TenantFilter
                 $Body = @{
                     Results  = @($Results)
                     Metadata = @{
@@ -80,14 +80,14 @@ function Invoke-ListAuditLogSearches {
             }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Body
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'TenantFilter is required'
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'TenantFilter is required'
+        }
     }
 }

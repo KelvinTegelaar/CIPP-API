@@ -119,8 +119,8 @@ function Invoke-ExecGDAPInvite {
         }
 
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $body
+    }
 }

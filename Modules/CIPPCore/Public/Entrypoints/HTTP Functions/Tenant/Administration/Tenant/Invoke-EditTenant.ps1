@@ -68,23 +68,23 @@ function Invoke-EditTenant {
             }
         }
 
-        $response = @{
+        $Response = @{
             state      = 'success'
             resultText = 'Tenant details updated successfully'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $response
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Response
+        }
     } catch {
-        Write-LogMessage -headers $Headers -tenant $customerId -API $APINAME -message "Edit Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
-        $response = @{
+        Write-LogMessage -headers $Headers -tenant $customerId -API $APIName -message "Edit Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
+        $Response = @{
             state      = 'error'
             resultText = $_.Exception.Message
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::InternalServerError
-                Body       = $response
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::InternalServerError
+            Body       = $Response
+        }
     }
 }

@@ -40,17 +40,15 @@ function Invoke-ListTenants {
         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
 
         $GraphRequest = [pscustomobject]@{'Results' = 'Cache has been cleared and a tenant refresh is queued.' }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @{
-                    Results  = @($GraphRequest)
-                    Metadata = @{
-                        Details = $Results
-                    }
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{
+                Results  = @($GraphRequest)
+                Metadata = @{
+                    Details = $Results
                 }
-            })
-        #Get-Tenants -IncludeAll -TriggerRefresh
-        return
+            }
+        }
     }
     if ($Request.Query.TriggerRefresh) {
         if ($Request.Query.TenantFilter -and $Request.Query.TenantFilter -ne 'AllTenants') {
@@ -120,14 +118,11 @@ function Invoke-ListTenants {
             defaultDomainName = ''
             displayName       = 'Failed to retrieve tenants. Perform a permission check.'
             customerId        = ''
-
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Body)
-        })
-
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Body)
+    }
 }

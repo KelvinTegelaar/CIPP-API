@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveCAPolicy {
+function Invoke-RemoveCAPolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -30,11 +30,8 @@ Function Invoke-RemoveCAPolicy {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    $body = [pscustomobject]@{'Results' = $Result }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

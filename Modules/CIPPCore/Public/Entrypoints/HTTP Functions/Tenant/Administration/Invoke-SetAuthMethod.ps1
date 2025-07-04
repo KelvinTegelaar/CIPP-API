@@ -5,7 +5,7 @@ function Invoke-SetAuthMethod {
     .ROLE
         Tenant.Administration.ReadWrite
     #>
-    Param($Request, $TriggerMetadata)
+    param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
@@ -25,9 +25,8 @@ function Invoke-SetAuthMethod {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = [pscustomobject]@{'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

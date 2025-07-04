@@ -14,18 +14,16 @@ function Invoke-ExecAuditLogSearch {
 
     $Query = $Request.Body
     if (!$Query.TenantFilter) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'TenantFilter is required'
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'TenantFilter is required'
+        }
     }
     if (!$Query.StartTime -or !$Query.EndTime) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'StartTime and EndTime are required'
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'StartTime and EndTime are required'
+        }
     }
 
     $Command = Get-Command New-CippAuditLogSearch
@@ -36,24 +34,23 @@ function Invoke-ExecAuditLogSearch {
         }
     }
     if ($BadProps) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = "Invalid parameters: $($BadProps -join ', ')"
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = "Invalid parameters: $($BadProps -join ', ')"
+        }
     }
 
     try {
         $Query = $Query | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
         $Results = New-CippAuditLogSearch @Query
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Results
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Results
+        }
     } catch {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $_.Exception.Message
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = $_.Exception.Message
+        }
     }
 }

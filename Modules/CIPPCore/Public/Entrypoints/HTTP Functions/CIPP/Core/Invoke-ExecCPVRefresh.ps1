@@ -18,8 +18,8 @@ function Invoke-ExecCPVRefresh {
 
     $InstanceId = Start-UpdatePermissionsOrchestrator
 
-    Push-OutputBinding -Name Response -Value @{
-        StatusCode = [System.Net.HttpStatusCode]::OK
+    return @{
+        StatusCode = [HttpStatusCode]::OK
         Body       = @{
             Results    = 'CPV Refresh has been triggered'
             InstanceId = $InstanceId

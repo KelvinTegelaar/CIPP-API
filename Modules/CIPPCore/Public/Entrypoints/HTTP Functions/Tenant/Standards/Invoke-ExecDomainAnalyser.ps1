@@ -8,6 +8,10 @@ function Invoke-ExecDomainAnalyser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
@@ -20,7 +24,7 @@ function Invoke-ExecDomainAnalyser {
             }
             $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
             Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
-            $Results = [pscustomobject]@{'Results' = 'Queueing Domain Analyser' }
+            $Results = 'Queueing Domain Analyser'
         }
     } else {
         $OrchStatus = Start-DomainOrchestrator
@@ -29,11 +33,11 @@ function Invoke-ExecDomainAnalyser {
         } else {
             $Message = 'Domain Analyser error: check logs'
         }
-        $Results = [pscustomobject]@{'Results' = $Message }
+        $Results = $Message
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

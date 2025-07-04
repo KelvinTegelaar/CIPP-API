@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListBPATemplates {
+function Invoke-ListBPATemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -47,10 +47,9 @@ Function Invoke-ListBPATemplates {
             }
         } | Sort-Object Name
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ($Templates | ConvertTo-Json -Depth 10)
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ($Templates | ConvertTo-Json -Depth 10)
+    }
 }

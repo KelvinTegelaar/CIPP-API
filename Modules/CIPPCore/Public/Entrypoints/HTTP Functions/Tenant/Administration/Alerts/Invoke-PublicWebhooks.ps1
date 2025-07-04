@@ -18,7 +18,7 @@ function Invoke-PublicWebhooks {
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
     Write-Host 'Received request'
     $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-    $CIPPURL = [string]$url
+    # $CIPPURL = [string]$url
     Write-Host $url
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
         Write-Host "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
@@ -82,9 +82,8 @@ function Invoke-PublicWebhooks {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListGDAPInvite {
+function Invoke-ListGDAPInvite {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -27,9 +27,8 @@ Function Invoke-ListGDAPInvite {
             $_
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Invite)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Invite)
+    }
 }

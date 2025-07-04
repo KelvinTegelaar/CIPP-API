@@ -25,7 +25,7 @@ function Invoke-ExecEditTemplate {
             $OriginalTemplate = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
             $OriginalTemplate = ($OriginalTemplate.JSON | ConvertFrom-Json -Depth 100)
             $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.body.parsedRAWJson
-            Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Request.Headers
+            Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Headers
         } else {
             $Table.Force = $true
             Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -34,20 +34,21 @@ function Invoke-ExecEditTemplate {
                 PartitionKey = "$Type"
                 GUID         = "$GUID"
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Edited template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -message "Edited template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         }
-        $body = [pscustomobject]@{ 'Results' = 'Successfully saved the template' }
+        $StatusCode = [HttpStatusCode]::OK
+        $Result = 'Successfully saved the template'
 
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Editing template failed: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to edit template: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Result
+    }
 
 }

@@ -22,19 +22,16 @@ function Invoke-ExecNamedLocation {
     $Content = $Request.Body.input ?? $Request.Query.input
 
     try {
-        $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers
+        $Results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        $results = "Failed to edit named location. Error: $($ErrorMessage.NormalizedError)"
+        $ErrorMessage = $_.Exception.Message
+        $Results = "Failed to edit named location. Error: $ErrorMessage"
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = @($results) }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

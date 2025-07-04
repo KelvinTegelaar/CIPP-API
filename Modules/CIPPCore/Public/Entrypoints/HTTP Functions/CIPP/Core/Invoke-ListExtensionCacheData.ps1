@@ -35,11 +35,11 @@ function Invoke-ListExtensionCacheData {
 
     $StatusCode = [HttpStatusCode]::OK
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body | ConvertTo-Json -Compress -Depth 100
-            Headers    = @{
-                'Content-Type' = 'application/json'
-            }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body | ConvertTo-Json -Compress -Depth 100
+        Headers    = @{
+            'Content-Type' = 'application/json'
+        }
+    }
 }

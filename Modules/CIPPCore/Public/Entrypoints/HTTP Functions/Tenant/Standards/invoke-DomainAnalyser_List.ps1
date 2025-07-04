@@ -1,7 +1,7 @@
 
 using namespace System.Net
 
-Function Invoke-DomainAnalyser_List {
+function Invoke-DomainAnalyser_List {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -10,6 +10,11 @@ Function Invoke-DomainAnalyser_List {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $DomainTable = Get-CIPPTable -Table 'Domains'
 
     # Get all the things
@@ -33,9 +38,8 @@ Function Invoke-DomainAnalyser_List {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Results)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Results)
+    }
 }

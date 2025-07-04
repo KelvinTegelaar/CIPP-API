@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddBPATemplate {
+function Invoke-AddBPATemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,7 +15,6 @@ Function Invoke-AddBPATemplate {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
-
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -24,19 +23,18 @@ Function Invoke-AddBPATemplate {
             PartitionKey = 'BPATemplate'
             GUID         = $Request.body.name
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created BPA named $($Request.body.name)" -Sev 'Debug'
-
-        $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+        $Result = "Successfully added BPA template $($Request.Body.name)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "BPA Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "BPA Template Creation failed: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "BPA Template Creation failed: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

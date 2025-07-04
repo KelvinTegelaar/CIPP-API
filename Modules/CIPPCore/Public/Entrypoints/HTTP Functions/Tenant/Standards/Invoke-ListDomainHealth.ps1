@@ -40,13 +40,6 @@ function Invoke-ListDomainHealth {
     Set-DnsResolver -Resolver $Resolver
 
     $UserRoles = Get-CIPPAccessRole -Request $Request
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
-
     $StatusCode = [HttpStatusCode]::OK
     try {
         if ($Request.Query.Action) {
@@ -147,15 +140,13 @@ function Invoke-ListDomainHealth {
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APIName -tenant $($name) -headers $Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $body
+    }
 }

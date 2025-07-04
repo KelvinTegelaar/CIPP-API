@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecOffboardTenant {
+function Invoke-ExecOffboardTenant {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,7 +29,7 @@ Function Invoke-ExecOffboardTenant {
         } elseif ($TenantId -eq $env:TenantID) {
             $Errors.Add('You cannot offboard the CSP tenant')
         } else {
-            if ($request.body.RemoveCSPGuestUsers -eq $true) {
+            if ($Request.Body.RemoveCSPGuestUsers -eq $true) {
                 # Delete guest users who's domains match the CSP tenants
                 try {
                     try {
@@ -49,19 +49,19 @@ Function Invoke-ExecOffboardTenant {
                                 }
                             })
 
-                        $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+                        $null = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-                        $results.Add('Successfully removed guest users')
+                        $Results.Add('Successfully removed guest users')
                         Write-LogMessage -headers $Request.Headers -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
                     } else {
-                        $results.Add('No guest users found to remove')
+                        $Results.Add('No guest users found to remove')
                     }
                 } catch {
-                    $errors.Add("Something went wrong while deleting guest users: $($_.Exception.message)")
+                    $Errors.Add("Something went wrong while deleting guest users: $($_.Exception.message)")
                 }
             }
 
-            if ($request.body.RemoveCSPnotificationContacts -eq $true) {
+            if ($Request.Body.RemoveCSPnotificationContacts -eq $true) {
                 # Remove all email adresses that match the CSP tenants domains from the contact properties in /organization
                 try {
                     try {
@@ -78,7 +78,7 @@ Function Invoke-ExecOffboardTenant {
                         throw "Failed to retrieve CSP domains: $($_.Exception.message)"
                     }
                 } catch {
-                    $errors.Add("$($_.Exception.message)")
+                    $Errors.Add("$($_.Exception.message)")
                 }
 
                 # foreach through the properties we want to check/update
@@ -86,7 +86,7 @@ Function Invoke-ExecOffboardTenant {
                     $property = $_
                     $propertyContacts = $orgContacts.($($property))
 
-                    if ($propertyContacts -AND ($domains -notcontains ($propertyContacts | ForEach-Object { $_.Split('@')[1] }))) {
+                    if ($propertyContacts -and ($domains -notcontains ($propertyContacts | ForEach-Object { $_.Split('@')[1] }))) {
                         $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split('@')[1] })
 
                         $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
@@ -99,7 +99,7 @@ Function Invoke-ExecOffboardTenant {
                             $Errors.Add("Failed to update property $($property): $($_.Exception.message)")
                         }
                     } else {
-                        $results.Add("No notification contacts found in $($property)")
+                        $Results.Add("No notification contacts found in $($property)")
                     }
                 }
                 # TODO Add logic for privacyProfile later - rvdwegen
@@ -119,7 +119,7 @@ Function Invoke-ExecOffboardTenant {
             }
 
             # All customer tenant specific actions ALWAYS have to be completed before this action!
-            if ($request.body.RemoveMultitenantCSPApps -eq $true) {
+            if ($Request.Body.RemoveMultitenantCSPApps -eq $true) {
                 # Remove multi-tenant apps with the CSP tenant as origin
                 try {
                     $MultiTenantCSPApps = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$count=true&`$select=displayName,appId,id,appOwnerOrganizationId&`$filter=appOwnerOrganizationId eq $($env:TenantID)" -tenantid $TenantFilter -ComplexFilter)
@@ -140,7 +140,7 @@ Function Invoke-ExecOffboardTenant {
                 }
             }
             $ClearCache = $false
-            if ($request.body.TerminateGDAP -eq $true) {
+            if ($Request.Body.TerminateGDAP -eq $true) {
                 # Terminate GDAP relationships
                 $ClearCache = $true
                 try {
@@ -153,8 +153,8 @@ Function Invoke-ExecOffboardTenant {
 
                         } catch {
                             $($_.Exception.message)
-                            #$results.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
-                            $errors.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
+                            #$Results.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
+                            $Errors.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
                         }
                     }
                 } catch {
@@ -164,7 +164,7 @@ Function Invoke-ExecOffboardTenant {
                 }
             }
 
-            if ($request.body.TerminateContract -eq $true) {
+            if ($Request.Body.TerminateContract -eq $true) {
                 # Terminate contract relationship
                 try {
                     $null = (New-GraphPostRequest -type 'PATCH' -body '{ "relationshipToPartner": "none" }' -Uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter" -ContentType 'application/json' -scope 'https://api.partnercenter.microsoft.com/user_impersonation' -tenantid $env:TenantID)
@@ -184,17 +184,16 @@ Function Invoke-ExecOffboardTenant {
 
         Write-LogMessage -headers $Headers -API $APIName -message 'Offboarding completed' -Sev 'Info' -tenant $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
-        $body = [pscustomobject]@{
-            'Results' = @($Results)
-            'Errors'  = @($Errors)
+        $Body = [pscustomobject]@{
+            Results = @($Results)
+            Errors  = @($Errors)
         }
     } catch {
         $StatusCode = [HttpStatusCode]::OK
-        $body = $_.Exception.message
+        $Body = $_.Exception.message
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

@@ -110,14 +110,14 @@ function Invoke-ExecGraphExplorerPreset {
         $Message = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{
-                Results = @{
-                    resultText = $Message
-                    state      = if ($Success) { 'success' } else { 'error' }
-                }
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{
+            Results = @{
+                resultText = $Message
+                state      = if ($Success) { 'success' } else { 'error' }
             }
-        })
+        }
+    }
 }
