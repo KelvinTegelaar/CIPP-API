@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMailboxRules {
+function Invoke-ListMailboxRules {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -80,9 +80,9 @@ Function Invoke-ListMailboxRules {
         Metadata = $Metadata
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 
 }

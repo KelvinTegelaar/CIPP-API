@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSetMailboxQuota {
+function Invoke-ExecSetMailboxQuota {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,42 +9,39 @@ Function Invoke-ExecSetMailboxQuota {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    try {
-        $APIName = $Request.Params.CIPPEndpoint
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-        $Username = $request.body.user
-        $Tenantfilter = $request.body.tenantfilter
-        $quota = $Request.body.quota
-        $Results = try {
-            if ($Request.Body.ProhibitSendQuota) {
-                $quota = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ProhibitSendQuota = $quota }
-                "Changed ProhibitSendQuota for $username - $($message)"
-                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Changed ProhibitSendQuota for $username - $($message)" -Sev 'Info' -tenant $TenantFilter
-            }
-            if ($Request.Body.ProhibitSendReceiveQuota) {
-                $quota = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ProhibitSendReceiveQuota = $quota }
-                "Changed ProhibitSendReceiveQuota for $username - $($message)"
-                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Changed ProhibitSendReceiveQuota for $username - $($message)" -Sev 'Info' -tenant $TenantFilter
-            }
-            if ($Request.Body.IssueWarningQuota) {
-                $quota = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; IssueWarningQuota = $quota }
-                "Changed IssueWarningQuota for $username - $($message)"
-                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Changed IssueWarningQuota for $username - $($message)" -Sev 'Info' -tenant $TenantFilter
-            }
-        } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not adjust mailbox quota for $($username)" -Sev 'Error' -tenant $TenantFilter
-            "Could not adjust mailbox quota for $($username). Error: $($_.Exception.Message)"
-        }
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-        $body = [pscustomobject]@{'Results' = @($results) }
+    $Username = $Request.Body.user
+    $TenantFilter = $Request.Body.tenantFilter
+    $Quota = $Request.Body.quota
+    $Results = try {
+        if ($Request.Body.ProhibitSendQuota) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ProhibitSendQuota = $Quota }
+            "Changed ProhibitSendQuota for $Username - $($Quota)"
+            Write-LogMessage -headers $Headers -API $APIName -message "Changed ProhibitSendQuota for $Username - $($Quota)" -Sev 'Info' -tenant $TenantFilter
+        }
+        if ($Request.Body.ProhibitSendReceiveQuota) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ProhibitSendReceiveQuota = $Quota }
+            "Changed ProhibitSendReceiveQuota for $Username - $($Quota)"
+            Write-LogMessage -headers $Headers -API $APIName -message "Changed ProhibitSendReceiveQuota for $Username - $($Quota)" -Sev 'Info' -tenant $TenantFilter
+        }
+        if ($Request.Body.IssueWarningQuota) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; IssueWarningQuota = $Quota }
+            "Changed IssueWarningQuota for $Username - $($Quota)"
+            Write-LogMessage -headers $Headers -API $APIName -message "Changed IssueWarningQuota for $Username - $($Quota)" -Sev 'Info' -tenant $TenantFilter
+        }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $body = [pscustomobject]@{'Results' = @("Could not adjust mailbox quota: $($_.Exception.message)") }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not adjust mailbox quota for $($Username)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Results = "Could not adjust mailbox quota for $($Username). Error: $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

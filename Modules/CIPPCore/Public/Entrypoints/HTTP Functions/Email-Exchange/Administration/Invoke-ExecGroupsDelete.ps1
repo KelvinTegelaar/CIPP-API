@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGroupsDelete {
+function Invoke-ExecGroupsDelete {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,17 +20,17 @@ Function Invoke-ExecGroupsDelete {
     $ID = $Request.Query.id ?? $Request.Body.id
     $DisplayName = $Request.Query.displayName ?? $Request.Body.displayName
 
-    Try {
+    try {
         $Result = Remove-CIPPGroup -ID $ID -GroupType $GroupType -TenantFilter $TenantFilter -DisplayName $DisplayName -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = "$($_.Exception.Message)"
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Result) }
+    }
 
 }

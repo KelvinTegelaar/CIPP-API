@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecEnableArchive {
+function Invoke-ExecEnableArchive {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,19 +19,17 @@ Function Invoke-ExecEnableArchive {
     $ID = $Request.Query.id ?? $Request.Body.id
     $UserName = $Request.Query.username ?? $Request.Body.username
 
-    Try {
-        $ResultsArch = Set-CIPPMailboxArchive -userid $ID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ArchiveEnabled $true -Username $UserName
-        if ($ResultsArch -like 'Failed to set archive*') { throw $ResultsArch }
+    try {
+        $ResultsArch = Set-CIPPMailboxArchive -UserID $ID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ArchiveEnabled $true -Username $UserName
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ResultsArch = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Results
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($ResultsArch) }
+    }
 
 }

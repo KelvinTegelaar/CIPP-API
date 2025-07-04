@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListmailboxPermissions {
+function Invoke-ListmailboxPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -56,8 +56,8 @@ Function Invoke-ListmailboxPermissions {
                     }
                 }
             }
-            if ($Perm.GrantSendonBehalfTo -ne $null) {
-                $Perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
+            if ($null -ne $Perm.GrantSendOnBehalfTo) {
+                $Perm.GrantSendOnBehalfTo | ForEach-Object { [PSCustomObject]@{
                         User        = $_
                         Permissions = 'SendOnBehalf'
                     }
@@ -70,9 +70,9 @@ Function Invoke-ListmailboxPermissions {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

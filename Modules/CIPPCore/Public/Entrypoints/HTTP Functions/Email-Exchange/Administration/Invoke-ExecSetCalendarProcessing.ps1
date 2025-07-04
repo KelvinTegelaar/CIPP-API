@@ -10,9 +10,11 @@ function Invoke-ExecSetCalendarProcessing {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecSetCalendarProcessing'
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $TenantFilter = $Request.Body.tenantFilter
     try {
         $cmdParams = @{
             Identity                       = $Request.Body.UPN
@@ -46,21 +48,20 @@ function Invoke-ExecSetCalendarProcessing {
             $cmdParams['AdditionalResponse'] = $Request.Body.additionalResponse
         }
 
-        $null = New-ExoRequest -tenantid $Request.Body.tenantFilter -cmdlet 'Set-CalendarProcessing' -cmdParams $cmdParams
-        
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CalendarProcessing' -cmdParams $cmdParams
+
         $Results = "Calendar processing settings for $($Request.Body.UPN) have been updated successfully"
-        Write-LogMessage -API $APIName -tenant $Request.Body.tenantFilter -message $Results -sev Info
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not update calendar processing settings for $($Request.Body.UPN). Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -API $APIName -tenant $Request.Body.tenantFilter -message $Results -sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Results }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

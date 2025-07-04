@@ -1,6 +1,6 @@
 ﻿using namespace System.Net
 
-Function Invoke-ExecSetMailboxRule {
+function Invoke-ExecSetMailboxRule {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -37,22 +37,25 @@ Function Invoke-ExecSetMailboxRule {
     } elseif ($Disable -eq $true) {
         $SetCIPPMailboxRuleParams.Add('Disable', $true)
     } else {
-        Write-LogMessage -headers $Headers -API $APIName -message 'No state provided for mailbox rule' -Sev 'Error' -tenant $TenantFilter
-        throw 'No state provided for mailbox rule'
-    }
-
-    $Results = Set-CIPPMailboxRule @SetCIPPMailboxRuleParams
-
-    if ($Results -like '*Could not set*') {
-        $StatusCode = [HttpStatusCode]::InternalServerError
-    } else {
-        $StatusCode = [HttpStatusCode]::OK
-    }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        $Results = 'No state provided for mailbox rule'
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -tenant $TenantFilter
+        $StatusCode = [HttpStatusCode]::BadRequest
+        return @{
             StatusCode = $StatusCode
-            Body       = @{ Results = $Results }
-        })
+            Body       = @{ Results = @($Results) }
+        }
+    }
 
+    try {
+        $Results = Set-CIPPMailboxRule @SetCIPPMailboxRuleParams
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $Results = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
+    }
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

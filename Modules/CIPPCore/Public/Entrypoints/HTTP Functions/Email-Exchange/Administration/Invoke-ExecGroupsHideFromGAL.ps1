@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGroupsHideFromGAL {
+function Invoke-ExecGroupsHideFromGAL {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,17 +20,16 @@ Function Invoke-ExecGroupsHideFromGAL {
     $GroupID = $Request.Query.ID ?? $Request.Body.ID
     $HideFromGAL = $Request.Query.HideFromGAL ?? $Request.Body.HideFromGAL
 
-    Try {
+    try {
         $Result = Set-CIPPGroupGAL -Id $GroupID -TenantFilter $TenantFilter -GroupType $GroupType -HiddenString $HideFromGAL -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = "$($_.Exception.Message)"
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Result) }
+    }
 
 }

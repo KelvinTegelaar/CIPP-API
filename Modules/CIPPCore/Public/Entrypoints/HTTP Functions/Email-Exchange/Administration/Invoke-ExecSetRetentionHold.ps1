@@ -10,7 +10,7 @@ function Invoke-ExecSetRetentionHold {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with the query or body of the request
     $TenantFilter = $Request.Body.tenantFilter
@@ -18,33 +18,22 @@ function Invoke-ExecSetRetentionHold {
     $Identity = $Request.Body.Identity
     $UserPrincipalName = $Request.Body.UPN
 
-    # Set the parameters for the EXO request
-    $ExoRequest = @{
-        tenantid  = $TenantFilter
-        cmdlet    = 'Set-Mailbox'
-        cmdParams = @{
-            Identity              = $Identity
-            RetentionHoldEnabled = $RetentionHoldState
-        }
-    }
-
     # Execute the EXO request
     try {
-        $null = New-ExoRequest @ExoRequest
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Identity; RetentionHoldEnabled = $RetentionHoldState }
         $Results = "Retention hold for $UserPrincipalName with Id $Identity has been set to $RetentionHoldState"
-        
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -sev Info
+
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -headers $Headers -sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not set retention hold for $UserPrincipalName with Id $Identity to $RetentionHoldState. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -sev Error -LogData $ErrorMessage
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -headers $Headers -sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Results }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }
