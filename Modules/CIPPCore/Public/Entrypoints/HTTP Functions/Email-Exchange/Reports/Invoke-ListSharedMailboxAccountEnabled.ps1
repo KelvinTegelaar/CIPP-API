@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListSharedMailboxAccountEnabled {
+function Invoke-ListSharedMailboxAccountEnabled {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -28,25 +28,25 @@ Function Invoke-ListSharedMailboxAccountEnabled {
             if ($User) {
                 # Return all shared mailboxes with license information
                 [PSCustomObject]@{
-                    UserPrincipalName = $User.userPrincipalName
-                    displayName = $User.displayName
-                    givenName = $User.givenName
-                    surname = $User.surname
-                    accountEnabled = $User.accountEnabled
-                    assignedLicenses = $User.assignedLicenses
-                    id = $User.id
+                    UserPrincipalName     = $User.userPrincipalName
+                    displayName           = $User.displayName
+                    givenName             = $User.givenName
+                    surname               = $User.surname
+                    accountEnabled        = $User.accountEnabled
+                    assignedLicenses      = $User.assignedLicenses
+                    id                    = $User.id
                     onPremisesSyncEnabled = $User.onPremisesSyncEnabled
                 }
             }
         }
     } catch {
-        Write-LogMessage -API 'Tenant' -tenant $TenantFilter -message "Shared Mailbox List on $($TenantFilter). Error: $($_.exception.message)" -sev 'Error'
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Shared Mailbox List on $($TenantFilter). Error: $($ErrorMessage.NormalizedError)" -headers $Headers -sev 'Error'
     }
     $GraphRequest = $SharedMailboxDetails
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($GraphRequest)
+    }
 
 }

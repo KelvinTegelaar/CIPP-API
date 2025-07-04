@@ -14,7 +14,7 @@ function Invoke-ListAntiPhishingFilters {
 
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $Policies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AntiPhishPolicy' | Select-Object -Property *
     $Rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AntiPhishRule' | Select-Object -Property *
 
@@ -24,9 +24,8 @@ function Invoke-ListAntiPhishingFilters {
     @{ Name = 'RecipientDomainIs'; Expression = { foreach ($item in $Rules) { if ($item.AntiPhishPolicy -eq $_.Name) { $item.RecipientDomainIs } } } },
     @{ Name = 'State'; Expression = { foreach ($item in $Rules) { if ($item.AntiPhishPolicy -eq $_.Name) { $item.State } } } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Output
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Output
+    }
 }

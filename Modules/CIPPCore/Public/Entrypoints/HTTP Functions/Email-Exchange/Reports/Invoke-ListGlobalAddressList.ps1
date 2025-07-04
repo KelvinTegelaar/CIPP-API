@@ -1,6 +1,6 @@
 ﻿using namespace System.Net
 
-Function Invoke-ListGlobalAddressList {
+function Invoke-ListGlobalAddressList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -27,10 +27,9 @@ Function Invoke-ListGlobalAddressList {
         $GAL = $ErrorMessage.NormalizedError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GAL)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GAL)
+    }
 
 }
