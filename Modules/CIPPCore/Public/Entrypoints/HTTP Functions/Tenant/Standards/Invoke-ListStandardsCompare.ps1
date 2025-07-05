@@ -10,6 +10,9 @@ function Invoke-ListStandardsCompare {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -TableName 'CippStandardsReports'
     $TenantFilter = $Request.Query.tenantFilter
@@ -57,7 +60,7 @@ function Invoke-ListStandardsCompare {
             $HexEncodedName = $Matches[2]
             $Chars = [System.Collections.Generic.List[char]]::new()
             for ($i = 0; $i -lt $HexEncodedName.Length; $i += 2) {
-                $Chars.Add([char][Convert]::ToInt32($HexEncodedName.Substring($i,2),16))
+                $Chars.Add([char][Convert]::ToInt32($HexEncodedName.Substring($i, 2), 16))
             }
             $FieldName = "$Prefix$(-join $Chars)"
         }
@@ -90,9 +93,8 @@ function Invoke-ListStandardsCompare {
         $Results.Add($TenantStandard)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Results)
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Results)
+    }
 }

@@ -32,14 +32,11 @@ function Invoke-ExecEditCalendarPermissions {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
-        Write-Warning "Error in ExecEditCalendarPermissions: $($_.Exception.Message)"
-        Write-Information $_.InvocationInfo.PositionMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{Results = $Result }
+    }
 }

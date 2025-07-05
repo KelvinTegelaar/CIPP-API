@@ -36,16 +36,14 @@ function Invoke-ExecDeleteSafeLinksPolicy {
                 $null = New-ExoRequest @ExoRequestRuleParam
                 $ResultMessages.Add("Successfully deleted SafeLinks rule '$RuleName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully deleted SafeLinks rule '$RuleName'" -Sev 'Info'
-            }
-            catch {
+            } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $ResultMessages.Add("Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
             }
-        }
-        else {
-            $ResultMessages.Add("No rule name provided, skipping rule deletion") | Out-Null
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No rule name provided, skipping rule deletion" -Sev 'Info'
+        } else {
+            $ResultMessages.Add('No rule name provided, skipping rule deletion') | Out-Null
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message 'No rule name provided, skipping rule deletion' -Sev 'Info'
         }
 
         # Only try to delete the policy if a name was provided
@@ -63,32 +61,28 @@ function Invoke-ExecDeleteSafeLinksPolicy {
                 $null = New-ExoRequest @ExoRequestPolicyParam
                 $ResultMessages.Add("Successfully deleted SafeLinks policy '$PolicyName'") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully deleted SafeLinks policy '$PolicyName'" -Sev 'Info'
-            }
-            catch {
+            } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $ResultMessages.Add("Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
             }
-        }
-        else {
-            $ResultMessages.Add("No policy name provided, skipping policy deletion") | Out-Null
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No policy name provided, skipping policy deletion" -Sev 'Info'
+        } else {
+            $ResultMessages.Add('No policy name provided, skipping policy deletion') | Out-Null
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message 'No policy name provided, skipping policy deletion' -Sev 'Info'
         }
 
         # Combine all result messages
-        $Result = $ResultMessages -join " | "
+        $Result = $ResultMessages -join ' | '
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "An unexpected error occurred: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

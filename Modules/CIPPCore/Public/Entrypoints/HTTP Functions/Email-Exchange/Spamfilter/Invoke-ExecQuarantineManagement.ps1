@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecQuarantineManagement {
+function Invoke-ExecQuarantineManagement {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,11 +15,8 @@ Function Invoke-ExecQuarantineManagement {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-
-
-
     # Interact with query parameters or the body of the request.
-    Try {
+    try {
         $TenantFilter = $Request.Body.tenantFilter | Select-Object -First 1
         $params = @{
             AllowSender  = [boolean]$Request.Body.AllowSender
@@ -31,17 +28,18 @@ Function Invoke-ExecQuarantineManagement {
         } else {
             $params['Identities'] = $Request.Body.Identity
         }
-        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $Params
-        $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $Params
+        $Result = "Successfully processed $($Request.Body.Identity)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to process Quarantine Management: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

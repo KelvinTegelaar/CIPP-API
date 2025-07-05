@@ -34,8 +34,8 @@ function Invoke-AddSharedMailbox {
 
         # Block sign-in for the mailbox
         try {
-            $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APIName -Headers $Headers -AccountEnabled $false
-            $Results.Add("Blocked sign-in for shared mailbox $Email")
+            $SignInState = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APIName -Headers $Headers -AccountEnabled $false
+            $Results.Add($SignInState)
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Message = "Failed to block sign-in for shared mailbox $Email Error: $($ErrorMessage.NormalizedError)"
@@ -69,14 +69,12 @@ function Invoke-AddSharedMailbox {
         $Message = "Failed to create shared mailbox. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = @($Results) }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 
 }

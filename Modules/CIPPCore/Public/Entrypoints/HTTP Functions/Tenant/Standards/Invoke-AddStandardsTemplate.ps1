@@ -14,14 +14,14 @@ function Invoke-AddStandardsTemplate {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
+    $GUID = $Request.Body.GUID ? $Request.Body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
     #updatedAt    = (Get-Date).ToUniversalTime()
-    $request.body | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
-    $request.body | Add-Member -NotePropertyName 'createdAt' -NotePropertyValue ($Request.body.createdAt ? $Request.body.createdAt : (Get-Date).ToUniversalTime()) -Force
-    $Request.body | Add-Member -NotePropertyName 'updatedBy' -NotePropertyValue ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails -Force
-    $Request.body | Add-Member -NotePropertyName 'updatedAt' -NotePropertyValue (Get-Date).ToUniversalTime() -Force
-    $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject ($Request.body))
+    $Request.Body | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
+    $Request.Body | Add-Member -NotePropertyName 'createdAt' -NotePropertyValue ($Request.Body.createdAt ? $Request.Body.createdAt : (Get-Date).ToUniversalTime()) -Force
+    $Request.Body | Add-Member -NotePropertyName 'updatedBy' -NotePropertyValue ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails -Force
+    $Request.Body | Add-Member -NotePropertyName 'updatedAt' -NotePropertyValue (Get-Date).ToUniversalTime() -Force
+    $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject ($Request.Body))
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
     Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -39,13 +39,12 @@ function Invoke-AddStandardsTemplate {
     $ConfigTable = Get-CIPPTable -tablename 'Config'
     Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
 
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Standards Template $($Request.body.templateName) with GUID $GUID added/edited." -Sev 'Info'
-    $body = [pscustomobject]@{'Results' = 'Successfully added template'; Metadata = @{id = $GUID } }
+    $Result = "Standards Template $($Request.Body.templateName) with GUID $GUID added/edited."
+    $StatusCode = [HttpStatusCode]::OK
+    Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result; Metadata = @{ id = $GUID } }
+    }
 }

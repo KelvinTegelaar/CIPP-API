@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListIntuneIntents {
+function Invoke-ListIntuneIntents {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -26,10 +26,8 @@ Function Invoke-ListIntuneIntents {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

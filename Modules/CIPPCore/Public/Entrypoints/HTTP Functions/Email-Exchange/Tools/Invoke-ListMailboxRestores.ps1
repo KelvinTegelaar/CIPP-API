@@ -12,16 +12,20 @@ function Invoke-ListMailboxRestores {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
+    $Identity = $Request.Query.Identity
+    $IncludeReport = [bool]$Request.Query.IncludeReport
+    $Statistics = [bool]$Request.Query.Statistics
+
     try {
-        if ([bool]$Request.Query.Statistics -eq $true -and $Request.Query.Identity) {
+        if ($Statistics -eq $true -and $Identity) {
             $ExoRequest = @{
                 tenantid  = $TenantFilter
                 cmdlet    = 'Get-MailboxRestoreRequestStatistics'
-                cmdParams = @{ Identity = $Request.Query.Identity }
+                cmdParams = @{ Identity = $Identity }
             }
 
-            if ([bool]$Request.Query.IncludeReport -eq $true) {
+            if ($IncludeReport -eq $true) {
                 $ExoRequest.cmdParams.IncludeReport = $true
             }
             $GraphRequest = New-ExoRequest @ExoRequest
@@ -39,12 +43,11 @@ function Invoke-ListMailboxRestores {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecStandardsRun {
+function Invoke-ExecStandardsRun {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -27,7 +27,6 @@ Function Invoke-ExecStandardsRun {
     } | Where-Object {
         $_.guid -like $TemplateId
     }
-
 
 
     $ConfigTable = Get-CIPPTable -tablename Config
@@ -63,12 +62,8 @@ Function Invoke-ExecStandardsRun {
         }
     }
 
-    $Results = [pscustomobject]@{'Results' = "$Results" }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

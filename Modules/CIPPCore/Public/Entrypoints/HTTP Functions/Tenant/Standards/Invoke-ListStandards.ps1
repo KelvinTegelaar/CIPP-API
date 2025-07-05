@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListStandards {
+function Invoke-ListStandards {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,8 +16,6 @@ Function Invoke-ListStandards {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-
-
     if ($Request.Query.ShowConsolidated -eq $true) {
         $StandardQuery = @{
             TenantFilter = $TenantFilter
@@ -50,10 +48,9 @@ Function Invoke-ListStandards {
 
         $CurrentStandards = ConvertTo-Json -InputObject @($CurrentStandards) -Depth 15 -Compress
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $CurrentStandards
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $CurrentStandards
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListHaloClients {
+function Invoke-ListHaloClients {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,7 +13,6 @@ Function Invoke-ListHaloClients {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
 
     # Interact with query parameters or the body of the request.
     try {
@@ -41,10 +40,8 @@ Function Invoke-ListHaloClients {
         $HaloClients = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($HaloClients)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($HaloClients)
+    }
 }

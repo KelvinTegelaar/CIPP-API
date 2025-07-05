@@ -8,7 +8,11 @@ function Invoke-ExecSAMAppPermissions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
     switch ($Request.Query.Action) {
         'Update' {
@@ -25,22 +29,24 @@ function Invoke-ExecSAMAppPermissions {
                 $Body = @{
                     'Results' = 'Permissions Updated'
                 }
-                Write-LogMessage -headers $Request.Headers -API 'ExecSAMAppPermissions' -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
+                Write-LogMessage -headers $Headers -API $APIName -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
+                $StatusCode = [HttpStatusCode]::OK
             } catch {
                 $Body = @{
                     'Results' = $_.Exception.Message
                 }
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         default {
             $Body = Get-CippSamPermissions
+            $StatusCode = [HttpStatusCode]::OK
         }
     }
 
-
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ConvertTo-Json -Depth 10 -InputObject $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = ConvertTo-Json -Depth 10 -InputObject $Body
+    }
 
 }

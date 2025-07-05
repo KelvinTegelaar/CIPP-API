@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRestoreDeleted {
+function Invoke-ExecRestoreDeleted {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -39,10 +39,8 @@ Function Invoke-ExecRestoreDeleted {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

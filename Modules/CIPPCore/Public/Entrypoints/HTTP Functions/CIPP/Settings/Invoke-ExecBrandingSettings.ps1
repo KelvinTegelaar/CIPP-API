@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecBrandingSettings {
+function Invoke-ExecBrandingSettings {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,7 +15,6 @@ Function Invoke-ExecBrandingSettings {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $StatusCode = [HttpStatusCode]::OK
-    @{}
 
     try {
         $Table = Get-CIPPTable -TableName Config
@@ -72,7 +71,7 @@ Function Invoke-ExecBrandingSettings {
                             $StatusCode = [HttpStatusCode]::BadRequest
                             'Error: Invalid base64 image data: ' + $_.Exception.Message
                         }
-                    } elseif ($Logo -eq $null -or $Logo -eq '') {
+                    } elseif ([string]::IsNullOrWhiteSpace($Logo)) {
                         $BrandingConfig | Add-Member -MemberType NoteProperty -Name 'logo' -Value $null -Force
                         $Updated = $true
                     }
@@ -83,7 +82,7 @@ Function Invoke-ExecBrandingSettings {
                     $BrandingConfig.RowKey = 'BrandingSettings'
 
                     Add-CIPPAzDataTableEntity @Table -Entity $BrandingConfig -Force | Out-Null
-                    Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message 'Updated branding settings' -Sev 'Info'
+                    Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'Updated branding settings' -Sev 'Info'
                     'Successfully updated branding settings'
                 } else {
                     $StatusCode = [HttpStatusCode]::BadRequest
@@ -99,7 +98,7 @@ Function Invoke-ExecBrandingSettings {
                 }
 
                 Add-CIPPAzDataTableEntity @Table -Entity $DefaultConfig -Force | Out-Null
-                Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message 'Reset branding settings to defaults' -Sev 'Info'
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'Reset branding settings to defaults' -Sev 'Info'
                 'Successfully reset branding settings to defaults'
             }
             default {
@@ -108,16 +107,13 @@ Function Invoke-ExecBrandingSettings {
             }
         }
     } catch {
-        Write-LogMessage -API $APIName -tenant 'Global' -headers $Request.Headers -message "Branding Settings API failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "Branding Settings API failed: $($_.Exception.Message)" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
         "Failed to process branding settings: $($_.Exception.Message)"
     }
 
-    $body = [pscustomobject]@{'Results' = $Results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

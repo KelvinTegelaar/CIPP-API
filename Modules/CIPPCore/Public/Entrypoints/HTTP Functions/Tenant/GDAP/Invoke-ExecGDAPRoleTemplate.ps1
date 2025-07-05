@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGDAPRoleTemplate {
+function Invoke-ExecGDAPRoleTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -88,10 +88,8 @@ Function Invoke-ExecGDAPRoleTemplate {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

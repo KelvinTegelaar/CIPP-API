@@ -27,7 +27,7 @@ function Invoke-AddGroupTemplate {
             '*security*' { 'security' }
             default { $Request.Body.groupType }
         }
-        if ($Request.body.membershipRules) { $groupType = 'dynamic' }
+        if ($Request.Body.membershipRules) { $groupType = 'dynamic' }
         $object = [PSCustomObject]@{
             displayName     = $Request.Body.displayName
             description     = $Request.Body.description
@@ -44,19 +44,18 @@ function Invoke-AddGroupTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'GroupTemplate'
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Group template named $($Request.Body.displayname) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -message "Created Group template named $($Request.Body.displayname) with GUID $GUID" -Sev 'Debug'
 
-        $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+        $Results = 'Successfully added template'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Group Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Group Template Creation failed: $($_.Exception.Message)" }
+        Write-LogMessage -headers $Headers -API $APIName -message "Group Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
+        $Results = "Group Template Creation failed: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

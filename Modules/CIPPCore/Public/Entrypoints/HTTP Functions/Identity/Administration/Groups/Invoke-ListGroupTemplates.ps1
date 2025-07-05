@@ -15,31 +15,33 @@ function Invoke-ListGroupTemplates {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    Write-Host $Request.query.id
+    try {
+        #List new policies
+        $Table = Get-CippTable -tablename 'templates'
+        $Filter = "PartitionKey eq 'GroupTemplate'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $data = $_.JSON | ConvertFrom-Json
+            [PSCustomObject]@{
+                displayName     = $data.displayName
+                description     = $data.description
+                groupType       = $data.groupType
+                membershipRules = $data.membershipRules
+                allowExternal   = $data.allowExternal
+                username        = $data.username
+                GUID            = $_.RowKey
+            }
+        } | Sort-Object -Property displayName
 
-    #List new policies
-    $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'GroupTemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json
-        [PSCustomObject]@{
-            displayName     = $data.displayName
-            description     = $data.description
-            groupType       = $data.groupType
-            membershipRules = $data.membershipRules
-            allowExternal   = $data.allowExternal
-            username        = $data.username
-            GUID            = $_.RowKey
-        }
-    } | Sort-Object -Property displayName
-
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
+        if ($Request.Query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.Query.id }
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $Templates = $_.Exception.Message
+    }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Templates)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Templates)
+    }
 }

@@ -8,6 +8,10 @@ function Invoke-ExecRemoveTenant {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     if ($Request.Body.TenantID -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
         $Body = @{Results = "Tenant ID $($Request.Body.TenantID) is not a valid GUID." }
         $StatusCode = [HttpStatusCode]::BadRequest
@@ -29,8 +33,8 @@ function Invoke-ExecRemoveTenant {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

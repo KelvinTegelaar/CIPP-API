@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveUser {
+function Invoke-RemoveUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,7 +19,13 @@ Function Invoke-RemoveUser {
     $UserID = $Request.Query.ID ?? $Request.Body.ID
     $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName
 
-    if (!$UserID) { exit }
+    if (!$UserID) {
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ Results = 'No User ID provided' }
+        }
+    }
+
     try {
         $Result = Remove-CIPPUser -UserID $UserID -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         $StatusCode = [HttpStatusCode]::OK
@@ -29,9 +35,8 @@ Function Invoke-RemoveUser {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

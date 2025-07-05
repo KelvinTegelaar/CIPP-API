@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSchedulerBillingRun {
+function Invoke-ExecSchedulerBillingRun {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,7 +22,7 @@ Function Invoke-ExecSchedulerBillingRun {
         foreach ($ConfigItem in $Configuration.PSObject.Properties.Name) {
             switch ($ConfigItem) {
                 'Gradient' {
-                    If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
+                    if ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
                         New-GradientServiceSyncRun
                     }
                 }

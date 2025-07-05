@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSpamFilterTemplate {
+function Invoke-AddSpamFilterTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,7 +20,7 @@ Function Invoke-AddSpamFilterTemplate {
             Write-Host 'PowerShellCommand'
             $Request.Body.PowerShellCommand | ConvertFrom-Json
         } else {
-        ([pscustomobject]$Request.Body | Select-Object name, AddXHeaderValue, AdminDisplayName, AllowedSenderDomains, AllowedSenders, BlockedSenderDomains, BlockedSenders, BulkQuarantineTag, BulkSpamAction, BulkThreshold, Confirm, DownloadLink, EnableEndUserSpamNotifications, EnableLanguageBlockList, EnableRegionBlockList, EndUserSpamNotificationCustomFromAddress, EndUserSpamNotificationCustomFromName, EndUserSpamNotificationCustomSubject, EndUserSpamNotificationFrequency, EndUserSpamNotificationLanguage, EndUserSpamNotificationCustomFromAddress, HighConfidencePhishAction, HighConfidencePhishQuarantineTag, HighConfidenceSpamAction, HighConfidenceSpamQuarantineTag, IncreaseScoreWithBizOrInfoUrls, IncreaseScoreWithImageLinks, IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, InlineSafetyTipsEnabled, LanguageBlockList, MarkAsSpamBulkMail, MarkAsSpamEmbedTagsInHtml, MarkAsSpamEmptyMessages, MarkAsSpamFormTagsInHtml, MarkAsSpamFramesInHtml, MarkAsSpamFromAddressAuthFail, MarkAsSpamJavaScriptInHtml, MarkAsSpamNdrBackscatter, MarkAsSpamObjectTagsInHtml, MarkAsSpamSensitiveWordList, MarkAsSpamSpfRecordHardFail, MarkAsSpamWebBugsInHtml, ModifySubjectValue, PhishQuarantineTag, PhishSpamAction, PhishZapEnabled, QuarantineRetentionPeriod, RecommendedPolicyType, RedirectToRecipients, RegionBlockList, SpamAction, SpamQuarantineTag, SpamZapEnabled, TestModeAction, TestModeBccToRecipients ) | ForEach-Object {
+            ([pscustomobject]$Request.Body | Select-Object name, AddXHeaderValue, AdminDisplayName, AllowedSenderDomains, AllowedSenders, BlockedSenderDomains, BlockedSenders, BulkQuarantineTag, BulkSpamAction, BulkThreshold, Confirm, DownloadLink, EnableEndUserSpamNotifications, EnableLanguageBlockList, EnableRegionBlockList, EndUserSpamNotificationCustomFromAddress, EndUserSpamNotificationCustomFromName, EndUserSpamNotificationCustomSubject, EndUserSpamNotificationFrequency, EndUserSpamNotificationLanguage, EndUserSpamNotificationCustomFromAddress, HighConfidencePhishAction, HighConfidencePhishQuarantineTag, HighConfidenceSpamAction, HighConfidenceSpamQuarantineTag, IncreaseScoreWithBizOrInfoUrls, IncreaseScoreWithImageLinks, IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, InlineSafetyTipsEnabled, LanguageBlockList, MarkAsSpamBulkMail, MarkAsSpamEmbedTagsInHtml, MarkAsSpamEmptyMessages, MarkAsSpamFormTagsInHtml, MarkAsSpamFramesInHtml, MarkAsSpamFromAddressAuthFail, MarkAsSpamJavaScriptInHtml, MarkAsSpamNdrBackscatter, MarkAsSpamObjectTagsInHtml, MarkAsSpamSensitiveWordList, MarkAsSpamSpfRecordHardFail, MarkAsSpamWebBugsInHtml, ModifySubjectValue, PhishQuarantineTag, PhishSpamAction, PhishZapEnabled, QuarantineRetentionPeriod, RecommendedPolicyType, RedirectToRecipients, RegionBlockList, SpamAction, SpamQuarantineTag, SpamZapEnabled, TestModeAction, TestModeBccToRecipients ) | ForEach-Object {
                 $NonEmptyProperties = $_.PSObject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                 $_ | Select-Object -Property $NonEmptyProperties
             }
@@ -43,11 +43,8 @@ Function Invoke-AddSpamFilterTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

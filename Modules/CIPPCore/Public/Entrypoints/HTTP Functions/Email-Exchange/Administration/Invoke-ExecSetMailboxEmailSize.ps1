@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSetMailboxEmailSize {
+function Invoke-ExecSetMailboxEmailSize {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +12,7 @@ Function Invoke-ExecSetMailboxEmailSize {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $Tenant = $Request.Body.tenantFilter
@@ -36,14 +36,13 @@ Function Invoke-ExecSetMailboxEmailSize {
         $Result = Set-CippMaxEmailSize @Params
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = "$($_.Exception.Message)"
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ Results = $Result }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Result) }
+    }
 
 }

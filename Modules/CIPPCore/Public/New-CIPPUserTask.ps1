@@ -15,14 +15,14 @@ function New-CIPPUserTask {
         $Results.Add("Password: $($CreationResults.Password)")
     } catch {
         $Results.Add("Failed to create user. $($_.Exception.Message)" )
-        return @{'Results' = $Results }
+        return @{ Results = $Results }
     }
 
     try {
         if ($UserObj.licenses.value) {
             if ($UserObj.sherwebLicense.value) {
                 $License = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $null = $results.Add('Added Sherweb License, scheduling assignment')
+                $null = $Results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"

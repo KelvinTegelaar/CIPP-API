@@ -17,14 +17,14 @@ function Invoke-ExecAddAlert {
     $Severity = 'Alert'
 
     $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true -or $Request.Body.sendPsaNow -eq $true) {
-        $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
-        if ($Request.body.email -or $Request.body.webhook) {
+        $sev = ([pscustomobject]$Request.Body.Severity).value -join (',')
+        if ($Request.Body.email -or $Request.Body.webhook) {
             Write-Host 'found config, setting'
             $config = @{
-                email             = $Request.body.email
-                webhook           = $Request.body.webhook
-                onepertenant      = $Request.body.onePerTenant
-                logsToInclude     = $Request.body.logsToInclude
+                email             = $Request.Body.email
+                webhook           = $Request.Body.webhook
+                onepertenant      = $Request.Body.onePerTenant
+                logsToInclude     = $Request.Body.logsToInclude
                 sendtoIntegration = $true
                 sev               = $sev
             }
@@ -70,8 +70,8 @@ function Invoke-ExecAddAlert {
         Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
         'Successfully generated alert.'
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Result
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Result
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserDevices {
+function Invoke-ListUserDevices {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -47,14 +47,16 @@ Function Invoke-ListUserDevices {
         @{ Name = 'operatingSystemVersion'; Expression = { $_.'operatingSystemVersion' } },
         @{ Name = 'trustType'; Expression = { $_.'trustType' } },
         @{ Name = 'EPMID'; Expression = { $(Get-EPMID -deviceID $_.'deviceId' -EPMDevices $EPMDevices) } }
+
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequest = @()
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

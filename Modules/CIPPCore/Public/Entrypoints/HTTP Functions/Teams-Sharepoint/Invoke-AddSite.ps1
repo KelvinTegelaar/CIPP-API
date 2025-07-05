@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSite {
+function Invoke-AddSite {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,17 +20,25 @@ Function Invoke-AddSite {
     $SharePointObj = $Request.Body
 
     try {
-        $Result = New-CIPPSharepointSite -Headers $Headers -SiteName $SharePointObj.siteName -SiteDescription $SharePointObj.siteDescription -SiteOwner $SharePointObj.siteOwner.value -TemplateName $SharePointObj.templateName.value -SiteDesign $SharePointObj.siteDesign.value -SensitivityLabel $SharePointObj.sensitivityLabel -TenantFilter $TenantFilter
+        $SharePointParams = @{
+            Headers          = $Headers
+            SiteName         = $SharePointObj.siteName
+            SiteDescription  = $SharePointObj.siteDescription
+            SiteOwner        = $SharePointObj.siteOwner.value
+            TemplateName     = $SharePointObj.templateName.value
+            SiteDesign       = $SharePointObj.siteDesign.value
+            SensitivityLabel = $SharePointObj.sensitivityLabel
+            TenantFilter     = $TenantFilter
+        }
+        $Result = New-CIPPSharepointSite @SharePointParams
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
-        $Result = "Failed to create SharePoint Site: $($_.Exception.Message)"
+        $Result = $_.Exception.Message
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

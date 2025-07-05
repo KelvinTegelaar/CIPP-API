@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserPhoto {
+function Invoke-ListUserPhoto {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -32,11 +32,9 @@ Function Invoke-ListUserPhoto {
     #convert body from base64 to byte array
     $Body = [Convert]::FromBase64String($ImageData.body)
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode  = [HttpStatusCode]::OK
-            ContentType = $ImageData.headers.'Content-Type'
-            Body        = $Body
-        })
-
+    return @{
+        StatusCode  = [HttpStatusCode]::OK
+        ContentType = $ImageData.headers.'Content-Type'
+        Body        = $Body
+    }
 }

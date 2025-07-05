@@ -11,11 +11,11 @@ function Invoke-AddGroup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $SelectedTenants = if ('AllTenants' -in $SelectedTenants) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev Debug
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-    $GroupObject = $Request.body
+    $SelectedTenants = if ('AllTenants' -in $SelectedTenants) { (Get-Tenants).defaultDomainName } else { $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter }
+    $GroupObject = $Request.Body
 
     $Results = foreach ($tenant in $SelectedTenants) {
         try {
@@ -82,19 +82,18 @@ function Invoke-AddGroup {
             }
 
             "Successfully created group $($GroupObject.displayName) for $($tenant)"
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Group creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-            "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed to create group $($GroupObject.displayName) for $($tenant). $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+            "Failed to create group $($GroupObject.displayName) for $($tenant). $($ErrorMessage.NormalizedError)"
             $StatusCode = [HttpStatusCode]::InternalServerError
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = @($Results) }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

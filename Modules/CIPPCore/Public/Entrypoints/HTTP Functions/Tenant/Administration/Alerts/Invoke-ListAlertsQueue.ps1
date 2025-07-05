@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListAlertsQueue {
+function Invoke-ListAlertsQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -93,10 +93,9 @@ Function Invoke-ListAlertsQueue {
     }
 
     $finalList = ConvertTo-Json -InputObject @($AllTasksArrayList) -Depth 10
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $finalList
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $finalList
+    }
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListSharepointQuota {
+function Invoke-ListSharepointQuota {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -44,10 +44,8 @@ Function Invoke-ListSharepointQuota {
 
     $StatusCode = [HttpStatusCode]::OK
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $SharePointQuotaDetails
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $SharePointQuotaDetails
+    }
 }

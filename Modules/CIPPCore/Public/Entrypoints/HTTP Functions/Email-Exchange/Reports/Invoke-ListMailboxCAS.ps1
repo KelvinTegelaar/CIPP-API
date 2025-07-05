@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMailboxCAS {
+function Invoke-ListMailboxCAS {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,9 +16,9 @@ Function Invoke-ListMailboxCAS {
 
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox" -Tenantid $tenantfilter -scope ExchangeOnline | Select-Object @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+        $GraphRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/CasMailbox" -Tenantid $TenantFilter -scope ExchangeOnline | Select-Object @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
         @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
         @{ Name = 'ecpenabled'; Expression = { $_.'ECPEnabled' } },
         @{ Name = 'owaenabled'; Expression = { $_.'OWAEnabled' } },
@@ -33,10 +33,10 @@ Function Invoke-ListMailboxCAS {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

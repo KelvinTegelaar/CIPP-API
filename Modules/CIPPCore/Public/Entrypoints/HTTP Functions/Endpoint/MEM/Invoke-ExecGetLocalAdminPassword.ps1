@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGetLocalAdminPassword {
+function Invoke-ExecGetLocalAdminPassword {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,21 +11,21 @@ Function Invoke-ExecGetLocalAdminPassword {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $DeviceGuid = $Request.Body.GUID
+    $TenantFilter = $Request.Body.tenantFilter
     try {
-        $GraphRequest = Get-CIPPLapsPassword -device $($request.body.guid) -tenantFilter $Request.body.TenantFilter -APIName $APINAME -Headers $Request.Headers
-        $Body = [pscustomobject]@{'Results' = $GraphRequest }
-
+        $Result = Get-CIPPLapsPassword -Device $DeviceGuid -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Body = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }
-
+        $Result = "$($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

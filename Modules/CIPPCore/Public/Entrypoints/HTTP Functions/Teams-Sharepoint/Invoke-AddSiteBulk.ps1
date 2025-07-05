@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSiteBulk {
+function Invoke-AddSiteBulk {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,16 +19,24 @@ Function Invoke-AddSiteBulk {
 
     foreach ($sharePointObj in $Request.Body.bulkSites) {
         try {
-            $SharePointSite = New-CIPPSharepointSite -Headers $Headers -SiteName $sharePointObj.siteName -SiteDescription $sharePointObj.siteDescription -SiteOwner $sharePointObj.siteOwner -TemplateName $sharePointObj.templateName -SiteDesign $sharePointObj.siteDesign -SensitivityLabel $sharePointObj.sensitivityLabel -TenantFilter $Request.body.tenantFilter
+            $SharePointParams = @{
+                Headers          = $Headers
+                SiteName         = $sharePointObj.siteName
+                SiteDescription  = $sharePointObj.siteDescription
+                SiteOwner        = $sharePointObj.siteOwner
+                TemplateName     = $sharePointObj.templateName
+                SiteDesign       = $sharePointObj.siteDesign
+                SensitivityLabel = $sharePointObj.sensitivityLabel
+                TenantFilter     = $Request.body.tenantFilter
+            }
+            $SharePointSite = New-CIPPSharepointSite @SharePointParams
             $Results.Add($SharePointSite)
         } catch {
             $Results.Add("Failed to create $($sharePointObj.siteName) Error message: $($_.Exception.Message)")
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = $Results }
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

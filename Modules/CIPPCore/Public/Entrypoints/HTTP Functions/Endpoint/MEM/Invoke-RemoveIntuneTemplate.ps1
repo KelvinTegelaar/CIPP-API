@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveIntuneTemplate {
+function Invoke-RemoveIntuneTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,7 +14,7 @@ Function Invoke-RemoveIntuneTemplate {
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.Query.ID ?? $Request.Body.ID
+    $ID = $Request.Query.ID ?? $Request.Body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
         Write-Host $ID
@@ -24,20 +24,17 @@ Function Invoke-RemoveIntuneTemplate {
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         $Result = "Removed Intune Template with ID $ID"
-        Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Intune template $($ID): $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

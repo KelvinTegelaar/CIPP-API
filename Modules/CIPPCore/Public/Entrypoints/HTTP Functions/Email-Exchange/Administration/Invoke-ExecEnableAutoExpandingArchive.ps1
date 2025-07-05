@@ -25,8 +25,8 @@
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = "$Result" }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Result) }
+    }
 }

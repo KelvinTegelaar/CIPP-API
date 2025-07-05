@@ -11,10 +11,10 @@ function Invoke-ExecJITAdmin {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    $TenantFilter = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $TenantFilter = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
     if ($Request.Query.Action -eq 'List') {
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         if ($Request.Query.TenantFilter -ne 'AllTenants') {
@@ -125,14 +125,14 @@ function Invoke-ExecJITAdmin {
         if ($Request.Body.existingUser.value -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
         }
-        Write-LogMessage -Headers $User -API $APIName -message "Executing JIT Admin for $Username" -tenant $TenantFilter -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APIName -message "Executing JIT Admin for $Username" -tenant $TenantFilter -Sev 'Info'
 
         $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
         $Results = [System.Collections.Generic.List[string]]::new()
 
         if ($Request.Body.useraction -eq 'Create') {
-            Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
+            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.username)"
             $JITAdmin = @{
                 User         = @{
@@ -262,10 +262,8 @@ function Invoke-ExecJITAdmin {
         }
     }
 
-    # TODO - We should find a way to have this return a HTTP status code based on the success or failure of the operation. This also doesn't return the results of the operation in a Results hash table, like most of the rest of the API.
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

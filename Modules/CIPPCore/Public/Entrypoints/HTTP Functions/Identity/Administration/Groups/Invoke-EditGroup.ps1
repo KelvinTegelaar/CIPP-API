@@ -429,11 +429,8 @@ function Invoke-EditGroup {
         }
     }
 
-    $body = @{'Results' = @($Results) }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecEditMailboxPermissions {
+function Invoke-ExecEditMailboxPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,108 +12,120 @@ Function Invoke-ExecEditMailboxPermissions {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
-    $Username = $request.body.userID
-    $Tenantfilter = $request.body.tenantfilter
-    if ($username -eq $null) { exit }
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
-    $Results = [System.Collections.ArrayList]@()
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $RemoveFullAccess = ($Request.body.RemoveFullAccess).value
+    $Username = $Request.Body.userID
+    $TenantFilter = $Request.Body.tenantFilter
+    if ($null -eq $Username) { exit }
+    $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $TenantFilter).id
+    $Results = [System.Collections.Generic.List[string]]::new()
+
+    $RemoveFullAccess = ($Request.Body.RemoveFullAccess).value
     foreach ($RemoveUser in $RemoveFullAccess) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-mailboxpermission' -cmdParams @{Identity = $userid; user = $RemoveUser; accessRights = @('FullAccess'); }
-            $results.add("Removed $($removeuser) from $($username) Shared Mailbox permissions")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $($RemoveUser) from $($username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Remove-MailboxPermission' -cmdParams @{Identity = $UserID; User = $RemoveUser; AccessRights = @('FullAccess'); }
+            $Results.Add("Removed $($RemoveUser) from $($Username) Shared Mailbox permissions")
+            Write-LogMessage -headers $Headers -API $APIName -message "Removed $($RemoveUser) from $($Username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not remove mailbox permissions for $($removeuser) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not remove $($removeuser) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not remove mailbox permissions for $($RemoveUser) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
-    $AddFullAccess = ($Request.body.AddFullAccess).value
 
+    $AddFullAccess = ($Request.Body.AddFullAccess).value
     foreach ($UserAutomap in $AddFullAccess) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @('FullAccess'); automapping = $true }
-            $results.add( "Granted $($UserAutomap) access to $($username) Mailbox with automapping")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $($UserAutomap) access to $($username) Mailbox with automapping" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $UserID; User = $UserAutomap; AccessRights = @('FullAccess'); AutoMapping = $true }
+            $Results.Add("Granted $($UserAutomap) access to $($Username) Mailbox with AutoMapping")
+            Write-LogMessage -headers $Headers -API $APIName -message "Granted $($UserAutomap) access to $($Username) Mailbox with AutoMapping" -Sev 'Info' -tenant $TenantFilter
 
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add( "Could not add $($UserAutomap) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not add mailbox permissions for $($UserAutomap) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
-    $AddFullAccessNoAutoMap = ($Request.body.AddFullAccessNoAutoMap).value
 
+    $AddFullAccessNoAutoMap = ($Request.Body.AddFullAccessNoAutoMap).value
     foreach ($UserNoAutomap in $AddFullAccessNoAutoMap) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @('FullAccess'); automapping = $false }
-            $results.add( "Granted $UserNoAutomap access to $($username) Mailbox without automapping")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserNoAutomap access to $($username) Mailbox without automapping" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $UserID; User = $UserNoAutomap; AccessRights = @('FullAccess'); AutoMapping = $false }
+            $Results.Add("Granted $($UserNoAutomap) access to $($Username) Mailbox without AutoMapping")
+            Write-LogMessage -headers $Headers -API $APIName -message "Granted $($UserNoAutomap) access to $($Username) Mailbox without AutoMapping" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserNoAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not add $($UserNoAutomap) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not add mailbox permissions for $($UserNoAutomap) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
 
-    $AddSendAS = ($Request.body.AddSendAs).value
+    $AddSendAs = ($Request.Body.AddSendAs).value
 
-    foreach ($UserSendAs in $AddSendAS) {
+    foreach ($UserSendAs in $AddSendAs) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
-            $results.add( "Granted $UserSendAs access to $($username) with Send As permissions")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserSendAs access to $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Add-RecipientPermission' -cmdParams @{Identity = $UserID; Trustee = $UserSendAs; AccessRights = @('SendAs') }
+            $Results.Add("Granted $($UserSendAs) access to $($Username) with Send As permissions")
+            Write-LogMessage -headers $Headers -API $APIName -message "Granted $($UserSendAs) access to $($Username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not add $($UserSendAs) send-as permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not add mailbox permissions for $($UserSendAs) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
 
-    $RemoveSendAs = ($Request.body.RemoveSendAs).value
-
+    $RemoveSendAs = ($Request.Body.RemoveSendAs).value
     foreach ($UserSendAs in $RemoveSendAs) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
-            $results.add( "Removed $UserSendAs from $($username) with Send As permissions")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $UserSendAs from $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Remove-RecipientPermission' -cmdParams @{Identity = $UserID; Trustee = $UserSendAs; AccessRights = @('SendAs') }
+            $Results.Add("Removed $($UserSendAs) from $($Username) with Send As permissions")
+            Write-LogMessage -headers $Headers -API $APIName -message "Removed $($UserSendAs) from $($Username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not remove mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not remove $($UserSendAs) send-as permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not remove mailbox permissions for $($UserSendAs) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
 
-    $AddSendOnBehalf = ($Request.body.AddSendOnBehalf).value
 
+    $AddSendOnBehalf = ($Request.Body.AddSendOnBehalf).value
     foreach ($UserSendOnBehalf in $AddSendOnBehalf) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $UserSendOnBehalf }; }
-            $results.add( "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserID; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $UserSendOnBehalf }; }
+            $Results.Add("Granted $($UserSendOnBehalf) access to $($Username) with Send On Behalf Permissions")
+            Write-LogMessage -headers $Headers -API $APIName -message "Granted $($UserSendOnBehalf) access to $($Username) with Send On Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not add $($UserSendOnBehalf) send on behalf permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not add send on behalf permissions for $($UserSendOnBehalf) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
 
-    $RemoveSendOnBehalf = ($Request.body.RemoveSendOnBehalf).value
 
+    $RemoveSendOnBehalf = ($Request.Body.RemoveSendOnBehalf).value
     foreach ($UserSendOnBehalf in $RemoveSendOnBehalf) {
         try {
-            $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $UserSendOnBehalf }; }
-            $results.add( "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions")
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
+            $null = New-ExoRequest -Anchor $Username -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserID; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $UserSendOnBehalf }; }
+            $Results.Add("Removed $($UserSendOnBehalf) from $($Username) Send on Behalf Permissions")
+            Write-LogMessage -headers $Headers -API $APIName -message "Removed $($UserSendOnBehalf) from $($Username) Send on Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not Remove send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
-            $results.add("Could not remove $($UserSendOnBehalf) send on behalf permissions for $($username). Error: $($_.Exception.Message)")
+            $ErrorMessage = Get-CippException -Exception $_
+            $Message = "Could not remove send on behalf permissions for $($UserSendOnBehalf) on $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            $Results.Add($Message)
         }
     }
 
-    $body = [pscustomobject]@{'Results' = @($results) }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddAPDevice {
+function Invoke-AddAPDevice {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,16 +16,16 @@ Function Invoke-AddAPDevice {
 
 
 
-    $TenantFilter = (Get-Tenants | Where-Object { $_.defaultDomainName -eq $Request.body.TenantFilter.value }).customerId
-    $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { (New-Guid).GUID }
+    $TenantFilter = (Get-Tenants | Where-Object { $_.defaultDomainName -eq $Request.Body.TenantFilter.value }).customerId
+    $GroupName = if ($Request.Body.Groupname) { $Request.Body.Groupname } else { (New-Guid).GUID }
     Write-Host $GroupName
-    $rawDevices = $request.body.autopilotData
+    $rawDevices = $Request.Body.autopilotData
     $Devices = ConvertTo-Json @($rawDevices)
     $Result = try {
         $CurrentStatus = (New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$tenantfilter/DeviceBatches" -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
-        if ($groupname -in $CurrentStatus.items.id) {
+        if ($GroupName -in $CurrentStatus.items.id) {
             Write-Host 'Gonna do an update!'
-            $body = $request.body.autopilotData | ForEach-Object {
+            $body = $Request.Body.autopilotData | ForEach-Object {
                 $Device = $_
                 [pscustomobject]@{
                     deviceBatchId       = $GroupName
@@ -46,12 +46,12 @@ Function Invoke-AddAPDevice {
         $Amount = 0
         do {
             Write-Host "Checking status of import job for $GroupName"
-            $amount ++
+            $Amount++
             Start-Sleep 1
-            $NewStatus = New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/$($GraphRequest.Location)" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
+            $NewStatus = New-GraphGetRequest -uri "https://api.partnercenter.microsoft.com/v1/$($GraphRequest.Location)" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
         } until ($Newstatus.status -eq 'finished' -or $amount -eq 4)
         if ($NewStatus.status -ne 'finished') { throw 'Could not retrieve status of import - This job might still be running. Check the autopilot device list in 10 minutes for the latest status.' }
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($Request.Body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
 
         [PSCustomObject]@{
             Status  = 'Import Job Completed'
@@ -59,19 +59,15 @@ Function Invoke-AddAPDevice {
         }
     } catch {
         [PSCustomObject]@{
-            Status  = "$($Request.body.TenantFilter.value): Failed to create autopilot devices. $($_.Exception.Message)"
+            Status  = "$($Request.Body.TenantFilter.value): Failed to create autopilot devices. $($_.Exception.Message)"
             Devices = @()
         }
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($Request.Body.TenantFilter.value) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev 'Error'
     }
 
-    $body = [pscustomobject]@{'Results' = $Result }
-    Write-Host $body
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Result }
+    }
 
 }

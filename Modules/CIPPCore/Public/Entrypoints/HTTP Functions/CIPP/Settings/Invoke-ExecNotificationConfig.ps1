@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecNotificationConfig {
+function Invoke-ExecNotificationConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,22 +14,19 @@ Function Invoke-ExecNotificationConfig {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
+    $sev = ([pscustomobject]$Request.Body.Severity).value -join (',')
     $config = @{
-        email             = $Request.body.email
-        webhook           = $Request.body.webhook
-        onepertenant      = $Request.body.onePerTenant
-        logsToInclude     = $Request.body.logsToInclude
-        sendtoIntegration = $Request.body.sendtoIntegration
+        email             = $Request.Body.email
+        webhook           = $Request.Body.webhook
+        onepertenant      = $Request.Body.onePerTenant
+        logsToInclude     = $Request.Body.logsToInclude
+        sendtoIntegration = $Request.Body.sendtoIntegration
         sev               = $sev
     }
     $Results = Set-cippNotificationConfig @Config
-    $body = [pscustomobject]@{'Results' = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

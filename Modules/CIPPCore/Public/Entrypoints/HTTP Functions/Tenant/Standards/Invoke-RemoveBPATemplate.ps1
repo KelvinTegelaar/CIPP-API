@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveBPATemplate {
+function Invoke-RemoveBPATemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -22,21 +22,17 @@ Function Invoke-RemoveBPATemplate {
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed BPA Template with ID $ID"
-        Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove BPA template with ID $ID. $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

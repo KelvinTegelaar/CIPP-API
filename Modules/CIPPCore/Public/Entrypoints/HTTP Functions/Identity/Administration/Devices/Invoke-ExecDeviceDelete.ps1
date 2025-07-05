@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecDeviceDelete {
+function Invoke-ExecDeviceDelete {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,13 +24,11 @@ Function Invoke-ExecDeviceDelete {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Results }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

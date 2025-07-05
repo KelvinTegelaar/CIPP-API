@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTransportRulesTemplates {
+function Invoke-ListTransportRulesTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -13,10 +13,10 @@ Function Invoke-ListTransportRulesTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Add the default templates to the table
     $Table = Get-CippTable -tablename 'templates'
-
     $Templates = Get-ChildItem 'Config\*.TransportRuleTemplate.json' | ForEach-Object {
-
         $Entity = @{
             JSON         = "$(Get-Content $_)"
             RowKey       = "$($_.name)"
@@ -24,26 +24,29 @@ Function Invoke-ListTransportRulesTemplates {
             GUID         = "$($_.name)"
         }
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
-
     }
 
-    #List new policies
-    $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'TransportTemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $GUID = $_.RowKey
-        $data = $_.JSON | ConvertFrom-Json
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
-        $data
+    try {
+        #List new policies
+        $Table = Get-CippTable -tablename 'templates'
+        $Filter = "PartitionKey eq 'TransportTemplate'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $GUID = $_.RowKey
+            $data = $_.JSON | ConvertFrom-Json
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
+            $data
+        }
+
+        if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $Templates = $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
-
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Templates)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Templates)
+    }
 }

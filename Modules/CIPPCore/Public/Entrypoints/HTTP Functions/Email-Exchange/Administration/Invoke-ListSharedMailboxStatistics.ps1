@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListSharedMailboxStatistics {
+function Invoke-ListSharedMailboxStatistics {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,13 +29,13 @@ Function Invoke-ListSharedMailboxStatistics {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

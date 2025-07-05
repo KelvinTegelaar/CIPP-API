@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGeoIPLookup {
+function Invoke-ExecGeoIPLookup {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -23,10 +23,9 @@ Function Invoke-ExecGeoIPLookup {
         $locationInfo = Get-CIPPGeoIPLocation -IP $IP
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $LocationInfo
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $LocationInfo
+    }
 
 }

@@ -5,7 +5,7 @@ function Invoke-ExecPartnerWebhook {
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>
-    Param($Request, $TriggerMetadata)
+    param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
@@ -77,8 +77,8 @@ function Invoke-ExecPartnerWebhook {
         }
     }
 
-    Push-OutputBinding -Name Response -Value @{
-        StatusCode = [System.Net.HttpStatusCode]::OK
+    return @{
+        StatusCode = [HttpStatusCode]::OK
         Body       = $Body
     }
 }

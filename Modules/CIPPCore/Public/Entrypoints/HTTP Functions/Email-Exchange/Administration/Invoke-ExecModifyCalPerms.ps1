@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecModifyCalPerms {
+function Invoke-ExecModifyCalPerms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,12 +22,10 @@ Function Invoke-ExecModifyCalPerms {
 
     if ($null -eq $Username) {
         Write-LogMessage -headers $Headers -API $APIName -message 'Username is null' -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = @('Username is required') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $Body
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ Results = @('Username is required') }
+        }
     }
 
     try {
@@ -35,12 +33,10 @@ Function Invoke-ExecModifyCalPerms {
         Write-LogMessage -headers $Headers -API $APIName -message "Retrieved user ID: $UserId" -Sev 'Debug'
     } catch {
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to get user ID: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = @("Failed to get user ID: $($_.Exception.Message)") }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::NotFound
-                Body       = $Body
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::NotFound
+            Body       = @{ Results = @("Failed to get user ID: $($_.Exception.Message)") }
+        }
     }
 
     $Results = [System.Collections.Generic.List[string]]::new()
@@ -88,28 +84,24 @@ Function Invoke-ExecModifyCalPerms {
                     CanViewPrivateItems  = $CanViewPrivateItems
                 }
 
-                # Write-Host "Request params: $($Params | ConvertTo-Json)"
                 $Result = Set-CIPPCalendarPermission @Params
 
-                $null = $Results.Add($Result)
+                $Results.Add($Result)
             } catch {
                 $HasErrors = $true
-                $null = $Results.Add("$($_.Exception.Message)")
+                $Results.Add("$($_.Exception.Message)")
             }
         }
     }
 
     if ($Results.Count -eq 0) {
         Write-LogMessage -headers $Headers -API $APIName -message 'No results were generated from the operation' -Sev 'Warning'
-        $null = $Results.Add('No results were generated from the operation. Please check the logs for more details.')
+        $Results.Add('No results were generated from the operation. Please check the logs for more details.')
         $HasErrors = $true
     }
 
-    $Body = [pscustomobject]@{'Results' = @($Results) }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
-            Body       = $Body
-        })
+    return @{
+        StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
+        Body       = @{ Results = @($Results) }
+    }
 }
