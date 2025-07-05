@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListPartnerRelationships {
+function Invoke-ListPartnerRelationships {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -32,12 +32,8 @@ Function Invoke-ListPartnerRelationships {
     }
 
 
-    $Results = [PSCustomObject]@{
-        Results = @($GraphRequest)
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($GraphRequest) }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Results
-        })
 }

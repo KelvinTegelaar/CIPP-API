@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListNamedLocations {
+function Invoke-ListNamedLocations {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,10 +20,10 @@ Function Invoke-ListNamedLocations {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
-        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -Tenantid $tenantfilter | Select-Object *,
+        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -Tenantid $TenantFilter | Select-Object *,
         @{
             name       = 'rangeOrLocation'
-            expression = { if ($_.ipRanges) { $_.ipranges.cidrAddress -join ', ' } else { $_.countriesAndRegions -join ', ' } }
+            expression = { if ($_.ipRanges) { $_.ipRanges.cidrAddress -join ', ' } else { $_.countriesAndRegions -join ', ' } }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -32,10 +32,9 @@ Function Invoke-ListNamedLocations {
         $GraphRequest = $ErrorMessage
 
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

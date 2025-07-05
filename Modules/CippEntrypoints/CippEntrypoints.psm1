@@ -58,10 +58,10 @@ function Receive-CippHttpTrigger {
             $Response = & $FunctionName @HttpTrigger
             $Output = Get-OutputBinding -Name Response | Where-Object { $null -ne $_.Response }
             if ($Output) {
-                Write-Information 'Output binding FOUND so just returning response in the entrypoint' 
+                Write-Information 'Output binding FOUND so just returning response in in Receive-CippHttpTrigger' 
                 $Response
             } else {
-                Write-Information 'Output binding NOT found so executing Push-OutputBinding in the entrypoint'
+                Write-Information 'Output binding NOT found so executing Push-OutputBinding in in Receive-CippHttpTrigger'
                 Push-OutputBinding -Name Response -Value ([HttpResponseContext]$Response)
             }
 

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListDeviceDetails {
+function Invoke-ListDeviceDetails {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -81,8 +81,6 @@ Function Invoke-ListDeviceDetails {
             $Null = $GraphRequest | Add-Member -NotePropertyName 'DetectedApps' -NotePropertyValue ($DetectedApps.DetectedApps | Select-Object id, displayName, version)
             $Null = $GraphRequest | Add-Member -NotePropertyName 'CompliancePolicies' -NotePropertyValue ($CompliancePolicies | Select-Object id, displayName, UserPrincipalName, state)
             $Null = $GraphRequest | Add-Member -NotePropertyName 'DeviceGroups' -NotePropertyValue ($DeviceGroups | Select-Object id, displayName, description)
-
-
         }
 
         $StatusCode = [HttpStatusCode]::OK
@@ -92,10 +90,9 @@ Function Invoke-ListDeviceDetails {
         $GraphRequest = $ErrorMessage
 
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $GraphRequest
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = $GraphRequest
+    }
 }

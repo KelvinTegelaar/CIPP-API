@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListPendingWebhooks {
+function Invoke-ListPendingWebhooks {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -29,14 +29,14 @@ Function Invoke-ListPendingWebhooks {
     } catch {
         $PendingWebhooks = @()
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{
-                Results  = @($PendingWebhooks)
-                Metadata = @{
-                    Count = ($PendingWebhooks | Measure-Object).Count
-                }
+
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{
+            Results  = @($PendingWebhooks)
+            Metadata = @{
+                Count = ($PendingWebhooks | Measure-Object).Count
             }
-        })
+        }
+    }
 }

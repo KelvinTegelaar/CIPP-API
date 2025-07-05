@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecCSPLicense {
+function Invoke-ExecCSPLicense {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -41,9 +41,9 @@ Function Invoke-ExecCSPLicense {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
     # If $GraphRequest is a GUID, the subscription was edited successfully, and return that it's done.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Result
-        }) -Clobber
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Result
+    }
 
 }

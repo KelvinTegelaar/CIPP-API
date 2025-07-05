@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListFunctionStats {
+function Invoke-ListFunctionStats {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -89,9 +89,8 @@ Function Invoke-ListFunctionStats {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        }) -Clobber
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

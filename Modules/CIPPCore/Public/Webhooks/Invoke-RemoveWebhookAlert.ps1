@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveWebhookAlert {
+function Invoke-RemoveWebhookAlert {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,14 +16,14 @@ Function Invoke-RemoveWebhookAlert {
 
     try {
         $WebhookTable = Get-CIPPTable -TableName 'SchedulerConfig'
-        $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.query.TenantFilter
+        $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.Query.TenantFilter
         Write-Host "The webhook count is $($WebhookRow.count)"
         if ($WebhookRow.count -gt 1) {
-            $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
+            $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.Query.ID
             Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
-            $Results = "Removed Alert Rule for $($Request.query.TenantFilter)"
+            $Results = "Removed Alert Rule for $($Request.Query.TenantFilter)"
         } else {
-            if ($Request.query.TenantFilter -eq 'AllTenants') {
+            if ($Request.Query.TenantFilter -eq 'AllTenants') {
                 $Tenants = Get-Tenants -IncludeAll -IncludeErrors | Select-Object -ExpandProperty defaultDomainName
                 try {
                     $CompleteObject = @{
@@ -34,28 +34,27 @@ Function Invoke-RemoveWebhookAlert {
                     }
                     Remove-AzDataTableEntity -Force @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 } catch {
-                    Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
+                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
                 }
             } else {
-                $Tenants = $Request.query.TenantFilter
+                $Tenants = $Request.Query.TenantFilter
             }
 
             $Results = foreach ($Tenant in $Tenants) {
                 Remove-CIPPGraphSubscription -TenantFilter $Tenant -Type 'AuditLog'
-                $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
+                $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.Query.ID
                 Remove-AzDataTableEntity -Force @WebhookTable -Entity $Entity | Out-Null
-                "Removed Alert Rule for $($Request.query.TenantFilter)"
+                "Removed Alert Rule for $($Request.Query.TenantFilter)"
             }
         }
-        $body = [pscustomobject]@{'Results' = $Results }
+        $Body = [pscustomobject]@{'Results' = $Results }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
+        $Body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

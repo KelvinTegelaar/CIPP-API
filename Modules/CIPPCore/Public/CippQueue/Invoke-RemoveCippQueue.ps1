@@ -16,8 +16,8 @@ function Invoke-RemoveCippQueue {
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
     Clear-AzDataTable @CippQueueTasks
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{Results = @('History cleared') }
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{Results = @('History cleared') }
+    }
 }

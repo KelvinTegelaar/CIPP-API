@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecBreachSearch {
+function Invoke-ExecBreachSearch {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,13 +15,13 @@ Function Invoke-ExecBreachSearch {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
 
     #Move to background job
     New-BreachTenantSearch -TenantFilter $TenantFilter
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{ Results = "Executing Search for $TenantFilter" }
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = "Executing Search for $TenantFilter" }
+    }
 
 }

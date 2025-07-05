@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListOrg {
+function Invoke-ListOrg {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -23,10 +23,8 @@ Function Invoke-ListOrg {
         $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $GraphRequest
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $GraphRequest
+    }
 }
