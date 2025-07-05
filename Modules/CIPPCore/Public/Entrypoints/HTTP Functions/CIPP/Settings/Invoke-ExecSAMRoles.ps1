@@ -8,6 +8,10 @@ function Invoke-ExecSAMRoles {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $SAMRolesTable = Get-CIPPTable -tablename 'SAMRoles'
     switch ($Request.Query.Action) {
         'Update' {
@@ -35,8 +39,8 @@ function Invoke-ExecSAMRoles {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

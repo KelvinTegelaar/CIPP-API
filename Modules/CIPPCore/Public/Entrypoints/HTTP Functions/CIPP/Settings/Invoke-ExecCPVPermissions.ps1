@@ -13,8 +13,8 @@ function Invoke-ExecCPVPermissions {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-    $TenantFilter = $Request.Body.tenantFilter
 
+    $TenantFilter = $Request.Body.tenantFilter
     $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors
 
     if ($Tenant) {
@@ -54,16 +54,15 @@ function Invoke-ExecCPVPermissions {
         $GraphRequest = 'Tenant not found'
         $Success = $false
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{
-                Results  = $GraphRequest
-                Metadata = @{
-                    Heading = ('CPV Permission - {0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName)
-                    Success = $Success
-                }
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{
+            Results  = $GraphRequest
+            Metadata = @{
+                Heading = ('CPV Permission - {0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName)
+                Success = $Success
             }
-        })
+        }
+    }
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecExtensionSync {
+function Invoke-ExecExtensionSync {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,7 +24,7 @@ Function Invoke-ExecExtensionSync {
                 foreach ($ConfigItem in $Configuration.psobject.properties.name) {
                     switch ($ConfigItem) {
                         'Gradient' {
-                            If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
+                            if ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
                                 $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
                                 $ProcessorFunction = [PSCustomObject]@{
                                     PartitionKey = 'Function'
@@ -100,9 +100,8 @@ Function Invoke-ExecExtensionSync {
     }
 
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
 }

@@ -12,6 +12,10 @@ function Invoke-ExecPermissionRepair {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     try {
         $Table = Get-CippTable -tablename 'AppPermissions'
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
@@ -71,7 +75,7 @@ function Invoke-ExecPermissionRepair {
             $Body = @{
                 'Results' = 'Permissions Updated'
             }
-            Write-LogMessage -headers $Request.Headers -API 'ExecPermissionRepair' -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
+            Write-LogMessage -headers $Headers -API $APIName -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
         } else {
             $Body = @{
                 'Results' = 'No permissions to update'
@@ -83,8 +87,8 @@ function Invoke-ExecPermissionRepair {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

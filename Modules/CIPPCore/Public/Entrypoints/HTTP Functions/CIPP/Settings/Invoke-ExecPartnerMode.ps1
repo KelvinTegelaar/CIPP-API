@@ -10,13 +10,16 @@ function Invoke-ExecPartnerMode {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CippTable -tablename 'tenantMode'
-    if ($request.body.TenantMode) {
+    if ($Request.Body.TenantMode) {
         Add-CIPPAzDataTableEntity @Table -Entity @{
             PartitionKey = 'Setting'
             RowKey       = 'PartnerModeSetting'
-            state        = $request.body.TenantMode
+            state        = $Request.Body.TenantMode
         } -Force
 
         if ($Request.Body.TenantMode -eq 'default') {
@@ -41,21 +44,20 @@ function Invoke-ExecPartnerMode {
             Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @{
-                    results = @(
-                        @{
-                            resultText = "Set Tenant mode to $($Request.body.TenantMode)"
-                            state      = 'success'
-                        }
-                    )
-                }
-            })
-
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{
+                Results = @(
+                    @{
+                        resultText = "Set Tenant mode to $($Request.Body.TenantMode)"
+                        state      = 'success'
+                    }
+                )
+            }
+        }
     }
 
-    if ($request.query.action -eq 'ListCurrent') {
+    if ($Request.Query.action -eq 'ListCurrent') {
         $CurrentState = Get-CIPPAzDataTableEntity @Table
         $CurrentState = if (!$CurrentState) {
             [PSCustomObject]@{
@@ -67,10 +69,9 @@ function Invoke-ExecPartnerMode {
             }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $CurrentState
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $CurrentState
+        }
     }
-
 }

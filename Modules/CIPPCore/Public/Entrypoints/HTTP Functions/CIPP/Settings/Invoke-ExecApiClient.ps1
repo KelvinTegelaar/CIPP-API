@@ -8,6 +8,10 @@ function Invoke-ExecApiClient {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'ApiClients'
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
@@ -186,7 +190,7 @@ function Invoke-ExecApiClient {
                     Write-Information "Deleting API Client: $ClientId from CIPP"
                     $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey
                     Remove-AzDataTableEntity @Table -Entity $Client -Force
-                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
+                    Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
                 } else {
                     $Body = @{ Results = "API client $ClientId not found or not a valid CIPP-API application" }
@@ -200,9 +204,9 @@ function Invoke-ExecApiClient {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }
 

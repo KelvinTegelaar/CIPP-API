@@ -13,20 +13,18 @@ function Invoke-ExecSAMSetup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-
-    if ($Request.Query.error) {
-        Add-Type -AssemblyName System.Web
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                ContentType = 'text/html'
-                StatusCode  = [HttpStatusCode]::Forbidden
-                Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
-            })
-        exit
-    }
-
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    if ($Request.Query.error) {
+        Add-Type -AssemblyName System.Web
+        return @{
+            ContentType = 'text/html'
+            StatusCode  = [HttpStatusCode]::Forbidden
+            Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+        }
+    }
 
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
@@ -239,10 +237,9 @@ function Invoke-ExecSAMSetup {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)" ; step = $step }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
 
 }

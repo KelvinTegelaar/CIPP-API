@@ -12,6 +12,10 @@ function Invoke-ExecTenantGroup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'TenantGroups'
     $MembersTable = Get-CippTable -tablename 'TenantGroupMembers'
     $Action = $Request.Body.Action
@@ -107,8 +111,8 @@ function Invoke-ExecTenantGroup {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecPasswordConfig {
+function Invoke-ExecPasswordConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -18,7 +18,7 @@ Function Invoke-ExecPasswordConfig {
     $PasswordType = (Get-CIPPAzDataTableEntity @Table)
 
 
-    $results = try {
+    $Results = try {
         if ($Request.Query.List) {
             @{ passwordType = $PasswordType.passwordType }
         } else {
@@ -32,17 +32,14 @@ Function Invoke-ExecPasswordConfig {
             Add-CIPPAzDataTableEntity @Table -Entity $PasswordConfig -Force | Out-Null
             'Successfully set the configuration'
         }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         "Failed to set configuration: $($_.Exception.message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    $body = [pscustomobject]@{'Results' = $Results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListExtensionSync {
+function Invoke-ListExtensionSync {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -50,8 +50,8 @@ Function Invoke-ListExtensionSync {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = (ConvertTo-Json -Depth 5 -InputObject @($AllTasksArrayList))
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = (ConvertTo-Json -Depth 5 -InputObject @($AllTasksArrayList))
+    }
 }

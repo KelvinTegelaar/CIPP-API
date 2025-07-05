@@ -9,6 +9,10 @@ function Invoke-ExecOffloadFunctions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'Config'
 
     if ($Request.Query.Action -eq 'ListCurrent') {
@@ -52,15 +56,15 @@ function Invoke-ExecOffloadFunctions {
                 CanEnable        = $CanEnable
             }
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $CurrentState
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $CurrentState
+        }
     } else {
         Add-CIPPAzDataTableEntity @Table -Entity @{
             PartitionKey = 'OffloadFunctions'
             RowKey       = 'OffloadFunctions'
-            state        = $request.Body.OffloadFunctions
+            state        = $Request.Body.OffloadFunctions
         } -Force
 
         if ($Request.Body.OffloadFunctions) {
@@ -68,9 +72,9 @@ function Invoke-ExecOffloadFunctions {
         } else {
             $Results = 'Disabled Offload Functions'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @{ results = $Results }
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{ Results = $Results }
+        }
     }
 }

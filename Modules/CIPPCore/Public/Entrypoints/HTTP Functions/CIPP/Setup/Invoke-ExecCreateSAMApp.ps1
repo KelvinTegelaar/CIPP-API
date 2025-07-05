@@ -11,12 +11,16 @@ function Invoke-ExecCreateSAMApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $KV = $env:WEBSITE_DEPLOYMENT_ID
 
     try {
-        $Token = $Request.body
+        $Token = $Request.Body
         if ($Token) {
-            $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+            $URL = ($Headers.'x-ms-original-url').split('/api') | Select-Object -First 1
             $TenantId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/organization' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value.id
             #Find Existing app registration
             $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq 'CIPP-SAM'" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value | Select-Object -Last 1
@@ -104,10 +108,9 @@ function Invoke-ExecCreateSAMApp {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
 
 }

@@ -10,6 +10,11 @@ function Invoke-ExecCombinedSetup {
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     #Make arraylist of Results
     $Results = [System.Collections.ArrayList]::new()
     try {
@@ -20,9 +25,9 @@ function Invoke-ExecCombinedSetup {
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $null = Set-AzContext -SubscriptionId $SubscriptionId
         }
-        if ($request.body.selectedBaselines -and $request.body.baselineOption -eq 'downloadBaselines') {
+        if ($Request.Body.selectedBaselines -and $Request.Body.baselineOption -eq 'downloadBaselines') {
             #do a single download of the selected baselines.
-            foreach ($template in $request.body.selectedBaselines) {
+            foreach ($template in $Request.Body.selectedBaselines) {
                 $object = @{
                     TenantFilter  = 'No tenant'
                     Name          = "Download Single Baseline: $($template.value)"
@@ -55,14 +60,14 @@ function Invoke-ExecCombinedSetup {
                     ScheduledTime = 0
                 }
                 $null = Add-CIPPScheduledTask -task $object -hidden $false -DisallowDuplicateName $true -Headers $Request.Headers
-                $Results.add("Scheduled download of baseline: $($template.value)")
+                $Results.Add("Scheduled download of baseline: $($template.value)")
             }
         }
-        if ($Request.body.email -or $Request.body.webhook) {
+        if ($Request.Body.email -or $Request.Body.webhook) {
             #create hashtable from pscustomobject
-            $notificationConfig = $request.body | Select-Object email, webhook, onepertenant, logsToInclude, sendtoIntegration, sev | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+            $notificationConfig = $Request.Body | Select-Object email, webhook, onepertenant, logsToInclude, sendtoIntegration, sev | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             $notificationResults = Set-CIPPNotificationConfig @notificationConfig
-            $Results.add($notificationResults)
+            $Results.Add($notificationResults)
         }
         if ($Request.Body.selectedOption -eq 'Manual') {
             $KV = $env:WEBSITE_DEPLOYMENT_ID
@@ -86,36 +91,37 @@ function Invoke-ExecCombinedSetup {
                 if ($Request.Body.applicationId) { $Secret.ApplicationId = $Request.Body.applicationId }
                 if ($Request.Body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.Body.ApplicationSecret }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
-                $Results.add('Manual credentials have been set in the DevSecrets table.')
+                $Results.Add('Manual credentials have been set in the DevSecrets table.')
             } else {
                 if ($Request.Body.tenantId) {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $Request.Body.tenantId -AsPlainText -Force)
-                    $Results.add('Set tenant ID in Key Vault.')
+                    $Results.Add('Set tenant ID in Key Vault.')
                 }
                 if ($Request.Body.applicationId) {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationId -AsPlainText -Force)
-                    $Results.add('Set application ID in Key Vault.')
+                    $Results.Add('Set application ID in Key Vault.')
                 }
                 if ($Request.Body.applicationSecret) {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationSecret -AsPlainText -Force)
-                    $Results.add('Set application secret in Key Vault.')
+                    $Results.Add('Set application secret in Key Vault.')
                 }
             }
 
-            $Results.add('Manual credentials setup has been completed.')
+            $Results.Add('Manual credentials setup has been completed.')
         }
 
-        $Results.add('Setup is now complete. You may navigate away from this page and start using CIPP.')
+        $Results.Add('Setup is now complete. You may navigate away from this page and start using CIPP.')
         #one more force of reauth so env vars update.
         $auth = Get-CIPPAuthentication
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Results
+    }
 
 }

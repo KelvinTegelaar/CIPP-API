@@ -9,6 +9,11 @@ function Invoke-AddScheduledItem {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     if ($null -eq $Request.Query.hidden) {
         $hidden = $false
     } else {
@@ -21,7 +26,7 @@ function Invoke-AddScheduledItem {
             $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
             $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
             if ($ExistingTask) {
-                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Request.Headers
+                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Headers
             } else {
                 $Result = "Task with id $($Request.Body.RowKey) does not exist"
             }
@@ -31,11 +36,11 @@ function Invoke-AddScheduledItem {
             $Result = "Error scheduling task: $($_.Exception.Message)"
         }
     } else {
-        $Result = Add-CIPPScheduledTask -Task $Request.Body -Headers $Request.Headers -hidden $hidden -DisallowDuplicateName $Request.Query.DisallowDuplicateName
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Info'
+        $Result = Add-CIPPScheduledTask -Task $Request.Body -Headers $Headers -hidden $hidden -DisallowDuplicateName $Request.Query.DisallowDuplicateName
+        Write-LogMessage -headers $Headers -API $APINAME -message $Result -Sev 'Info'
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{ Results = $Result }
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Result }
+    }
 }

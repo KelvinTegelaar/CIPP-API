@@ -8,10 +8,14 @@ function Invoke-ExecAPIPermissionList {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Roles = Get-CIPPHttpFunctions -ByRoleGroup | ConvertTo-Json -Depth 10
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Roles
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Roles
+    }
 }

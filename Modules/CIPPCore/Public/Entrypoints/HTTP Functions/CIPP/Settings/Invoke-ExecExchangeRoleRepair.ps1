@@ -8,7 +8,9 @@ function Invoke-ExecExchangeRoleRepair {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantId = $Request.Query.tenantId ?? $Request.Body.tenantId
     $Tenant = Get-Tenants -TenantFilter $TenantId
@@ -89,8 +91,8 @@ function Invoke-ExecExchangeRoleRepair {
         }
     }
 
-    Push-OutputBinding -Name 'Response' -Value ([HttpResponseContext]@{
-            StatusCode = [System.Net.HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = [System.Net.HttpStatusCode]::OK
+        Body       = $Results
+    }
 }

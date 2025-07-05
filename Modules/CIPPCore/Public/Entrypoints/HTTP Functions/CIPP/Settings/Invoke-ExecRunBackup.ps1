@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRunBackup {
+function Invoke-ExecRunBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,10 +11,12 @@ Function Invoke-ExecRunBackup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $CSVfile = New-CIPPBackup -BackupType 'CIPP' -Headers $Request.Headers
-        $body = [pscustomobject]@{
+        $CSVfile = New-CIPPBackup -BackupType 'CIPP' -Headers $Headers
+        $Body = [pscustomobject]@{
             'Results' = @{
                 resultText = 'Created backup'
                 state      = 'success'
@@ -22,10 +24,10 @@ Function Invoke-ExecRunBackup {
             backup    = $CSVfile.BackupData
         } | ConvertTo-Json -Depth 5 -Compress
 
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created CIPP backup' -Sev 'Info'
-
+        Write-LogMessage -headers $Headers -API $APIName -message 'Created CIPP backup' -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $body = [pscustomobject]@{
+        $Body = [pscustomobject]@{
             'Results' = @(
                 @{
                     resultText = 'Failed to create backup'
@@ -33,12 +35,12 @@ Function Invoke-ExecRunBackup {
                 }
             )
         } | ConvertTo-Json -Depth 5 -Compress
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Failed to create CIPP backup' -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Headers -API $APIName -message 'Failed to create CIPP backup' -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Body }
+    }
 }

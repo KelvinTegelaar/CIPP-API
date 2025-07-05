@@ -136,15 +136,13 @@ function Invoke-ExecAccessChecks {
         $Metadata.AlertMessage = $Message
     }
 
-    $body = [pscustomobject]@{
-        'Results'  = $Results
-        'Metadata' = $Metadata
+
+
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{
+            'Results'  = $Results
+            'Metadata' = $Metadata
+        }
     }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
 }

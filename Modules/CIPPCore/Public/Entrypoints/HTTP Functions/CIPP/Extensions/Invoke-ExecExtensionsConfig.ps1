@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecExtensionsConfig {
+function Invoke-ExecExtensionsConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -75,12 +75,8 @@ Function Invoke-ExecExtensionsConfig {
         "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
     }
 
-
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = $Results }
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{'Results' = $Results }
+    }
 }

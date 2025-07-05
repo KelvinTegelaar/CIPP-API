@@ -10,12 +10,16 @@ function Invoke-ListTenantGroups {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $groupFilter = $Request.Query.groupId ?? $Request.Body.groupId
     $TenantGroups = (Get-TenantGroups -GroupId $groupFilter) ?? @()
     $Body = @{ Results = @($TenantGroups) }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }
