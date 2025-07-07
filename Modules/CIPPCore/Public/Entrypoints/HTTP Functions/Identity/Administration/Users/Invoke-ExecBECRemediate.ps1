@@ -57,16 +57,12 @@ function Invoke-ExecBECRemediate {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Results = [pscustomobject]@{'Results' = "Failed to execute remediation. $($ErrorMessage.NormalizedError)" }
+        $Results = "Failed to execute remediation. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username failed at the $Step step" -sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    $Results = [pscustomobject]@{'Results' = @($Results) }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

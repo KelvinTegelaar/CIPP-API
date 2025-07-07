@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddIntuneTemplate {
+function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -35,9 +35,9 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
 
-            $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+            $Result = 'Successfully added template'
         } else {
             $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
             $URLName = $Request.Body.URLName ?? $Request.Query.URLName
@@ -59,20 +59,21 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
 
-            $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+            $Result = 'Successfully added template'
         }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 
 }

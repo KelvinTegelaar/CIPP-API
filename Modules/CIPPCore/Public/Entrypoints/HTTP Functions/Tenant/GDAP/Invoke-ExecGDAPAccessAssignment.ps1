@@ -9,7 +9,8 @@ function Invoke-ExecGDAPAccessAssignment {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Action = $Request.Body.Action ?? $Request.Query.Action
     $Id = $Request.Body.Id ?? $Request.Query.Id
@@ -180,8 +181,8 @@ function Invoke-ExecGDAPAccessAssignment {
             }
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

@@ -85,8 +85,8 @@ function Invoke-ListCustomRole {
     }
     $Body = @($RoleList)
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ConvertTo-Json -InputObject $Body -Depth 5
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ConvertTo-Json -InputObject $Body -Depth 5
+    }
 }

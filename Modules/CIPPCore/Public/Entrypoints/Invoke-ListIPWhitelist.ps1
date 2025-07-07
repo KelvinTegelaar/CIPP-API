@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListIPWhitelist {
+function Invoke-ListIPWhitelist {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,9 +17,8 @@ Function Invoke-ListIPWhitelist {
     $Table = Get-CippTable -tablename 'trustedIps'
     $body = Get-CIPPAzDataTableEntity @Table
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($body)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($body)
+    }
 }

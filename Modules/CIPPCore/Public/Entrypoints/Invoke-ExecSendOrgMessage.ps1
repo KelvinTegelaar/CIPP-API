@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSendOrgMessage {
+function Invoke-ExecSendOrgMessage {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,15 +14,12 @@ Function Invoke-ExecSendOrgMessage {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
-    $Device = $request.query.ID
+    $Device = $Request.Query.ID
     try {
 
-        $type = switch ($request.Query.type) {
+        $type = switch ($Request.Query.type) {
             'taskbar' {
                 '844ec9d0-dd31-459c-a1e7-21fb1b39d5da'
                 $placementDetails = @(@{
@@ -32,7 +29,7 @@ Function Invoke-ExecSendOrgMessage {
                                 localizedTexts = @(@{
                                         locale = 'invariant'
                                         text   = @{
-                                            'clickUrl' = $Request.query.URL
+                                            'clickUrl' = $Request.Query.URL
                                         }
                                     })
                             })
@@ -47,7 +44,7 @@ Function Invoke-ExecSendOrgMessage {
                                 localizedTexts = @(@{
                                         locale = 'invariant'
                                         text   = @{
-                                            'clickUrl' = $Request.query.URL
+                                            'clickUrl' = $Request.Query.URL
                                         }
                                     })
                             })
@@ -87,7 +84,7 @@ Function Invoke-ExecSendOrgMessage {
             }
 
         }
-        $freq = $request.query.freq
+        $freq = $Request.Query.freq
         $object = [pscustomobject]@{
             startDateTime	= (Get-Date).ToString('O')
             endDateTime   = (Get-Date).AddYears('1').ToString('O')
@@ -115,10 +112,9 @@ Function Invoke-ExecSendOrgMessage {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
 
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

@@ -9,7 +9,7 @@ function Invoke-ListCippQueue {
 
     if ($Request) {
         $APIName = $Request.Params.CIPPEndpoint
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     }
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
@@ -62,10 +62,10 @@ function Invoke-ListCippQueue {
     }
 
     if ($request) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @($QueueData)
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @($QueueData)
+        }
     } else {
         return $QueueData
     }

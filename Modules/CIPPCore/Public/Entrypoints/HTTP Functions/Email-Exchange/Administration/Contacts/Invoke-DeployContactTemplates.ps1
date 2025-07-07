@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-DeployContactTemplates {
+function Invoke-DeployContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -52,11 +52,11 @@ Function Invoke-DeployContactTemplates {
                 }
             }
         } else {
-            throw "TemplateList is required and must contain at least one template"
+            throw 'TemplateList is required and must contain at least one template'
         }
 
         if ($ContactTemplates.Count -eq 0) {
-            throw "No valid contact templates found to deploy"
+            throw 'No valid contact templates found to deploy'
         }
 
         $Results = foreach ($TenantFilter in $SelectedTenants) {
@@ -155,8 +155,7 @@ Function Invoke-DeployContactTemplates {
 
                     # Return success message as a simple string
                     "Successfully deployed contact '$($ContactTemplate.displayName)' to tenant $TenantFilter"
-                }
-                catch {
+                } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     $ErrorDetail = "Failed to deploy contact '$($ContactTemplate.displayName)' to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
@@ -168,17 +167,15 @@ Function Invoke-DeployContactTemplates {
         }
 
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to process contact template deployment request. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Results}
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{Results = $Results }
+    }
 }

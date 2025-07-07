@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListIntuneTemplates {
+function Invoke-ListIntuneTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -60,10 +60,8 @@ Function Invoke-ListIntuneTemplates {
     # Sort all output regardless of view condition
     $Templates = $Templates | Sort-Object -Property displayName
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = ($Templates | ConvertTo-Json -Depth 100)
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = ($Templates | ConvertTo-Json -Depth 100)
+    }
 }

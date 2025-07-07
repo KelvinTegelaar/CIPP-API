@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecDeleteGDAPRelationship {
+function Invoke-ExecDeleteGDAPRelationship {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -15,20 +15,21 @@ Function Invoke-ExecDeleteGDAPRelationship {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $GDAPID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
+    $GdapID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
     try {
-        $DELETE = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPID)/requests" -type POST -body '{"action":"terminate"}' -tenantid $env:TenantID
-        $Results = [pscustomobject]@{'Results' = "Success. GDAP relationship for $($GDAPID) been revoked" }
-        Write-LogMessage -headers $Headers -API $APIName -message "Success. GDAP relationship for $($GDAPID) been revoked" -Sev 'Info'
-
+        $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GdapID)/requests" -type POST -body '{"action":"terminate"}' -tenantid $env:TenantID
+        $Results = "Success. GDAP relationship for $($GdapID) been revoked"
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = "Failed to revoke GDAP relationship.  $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

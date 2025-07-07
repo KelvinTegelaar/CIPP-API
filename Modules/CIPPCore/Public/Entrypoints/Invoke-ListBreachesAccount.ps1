@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListBreachesAccount {
+function Invoke-ListBreachesAccount {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -23,10 +23,8 @@ Function Invoke-ListBreachesAccount {
         $Results = Get-BreachInfo -Domain $Account
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($results)
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Results)
+    }
 }

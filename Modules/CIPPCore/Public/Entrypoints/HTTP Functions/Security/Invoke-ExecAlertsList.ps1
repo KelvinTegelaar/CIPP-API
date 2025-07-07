@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAlertsList {
+function Invoke-ExecAlertsList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -137,9 +137,8 @@ Function Invoke-ExecAlertsList {
             Metadata = $Metadata
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 }

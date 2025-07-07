@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListDomains {
+function Invoke-ListDomains {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,10 +24,8 @@ Function Invoke-ListDomains {
         $Result = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Result)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Result)
+    }
 }

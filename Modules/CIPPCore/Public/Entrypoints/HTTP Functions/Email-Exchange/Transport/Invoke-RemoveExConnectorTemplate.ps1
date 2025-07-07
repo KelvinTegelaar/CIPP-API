@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveExConnectorTemplate {
+function Invoke-RemoveExConnectorTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -30,12 +30,8 @@ Function Invoke-RemoveExConnectorTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

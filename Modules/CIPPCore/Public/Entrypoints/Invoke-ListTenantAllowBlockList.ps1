@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTenantAllowBlockList {
+function Invoke-ListTenantAllowBlockList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -31,9 +31,9 @@ Function Invoke-ListTenantAllowBlockList {
         $StatusCode = [HttpStatusCode]::Forbidden
         $Results = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 }

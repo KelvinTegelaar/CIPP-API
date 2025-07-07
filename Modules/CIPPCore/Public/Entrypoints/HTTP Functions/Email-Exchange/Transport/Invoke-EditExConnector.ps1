@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditExConnector {
+function Invoke-EditExConnector {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -34,10 +34,8 @@ Function Invoke-EditExConnector {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

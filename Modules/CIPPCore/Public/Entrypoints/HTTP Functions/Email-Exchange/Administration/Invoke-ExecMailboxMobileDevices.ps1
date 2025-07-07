@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecMailboxMobileDevices {
+function Invoke-ExecMailboxMobileDevices {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,19 +14,26 @@ Function Invoke-ExecMailboxMobileDevices {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
+    # XXX - Seems to be an unused endpoint. -Bobby
     # Interact with query parameters or the body of the request.
-    Try {
-        $MobileResults = Set-CIPPMobileDevice -UserId $request.query.Userid -Guid $request.query.guid -DeviceId $request.query.deviceid -Quarantine $request.query.Quarantine -tenantFilter $request.query.tenantfilter -APIName $APINAME -Delete $Request.query.Delete -Headers $Request.Headers
-        $Results = [pscustomobject]@{'Results' = $MobileResults }
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $UserId = $Request.Query.UserID ?? $Request.Body.UserID
+    $Guid = $Request.Query.GUID ?? $Request.Body.GUID
+    $DeviceId = $Request.Query.DeviceID ?? $Request.Body.DeviceID
+    $Quarantine = $Request.Query.Quarantine ?? $Request.Body.Quarantine
+    $Delete = $Request.Query.Delete ?? $Request.Body.Delete
+
+    try {
+        $Results = Set-CIPPMobileDevice -UserId $UserId -Guid $Guid -DeviceId $DeviceId -Quarantine $Quarantine -TenantFilter $TenantFilter -APIName $APIName -Delete $Delete -Headers $Headers
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed  $($request.query.Userid): $($_.Exception.Message)" }
+        $Results = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecUniversalSearch {
+function Invoke-ExecUniversalSearch {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -18,9 +18,8 @@ Function Invoke-ExecUniversalSearch {
 
 
     # Interact with query parameters or the body of the request.
-
     try {
-        $tenantfilter = Get-Tenants
+        $TenantFilter = Get-Tenants
         $payload = [PSCustomObject]@{
             returnsPartialResults = $false
             displayName           = 'getUsers'
@@ -29,7 +28,7 @@ Function Invoke-ExecUniversalSearch {
             }
             operationDefinition   = [PSCustomObject]@{
                 values = @(
-                    "@sys.normalize([ConsistencyLevel: eventual GET /v1.0/users?`$top=5&`$search=`"userPrincipalName:$($Request.query.name)`" OR `"displayName:$($Request.query.name)`"])"
+                    "@sys.normalize([ConsistencyLevel: eventual GET /v1.0/users?`$top=5&`$search=`"userPrincipalName:$($Request.Query.name)`" OR `"displayName:$($Request.Query.name)`"])"
                 )
             }
             aggregationDefinition = [PSCustomObject]@{
@@ -38,11 +37,11 @@ Function Invoke-ExecUniversalSearch {
                 )
             }
         } | ConvertTo-Json -Depth 10
-        $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedTenantOperations' -tenantid $env:TenantID -body $payload -IgnoreErrors $true
+        $GraphRequest = New-GraphPOSTRequest -NoAuthCheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedTenantOperations' -tenantid $env:TenantID -body $payload -IgnoreErrors $true
         if (!$GraphRequest.result.results) {
-            $GraphRequest = ($GraphRequest.error.message | ConvertFrom-Json).result.results | ConvertFrom-Json | Where-Object { $_.'_TenantId' -in $tenantfilter.customerId }
+            $GraphRequest = ($GraphRequest.error.message | ConvertFrom-Json).result.results | ConvertFrom-Json | Where-Object { $_.'_TenantId' -in $TenantFilter.customerId }
         } else {
-            $GraphRequest = $GraphRequest.result.Results | ConvertFrom-Json -ErrorAction SilentlyContinue | Where-Object { $_.'_TenantId' -in $tenantfilter.customerId }
+            $GraphRequest = $GraphRequest.result.Results | ConvertFrom-Json -ErrorAction SilentlyContinue | Where-Object { $_.'_TenantId' -in $TenantFilter.customerId }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -50,10 +49,10 @@ Function Invoke-ExecUniversalSearch {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

@@ -1,4 +1,4 @@
-Function Invoke-ExecBulkLicense {
+function Invoke-ExecBulkLicense {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -6,14 +6,14 @@ Function Invoke-ExecBulkLicense {
         Identity.User.ReadWrite
     #>
     [CmdletBinding()]
-    param (
-        $Request,
-        $TriggerMetadata
-    )
+    param ($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Results = [System.Collections.Generic.List[string]]::new()
-    $StatusCode = [HttpStatusCode]::OK
+
 
     try {
         $UserRequests = $Request.Body
@@ -52,34 +52,29 @@ Function Invoke-ExecBulkLicense {
                     } elseif ($RemoveAllLicenses) {
                         $RemoveLicenses = $User.assignedLicenses.skuId
                     }
-                    #todo: Actually build bulk support into set-cippuserlicense.
+                    #todo: Actually build bulk support into Set-CIPPUserLicense.
                     $TaskResults = Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -AddLicenses $AddLicenses -RemoveLicenses $RemoveLicenses
 
                     $Results.Add($TaskResults)
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Successfully processed licenses for user $UserPrincipalName" -Sev 'Info'
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Successfully processed licenses for user $UserPrincipalName" -Sev 'Info'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     $Results.Add("Failed to process licenses for user $($UserRequest.userIds). Error: $($ErrorMessage.NormalizedError)")
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to process licenses for user $($UserRequest.userIds). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Failed to process licenses for user $($UserRequest.userIds). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
-
-        $Body = @{
-            Results = @($Results)
-        }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $StatusCode = [HttpStatusCode]::BadRequest
-        $Body = @{
-            Results = @("Failed to process bulk license operation: $($ErrorMessage.NormalizedError)")
-        }
-        Write-LogMessage -API $APIName -message "Failed to process bulk license operation: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $Results.Add("Failed to process bulk license operation: $($ErrorMessage.NormalizedError)")
+        Write-LogMessage -API $APIName -headers $Headers -message "Failed to process bulk license operation: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
     # Return response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

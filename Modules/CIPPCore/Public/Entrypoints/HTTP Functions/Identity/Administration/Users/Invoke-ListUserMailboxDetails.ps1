@@ -290,8 +290,8 @@ function Invoke-ListUserMailboxDetails {
             InPlaceHolds)
     } # Select statement taken from ListMailboxes to save a EXO request. If updated here, update in ListMailboxes as well.
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($GraphRequest)
+    }
 }

@@ -32,7 +32,7 @@ function New-CIPPSharepointSite {
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$SiteName,
 
@@ -169,7 +169,7 @@ function New-CIPPSharepointSite {
             $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. The site already exists."
             throw $Result
         }
-        Default {}
+        default {}
     }
 
 

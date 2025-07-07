@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecCAExclusion {
+function Invoke-ExecCAExclusion {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -49,15 +49,14 @@ Function Invoke-ExecCAExclusion {
         $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $Username - $($TenantFilter)"
         $TaskBody.ScheduledTime = $EndDate
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
-        $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
+        $Results = "Successfully added vacation mode schedule for $Username."
     } else {
-        Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType $ExclusionType -UserID $UserID -PolicyId $PolicyId -Headers $Headers -UserName $Username
+        $Results = Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType $ExclusionType -UserID $UserID -PolicyId $PolicyId -Headers $Headers -UserName $Username
     }
 
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

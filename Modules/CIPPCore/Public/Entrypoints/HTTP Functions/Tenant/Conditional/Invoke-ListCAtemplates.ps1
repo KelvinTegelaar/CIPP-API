@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListCAtemplates {
+function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -35,22 +35,26 @@ Function Invoke-ListCAtemplates {
             PartitionKey = 'settings'
         } -Force
     }
-    #List new policies
-    $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'CATemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -Depth 100
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-        $data
-    } | Sort-Object -Property displayName
+    try {
+        #List new policies
+        $Table = Get-CippTable -tablename 'templates'
+        $Filter = "PartitionKey eq 'CATemplate'"
+        $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+            $data = $_.JSON | ConvertFrom-Json -Depth 100
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+            $data
+        } | Sort-Object -Property displayName
 
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
+        if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
+        $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $Templates = "Failed to list CA templates. Error: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
+    }
 
-    $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Templates
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Templates
+    }
 }

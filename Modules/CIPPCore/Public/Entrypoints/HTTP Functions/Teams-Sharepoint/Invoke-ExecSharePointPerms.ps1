@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSharePointPerms {
+function Invoke-ExecSharePointPerms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,12 +16,6 @@ Function Invoke-ExecSharePointPerms {
 
     $TenantFilter = $Request.Body.tenantFilter
 
-    Write-Host '===================================='
-    Write-Host 'Request Body:'
-    Write-Host (ConvertTo-Json $Request.body -Depth 10)
-    Write-Host '===================================='
-
-
     # The UPN or ID of the users OneDrive we are changing permissions on
     $UserId = $Request.Body.UPN
     # The UPN of the user we are adding or removing permissions for
@@ -30,7 +24,6 @@ Function Invoke-ExecSharePointPerms {
     $RemovePermission = $Request.Body.RemovePermission
 
     try {
-
         $State = Set-CIPPSharePointPerms -tenantFilter $TenantFilter `
             -UserId $UserId `
             -OnedriveAccessUser $OnedriveAccessUser `
@@ -38,18 +31,15 @@ Function Invoke-ExecSharePointPerms {
             -APIName $APIName `
             -RemovePermission $RemovePermission `
             -URL $URL
-        $Result = "$State"
+        $Result = $State
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = $_.Exception.Message
-        $Result = "Failed. Error: $ErrorMessage"
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

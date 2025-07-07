@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecExtensionTest {
+function Invoke-ExecExtensionTest {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -101,10 +101,8 @@ Function Invoke-ExecExtensionTest {
         $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message). Line $($_.InvocationInfo.ScriptLineNumber)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
 }

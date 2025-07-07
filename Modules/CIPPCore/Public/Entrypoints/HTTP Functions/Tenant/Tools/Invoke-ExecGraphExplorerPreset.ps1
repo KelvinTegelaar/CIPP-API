@@ -44,31 +44,29 @@ function Invoke-ExecGraphExplorerPreset {
     if (!$Request.Body.preset.name) {
         $Message = 'Error: Preset name is required'
         $StatusCode = [HttpStatusCode]::BadRequest
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = $StatusCode
-                Body       = @{
-                    Results = @{
-                        resultText = $Message
-                        state      = 'error'
-                    }
+        return @{
+            StatusCode = $StatusCode
+            Body       = @{
+                Results = @{
+                    resultText = $Message
+                    state      = 'error'
                 }
-            })
-        return
+            }
+        }
     }
 
     if (!$Request.Body.preset.endpoint) {
         $Message = 'Error: Preset endpoint is required'
         $StatusCode = [HttpStatusCode]::BadRequest
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = $StatusCode
-                Body       = @{
-                    Results = @{
-                        resultText = $Message
-                        state      = 'error'
-                    }
+        return @{
+            StatusCode = $StatusCode
+            Body       = @{
+                Results = @{
+                    resultText = $Message
+                    state      = 'error'
                 }
-            })
-        return
+            }
+        }
     }
 
     $Preset = [PSCustomObject]@{
@@ -110,14 +108,14 @@ function Invoke-ExecGraphExplorerPreset {
         $Message = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{
-                Results = @{
-                    resultText = $Message
-                    state      = if ($Success) { 'success' } else { 'error' }
-                }
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{
+            Results = @{
+                resultText = $Message
+                state      = if ($Success) { 'success' } else { 'error' }
             }
-        })
+        }
+    }
 }

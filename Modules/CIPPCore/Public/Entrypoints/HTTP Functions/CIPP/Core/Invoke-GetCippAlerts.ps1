@@ -72,10 +72,9 @@ function Invoke-GetCippAlerts {
     if ($Rows) { $Rows | ForEach-Object { $Alerts.Add($_) } }
     $Alerts = @($Alerts)
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Alerts
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Alerts
+    }
 
 }

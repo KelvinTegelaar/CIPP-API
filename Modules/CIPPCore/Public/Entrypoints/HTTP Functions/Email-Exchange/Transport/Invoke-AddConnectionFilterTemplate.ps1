@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddConnectionFilterTemplate {
+function Invoke-AddConnectionFilterTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -23,7 +23,7 @@ Function Invoke-AddConnectionFilterTemplate {
             $request.body.PowerShellCommand | ConvertFrom-Json
         } else {
             $GUID = (New-Guid).GUID
-        ([pscustomobject]$Request.body | Select-Object Name, EnableSafeList, IPAllowList , IPBlockList ) | ForEach-Object {
+            ([pscustomobject]$Request.body | Select-Object Name, EnableSafeList, IPAllowList , IPBlockList ) | ForEach-Object {
                 $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                 $_ | Select-Object -Property $NonEmptyProperties
             }
@@ -46,11 +46,8 @@ Function Invoke-AddConnectionFilterTemplate {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

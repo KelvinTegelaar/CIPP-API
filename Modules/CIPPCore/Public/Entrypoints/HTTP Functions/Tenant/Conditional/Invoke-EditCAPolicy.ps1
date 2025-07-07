@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditCAPolicy {
+function Invoke-EditCAPolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,11 +25,11 @@ Function Invoke-EditCAPolicy {
 
         # Conditionally add properties
         if ($State) {
-            $properties["state"] = $State
+            $properties['state'] = $State
         }
 
         if ($DisplayName) {
-            $properties["displayName"] = $DisplayName
+            $properties['displayName'] = $DisplayName
         }
 
         $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($ID)" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
@@ -47,10 +47,8 @@ Function Invoke-EditCAPolicy {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecTokenExchange {
+function Invoke-ExecTokenExchange {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -10,9 +10,12 @@ Function Invoke-ExecTokenExchange {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     # Get the key vault name
     $KV = $env:WEBSITE_DEPLOYMENT_ID
-    $APIName = $Request.Params.CIPPEndpoint
 
     try {
         if (!$Request.Body) {
@@ -75,16 +78,16 @@ Function Invoke-ExecTokenExchange {
         }
     }
     if ($Results.error) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $Results
-                Headers    = @{'Content-Type' = 'application/json' }
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = $Results
+            Headers    = @{'Content-Type' = 'application/json' }
+        }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Results
-                Headers    = @{'Content-Type' = 'application/json' }
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Results
+            Headers    = @{'Content-Type' = 'application/json' }
+        }
     }
 }

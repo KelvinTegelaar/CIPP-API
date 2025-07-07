@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecDnsConfig {
+function Invoke-ExecDnsConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,8 +20,6 @@ Function Invoke-ExecDnsConfig {
         'Cloudflare'
         'Quad9'
     )
-
-
 
     $StatusCode = [HttpStatusCode]::OK
     try {
@@ -59,11 +57,11 @@ Function Invoke-ExecDnsConfig {
                 }
                 if ($updated) {
                     Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
-                    Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message 'DNS configuration updated' -Sev 'Info'
-                    $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
+                    Write-LogMessage -API $APINAME -tenant 'Global' -headers $Headers -message 'DNS configuration updated' -Sev 'Info'
+                    $Body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
                 } else {
                     $StatusCode = [HttpStatusCode]::BadRequest
-                    $body = [pscustomobject]@{'Results' = 'Error: No DNS resolver provided.' }
+                    $Body = [pscustomobject]@{'Results' = 'Error: No DNS resolver provided.' }
                 }
             }
             'SetDkimConfig' {
@@ -89,27 +87,26 @@ Function Invoke-ExecDnsConfig {
                 Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
             }
             'GetConfig' {
-                $body = [pscustomobject]$Config
-                Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message 'Retrieved DNS configuration' -Sev 'Debug'
+                $Body = [pscustomobject]$Config
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'Retrieved DNS configuration' -Sev 'Debug'
             }
             'RemoveDomain' {
                 $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
                 $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter -Property PartitionKey, RowKey
                 Remove-AzDataTableEntity -Force @DomainTable -Entity $DomainRow
-                Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
-                $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
+                $Body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APIName -tenant $($name) -headers $Headers -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 
 }

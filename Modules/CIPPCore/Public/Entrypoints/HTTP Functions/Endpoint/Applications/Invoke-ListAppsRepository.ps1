@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListAppsRepository {
+function Invoke-ListAppsRepository {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -57,16 +57,14 @@ Function Invoke-ListAppsRepository {
         $Message = "Repository error: $($_.Exception.Message)"
     }
 
-    $PackageSearch = @{
-        Search  = $Search
-        Results = @($Packages | Sort-Object -Property packagename)
-        Message = $Message
-        IsError = $IsError
+
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{
+            Search  = $Search
+            Results = @($Packages | Sort-Object -Property packagename)
+            Message = $Message
+            IsError = $IsError
+        }
     }
-
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $PackageSearch
-        })
-
 }

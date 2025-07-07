@@ -36,23 +36,18 @@ function Invoke-EditSafeLinksPolicy {
             foreach ($item in $Field) {
                 if ($item -is [string]) {
                     $result.Add($item) | Out-Null
-                }
-                elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
+                } elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
                     # Extract value from object
                     if ($null -ne $item.value) {
                         $result.Add($item.value) | Out-Null
-                    }
-                    elseif ($null -ne $item.userPrincipalName) {
+                    } elseif ($null -ne $item.userPrincipalName) {
                         $result.Add($item.userPrincipalName) | Out-Null
-                    }
-                    elseif ($null -ne $item.id) {
+                    } elseif ($null -ne $item.id) {
                         $result.Add($item.id) | Out-Null
-                    }
-                    else {
+                    } else {
                         $result.Add($item.ToString()) | Out-Null
                     }
-                }
-                else {
+                } else {
                     $result.Add($item.ToString()) | Out-Null
                 }
             }
@@ -172,7 +167,7 @@ function Invoke-EditSafeLinksPolicy {
 
             $null = New-ExoRequest @ExoRuleRequestParam
             $hasRuleOperation = $true
-            $ruleMessages.Add("updated properties") | Out-Null
+            $ruleMessages.Add('updated properties') | Out-Null
         }
 
         # Handle enable/disable if needed
@@ -189,29 +184,27 @@ function Invoke-EditSafeLinksPolicy {
 
             $null = New-ExoRequest @EnableRequestParam
             $hasRuleOperation = $true
-            $State = $State ? "enabled" : "disabled"
+            $State = $State ? 'enabled' : 'disabled'
             $ruleMessages.Add($State) | Out-Null
         }
 
         # Add combined rule message if any rule operations were performed
         if ($hasRuleOperation) {
-            $ruleOperations = $ruleMessages -join " and "
+            $ruleOperations = $ruleMessages -join ' and '
             $Results.Add("Successfully $ruleOperations SafeLinks rule '$RuleName'") | Out-Null
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$ruleOperations SafeLinks rule '$RuleName'" -Sev 'Info'
         }
 
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results.Add("Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed updating SafeLinks configuration '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{Results = $Results }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

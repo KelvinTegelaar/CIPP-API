@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveTenantAllowBlockList {
+function Invoke-RemoveTenantAllowBlockList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -44,12 +44,11 @@ Function Invoke-RemoveTenantAllowBlockList {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{
-                'Results' = $Result
-                # 'Request' = $ExoRequest
-            }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{
+            'Results' = $Result
+            # 'Request' = $ExoRequest
+        }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListLicenses {
+function Invoke-ListLicenses {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -58,9 +58,8 @@ Function Invoke-ListLicenses {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        }) -Clobber
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($GraphRequest)
+    }
 }

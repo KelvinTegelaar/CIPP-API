@@ -89,8 +89,8 @@ function Invoke-ExecServicePrincipals {
     }
 
     $Json = $Body | ConvertTo-Json -Depth 10 -Compress
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Json
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Json
+    }
 }

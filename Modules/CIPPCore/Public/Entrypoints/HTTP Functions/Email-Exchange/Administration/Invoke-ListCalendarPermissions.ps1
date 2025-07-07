@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListCalendarPermissions {
+function Invoke-ListCalendarPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,7 +24,7 @@ Function Invoke-ListCalendarPermissions {
         $Mailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{Identity = $UserID }
         $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderPermission' -anchor $UserID -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName, @{ Name = 'MailboxInfo'; Expression = { $Mailbox } }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Calendar permissions listed for $($TenantFilter)" -sev Debug
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Calendar permissions listed for $($TenantFilter)" -headers $Headers -sev Debug
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -32,10 +32,9 @@ Function Invoke-ListCalendarPermissions {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddConnectionFilter {
+function Invoke-AddConnectionFilter {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -32,10 +32,8 @@ Function Invoke-AddConnectionFilter {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{Results = @($Result) }
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Result) }
+    }
 }

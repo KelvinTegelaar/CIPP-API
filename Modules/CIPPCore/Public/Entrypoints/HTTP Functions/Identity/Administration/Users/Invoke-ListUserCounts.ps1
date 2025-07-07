@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserCounts {
+function Invoke-ListUserCounts {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -35,10 +35,8 @@ Function Invoke-ListUserCounts {
         Guests   = $Guests
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Counts
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Counts
+    }
 }

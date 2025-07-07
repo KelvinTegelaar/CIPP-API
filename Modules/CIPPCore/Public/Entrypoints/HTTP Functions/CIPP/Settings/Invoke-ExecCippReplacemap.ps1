@@ -8,16 +8,19 @@ function Invoke-ExecCippReplacemap {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'CippReplacemap'
     $Action = $Request.Query.Action ?? $Request.Body.Action
     $customerId = $Request.Query.tenantId ?? $Request.Body.tenantId
 
     if (!$customerId) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'customerId is required'
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'customerId is required'
+        }
     }
 
     switch ($Action) {
@@ -57,8 +60,8 @@ function Invoke-ExecCippReplacemap {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

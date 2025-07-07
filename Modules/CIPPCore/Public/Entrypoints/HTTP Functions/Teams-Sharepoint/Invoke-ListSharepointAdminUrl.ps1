@@ -11,8 +11,8 @@ function Invoke-ListSharepointAdminUrl {
         $TriggerMetadata
     )
 
-    if ($Request.Query.TenantFilter) {
-        $TenantFilter = $Request.Query.TenantFilter
+    if ($Request.Query.tenantFilter) {
+        $TenantFilter = $Request.Query.tenantFilter
 
         $Tenant = Get-Tenants -TenantFilter $TenantFilter
 
@@ -26,24 +26,24 @@ function Invoke-ListSharepointAdminUrl {
         }
 
         if ($Request.Query.ReturnUrl) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @{
-                        AdminUrl = $AdminUrl
-                    }
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{
+                    AdminUrl = $AdminUrl
+                }
+            }
         } else {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::Found
-                    Headers    = @{
-                        Location = $AdminUrl
-                    }
-                })
+            return @{
+                StatusCode = [HttpStatusCode]::Found
+                Headers    = @{
+                    Location = $AdminUrl
+                }
+            }
         }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'TenantFilter is required'
-            })
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = 'TenantFilter is required'
+        }
     }
 }

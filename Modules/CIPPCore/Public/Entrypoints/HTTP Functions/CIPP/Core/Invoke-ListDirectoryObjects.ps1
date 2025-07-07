@@ -37,8 +37,8 @@ function Invoke-ListDirectoryObjects {
         Write-Information $_.InvocationInfo.PositionMessage
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Results
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $Results
+    }
 }

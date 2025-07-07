@@ -45,6 +45,7 @@ function Invoke-ListIntuneScript {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Host "Failed to retrieve scripts. Error: $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     foreach ($scriptId in @('Windows', 'MacOS', 'Remediation', 'Linux')) {
@@ -59,12 +60,11 @@ function Invoke-ListIntuneScript {
         Write-Host "$scriptId scripts count: $($scripts.Count)"
         $Results.AddRange(@($scripts))
     }
+    $StatusCode = [HttpStatusCode]::OK
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Results)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 
 }

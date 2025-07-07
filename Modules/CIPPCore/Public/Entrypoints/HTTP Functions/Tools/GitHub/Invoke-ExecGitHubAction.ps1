@@ -12,6 +12,10 @@ function Invoke-ExecGitHubAction {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
     if ($Request.Query.Action) {
@@ -110,8 +114,8 @@ function Invoke-ExecGitHubAction {
         $Body.Metadata = $Metadata
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

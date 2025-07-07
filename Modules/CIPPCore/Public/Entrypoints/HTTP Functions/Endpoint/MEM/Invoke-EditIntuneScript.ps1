@@ -12,7 +12,7 @@ function Invoke-EditIntuneScript {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     $graphUrl = 'https://graph.microsoft.com/beta'
 
@@ -41,13 +41,13 @@ function Invoke-EditIntuneScript {
             # Try each endpoint to find the script
             foreach ($scriptType in @('Windows', 'MacOS', 'Remediation', 'Linux')) {
                 $endpoint = Get-ScriptEndpoint -ScriptType $scriptType
-                $parms = @{
+                $Params = @{
                     uri      = "$graphUrl/$endpoint/$scriptId"
                     tenantid = $Request.Query.TenantFilter
                 }
 
                 try {
-                    $intuneScript = New-GraphGetRequest @parms -ErrorAction Stop
+                    $intuneScript = New-GraphGetRequest @Params -ErrorAction Stop
                     if ($intuneScript) {
                         $intuneScript | Add-Member -MemberType NoteProperty -Name scriptType -Value $scriptType -Force
                         $scriptTypeFound = $true
@@ -60,22 +60,22 @@ function Invoke-EditIntuneScript {
             }
 
             if ($scriptTypeFound) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::OK
-                        Body       = $intuneScript
-                    })
+                return @{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $intuneScript
+                }
             } else {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::NotFound
-                        Body       = "Script with ID $scriptId was not found in any endpoint."
-                    })
+                return @{
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = "Script with ID $scriptId was not found in any endpoint."
+                }
             }
         }
         'PATCH' {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return @{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Method $($Request.Method) is not supported."
-            })
+            }
         }
         'POST' {
             # Parse the script data to determine type
@@ -101,25 +101,24 @@ function Invoke-EditIntuneScript {
             }
 
             $endpoint = Get-ScriptEndpoint -ScriptType $scriptType
-            $parms = @{
+            $Params = @{
                 uri      = "$graphUrl/$endpoint/$($Request.Body.ScriptId)"
                 tenantid = $Request.Body.TenantFilter
                 body     = $Request.Body.IntuneScript
             }
 
             try {
-                $patchResult = New-GraphPOSTRequest @parms -type 'PATCH'
-                $body = [pscustomobject]@{'Results' = $patchResult }
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::OK
-                        Body       = $body
-                    })
+                $patchResult = New-GraphPOSTRequest @Params -type 'PATCH'
+                return @{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = @{ Results = $patchResult }
+                }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::BadRequest
-                        Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"
-                    })
+                return @{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"
+                }
             }
         }
     }

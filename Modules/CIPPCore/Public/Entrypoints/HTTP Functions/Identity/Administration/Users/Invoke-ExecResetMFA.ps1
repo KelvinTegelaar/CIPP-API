@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecResetMFA {
+function Invoke-ExecResetMFA {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,10 +25,8 @@ Function Invoke-ExecResetMFA {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Result }
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

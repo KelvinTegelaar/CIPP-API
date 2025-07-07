@@ -11,8 +11,8 @@ function Invoke-ListPerUserMFA {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Parse query parameters
     $Tenant = $Request.query.tenantFilter
@@ -37,11 +37,8 @@ function Invoke-ListPerUserMFA {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 }

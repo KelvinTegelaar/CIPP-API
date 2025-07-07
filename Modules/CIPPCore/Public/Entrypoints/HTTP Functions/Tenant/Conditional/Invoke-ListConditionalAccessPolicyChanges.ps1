@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListConditionalAccessPolicyChanges {
+function Invoke-ListConditionalAccessPolicyChanges {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -38,9 +38,8 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         $Changes = "Failed to request audit logs for policy $($PolicyDisplayName): $($_.Exception.message)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Changes)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Changes)
+    }
 }

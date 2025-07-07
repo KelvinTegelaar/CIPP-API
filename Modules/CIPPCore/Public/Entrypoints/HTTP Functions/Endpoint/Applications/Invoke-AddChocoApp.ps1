@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddChocoApp {
+function Invoke-AddChocoApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -49,16 +49,14 @@ Function Invoke-AddChocoApp {
             "Successfully added Choco App for $($Tenant) to queue."
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Successfully added Choco App $($intuneBody.DisplayName) to queue" -Sev 'Info'
         } catch {
-            "Failed adding Choco App for $($Tenant) to queue"
-            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to add Chocolatey Application $($intuneBody.DisplayName) to queue" -Sev 'Error'
+            $ErrorMessage = Get-CippException -Exception $_
+            "Failed adding Choco App for $($Tenant) to queue. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to add Chocolatey Application $($intuneBody.DisplayName) to queue. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
-    $body = [PSCustomObject]@{'Results' = $Results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListExchangeConnectors {
+function Invoke-ListExchangeConnectors {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,8 +12,9 @@ Function Invoke-ListExchangeConnectors {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $TenantFilter = $request.Query.tenantFilter
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $TenantFilter = $Request.Query.tenantFilter
 
     $Results = try {
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-OutboundConnector' | Select-Object *, @{n = 'cippconnectortype'; e = { 'outbound' } }
@@ -21,14 +22,12 @@ Function Invoke-ListExchangeConnectors {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 }

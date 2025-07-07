@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddStoreApp {
+function Invoke-AddStoreApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,9 +15,8 @@ Function Invoke-AddStoreApp {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $WinGetApp = $Request.Body
-    $assignTo = $Request.body.AssignTo
+    $AssignTo = $Request.Body.AssignTo
 
-    if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $WinGetData = [ordered]@{
         '@odata.type'       = '#microsoft.graph.winGetApp'
         'displayName'       = "$($WinGetApp.ApplicationName)"
@@ -29,13 +28,13 @@ Function Invoke-AddStoreApp {
         }
     }
 
-    $Tenants = $Request.body.selectedTenants.defaultDomainName
+    $Tenants = $Request.Body.selectedTenants.defaultDomainName
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{
                 tenant             = $Tenant
                 ApplicationName    = $WinGetApp.ApplicationName
-                assignTo           = $assignTo
+                assignTo           = $AssignTo
                 InstallationIntent = $Request.Body.InstallationIntent
                 type               = 'WinGet'
                 IntuneBody         = $WinGetData
@@ -49,19 +48,16 @@ Function Invoke-AddStoreApp {
                 status       = 'Not Deployed yet'
             }
             "Successfully added Store App for $($Tenant) to queue."
-            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Successfully added Store App $($IntuneBody.DisplayName) to queue" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Successfully added Store App $($IntuneBody.DisplayName) to queue" -Sev 'Info'
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed to add Store App $($IntuneBody.DisplayName) to queue" -Sev 'Error'
-            "Failed to add Store App for $($Tenant) to queue"
+            $ErrorMessage = Get-CippException -Exception $_
+            "Failed to add Store App for $($Tenant) to queue. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to add Store App $($IntuneBody.DisplayName) to queue. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
-    $body = [pscustomobject]@{'Results' = $Results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = $Results }
+    }
 }

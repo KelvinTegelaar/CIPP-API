@@ -20,20 +20,22 @@ function Invoke-ExecAppUpload {
             }
             $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
             Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
-            $Results = [pscustomobject]@{'Results' = 'Application upload job has started. Please check back in 15 minutes or track the logbook for results.' }
+            $Results = 'Application upload job has started. Please check back in 15 minutes or track the logbook for results.'
+            $StatusCode = [HttpStatusCode]::OK
         }
     } else {
         try {
             Start-ApplicationOrchestrator
-            $Results = [pscustomobject]@{'Results' = 'Started application upload' }
+            $Results = 'Started application upload'
+            $StatusCode = [HttpStatusCode]::OK
         } catch {
-            $Results = [pscustomobject]@{'Results' = "Failed to start application upload. Error: $($_.Exception.Message)" }
+            $Results = "Failed to start application upload. Error: $($_.Exception.Message)"
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Results }
+    }
 }

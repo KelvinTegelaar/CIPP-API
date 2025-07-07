@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveStandard {
+function Invoke-RemoveStandard {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -21,24 +21,19 @@ Function Invoke-RemoveStandard {
         $Filter = "PartitionKey eq 'standards' and RowKey eq '$ID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
-        Write-LogMessage -Headers $Headers -API $APIName -message "Removed standards for $ID." -Sev 'Info'
-        $body = [pscustomobject]@{'Results' = 'Successfully removed standards deployment' }
+
+        $Result = "Successfully removed standards deployment for $ID"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
-
-
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $Headers -API $APIName -message "Failed to remove standard for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $Result = "Failed to remove standards deployment for $ID. $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
-        $body = [pscustomobject]@{'Results' = 'Failed to remove standard' }
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
-
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

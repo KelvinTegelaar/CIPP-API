@@ -28,7 +28,7 @@ function Set-CIPPNamedLocation {
                 $ActionDescription = "Removing IP $Content from named location"
             }
             'removeLocation' {
-                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $Content })
+                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -ne $Content })
                 $ActionDescription = "Removing location $Content from named location"
             }
             'rename' {

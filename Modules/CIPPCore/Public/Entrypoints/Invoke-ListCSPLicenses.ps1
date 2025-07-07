@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListCSPLicenses {
+function Invoke-ListCSPLicenses {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,10 +25,8 @@ Function Invoke-ListCSPLicenses {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Result)
-        }) -Clobber
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Result)
+    }
 }

@@ -13,7 +13,7 @@ function Invoke-ListSafeAttachmentsFilters {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $Policies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeAttachmentPolicy' | Select-Object -Property *
     $Rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeAttachmentRule' | Select-Object -Property *
 
@@ -23,9 +23,8 @@ function Invoke-ListSafeAttachmentsFilters {
     @{ Name = 'RecipientDomainIs'; Expression = { foreach ($item in $Rules) { if ($item.SafeAttachmentPolicy -eq $_.Name) { $item.RecipientDomainIs } } } },
     @{ Name = 'State'; Expression = { foreach ($item in $Rules) { if ($item.SafeAttachmentPolicy -eq $_.Name) { $item.State } } } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Output
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Output
+    }
 }

@@ -1,5 +1,5 @@
 
-Function Invoke-ListIntunePolicy {
+function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,15 +11,13 @@ Function Invoke-ListIntunePolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $id = $Request.Query.ID
+    $TenantFilter = $Request.Query.tenantFilter
+    $ID = $Request.Query.ID
     $URLName = $Request.Query.URLName
+
     try {
         if ($ID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
@@ -97,7 +95,7 @@ Function Invoke-ListIntunePolicy {
                     $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
                     $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
                     $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                    ForEach ($target in $Assignments) {
+                    foreach ($target in $Assignments) {
                         switch ($target.'@odata.type') {
                             '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
                             '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }
@@ -127,12 +125,12 @@ Function Invoke-ListIntunePolicy {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

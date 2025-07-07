@@ -83,8 +83,8 @@ function Invoke-ListAppConsentRequests {
         $Results = "Error: $($ErrorMessage.NormalizedError)"
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 }

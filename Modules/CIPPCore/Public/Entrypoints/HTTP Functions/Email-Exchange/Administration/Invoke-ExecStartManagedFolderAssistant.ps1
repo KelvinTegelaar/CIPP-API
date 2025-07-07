@@ -1,6 +1,6 @@
 ﻿using namespace System.Net
 
-Function Invoke-ExecStartManagedFolderAssistant {
+function Invoke-ExecStartManagedFolderAssistant {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -21,14 +21,8 @@ Function Invoke-ExecStartManagedFolderAssistant {
     $Identity = $ID ?? $UserPrincipalName
     $ShownName = $UserPrincipalName ?? $ID
 
-
-    $ExoParams = @{
-        Identity          = $Identity
-        FullCrawl         = $true
-    }
-
     try {
-        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams $ExoParams
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams @{Identity = $Identity; FullCrawl = $true }
         $Result = "Successfully started Managed Folder Assistant for mailbox $($ShownName)."
         $Severity = 'Info'
         $StatusCode = [HttpStatusCode]::OK
@@ -41,10 +35,8 @@ Function Invoke-ExecStartManagedFolderAssistant {
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev $Severity -LogData $ErrorMessage
     }
 
-    $Body = [pscustomobject] @{ 'Results' = $Result }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Result) }
+    }
 }

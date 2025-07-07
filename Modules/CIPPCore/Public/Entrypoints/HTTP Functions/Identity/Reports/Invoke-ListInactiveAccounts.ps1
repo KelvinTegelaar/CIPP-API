@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListInactiveAccounts {
+function Invoke-ListInactiveAccounts {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -31,9 +31,8 @@ Function Invoke-ListInactiveAccounts {
         $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

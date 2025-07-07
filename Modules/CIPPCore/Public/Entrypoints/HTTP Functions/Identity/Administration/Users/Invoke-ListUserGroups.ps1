@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserGroups {
+function Invoke-ListUserGroups {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,27 +20,31 @@ Function Invoke-ListUserGroups {
     $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole&`$orderby=displayName asc"
     Write-Host $URI
 
-    $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -Verbose | Select-Object id,
-    @{ Name = 'DisplayName'; Expression = { $_.displayName } },
-    @{ Name = 'MailEnabled'; Expression = { $_.mailEnabled } },
-    @{ Name = 'Mail'; Expression = { $_.mail } },
-    @{ Name = 'SecurityGroup'; Expression = { $_.securityEnabled } },
-    @{ Name = 'GroupTypes'; Expression = { $_.groupTypes -join ',' } },
-    @{ Name = 'OnPremisesSync'; Expression = { $_.onPremisesSyncEnabled } },
-    @{ Name = 'IsAssignableToRole'; Expression = { $_.isAssignableToRole } },
-    @{ Name = 'calculatedGroupType'; Expression = {
-            if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-            if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
-            if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-            if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+    try {
+        $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -Verbose | Select-Object id,
+        @{ Name = 'DisplayName'; Expression = { $_.displayName } },
+        @{ Name = 'MailEnabled'; Expression = { $_.mailEnabled } },
+        @{ Name = 'Mail'; Expression = { $_.mail } },
+        @{ Name = 'SecurityGroup'; Expression = { $_.securityEnabled } },
+        @{ Name = 'GroupTypes'; Expression = { $_.groupTypes -join ',' } },
+        @{ Name = 'OnPremisesSync'; Expression = { $_.onPremisesSyncEnabled } },
+        @{ Name = 'IsAssignableToRole'; Expression = { $_.isAssignableToRole } },
+        @{ Name = 'calculatedGroupType'; Expression = {
+                if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+            }
         }
+
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $GraphRequest = @()
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

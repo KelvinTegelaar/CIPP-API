@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddContact {
+function Invoke-AddContact {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -90,8 +90,7 @@ Function Invoke-AddContact {
         $Result = "Successfully created contact $($ContactObject.displayName) with email address $($ContactObject.email)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create contact. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Result -Sev 'Error' -LogData $ErrorMessage
@@ -100,8 +99,8 @@ Function Invoke-AddContact {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return @{
         StatusCode = $StatusCode
         Body       = @{Results = $Result }
-    })
+    }
 }

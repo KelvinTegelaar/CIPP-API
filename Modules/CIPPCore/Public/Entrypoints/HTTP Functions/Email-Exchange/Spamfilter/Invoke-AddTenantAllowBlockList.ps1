@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddTenantAllowBlockList {
+function Invoke-AddTenantAllowBlockList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -21,7 +21,7 @@ Function Invoke-AddTenantAllowBlockList {
     if ($BlockListObject.entries -is [array]) {
         $Entries = $BlockListObject.entries
     } else {
-        $Entries = @($BlockListObject.entries -split "[,;]" | Where-Object { $_ -ne "" } | ForEach-Object { $_.Trim() })
+        $Entries = @($BlockListObject.entries -split '[,;]' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim() })
     }
     foreach ($Tenant in $Tenants) {
         try {
@@ -43,21 +43,21 @@ Function Invoke-AddTenantAllowBlockList {
             }
 
             New-ExoRequest @ExoRequest
-
-            $results.add("Successfully added $($BlockListObject.Entries) as type $($BlockListObject.ListType) to the $($BlockListObject.listMethod) list for $tenant")
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $result -Sev 'Info'
+            $Result = "Successfully added $($BlockListObject.Entries) as type $($BlockListObject.ListType) to the $($BlockListObject.listMethod) list for $Tenant"
+            $Results.Add($Result)
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev 'Info'
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            $results.add("Failed to create blocklist. Error: $ErrorMessage")
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $result -Sev 'Error'
+            $ErrorMessage = Get-CippException -Exception $_
+            $Result = "Failed to create blocklist. Error: $($ErrorMessage.NormalizedError)"
+            $Results.Add($Result)
+            Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev 'Error' -LogData $ErrorMessage
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{
-                'Results' = $results
-                'Request' = $ExoRequest
-            }
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{
+            Results = $Results
+            Request = $ExoRequest
+        }
+    }
 }

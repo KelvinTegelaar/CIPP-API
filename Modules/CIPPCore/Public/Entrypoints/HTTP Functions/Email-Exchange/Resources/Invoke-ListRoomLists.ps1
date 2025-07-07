@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListRoomLists {
+function Invoke-ListRoomLists {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -108,10 +108,9 @@ Function Invoke-ListRoomLists {
         $ResponseBody = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $ResponseBody
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = $ResponseBody
+    }
 
 }

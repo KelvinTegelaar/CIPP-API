@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListBPA {
+function Invoke-ListBPA {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -100,10 +100,8 @@ Function Invoke-ListBPA {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = (ConvertTo-Json -Depth 15 -InputObject $Results)
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = (ConvertTo-Json -Depth 15 -InputObject $Results)
+    }
 }

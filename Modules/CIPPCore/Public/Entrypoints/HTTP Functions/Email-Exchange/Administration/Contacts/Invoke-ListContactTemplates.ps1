@@ -1,5 +1,5 @@
 using namespace System.Net
-Function Invoke-ListContactTemplates {
+function Invoke-ListContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -39,11 +39,10 @@ Function Invoke-ListContactTemplates {
 
         if (-not $Templates) {
             Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -Sev 'Warning'
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return @{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = @{ Error = "Template with ID $RequestedID not found" }
-            })
-            return
+            }
         }
     } else {
         # List all policies if no specific ID requested
@@ -58,9 +57,8 @@ Function Invoke-ListContactTemplates {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Templates)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Templates)
+    }
 }

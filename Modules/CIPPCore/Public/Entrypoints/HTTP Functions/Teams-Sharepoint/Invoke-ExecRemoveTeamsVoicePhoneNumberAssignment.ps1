@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
+function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -31,9 +31,9 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = $Result }
+    }
 }

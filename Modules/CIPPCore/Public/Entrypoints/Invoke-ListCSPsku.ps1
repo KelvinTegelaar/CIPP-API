@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListCSPsku {
+function Invoke-ListCSPsku {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -33,9 +33,8 @@ Function Invoke-ListCSPsku {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        }) -Clobber
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecConvertMailbox {
+function Invoke-ExecConvertMailbox {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -26,10 +26,10 @@ Function Invoke-ExecConvertMailbox {
         $Results = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{'Results' = $Results }
-        })
+
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{'Results' = $Results }
+    }
 
 }

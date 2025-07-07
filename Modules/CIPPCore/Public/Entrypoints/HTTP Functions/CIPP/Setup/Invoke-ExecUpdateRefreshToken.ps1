@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecUpdateRefreshToken {
+function Invoke-ExecUpdateRefreshToken {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -10,6 +10,10 @@ Function Invoke-ExecUpdateRefreshToken {
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $KV = $env:WEBSITE_DEPLOYMENT_ID
 
@@ -21,22 +25,22 @@ Function Invoke-ExecUpdateRefreshToken {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
 
-            if ($env:TenantID -eq $Request.body.tenantId) {
-                $Secret | Add-Member -MemberType NoteProperty -Name 'RefreshToken' -Value $Request.body.refreshtoken -Force
+            if ($env:TenantID -eq $Request.Body.tenantId) {
+                $Secret | Add-Member -MemberType NoteProperty -Name 'RefreshToken' -Value $Request.Body.refreshtoken -Force
             } else {
-                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId)"
+                Write-Host "$($env:TenantID) does not match $($Request.Body.tenantId)"
                 $name = $Request.body.tenantId -replace '-', '_'
-                $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
+                $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.Body.refreshtoken -Force
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
-            if ($env:TenantID -eq $Request.body.tenantId) {
-                Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+            if ($env:TenantID -eq $Request.Body.tenantId) {
+                Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.Body.refreshtoken -AsPlainText -Force)
             } else {
-                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
-                $name = $Request.body.tenantId
+                Write-Host "$($env:TenantID) does not match $($Request.Body.tenantId) - we're adding a new secret for the tenant."
+                $name = $Request.Body.tenantId
                 try {
-                    Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                    Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.Body.refreshtoken -AsPlainText -Force)
                 } catch {
                     Write-Host "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
                     throw $_
@@ -45,10 +49,10 @@ Function Invoke-ExecUpdateRefreshToken {
         }
         $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
 
-        if ($request.body.tenantId -eq $env:TenantID) {
+        if ($Request.Body.tenantId -eq $env:TenantID) {
             $TenantName = 'your partner tenant'
         } else {
-            $TenantName = $request.body.tenantId
+            $TenantName = $Request.Body.tenantId
         }
         $Results = @{
             'message'  = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
@@ -58,10 +62,8 @@ Function Invoke-ExecUpdateRefreshToken {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"; severity = 'failed' }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
 }

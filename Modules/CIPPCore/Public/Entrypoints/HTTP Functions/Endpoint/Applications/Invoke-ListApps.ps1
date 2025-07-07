@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListApps {
+function Invoke-ListApps {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -28,10 +28,8 @@ Function Invoke-ListApps {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        })
-
+    return @{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 }

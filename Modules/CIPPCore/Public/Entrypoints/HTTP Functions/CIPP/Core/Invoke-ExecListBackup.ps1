@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecListBackup {
+function Invoke-ExecListBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -39,10 +39,9 @@ Function Invoke-ExecListBackup {
         $Result = $Result | Select-Object @{Name = 'BackupName'; exp = { $_.RowKey } }, Timestamp | Sort-Object Timestamp -Descending
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Result)
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Result)
+    }
 
 }

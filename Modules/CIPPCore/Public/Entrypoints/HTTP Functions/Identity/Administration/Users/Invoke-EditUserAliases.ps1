@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditUserAliases {
+function Invoke-EditUserAliases {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -18,12 +18,10 @@ Function Invoke-EditUserAliases {
     $TenantFilter = $UserObj.tenantFilter
 
     if ([string]::IsNullOrWhiteSpace($UserObj.id)) {
-        $body = @{'Results' = @('Failed to manage aliases. No user ID provided') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $Body
-            })
-        return
+        return @{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ Results = @('Failed to manage aliases. No user ID provided') }
+        }
     }
 
     $Results = [System.Collections.Generic.List[object]]::new()
@@ -36,7 +34,12 @@ Function Invoke-EditUserAliases {
             $CurrentMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{ Identity = $UserObj.id } -UseSystemMailbox $true
 
             if (-not $CurrentMailbox) {
-                throw 'Could not find mailbox for user'
+                $Results.Add('Could not find mailbox for user')
+                $StatusCode = [HttpStatusCode]::NotFound
+                return @{
+                    StatusCode = $StatusCode
+                    Body       = @{ Results = @($Results) }
+                }
             }
 
             $CurrentProxyAddresses = @($CurrentMailbox.EmailAddresses)
@@ -64,7 +67,12 @@ Function Invoke-EditUserAliases {
 
                 if (-not $ExistingAddress) {
                     Write-Host "Available addresses: $($CurrentProxyAddresses -join ', ')"
-                    throw "Cannot set primary address. Address $($PrimaryAddress -replace '^SMTP:', '') not found in user's addresses."
+                    $Results.Add("Cannot set primary address. Address $($PrimaryAddress -replace '^SMTP:', '') not found in user's addresses.")
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    return @{
+                        StatusCode = $StatusCode
+                        Body       = @{ Results = @($Results) }
+                    }
                 }
 
                 # Convert all current SMTP addresses to lowercase (secondary)
@@ -132,14 +140,16 @@ Function Invoke-EditUserAliases {
         } else {
             $Results.Add('No alias changes specified.')
         }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($TenantFilter) -headers $Headers -message "Alias management failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Results.Add("Failed to manage aliases: $($ErrorMessage.NormalizedError)")
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{'Results' = @($Results) }
-        })
+    return @{
+        StatusCode = $StatusCode
+        Body       = @{ Results = @($Results) }
+    }
 }

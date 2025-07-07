@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddCAPolicy {
+function Invoke-AddCAPolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,23 +17,27 @@ Function Invoke-AddCAPolicy {
     $Tenants = $Request.body.tenantFilter.value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
 
-    $results = foreach ($Tenant in $tenants) {
+    $Results = foreach ($Tenant in $Tenants) {
         try {
-            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.Body.replacename -Overwrite $request.Body.overwrite -TenantFilter $Tenant -state $Request.Body.NewState -RawJSON $Request.Body.RawJSON -APIName $APIName -Headers $Headers
-            "$CAPolicy"
+            $CAPolicyParams = @{
+                replacePattern = $Request.Body.replacename
+                Overwrite      = $Request.Body.overwrite
+                TenantFilter   = $Tenant
+                state          = $Request.Body.NewState
+                RawJSON        = $Request.Body.RawJSON
+                APIName        = $APIName
+                Headers        = $Headers
+            }
+            New-CIPPCAPolicy @CAPolicyParams
+
         } catch {
-            "$($_.Exception.Message)"
+            $_.Exception.Message
             continue
         }
-
     }
 
-    $body = [pscustomobject]@{'Results' = @($results) }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{ Results = @($Results) }
+    }
 }

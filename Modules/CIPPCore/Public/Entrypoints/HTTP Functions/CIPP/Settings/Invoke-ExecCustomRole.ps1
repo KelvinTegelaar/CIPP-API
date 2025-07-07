@@ -8,6 +8,10 @@ function Invoke-ExecCustomRole {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'CustomRoles'
     $AccessRoleGroupTable = Get-CippTable -tablename 'AccessRoleGroups'
     $Action = $Request.Query.Action ?? $Request.Body.Action
@@ -23,7 +27,7 @@ function Invoke-ExecCustomRole {
         'AddUpdate' {
             try {
                 $Results = [System.Collections.Generic.List[string]]::new()
-                Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
+                Write-LogMessage -headers $Headers -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
                 if ($Request.Body.RoleName -notin $DefaultRoles) {
                     $Role = @{
                         'PartitionKey'   = 'CustomRoles'
@@ -44,13 +48,13 @@ function Invoke-ExecCustomRole {
                     }
                     Add-CIPPAzDataTableEntity @AccessRoleGroupTable -Entity $RoleGroup -Force | Out-Null
                     $Results.Add("Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role.")
-                    Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role." -Sev 'Info'
+                    Write-LogMessage -headers $Headers -API 'ExecCustomRole' -message "Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role." -Sev 'Info'
                 } else {
                     $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$($Request.Body.RoleName)'"
                     if ($AccessRoleGroup) {
                         Remove-AzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
                         $Results.Add("Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role.")
-                        Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role." -Sev 'Info'
+                        Write-LogMessage -headers $Headers -API 'ExecCustomRole' -message "Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role." -Sev 'Info'
                     }
                 }
                 $Body = @{Results = $Results }
@@ -65,7 +69,7 @@ function Invoke-ExecCustomRole {
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
             Remove-AzDataTableEntity -Force @Table -Entity $Role
             $Body = @{Results = 'Custom role deleted' }
-            Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
         }
         'ListEntraGroups' {
             $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true' -tenantid $env:TenantID -NoAuthCheck $true
@@ -136,8 +140,8 @@ function Invoke-ExecCustomRole {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

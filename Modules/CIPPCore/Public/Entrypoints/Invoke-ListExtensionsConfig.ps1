@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListExtensionsConfig {
+function Invoke-ListExtensionsConfig {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -34,10 +34,9 @@ Function Invoke-ListExtensionsConfig {
         Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
         $Body = @{}
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
 
+    return @{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }
