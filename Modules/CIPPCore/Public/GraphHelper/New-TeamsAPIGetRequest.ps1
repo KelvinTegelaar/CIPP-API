@@ -10,19 +10,44 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
         $NextURL = $Uri
         $ReturnedData = do {
             try {
-                # Use Invoke-RestMethod with automatic decompression and explicit headers to prevent gzip
-                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
-                    Authorization            = $token.Authorization
-                    'x-ms-client-request-id' = [guid]::NewGuid().ToString()
-                    'x-ms-client-session-id' = [guid]::NewGuid().ToString()
-                    'x-ms-correlation-id'    = [guid]::NewGuid()
-                    'X-Requested-With'       = 'XMLHttpRequest'
-                    'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9'
-                    'Accept'                 = 'application/json'
-                    'Accept-Encoding'        = 'identity'
-                    'User-Agent'             = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'
-                } -DisableKeepAlive
+                # Use .NET HttpClient directly to bypass PowerShell HTTP handling issues
+                $httpClient = New-Object System.Net.Http.HttpClient
+                $httpClient.DefaultRequestHeaders.Add('Authorization', $token.Authorization)
+                $httpClient.DefaultRequestHeaders.Add('x-ms-client-request-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('x-ms-client-session-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('x-ms-correlation-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('X-Requested-With', 'XMLHttpRequest')
+                $httpClient.DefaultRequestHeaders.Add('x-ms-tnm-applicationid', '045268c0-445e-4ac1-9157-d58f67b167d9')
+                $httpClient.DefaultRequestHeaders.Add('Accept', 'application/json')
+                $httpClient.DefaultRequestHeaders.Add('Accept-Encoding', 'identity')
+                $httpClient.DefaultRequestHeaders.Add('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36')
 
+                # Disable automatic decompression to prevent .NET compression issues
+                $handler = New-Object System.Net.Http.HttpClientHandler
+                $handler.AutomaticDecompression = [System.Net.DecompressionMethods]::None
+                $httpClient.Dispose()
+                $httpClient = New-Object System.Net.Http.HttpClient($handler)
+
+                # Re-add headers after creating new client with handler
+                $httpClient.DefaultRequestHeaders.Add('Authorization', $token.Authorization)
+                $httpClient.DefaultRequestHeaders.Add('x-ms-client-request-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('x-ms-client-session-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('x-ms-correlation-id', [guid]::NewGuid().ToString())
+                $httpClient.DefaultRequestHeaders.Add('X-Requested-With', 'XMLHttpRequest')
+                $httpClient.DefaultRequestHeaders.Add('x-ms-tnm-applicationid', '045268c0-445e-4ac1-9157-d58f67b167d9')
+                $httpClient.DefaultRequestHeaders.Add('Accept', 'application/json')
+                $httpClient.DefaultRequestHeaders.Add('Accept-Encoding', 'identity')
+                $httpClient.DefaultRequestHeaders.Add('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36')
+
+                $response = $httpClient.GetAsync($NextURL).Result
+                $contentString = $response.Content.ReadAsStringAsync().Result
+
+                # Clean up
+                $httpClient.Dispose()
+                $handler.Dispose()
+
+                # Parse JSON
+                $Data = $contentString | ConvertFrom-Json
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
             } catch {
