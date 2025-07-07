@@ -10,8 +10,8 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
         $NextURL = $Uri
         $ReturnedData = do {
             try {
-                # Use Invoke-WebRequest first to get full response control
-                $Response = Invoke-WebRequest -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                # Use Invoke-RestMethod with automatic decompression and explicit headers to prevent gzip
+                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
                     Authorization            = $token.Authorization
                     'x-ms-client-request-id' = [guid]::NewGuid().ToString()
                     'x-ms-client-session-id' = [guid]::NewGuid().ToString()
@@ -21,34 +21,8 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                     'Accept'                 = 'application/json'
                     'Accept-Encoding'        = 'identity'
                     'User-Agent'             = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'
-                }
+                } -DisableKeepAlive
 
-                # Handle response content - check for gzip encoding first
-                Write-Information "Response Headers: $($Response.Headers | ConvertTo-Json -Depth 10)"
-
-                if ($Response.Headers['Content-Encoding'] -contains 'gzip') {
-                    # Get raw bytes for proper gzip decompression
-                    $bytes = $Response.RawContentStream.ToArray()
-                    try {
-                        $memoryStream = New-Object System.IO.MemoryStream(, $bytes)
-                        $gzipStream = New-Object System.IO.Compression.GzipStream($memoryStream, [System.IO.Compression.CompressionMode]::Decompress)
-                        $reader = New-Object System.IO.StreamReader($gzipStream, [System.Text.Encoding]::UTF8)
-                        $ContentString = $reader.ReadToEnd()
-                        $reader.Close()
-                        $gzipStream.Close()
-                        $memoryStream.Close()
-                    } catch {
-                        # Fallback: try to use the content as-is if decompression fails
-                        Write-Warning "Gzip decompression failed, using content as-is: $($_.Exception.Message)"
-                        $ContentString = $Response.Content
-                    }
-                } else {
-                    # Content is not gzipped, use as-is
-                    $ContentString = $Response.Content
-                }
-
-                # Parse the content as JSON
-                $Data = $ContentString | ConvertFrom-Json
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
             } catch {
