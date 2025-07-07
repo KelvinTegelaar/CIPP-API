@@ -43,8 +43,8 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                 $contentString = $response.Content.ReadAsStringAsync().Result
 
                 # Clean up
-                $httpClient.Dispose()
-                $handler.Dispose()
+                $httpClient.Dispose() | Out-Null
+                $handler.Dispose() | Out-Null
 
                 # Parse JSON
                 $Data = $contentString | ConvertFrom-Json
