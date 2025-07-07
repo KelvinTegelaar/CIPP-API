@@ -18,6 +18,7 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                     'X-Requested-With'       = 'XMLHttpRequest'
                     'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9'
                     'Accept'                 = 'application/json'
+                    'User-Agent'             = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'
                 }
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }

@@ -16,13 +16,15 @@ function Invoke-ListTeamsVoice {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $TenantId = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter).customerId
+    $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
     try {
         $Users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter)
         $Skip = 0
         $GraphRequest = do {
             Write-Host "Getting page $Skip"
-            $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($TenantId)/telephone-numbers?skip=$($Skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
+            $Results = New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($TenantId)/telephone-numbers?skip=$($Skip)&locale=en-US&top=999" -tenantid $TenantFilter
+            Write-Information ($Results | ConvertTo-Json -Depth 10)
+            $data = $Results.TelephoneNumbers | ForEach-Object {
                 Write-Host 'Reached the loop'
                 $CompleteRequest = $_ | Select-Object *, @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.TargetId } }
                 if ($CompleteRequest.AcquisitionDate) {
