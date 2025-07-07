@@ -25,6 +25,7 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
 
                 # Ensure we get the content as string and parse as JSON
                 $ContentString = $Response.Content
+                Write-Information "Response Headers: $($Response.Headers | ConvertTo-Json -Depth 10)"
                 if ($Response.Headers['Content-Encoding'] -contains 'gzip') {
                     # If still gzipped despite our header, decompress manually
                     $bytes = [System.Text.Encoding]::UTF8.GetBytes($ContentString)
