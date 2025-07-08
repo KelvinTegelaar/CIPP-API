@@ -6,52 +6,49 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $token = Get-GraphToken -TenantID $tenantID -Scope "$Resource/.default"
-
         $NextURL = $Uri
         $ReturnedData = do {
+            $handler = $null
+            $httpClient = $null
+            $response = $null
             try {
-                # Use .NET HttpClient directly to bypass PowerShell HTTP handling issues
-                $httpClient = New-Object System.Net.Http.HttpClient
-                $httpClient.DefaultRequestHeaders.Add('Authorization', $token.Authorization)
-                $httpClient.DefaultRequestHeaders.Add('x-ms-client-request-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('x-ms-client-session-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('x-ms-correlation-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('X-Requested-With', 'XMLHttpRequest')
-                $httpClient.DefaultRequestHeaders.Add('x-ms-tnm-applicationid', '045268c0-445e-4ac1-9157-d58f67b167d9')
-                $httpClient.DefaultRequestHeaders.Add('Accept', 'application/json')
-                $httpClient.DefaultRequestHeaders.Add('Accept-Encoding', 'identity')
-                $httpClient.DefaultRequestHeaders.Add('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36')
-
-                # Disable automatic decompression to prevent .NET compression issues
+                # Create handler and client with compression disabled
                 $handler = New-Object System.Net.Http.HttpClientHandler
                 $handler.AutomaticDecompression = [System.Net.DecompressionMethods]::None
-                $httpClient.Dispose()
                 $httpClient = New-Object System.Net.Http.HttpClient($handler)
 
-                # Re-add headers after creating new client with handler
-                $httpClient.DefaultRequestHeaders.Add('Authorization', $token.Authorization)
-                $httpClient.DefaultRequestHeaders.Add('x-ms-client-request-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('x-ms-client-session-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('x-ms-correlation-id', [guid]::NewGuid().ToString())
-                $httpClient.DefaultRequestHeaders.Add('X-Requested-With', 'XMLHttpRequest')
-                $httpClient.DefaultRequestHeaders.Add('x-ms-tnm-applicationid', '045268c0-445e-4ac1-9157-d58f67b167d9')
-                $httpClient.DefaultRequestHeaders.Add('Accept', 'application/json')
-                $httpClient.DefaultRequestHeaders.Add('Accept-Encoding', 'identity')
-                $httpClient.DefaultRequestHeaders.Add('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36')
+                # Add all required headers
+                $headers = @{
+                    'Authorization'          = $token.Authorization
+                    'x-ms-client-request-id' = [guid]::NewGuid().ToString()
+                    'x-ms-client-session-id' = [guid]::NewGuid().ToString()
+                    'x-ms-correlation-id'    = [guid]::NewGuid().ToString()
+                    'X-Requested-With'       = 'XMLHttpRequest'
+                    'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9'
+                    'Accept'                 = 'application/json'
+                    'Accept-Encoding'        = 'identity'
+                    'User-Agent'             = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'
+                }
+
+                foreach ($header in $headers.GetEnumerator()) {
+                    $httpClient.DefaultRequestHeaders.Add($header.Key, $header.Value)
+                }
 
                 $response = $httpClient.GetAsync($NextURL).Result
                 $contentString = $response.Content.ReadAsStringAsync().Result
 
-                # Clean up
-                $httpClient.Dispose() | Out-Null
-                $handler.Dispose() | Out-Null
-
-                # Parse JSON
+                # Parse JSON and return data
                 $Data = $contentString | ConvertFrom-Json
+
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
             } catch {
                 throw "Failed to make Teams API Get Request $_"
+            } finally {
+                # Proper cleanup in finally block to ensure disposal even on exceptions
+                if ($response) { $response.Dispose() }
+                if ($httpClient) { $httpClient.Dispose() }
+                if ($handler) { $handler.Dispose() }
             }
         } until ($null -eq $NextURL)
         return $ReturnedData
