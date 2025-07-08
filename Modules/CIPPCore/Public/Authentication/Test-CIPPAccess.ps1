@@ -8,9 +8,13 @@ function Test-CIPPAccess {
     # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
-    try {
-        $Help = Get-Help $FunctionName -ErrorAction Stop
-    } catch {}
+    if ($FunctionName -ne 'Invoke-me') {
+        try {
+            $Help = Get-Help $FunctionName -ErrorAction Stop
+        } catch {
+            Write-Warning "Function '$FunctionName' not found"
+        }
+    }
 
     # Check help for role
     $APIRole = $Help.Role
@@ -189,10 +193,39 @@ function Test-CIPPAccess {
                         if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
                             @('AllTenants')
                         } else {
-                            if ($Permission.AllowedTenants -contains 'AllTenants') {
-                                $Permission.AllowedTenants = $Tenants.customerId
+                            # Expand tenant groups to individual tenant IDs
+                            $ExpandedAllowedTenants = foreach ($AllowedItem in $Permission.AllowedTenants) {
+                                if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') {
+                                    try {
+                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($AllowedItem)
+                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
+                                    } catch {
+                                        Write-Warning "Failed to expand tenant group '$($AllowedItem.label)': $($_.Exception.Message)"
+                                        @()
+                                    }
+                                } else {
+                                    $AllowedItem
+                                }
                             }
-                            $Permission.AllowedTenants | Where-Object { $Permission.BlockedTenants -notcontains $_ }
+
+                            $ExpandedBlockedTenants = foreach ($BlockedItem in $Permission.BlockedTenants) {
+                                if ($BlockedItem -is [PSCustomObject] -and $BlockedItem.type -eq 'Group') {
+                                    try {
+                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($BlockedItem)
+                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
+                                    } catch {
+                                        Write-Warning "Failed to expand blocked tenant group '$($BlockedItem.label)': $($_.Exception.Message)"
+                                        @()
+                                    }
+                                } else {
+                                    $BlockedItem
+                                }
+                            }
+
+                            if ($ExpandedAllowedTenants -contains 'AllTenants') {
+                                $ExpandedAllowedTenants = $Tenants.customerId
+                            }
+                            $ExpandedAllowedTenants | Where-Object { $ExpandedBlockedTenants -notcontains $_ }
                         }
                     }
                     return $LimitedTenantList
@@ -217,13 +250,45 @@ function Test-CIPPAccess {
                             $TenantAllowed = $false
                         } else {
                             $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
-                            if ($Role.AllowedTenants -contains 'AllTenants') {
+
+                            # Expand allowed tenant groups to individual tenant IDs
+                            $ExpandedAllowedTenants = foreach ($AllowedItem in $Role.AllowedTenants) {
+                                if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') {
+                                    try {
+                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($AllowedItem)
+                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
+                                    } catch {
+                                        Write-Warning "Failed to expand allowed tenant group '$($AllowedItem.label)': $($_.Exception.Message)"
+                                        @()
+                                    }
+                                } else {
+                                    $AllowedItem
+                                }
+                            }
+
+                            # Expand blocked tenant groups to individual tenant IDs
+                            $ExpandedBlockedTenants = foreach ($BlockedItem in $Role.BlockedTenants) {
+                                if ($BlockedItem -is [PSCustomObject] -and $BlockedItem.type -eq 'Group') {
+                                    try {
+                                        $GroupMembers = Expand-CIPPTenantGroups -TenantFilter @($BlockedItem)
+                                        $GroupMembers | ForEach-Object { $_.addedFields.customerId }
+                                    } catch {
+                                        Write-Warning "Failed to expand blocked tenant group '$($BlockedItem.label)': $($_.Exception.Message)"
+                                        @()
+                                    }
+                                } else {
+                                    $BlockedItem
+                                }
+                            }
+
+                            if ($ExpandedAllowedTenants -contains 'AllTenants') {
                                 $AllowedTenants = $Tenants.customerId
                             } else {
-                                $AllowedTenants = $Role.AllowedTenants
+                                $AllowedTenants = $ExpandedAllowedTenants
                             }
+
                             if ($Tenant) {
-                                $TenantAllowed = $AllowedTenants -contains $Tenant -and $Role.BlockedTenants -notcontains $Tenant
+                                $TenantAllowed = $AllowedTenants -contains $Tenant -and $ExpandedBlockedTenants -notcontains $Tenant
                                 if (!$TenantAllowed) { continue }
                                 break
                             } else {
