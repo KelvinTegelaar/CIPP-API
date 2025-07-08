@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGraphExplorerPreset {
+function Invoke-ExecGraphExplorerPreset {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,23 +10,25 @@ Function Invoke-ExecGraphExplorerPreset {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    #UNDOREPLACE
+    $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
-    $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     $Action = $Request.Body.Action ?? ''
+
+    Write-Information ($Request.Body | ConvertTo-Json -Depth 10)
 
     switch ($Action) {
         'Copy' {
-            $Id = (New-Guid).Guid
+            $Id = $Request.Body.preset.id ? $Request.Body.preset.id : (New-Guid).Guid
         }
         'Save' {
-            $Id = $Request.Body.preset.reportTemplate.value
+            $Id = $Request.Body.preset.id
         }
         'Delete' {
-            $Id = $Request.Body.preset.reportTemplate.value
+            $Id = $Request.Body.preset.id
         }
         default {
             $Action = 'Copy'
@@ -38,6 +40,32 @@ Function Invoke-ExecGraphExplorerPreset {
 
     if ($params.'$select'.value) {
         $params.'$select' = ($params.'$select').value -join ','
+    }
+
+    if (!$Request.Body.preset.name) {
+        $Message = 'Error: Preset name is required'
+        $StatusCode = [HttpStatusCode]::BadRequest
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @{
+                    Results = $Message
+                    Success = $false
+                }
+            })
+        return
+    }
+
+    if (!$Request.Body.preset.endpoint) {
+        $Message = 'Error: Preset endpoint is required'
+        $StatusCode = [HttpStatusCode]::BadRequest
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @{
+                    Results = $Message
+                    Success = $false
+                }
+            })
+        return
     }
 
     $Preset = [PSCustomObject]@{
@@ -55,7 +83,7 @@ Function Invoke-ExecGraphExplorerPreset {
         $Table = Get-CIPPTable -TableName 'GraphPresets'
         $Message = '{0} preset succeeded' -f $Action
         if ($Action -eq 'Copy') {
-            Add-CIPPAzDataTableEntity @Table -Entity $Preset
+            Add-CIPPAzDataTableEntity @Table -Entity $Preset -Force
             $Success = $true
         } else {
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Id'"
@@ -67,6 +95,7 @@ Function Invoke-ExecGraphExplorerPreset {
                 }
                 $Success = $true
             } else {
+                Write-Host "username in table: $($Entity.Owner). Username in request: $Username"
                 $Message = 'Error: You can only modify your own presets.'
                 $Success = $false
             }

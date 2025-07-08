@@ -1,7 +1,7 @@
 function Set-CIPPCopyGroupMembers {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [string]$ExecutingUser,
+        $Headers,
         [string]$UserId,
         [string]$CopyFromId,
         [string]$TenantFilter,
@@ -31,22 +31,26 @@ function Set-CIPPCopyGroupMembers {
     $CurrentMemberships = ($Results | Where-Object { $_.id -eq 'UserMembership' }).body.value
     $CopyFromMemberships = ($Results | Where-Object { $_.id -eq 'CopyFromMembership' }).body.value
 
-    Write-Information ($Results | ConvertTo-Json -Depth 10)
+    # Write-Information ($Results | ConvertTo-Json -Depth 10) # For debugging
 
     $ODataBind = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $User.id
     $AddMemberBody = @{
         '@odata.id' = $ODataBind
     } | ConvertTo-Json -Compress
 
-    $Success = [System.Collections.Generic.List[string]]::new()
-    $Errors = [System.Collections.Generic.List[string]]::new()
-    $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and $_.groupTypes -notcontains 'DynamicMembership' -and $_.onPremisesSyncEnabled -ne $true -and $_.visibility -ne 'Public' -and $CurrentMemberships.id -notcontains $_.id }
+    $Success = [System.Collections.Generic.List[object]]::new()
+    $Errors = [System.Collections.Generic.List[object]]::new()
+    $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and
+        $_.groupTypes -notcontains 'DynamicMembership' -and
+        $_.onPremisesSyncEnabled -ne $true -and
+        $_.visibility -ne 'Public' -and
+        $CurrentMemberships.id -notcontains $_.id }
     $ScheduleExchangeGroupTask = $false
     foreach ($MailGroup in $Memberships) {
         try {
             if ($PSCmdlet.ShouldProcess($MailGroup.displayName, "Add $UserId to group")) {
-                if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
-                    $Params = @{ Identity = $MailGroup.mailNickname; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
+                if ($MailGroup.MailEnabled -and $MailGroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
+                    $Params = @{ Identity = $MailGroup.id; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
                     try {
                         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                     } catch {
@@ -88,13 +92,13 @@ function Set-CIPPCopyGroupMembers {
                 Add-CIPPScheduledTask -Task $TaskBody -hidden $false
                 $Errors.Add("We've scheduled a task to add $UserId to the Exchange group $($MailGroup.displayName)") | Out-Null
             } else {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
                 $Success.Add("Added user to group: $($MailGroup.displayName)") | Out-Null
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Errors.Add("We've failed to add the group $($MailGroup.displayName): $($ErrorMessage.NormalizedError)") | Out-Null
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
@@ -103,5 +107,5 @@ function Set-CIPPCopyGroupMembers {
         'Error'   = $Errors
     }
 
-    return $Results
+    return @($Results)
 }

@@ -1,36 +1,55 @@
 function Set-CIPPOutOfOffice {
     [CmdletBinding()]
     param (
-        $userid,
+        [Parameter(Mandatory = $true)]
+        $UserID,
         $InternalMessage,
         $ExternalMessage,
         $TenantFilter,
-        $State,
+        [ValidateSet('Enabled', 'Disabled', 'Scheduled')]
+        [Parameter(Mandatory = $true)]
+        [string]$State,
         $APIName = 'Set Out of Office',
-        $ExecutingUser,
+        $Headers,
         $StartTime,
         $EndTime
     )
 
     try {
-        if (-not $StartTime) {
-            $StartTime = (Get-Date).ToString()
+
+        $CmdParams = @{
+            Identity       = $UserID
+            AutoReplyState = $State
         }
-        if (-not $EndTime) {
-            $EndTime = (Get-Date $StartTime).AddDays(7)
+
+        if ($PSBoundParameters.ContainsKey('InternalMessage')) {
+            $CmdParams.InternalMessage = $InternalMessage
         }
-        if ($State -ne 'Scheduled') {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage } -Anchor $userid
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev 'Info' -tenant $TenantFilter
-            return "Set Out-of-office for $($userid) to $state."
-        } else {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage; StartTime = $StartTime; EndTime = $EndTime } -Anchor $userid
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime" -Sev 'Info' -tenant $TenantFilter
-            return "Scheduled Out-of-office for $($userid) between $($StartTime.toString()) and $($EndTime.toString())"
+
+        if ($PSBoundParameters.ContainsKey('ExternalMessage')) {
+            $CmdParams.ExternalMessage = $ExternalMessage
         }
+
+        if ($State -eq 'Scheduled') {
+            # If starttime or endtime are not provided, default to enabling OOO for 7 days
+            $StartTime = $StartTime ? $StartTime : (Get-Date).ToString()
+            $EndTime = $EndTime ? $EndTime : (Get-Date $StartTime).AddDays(7)
+            $CmdParams.StartTime = $StartTime
+            $CmdParams.EndTime = $EndTime
+        }
+
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams $CmdParams -Anchor $UserID
+
+        $Results = $State -eq 'Scheduled' ?
+        "Scheduled Out-of-office for $($UserID) between $($StartTime.toString()) and $($EndTime.toString())" :
+        "Set Out-of-office for $($UserID) to $State."
+
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info' -tenant $TenantFilter
+        return $Results
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add OOO for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Could not add out of office message for $($userid). Error: $($ErrorMessage.NormalizedError)"
+        $Results = "Could not add OOO for $($UserID). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Results
     }
 }

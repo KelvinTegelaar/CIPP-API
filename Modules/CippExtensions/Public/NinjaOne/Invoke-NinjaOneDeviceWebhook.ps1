@@ -13,7 +13,7 @@ function Invoke-NinjaOneDeviceWebhook {
         }
 
         if ($MappedFields.DeviceCompliance) {
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -Headers $Headers -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
             $tenantfilter = $Data.tenantId
             $M365DeviceID = $Data.resourceData.id
 
@@ -28,7 +28,7 @@ function Invoke-NinjaOneDeviceWebhook {
                     $Token = Get-NinjaOneToken -configuration $Configuration
 
                     if (!$Token.access_token) {
-                        Write-LogMessage -API 'NinjaOneSync' -tenant $tenantfilter -user 'CIPP' -message 'Failed to get NinjaOne Token for Device Compliance Update' -Sev 'Error'
+                        Write-LogMessage -API 'NinjaOneSync' -tenant $tenantfilter -message 'Failed to get NinjaOne Token for Device Compliance Update' -Sev 'Error'
                         return
                     }
 
@@ -52,10 +52,10 @@ function Invoke-NinjaOneDeviceWebhook {
                         $_.Exception.message
                     }
                     Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -Depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message"
-                    Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
+                    Write-LogMessage -API 'NinjaOneSync' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
                 }
             } else {
-                Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "$($DeviceM365.displayName) ($($M365DeviceID)) was not matched in Ninja for $($tenantfilter)" -Sev 'Info'
+                Write-LogMessage -API 'NinjaOneSync' -message "$($DeviceM365.displayName) ($($M365DeviceID)) was not matched in Ninja for $($tenantfilter)" -Sev 'Info'
             }
 
         }
@@ -67,7 +67,7 @@ function Invoke-NinjaOneDeviceWebhook {
             $_.Exception.message
         }
         Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -Depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message"
-        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
+        Write-LogMessage -API 'NinjaOneSync' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
     }
 
 

@@ -13,62 +13,110 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         CAT
             Defender Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
-            {"type":"Select","label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","defaultValue":7}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"switch","name":"standards.SpamFilterPolicy.IncreaseScoreWithImageLinks","label":"Increase score if message contains image links to remote websites","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.IncreaseScoreWithBizOrInfoUrls","label":"Increase score if message contains links to .biz or .info domains","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamFramesInHtml","label":"Mark as spam if message contains HTML or iframe tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamObjectTagsInHtml","label":"Mark as spam if message contains HTML object tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamEmbedTagsInHtml","label":"Mark as spam if message contains HTML embed tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamFormTagsInHtml","label":"Mark as spam if message contains HTML form tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamWebBugsInHtml","label":"Mark as spam if message contains web bugs (also known as web beacons)","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamSensitiveWordList","label":"Mark as spam if message contains words from the sensitive words list","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.EnableLanguageBlockList","label":"Enable language block list","defaultValue":false}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.LanguageBlockList","label":"Languages to block (uppercase ISO 639-1 two-letter)","condition":{"field":"standards.SpamFilterPolicy.EnableLanguageBlockList","compareType":"is","compareValue":true}}
+            {"type":"switch","name":"standards.SpamFilterPolicy.EnableRegionBlockList","label":"Enable region block list","defaultValue":false}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.RegionBlockList","label":"Regions to block (uppercase ISO 3166-1 two-letter)","condition":{"field":"standards.SpamFilterPolicy.EnableRegionBlockList","compareType":"is","compareValue":true}}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.AllowedSenderDomains","label":"Allowed sender domains"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-15
         POWERSHELLEQUIVALENT
             New-HostedContentFilterPolicy or Set-HostedContentFilterPolicy
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpamFilterPolicy'
 
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' | Where-Object -Property Name -EQ $PolicyName | Select-Object -Property *
 
-    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                        ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
-                        ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag) -and
-                        ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction) -and
-                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag) -and
-                        ($CurrentState.BulkSpamAction -eq $Settings.BulkSpamAction) -and
-                        ($CurrentState.BulkQuarantineTag -eq $Settings.BulkQuarantineTag) -and
-                        ($CurrentState.PhishSpamAction -eq $Settings.PhishSpamAction) -and
-                        ($CurrentState.PhishQuarantineTag -eq $Settings.PhishQuarantineTag) -and
-                        ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
-                        ($CurrentState.HighConfidencePhishQuarantineTag -eq $Settings.HighConfidencePhishQuarantineTag) -and
-                        ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
-                        ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
-                        ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
-                        ($CurrentState.IncreaseScoreWithRedirectToOtherPort -eq 'On') -and
-                        ($CurrentState.MarkAsSpamEmptyMessages -eq 'On') -and
-                        ($CurrentState.MarkAsSpamJavaScriptInHtml -eq 'On') -and
-                        ($CurrentState.MarkAsSpamSpfRecordHardFail -eq 'On') -and
-                        ($CurrentState.MarkAsSpamFromAddressAuthFail -eq 'On') -and
-                        ($CurrentState.MarkAsSpamNdrBackscatter -eq 'On') -and
-                        ($CurrentState.MarkAsSpamBulkMail -eq 'On') -and
-                        ($CurrentState.InlineSafetyTipsEnabled -eq $true) -and
-                        ($CurrentState.PhishZapEnabled -eq $true) -and
-                        ($CurrentState.SpamZapEnabled -eq $true)
+    $SpamAction = $Settings.SpamAction.value ?? $Settings.SpamAction
+    $SpamQuarantineTag = $Settings.SpamQuarantineTag.value ?? $Settings.SpamQuarantineTag
+    $HighConfidenceSpamAction = $Settings.HighConfidenceSpamAction.value ?? $Settings.HighConfidenceSpamAction
+    $HighConfidenceSpamQuarantineTag = $Settings.HighConfidenceSpamQuarantineTag.value ?? $Settings.HighConfidenceSpamQuarantineTag
+    $BulkSpamAction = $Settings.BulkSpamAction.value ?? $Settings.BulkSpamAction
+    $BulkQuarantineTag = $Settings.BulkQuarantineTag.value ?? $Settings.BulkQuarantineTag
+    $PhishSpamAction = $Settings.PhishSpamAction.value ?? $Settings.PhishSpamAction
+    $PhishQuarantineTag = $Settings.PhishQuarantineTag.value ?? $Settings.PhishQuarantineTag
+    $HighConfidencePhishQuarantineTag = $Settings.HighConfidencePhishQuarantineTag.value ?? $Settings.HighConfidencePhishQuarantineTag
+
+    $IncreaseScoreWithImageLinks = if ($Settings.IncreaseScoreWithImageLinks) { 'On' } else { 'Off' }
+    $IncreaseScoreWithBizOrInfoUrls = if ($Settings.IncreaseScoreWithBizOrInfoUrls) { 'On' } else { 'Off' }
+    $MarkAsSpamFramesInHtml = if ($Settings.MarkAsSpamFramesInHtml) { 'On' } else { 'Off' }
+    $MarkAsSpamObjectTagsInHtml = if ($Settings.MarkAsSpamObjectTagsInHtml) { 'On' } else { 'Off' }
+    $MarkAsSpamEmbedTagsInHtml = if ($Settings.MarkAsSpamEmbedTagsInHtml) { 'On' } else { 'Off' }
+    $MarkAsSpamFormTagsInHtml = if ($Settings.MarkAsSpamFormTagsInHtml) { 'On' } else { 'Off' }
+    $MarkAsSpamWebBugsInHtml = if ($Settings.MarkAsSpamWebBugsInHtml) { 'On' } else { 'Off' }
+    $MarkAsSpamSensitiveWordList = if ($Settings.MarkAsSpamSensitiveWordList) { 'On' } else { 'Off' }
+
+    try {
+        $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
+        ($CurrentState.SpamAction -eq $SpamAction) -and
+        ($CurrentState.SpamQuarantineTag -eq $SpamQuarantineTag) -and
+        ($CurrentState.HighConfidenceSpamAction -eq $HighConfidenceSpamAction) -and
+        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $HighConfidenceSpamQuarantineTag) -and
+        ($CurrentState.BulkSpamAction -eq $BulkSpamAction) -and
+        ($CurrentState.BulkQuarantineTag -eq $BulkQuarantineTag) -and
+        ($CurrentState.PhishSpamAction -eq $PhishSpamAction) -and
+        ($CurrentState.PhishQuarantineTag -eq $PhishQuarantineTag) -and
+        ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
+        ($CurrentState.HighConfidencePhishQuarantineTag -eq $HighConfidencePhishQuarantineTag) -and
+        ($CurrentState.BulkThreshold -eq [int]$Settings.BulkThreshold) -and
+        ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
+        ($CurrentState.IncreaseScoreWithImageLinks -eq $IncreaseScoreWithImageLinks) -and
+        ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
+        ($CurrentState.IncreaseScoreWithRedirectToOtherPort -eq 'On') -and
+        ($CurrentState.IncreaseScoreWithBizOrInfoUrls -eq $IncreaseScoreWithBizOrInfoUrls) -and
+        ($CurrentState.MarkAsSpamEmptyMessages -eq 'On') -and
+        ($CurrentState.MarkAsSpamJavaScriptInHtml -eq 'On') -and
+        ($CurrentState.MarkAsSpamFramesInHtml -eq $MarkAsSpamFramesInHtml) -and
+        ($CurrentState.MarkAsSpamObjectTagsInHtml -eq $MarkAsSpamObjectTagsInHtml) -and
+        ($CurrentState.MarkAsSpamEmbedTagsInHtml -eq $MarkAsSpamEmbedTagsInHtml) -and
+        ($CurrentState.MarkAsSpamFormTagsInHtml -eq $MarkAsSpamFormTagsInHtml) -and
+        ($CurrentState.MarkAsSpamWebBugsInHtml -eq $MarkAsSpamWebBugsInHtml) -and
+        ($CurrentState.MarkAsSpamSensitiveWordList -eq $MarkAsSpamSensitiveWordList) -and
+        ($CurrentState.MarkAsSpamSpfRecordHardFail -eq 'On') -and
+        ($CurrentState.MarkAsSpamFromAddressAuthFail -eq 'On') -and
+        ($CurrentState.MarkAsSpamNdrBackscatter -eq 'On') -and
+        ($CurrentState.MarkAsSpamBulkMail -eq 'On') -and
+        ($CurrentState.InlineSafetyTipsEnabled -eq $true) -and
+        ($CurrentState.PhishZapEnabled -eq $true) -and
+        ($CurrentState.SpamZapEnabled -eq $true) -and
+        ($CurrentState.EnableLanguageBlockList -eq $Settings.EnableLanguageBlockList) -and
+        ((-not $CurrentState.LanguageBlockList -and -not $Settings.LanguageBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
+        ($CurrentState.EnableRegionBlockList -eq $Settings.EnableRegionBlockList) -and
+        ((-not $CurrentState.RegionBlockList -and -not $Settings.RegionBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
+        (!(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains)))
+    }
+    catch {
+        $StateIsCorrect = $false
+    }
 
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
@@ -77,31 +125,39 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
-                          ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
-                          ($RuleState.Priority -eq 0) -and
-                          (!(Compare-Object -ReferenceObject $RuleState.RecipientDomainIs -DifferenceObject $AcceptedDomains.Name))
+    ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
+    ($RuleState.Priority -eq 0) -and
+    (!(Compare-Object -ReferenceObject $RuleState.RecipientDomainIs -DifferenceObject $AcceptedDomains.Name))
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
-            $cmdparams = @{
-                SpamAction                           = $Settings.SpamAction
-                SpamQuarantineTag                    = $Settings.SpamQuarantineTag
-                HighConfidenceSpamAction             = $Settings.HighConfidenceSpamAction
-                HighConfidenceSpamQuarantineTag      = $Settings.HighConfidenceSpamQuarantineTag
-                BulkSpamAction                       = $Settings.BulkSpamAction
-                BulkQuarantineTag                    = $Settings.BulkQuarantineTag
-                PhishSpamAction                      = $Settings.PhishSpamAction
-                PhishQuarantineTag                   = $Settings.PhishQuarantineTag
+            $cmdParams = @{
+                SpamAction                           = $SpamAction
+                SpamQuarantineTag                    = $SpamQuarantineTag
+                HighConfidenceSpamAction             = $HighConfidenceSpamAction
+                HighConfidenceSpamQuarantineTag      = $HighConfidenceSpamQuarantineTag
+                BulkSpamAction                       = $BulkSpamAction
+                BulkQuarantineTag                    = $BulkQuarantineTag
+                PhishSpamAction                      = $PhishSpamAction
+                PhishQuarantineTag                   = $PhishQuarantineTag
                 HighConfidencePhishAction            = 'Quarantine'
-                HighConfidencePhishQuarantineTag     = $Settings.HighConfidencePhishQuarantineTag
-                BulkThreshold                        = $Settings.BulkThreshold
+                HighConfidencePhishQuarantineTag     = $HighConfidencePhishQuarantineTag
+                BulkThreshold                        = [int]$Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
+                IncreaseScoreWithImageLinks          = $IncreaseScoreWithImageLinks
                 IncreaseScoreWithNumericIps          = 'On'
                 IncreaseScoreWithRedirectToOtherPort = 'On'
+                IncreaseScoreWithBizOrInfoUrls       = $IncreaseScoreWithBizOrInfoUrls
                 MarkAsSpamEmptyMessages              = 'On'
                 MarkAsSpamJavaScriptInHtml           = 'On'
+                MarkAsSpamFramesInHtml               = $MarkAsSpamFramesInHtml
+                MarkAsSpamObjectTagsInHtml           = $MarkAsSpamObjectTagsInHtml
+                MarkAsSpamEmbedTagsInHtml            = $MarkAsSpamEmbedTagsInHtml
+                MarkAsSpamFormTagsInHtml             = $MarkAsSpamFormTagsInHtml
+                MarkAsSpamWebBugsInHtml              = $MarkAsSpamWebBugsInHtml
+                MarkAsSpamSensitiveWordList          = $MarkAsSpamSensitiveWordList
                 MarkAsSpamSpfRecordHardFail          = 'On'
                 MarkAsSpamFromAddressAuthFail        = 'On'
                 MarkAsSpamNdrBackscatter             = 'On'
@@ -109,20 +165,36 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 InlineSafetyTipsEnabled              = $true
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
+                AllowedSenderDomains                 = $Settings.AllowedSenderDomains.value ?? @{'@odata.type' = '#Exchange.GenericHashTable' }
             }
+
+            # Remove optional block lists if not configured
+            if ($Settings.EnableLanguageBlockList -eq $true -and $Settings.LanguageBlockList.value) {
+                $cmdParams.Add('EnableLanguageBlockList', $Settings.EnableLanguageBlockList)
+                $cmdParams.Add('LanguageBlockList', $Settings.LanguageBlockList.value)
+            } else {
+                $cmdParams.Add('EnableLanguageBlockList', $false)
+            }
+            if ($Settings.EnableRegionBlockList -eq $true -and $Settings.RegionBlockList.value) {
+                $cmdParams.Add('EnableRegionBlockList', $Settings.EnableRegionBlockList)
+                $cmdParams.Add('RegionBlockList', $Settings.RegionBlockList.value)
+            } else {
+                $cmdParams.Add('EnableRegionBlockList', $false)
+            }
+
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $PolicyName)
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $PolicyName)
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter policy $PolicyName." -sev Error -LogData $_
@@ -131,27 +203,27 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         }
 
         if ($RuleStateIsCorrect -eq $false) {
-            $cmdparams = @{
-                Priority                  = 0
-                RecipientDomainIs         = $AcceptedDomains.Name
+            $cmdParams = @{
+                Priority          = 0
+                RecipientDomainIs = $AcceptedDomains.Name
             }
 
             if ($RuleState.HostedContentFilterPolicy -ne $PolicyName) {
-                $cmdparams.Add('HostedContentFilterPolicy', $PolicyName)
+                $cmdParams.Add('HostedContentFilterPolicy', $PolicyName)
             }
 
             if ($RuleState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', "$PolicyName")
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', "$PolicyName")
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter rule $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter rule $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', "$PolicyName")
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', "$PolicyName")
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter rule $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter rule $PolicyName." -sev Error -LogData $_
@@ -161,16 +233,21 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     }
 
     if ($Settings.alert -eq $true) {
-
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Spam Filter Policy is not enabled' -object $CurrentState -tenant $Tenant -standardName 'SpamFilterPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $StateIsCorrect -eq $true ? $true : ($CurrentState ?? @{ state = 'Spam filter policy not found' })
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }
-
 }

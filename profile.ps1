@@ -13,7 +13,7 @@
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 
 # Import modules
-@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts') | ForEach-Object {
+@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzBobbyTables') | ForEach-Object {
     try {
         $Module = $_
         Import-Module -Name $_ -ErrorAction Stop
@@ -38,7 +38,7 @@ try {
 } catch {}
 
 try {
-    if (!$ENV:SetFromProfile) {
+    if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"
         $Auth = Get-CIPPAuthentication
     }
@@ -53,7 +53,6 @@ Write-Information "Function: $($env:WEBSITE_SITE_NAME) Version: $CurrentVersion"
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
-    Clear-CippDurables
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
     } else {
@@ -63,7 +62,12 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
             Version      = $CurrentVersion
         }
     }
-    Update-AzDataTableEntity @Table -Entity $LastStartup
+    Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
+    try {
+        Clear-CippDurables
+    } catch {
+        Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
+    }
 }
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias

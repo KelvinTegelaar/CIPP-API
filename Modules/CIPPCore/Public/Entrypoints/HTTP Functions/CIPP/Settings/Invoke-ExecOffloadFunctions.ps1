@@ -1,5 +1,5 @@
 
-Function Invoke-ExecOffloadFunctions {
+function Invoke-ExecOffloadFunctions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,48 +9,68 @@ Function Invoke-ExecOffloadFunctions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $roles = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userRoles
-    if ('superadmin' -notin $roles) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::Forbidden
-                Body       = @{ error = 'You do not have permission to perform this action.' }
-            })
-        return
-    } else {
-        $Table = Get-CippTable -tablename 'Config'
+    $Table = Get-CippTable -tablename 'Config'
 
-        if ($Request.Query.Action -eq 'ListCurrent') {
-            $CurrentState = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
-            $CurrentState = if (!$CurrentState) {
-                [PSCustomObject]@{
-                    OffloadFunctions = $false
-                }
-            } else {
-                [PSCustomObject]@{
-                    OffloadFunctions = $CurrentState.state
-                }
-            }
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = $CurrentState
-                })
+    if ($Request.Query.Action -eq 'ListCurrent') {
+        $CurrentState = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
+        $VersionTable = Get-CippTable -tablename 'Version'
+        $Version = Get-CIPPAzDataTableEntity @VersionTable -Filter "RowKey ne 'Version'"
+        $MainVersion = $Version | Where-Object { $_.RowKey -eq $env:WEBSITE_SITE_NAME }
+        $OffloadVersions = $Version | Where-Object { $_.RowKey -match '-' }
+
+        $Alerts = [System.Collections.Generic.List[string]]::new()
+
+        $CanEnable = $false
+        if (!$OffloadVersions.Version) {
+            $Alerts.Add('No offloaded function apps have been registered. If you''ve just deployed one, this can take up to 15 minutes.')
         } else {
-            Add-CIPPAzDataTableEntity @Table -Entity @{
-                PartitionKey = 'OffloadFunctions'
-                RowKey       = 'OffloadFunctions'
-                state        = $request.Body.OffloadFunctions
-            } -Force
-
-            if ($Request.Body.OffloadFunctions) {
-                $Results = 'Enabled Offload Functions'
-            } else {
-                $Results = 'Disabled Offload Functions'
-            }
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @{ results = $Results }
-                })
+            $CanEnable = $true
         }
 
+        foreach ($Offload in $OffloadVersions) {
+            $FunctionName = $Offload.RowKey
+            if ([semver]$Offload.Version -ne [semver]$MainVersion.Version) {
+                $CanEnable = $false
+                $Alerts.Add("The version of $FunctionName ($($Offload.Version)) does not match the current version of $($MainVersion.Version).")
+            }
+        }
+
+        $VersionTable = $Version | Select-Object @{n = 'Name'; e = { $_.RowKey } }, @{n = 'Version'; e = { $_.Version } }, @{n = 'Default'; e = { $_.RowKey -notmatch '-' } }
+
+        $CurrentState = if (!$CurrentState) {
+            [PSCustomObject]@{
+                OffloadFunctions = $false
+                Version          = @($VersionTable)
+                Alerts           = $Alerts
+                CanEnable        = $CanEnable
+            }
+        } else {
+            [PSCustomObject]@{
+                OffloadFunctions = $CurrentState.state
+                Version          = @($VersionTable)
+                Alerts           = $Alerts
+                CanEnable        = $CanEnable
+            }
+        }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $CurrentState
+            })
+    } else {
+        Add-CIPPAzDataTableEntity @Table -Entity @{
+            PartitionKey = 'OffloadFunctions'
+            RowKey       = 'OffloadFunctions'
+            state        = $request.Body.OffloadFunctions
+        } -Force
+
+        if ($Request.Body.OffloadFunctions) {
+            $Results = 'Enabled Offload Functions'
+        } else {
+            $Results = 'Disabled Offload Functions'
+        }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{ results = $Results }
+            })
     }
 }

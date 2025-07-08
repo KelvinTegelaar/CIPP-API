@@ -30,10 +30,32 @@ function Start-BPAOrchestrator {
         }
 
         Write-Verbose 'Getting BPA templates'
+
+
         $BPATemplateTable = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'BPATemplate'"
-        $Templates = ((Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json).Name
+        try {
+            $TemplateRows = Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter
 
+            if (!$TemplateRows) {
+                $null = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
+                    $TemplateJson = Get-Content $_ | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10
+                    $Entity = @{
+                        JSON         = "$TemplateJson"
+                        RowKey       = "$($_.name)"
+                        PartitionKey = 'BPATemplate'
+                        GUID         = "$($_.name)"
+                    }
+                    Add-CIPPAzDataTableEntity @BPATemplateTable -Entity $Entity -Force
+                }
+                $TemplateRows = Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter
+            }
+
+            $Templates = ($TemplateRows.JSON | ConvertFrom-Json).Name
+        } catch {
+            Write-LogMessage -API 'BestPracticeAnalyser' -message 'Could not get BPA templates' -sev Error
+            return $false
+        }
         Write-Verbose 'Creating orchestrator batch'
         $BPAReports = foreach ($Tenant in $TenantList) {
             foreach ($Template in $Templates) {

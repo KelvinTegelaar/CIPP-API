@@ -1,12 +1,16 @@
 function Invoke-ListAuditLogTest {
     <#
     .FUNCTIONALITY
-    Entrypoint
+    Entrypoint,AnyTenant
 
     .ROLE
     Tenant.Alert.Read
     #>
     Param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $AuditLogQuery = @{
         TenantFilter = $Request.Query.TenantFilter

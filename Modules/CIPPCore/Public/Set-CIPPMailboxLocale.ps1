@@ -1,24 +1,33 @@
 function Set-CippMailboxLocale {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
-        $locale,
-        $username,
+        $Headers,
+        $Locale,
+        $Username,
         $APIName = 'Mailbox Locale',
         $TenantFilter
     )
 
     try {
+        # Validate the locale. Also if the locale is not valid, it will throw an exception, not wasting a request.
+        if ([System.Globalization.CultureInfo]::GetCultureInfo($Locale).IsNeutralCulture) {
+            throw "$Locale is not a valid Locale. Neutral cultures are not supported."
+        }
+
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxRegionalConfiguration' -cmdParams @{
-            Identity                  = $username
-            Language                  = $locale
+            Identity                  = $Username
+            Language                  = $Locale
             LocalizeDefaultFolderName = $true
+            DateFormat                = $null
+            TimeFormat                = $null
         } -Anchor $username
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "set locale for $($username) to a $locale" -Sev 'Info' -tenant $TenantFilter
-        return "set locale for $($username) to a $locale"
+        $Result = "Set locale for $($Username) to $Locale"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Info -tenant $TenantFilter
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not set locale for $($username). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return  "Could not set locale for $username. Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to set locale for $($Username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

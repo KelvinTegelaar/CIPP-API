@@ -21,24 +21,24 @@ function Push-ListMailboxRulesQueue {
             }
         }
         if (($Rules | Measure-Object).Count -gt 0) {
-            foreach ($Rule in $Rules) {
-                $GraphRequest = [PSCustomObject]@{
+            $GraphRequest = foreach ($Rule in $Rules) {
+                [PSCustomObject]@{
                     Rules        = [string]($Rule | ConvertTo-Json)
                     RowKey       = [string](New-Guid).guid
                     Tenant       = [string]$domainName
-                    PartitionKey = 'mailboxrules'
+                    PartitionKey = 'MailboxRules'
                 }
 
             }
         } else {
-            $Rules = @{
-                Name = 'No rules found'
-            } | ConvertTo-Json
+            $Rules = @(@{
+                    Name = 'No rules found'
+                }) | ConvertTo-Json
             $GraphRequest = [PSCustomObject]@{
                 Rules        = [string]$Rules
                 RowKey       = [string]$domainName
                 Tenant       = [string]$domainName
-                PartitionKey = 'mailboxrules'
+                PartitionKey = 'MailboxRules'
             }
         }
     } catch {
@@ -49,7 +49,7 @@ function Push-ListMailboxRulesQueue {
             Rules        = [string]$Rules
             RowKey       = [string]$domainName
             Tenant       = [string]$domainName
-            PartitionKey = 'mailboxrules'
+            PartitionKey = 'MailboxRules'
         }
     }
     Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

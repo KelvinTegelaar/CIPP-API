@@ -27,13 +27,11 @@ function Write-CippFunctionStats {
         $StatEntity.DurationMS = $DurationMS
         $StatEntity.ErrorMsg = $ErrorMsg
         $Entity = [PSCustomObject]$Entity
+        $DesiredProperties = @('FunctionName', 'Command', 'DurableName')
+
         foreach ($Property in $Entity.PSObject.Properties.Name) {
             if ($Entity.$Property) {
-                if ($Entity.$Property.GetType().Name -in ('Hashtable', 'PSCustomObject', 'OrderedHashtable')) {
-                    $StatEntity.$Property = [string]($Entity.$Property | ConvertTo-Json -Compress)
-                } elseif ($Entity.$Property.GetType().Name -eq 'DateTime' -and $Entity.$Property.Kind -eq 'Local') {
-                    $StatEntity.$Property = $Entity.$Property.ToUniversalTime()
-                } elseif ($Property -notin ('ETag', 'RowKey', 'PartitionKey', 'Timestamp', 'LastRefresh')) {
+                if ($Property -in $DesiredProperties) {
                     $StatEntity.$Property = $Entity.$Property
                 }
             }

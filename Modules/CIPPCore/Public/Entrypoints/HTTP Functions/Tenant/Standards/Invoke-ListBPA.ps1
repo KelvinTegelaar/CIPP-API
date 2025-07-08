@@ -10,12 +10,15 @@ Function Invoke-ListBPA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    # Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Accessed this API" -Sev "Debug"
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Table = get-cipptable 'cachebpav2'
-    $name = $Request.query.Report
-    if ($name -eq $null) { $name = 'CIPP Best Practices v1.5 - Table view' }
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+    $Table = Get-CippTable 'cachebpav2'
+    $name = $Request.Query.Report
+    if ($null -eq $name) { $name = 'CIPP Best Practices v1.5 - Table view' }
 
     # Get all possible JSON files for reports, find the correct one, select the Columns
     $JSONFields = @()
@@ -33,10 +36,10 @@ Function Invoke-ListBPA {
     }
 
 
-    if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
+    if ($TenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
+        $CustomerId = (Get-Tenants -TenantFilter $TenantFilter).customerId
         $mergedObject = New-Object pscustomobject
-
-        $Data = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Request.query.tenantFilter)'") | ForEach-Object {
+        $Data = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$CustomerId'") | ForEach-Object {
             $row = $_
             $JSONFields | ForEach-Object {
                 $jsonContent = $row.$_
@@ -48,6 +51,7 @@ Function Invoke-ListBPA {
                 }
             }
             $row.PSObject.Properties | ForEach-Object {
+                Write-Host "Adding $($_.Name) to mergedObject"
                 $mergedObject | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force
             }
         }
@@ -82,9 +86,9 @@ Function Invoke-ListBPA {
         Columns = @($Columns)
         Keys    = $Data | ForEach-Object {
             $_.PSObject.Properties |
-            Where-Object { $_.Name -ne 'PartitionKey' -and $_.Name -ne 'RowKey' -and $_.Name -ne 'Timestamp' } |
-            ForEach-Object { $_.Name }
-        } | Select-Object -Unique
+                Where-Object { $_.Name -ne 'PartitionKey' -and $_.Name -ne 'RowKey' -and $_.Name -ne 'Timestamp' } |
+                ForEach-Object { $_.Name }
+            } | Select-Object -Unique
         Style   = $Style
     }
 

@@ -13,20 +13,22 @@ function Invoke-CIPPStandardAuditLog {
         CAT
             Global Standards
         TAG
-            "lowimpact"
             "CIS"
             "mip_search_auditlog"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Enable-OrganizationCustomization
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
@@ -67,12 +69,14 @@ function Invoke-CIPPStandardAuditLog {
         if ($AuditLogEnabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Unified Audit Log is not enabled' -object @{AuditLogEnabled = $AuditLogEnabled } -tenant $Tenant -standardName 'AuditLog' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-
+        $state = $AuditLogEnabled -eq $true ? $true : $AuditLogEnabled
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuditLog' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }

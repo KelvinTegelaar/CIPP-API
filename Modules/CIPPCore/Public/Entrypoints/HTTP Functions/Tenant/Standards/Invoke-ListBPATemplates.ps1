@@ -3,23 +3,23 @@ using namespace System.Net
 Function Invoke-ListBPATemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.BestPracticeAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-  
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
+        $TemplateJson = Get-Content $_ | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10
         $Entity = @{
-            JSON         = "$(Get-Content $_)"
+            JSON         = "$TemplateJson"
             RowKey       = "$($_.name)"
             PartitionKey = 'BPATemplate'
             GUID         = "$($_.name)"
@@ -28,19 +28,24 @@ Function Invoke-ListBPATemplates {
     }
 
     $Filter = "PartitionKey eq 'BPATemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if ($Request.Query.RawJson) {
-        $Templates
+        foreach ($Template in $Templates) {
+            $Template.JSON = $Template.JSON -replace '"parameters":', '"Parameters":'
+        }
+        $Templates = $Templates.JSON | ConvertFrom-Json | Sort-Object Name
     } else {
         $Templates = $Templates | ForEach-Object {
-            $Template = $_
+            $TemplateJson = $_.JSON -replace '"parameters":', '"Parameters":'
+            $Template = $TemplateJson | ConvertFrom-Json
             @{
+                GUID  = $_.GUID
                 Data  = $Template.fields
                 Name  = $Template.Name
                 Style = $Template.Style
             }
-        }
+        } | Sort-Object Name
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

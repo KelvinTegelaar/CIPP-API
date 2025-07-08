@@ -5,18 +5,18 @@ function Remove-CIPPCalendarInvites {
         $tenantFilter,
         $username,
         $APIName = 'Remove Calendar Invites',
-        $ExecutingUser
+        $Headers
     )
 
     try {
 
         New-ExoRequest -tenantid $tenantFilter -cmdlet 'Remove-CalendarEvents' -Anchor $username -cmdParams @{Identity = $username; QueryWindowInDays = 730 ; CancelOrganizedMeetings = $true ; Confirm = $false }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Cancelled all calendar invites for $($username)" -Sev 'Info' -tenant $tenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Cancelled all calendar invites for $($username)" -Sev 'Info' -tenant $tenantFilter
         "Cancelled all calendar invites for $($username)"
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not cancel calendar invites for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $tenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not cancel calendar invites for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $tenantFilter -LogData $ErrorMessage
         return "Could not cancel calendar invites for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }

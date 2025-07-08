@@ -2,93 +2,332 @@ function Get-CIPPStandards {
     param(
         [Parameter(Mandatory = $false)]
         [string]$TenantFilter = 'allTenants',
+
+        [Parameter(Mandatory = $false)]
         [switch]$ListAllTenants,
-        [switch]$SkipGetTenants
+
+        [Parameter(Mandatory = $false)]
+        $TemplateId = '*',
+
+        [Parameter(Mandatory = $false)]
+        $runManually = $false
     )
 
-    #Write-Host "Getting standards for tenant - $($tenantFilter)"
-    $Table = Get-CippTable -tablename 'standards'
-    $Filter = "PartitionKey eq 'standards'"
-    $Standards = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
-    $StandardsAllTenants = $Standards | Where-Object { $_.Tenant -eq 'AllTenants' }
+    # Get tenant groups
+    $TenantGroups = Get-TenantGroups
 
-    # Get tenant list based on filter
-    if ($SkipGetTenants.IsPresent) {
-        # Debugging flag to skip Get-Tenants
-        $Tenants = $Standards.Tenant | Sort-Object -Unique | ForEach-Object { [pscustomobject]@{ defaultDomainName = $_ } }
-    } else {
-        $Tenants = Get-Tenants
+    # 1. Get all JSON-based templates from the "templates" table
+    $Table = Get-CippTable -tablename 'templates'
+    $Filter = "PartitionKey eq 'StandardsTemplateV2'"
+    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
+    ForEach-Object {
+        try {
+            # Fix old "Action" => "action"
+            $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+        } catch {}
+    } |
+    Where-Object {
+        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
     }
+
+    # 2. Get tenant list, filter if needed
+    $AllTenantsList = Get-Tenants
     if ($TenantFilter -ne 'allTenants') {
-        $Tenants = $Tenants | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }
+        $AllTenantsList = $AllTenantsList | Where-Object {
+            $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter
+        }
     }
 
+    # 3. If -ListAllTenants, build standards for "AllTenants" only
     if ($ListAllTenants.IsPresent) {
-        $ComputedStandards = @{}
-        foreach ($StandardName in $StandardsAllTenants.Standards.PSObject.Properties.Name) {
-            $CurrentStandard = $StandardsAllTenants.Standards.$StandardName
-            #Write-Host ($CurrentStandard | ConvertTo-Json -Depth 10)
-            if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
-                #Write-Host "AllTenant Standard $StandardName"
-                $ComputedStandards[$StandardName] = $CurrentStandard
-            }
+        $AllTenantsTemplates = $Templates | Where-Object {
+            $_.tenantFilter.value -contains 'AllTenants'
         }
-        foreach ($Standard in $ComputedStandards.Keys) {
-            [pscustomobject]@{
-                Tenant   = 'AllTenants'
-                Standard = $Standard
-                Settings = $ComputedStandards.$Standard
-            }
-        }
-    } else {
-        foreach ($Tenant in $Tenants) {
-            #Write-Host "`r`n###### Tenant: $($Tenant.defaultDomainName)"
-            $StandardsTenant = $Standards | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName }
 
-            $ComputedStandards = @{}
-            if ($StandardsTenant.Standards.OverrideAllTenants.remediate -ne $true) {
-                #Write-Host 'AllTenant Standards apply to this tenant.'
-                foreach ($StandardName in $StandardsAllTenants.Standards.PSObject.Properties.Name) {
-                    $CurrentStandard = $StandardsAllTenants.Standards.$StandardName.PSObject.Copy()
-                    #Write-Host ($CurrentStandard | ConvertTo-Json -Depth 10)
-                    if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
-                        #Write-Host "AllTenant Standard $StandardName"
-                        $ComputedStandards[$StandardName] = $CurrentStandard
+        $ComputedStandards = [ordered]@{}
+
+        foreach ($Template in $AllTenantsTemplates) {
+            $Standards = $Template.standards
+
+            foreach ($StandardName in $Standards.PSObject.Properties.Name) {
+                $Value = $Standards.$StandardName
+                $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
+
+                if ($IsArray) {
+                    # e.g. IntuneTemplate with 2 items
+                    foreach ($Item in $Value) {
+                        $CurrentStandard = $Item.PSObject.Copy()
+                        $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                        if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                            $reportAction = [pscustomobject]@{
+                                label = 'Report'
+                                value = 'Report'
+                            }
+                            $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                        }
+
+                        $Actions = $CurrentStandard.action.value
+                        if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                            if (-not $ComputedStandards.Contains($StandardName)) {
+                                $ComputedStandards[$StandardName] = $CurrentStandard
+                            } else {
+                                $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                                $ComputedStandards[$StandardName] = $MergedStandard
+                            }
+                        }
+                    }
+                } else {
+                    # single object
+                    $CurrentStandard = $Value.PSObject.Copy()
+                    $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                    if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                        $reportAction = [pscustomobject]@{
+                            label = 'Report'
+                            value = 'Report'
+                        }
+                        $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                    }
+
+                    $Actions = $CurrentStandard.action.value
+                    if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                        if (-not $ComputedStandards.Contains($StandardName)) {
+                            $ComputedStandards[$StandardName] = $CurrentStandard
+                        } else {
+                            $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                            $ComputedStandards[$StandardName] = $MergedStandard
+                        }
                     }
                 }
             }
+        }
 
-            foreach ($StandardName in $StandardsTenant.Standards.PSObject.Properties.Name) {
-                if ($StandardName -eq 'OverrideAllTenants') { continue }
-                $CurrentStandard = $StandardsTenant.Standards.$StandardName.PSObject.Copy()
+        # Output result for 'AllTenants'
+        foreach ($Standard in $ComputedStandards.Keys) {
+            $TempCopy = $ComputedStandards[$Standard].PSObject.Copy()
 
-                if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
-                    # Write-Host "`r`nTenant: $StandardName"
-                    if (!$ComputedStandards[$StandardName] ) {
-                        #Write-Host "Applying tenant level $StandardName"
-                        $ComputedStandards[$StandardName] = $CurrentStandard
+            # Remove 'TemplateId' from final output
+            if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
+                foreach ($subItem in $TempCopy) {
+                    $subItem.PSObject.Properties.Remove('TemplateId') | Out-Null
+                }
+            } else {
+                $TempCopy.PSObject.Properties.Remove('TemplateId') | Out-Null
+            }
+
+            $Normalized = ConvertTo-CippStandardObject $TempCopy
+
+            [pscustomobject]@{
+                Tenant     = 'AllTenants'
+                Standard   = $Standard
+                Settings   = $Normalized
+                TemplateId = if ($ComputedStandards[$Standard] -is [System.Collections.IEnumerable] -and -not ($ComputedStandards[$Standard] -is [string])) {
+                    # If multiple items from multiple templates, you may have multiple TemplateIds
+                    $ComputedStandards[$Standard] | ForEach-Object { $_.TemplateId }
+                } else {
+                    $ComputedStandards[$Standard].TemplateId
+                }
+            }
+        }
+    } else {
+        # 4. For each tenant, figure out which templates apply, merge them, and output.
+        foreach ($Tenant in $AllTenantsList) {
+            $TenantName = $Tenant.defaultDomainName
+            # Determine which templates apply to this tenant
+            $ApplicableTemplates = $Templates | ForEach-Object {
+                $template = $_
+                $tenantFilterValues = $template.tenantFilter | ForEach-Object {
+                    $FilterValue = $_.value
+                    # Group lookup
+                    if ($_.type -eq 'Group') {
+                        ($TenantGroups | Where-Object {
+                            $_.Id -eq $FilterValue
+                        }).Members.defaultDomainName
                     } else {
-                        foreach ($Setting in $CurrentStandard.PSObject.Properties.Name) {
-                            if ($CurrentStandard.$Setting -ne $false -and ($CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and ![string]::IsNullOrWhiteSpace($CurrentStandard.$Setting) -or ($null -ne $CurrentStandard.$Setting -and $null -ne $ComputedStandards[$StandardName].$($Setting) -and (Compare-Object $CurrentStandard.$Setting $ComputedStandards[$StandardName].$($Setting))))) {
-                                #Write-Host "Overriding $Setting for $StandardName at tenant level"
-                                if ($ComputedStandards[$StandardName].PSObject.Properties.Name -contains $Setting) {
-                                    $ComputedStandards[$StandardName].$($Setting) = $CurrentStandard.$Setting
-                                } else {
-                                    $ComputedStandards[$StandardName] | Add-Member -NotePropertyName $Setting -NotePropertyValue $CurrentStandard.$Setting
+                        $FilterValue
+                    }
+                }
+
+                $excludedTenantValues = @()
+
+                if ($template.excludedTenants) {
+                    if ($template.excludedTenants -is [System.Collections.IEnumerable] -and -not ($template.excludedTenants -is [string])) {
+                        $excludedTenantValues = $template.excludedTenants | ForEach-Object {
+                            $FilterValue = $_.value
+                            if ($_.type -eq 'Group') {
+                                ($TenantGroups | Where-Object {
+                                    $_.Id -eq $FilterValue
+                                }).Members.defaultDomainName
+                            } else {
+                                $FilterValue
+                            } }
+                    } else {
+                        $excludedTenantValues = @($template.excludedTenants)
+                    }
+                }
+
+                $AllTenantsApplicable = $false
+                $TenantSpecificApplicable = $false
+
+                if ($tenantFilterValues -contains 'AllTenants' -and -not ($excludedTenantValues -contains $TenantName)) {
+                    $AllTenantsApplicable = $true
+                }
+                if ($tenantFilterValues -contains $TenantName -and -not ($excludedTenantValues -contains $TenantName)) {
+                    $TenantSpecificApplicable = $true
+                }
+
+                if ($AllTenantsApplicable -or $TenantSpecificApplicable) {
+                    $template
+                }
+            }
+
+            # Separate them into AllTenant vs. TenantSpecific sets
+            $AllTenantTemplatesSet = $ApplicableTemplates | Where-Object {
+                $_.tenantFilter.value -contains 'AllTenants'
+            }
+            $TenantSpecificTemplatesSet = $ApplicableTemplates | Where-Object {
+                $_.tenantFilter.value -notcontains 'AllTenants'
+            }
+
+            $ComputedStandards = [ordered]@{}
+
+            # 4a. Merge the AllTenantTemplatesSet
+            foreach ($Template in $AllTenantTemplatesSet) {
+                $Standards = $Template.standards
+
+                foreach ($StandardName in $Standards.PSObject.Properties.Name) {
+                    $Value = $Standards.$StandardName
+                    $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
+
+                    if ($IsArray) {
+                        foreach ($Item in $Value) {
+                            $CurrentStandard = $Item.PSObject.Copy()
+                            $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                            if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                                $reportAction = [pscustomobject]@{
+                                    label = 'Report'
+                                    value = 'Report'
                                 }
+                                $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                            }
+
+                            $Actions = $CurrentStandard.action.value
+                            if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                                if (-not $ComputedStandards.Contains($StandardName)) {
+                                    $ComputedStandards[$StandardName] = $CurrentStandard
+                                } else {
+                                    $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                                    $ComputedStandards[$StandardName] = $MergedStandard
+                                }
+                            }
+                        }
+                    } else {
+                        $CurrentStandard = $Value.PSObject.Copy()
+                        $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                        if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                            $reportAction = [pscustomobject]@{
+                                label = 'Report'
+                                value = 'Report'
+                            }
+                            $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                        }
+
+                        $Actions = $CurrentStandard.action.value
+                        if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                            if (-not $ComputedStandards.Contains($StandardName)) {
+                                $ComputedStandards[$StandardName] = $CurrentStandard
+                            } else {
+                                $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                                $ComputedStandards[$StandardName] = $MergedStandard
                             }
                         }
                     }
                 }
             }
 
+            # 4b. Merge the TenantSpecificTemplatesSet
+            foreach ($Template in $TenantSpecificTemplatesSet) {
+                $Standards = $Template.standards
+
+                foreach ($StandardName in $Standards.PSObject.Properties.Name) {
+                    $Value = $Standards.$StandardName
+                    $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
+
+                    if ($IsArray) {
+                        foreach ($Item in $Value) {
+                            $CurrentStandard = $Item.PSObject.Copy()
+                            $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                            if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                                $reportAction = [pscustomobject]@{
+                                    label = 'Report'
+                                    value = 'Report'
+                                }
+                                $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                            }
+
+                            # Filter actions only 'Remediate','warn','Report'
+                            $Actions = $CurrentStandard.action.value | Where-Object { $_ -in 'Remediate', 'warn', 'Report' }
+                            if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                                if (-not $ComputedStandards.Contains($StandardName)) {
+                                    $ComputedStandards[$StandardName] = $CurrentStandard
+                                } else {
+                                    $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                                    $ComputedStandards[$StandardName] = $MergedStandard
+                                }
+                            }
+                        }
+                    } else {
+                        $CurrentStandard = $Value.PSObject.Copy()
+                        $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                        if ($CurrentStandard.action.value -contains 'Remediate' -and -not ($CurrentStandard.action.value -contains 'Report')) {
+                            $reportAction = [pscustomobject]@{
+                                label = 'Report'
+                                value = 'Report'
+                            }
+                            $CurrentStandard.action = @($CurrentStandard.action) + $reportAction
+                        }
+
+                        $Actions = $CurrentStandard.action.value | Where-Object { $_ -in 'Remediate', 'warn', 'Report' }
+                        if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                            if (-not $ComputedStandards.Contains($StandardName)) {
+                                $ComputedStandards[$StandardName] = $CurrentStandard
+                            } else {
+                                $MergedStandard = Merge-CippStandards -Existing $ComputedStandards[$StandardName] -New $CurrentStandard -StandardName $StandardName
+                                $ComputedStandards[$StandardName] = $MergedStandard
+                            }
+                        }
+                    }
+                }
+            }
+
+            # 4c. Output each final standard for this tenant
             foreach ($Standard in $ComputedStandards.Keys) {
+                $TempCopy = $ComputedStandards[$Standard].PSObject.Copy()
+                # Remove local 'TemplateId' from final object(s)
+                if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
+                    foreach ($subItem in $TempCopy) {
+                        $subItem.PSObject.Properties.Remove('TemplateId') | Out-Null
+                    }
+                } else {
+                    $TempCopy.PSObject.Properties.Remove('TemplateId') | Out-Null
+                }
+
+                $Normalized = ConvertTo-CippStandardObject $TempCopy
+
                 [pscustomobject]@{
-                    Tenant   = $Tenant.defaultDomainName
-                    Standard = $Standard
-                    Settings = $ComputedStandards.$Standard
+                    Tenant     = $TenantName
+                    Standard   = $Standard
+                    Settings   = $Normalized
+                    TemplateId = $ComputedStandards[$Standard].TemplateId
                 }
             }
         }
     }
 }
+

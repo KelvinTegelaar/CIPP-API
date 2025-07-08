@@ -8,6 +8,10 @@ function Invoke-ExecAuditLogSearch {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Query = $Request.Body
     if (!$Query.TenantFilter) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -40,6 +44,7 @@ function Invoke-ExecAuditLogSearch {
     }
 
     try {
+        $Query = $Query | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
         $Results = New-CippAuditLogSearch @Query
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK

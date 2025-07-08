@@ -14,10 +14,20 @@ function Get-CippAuditLogSearchResults {
         [string]$TenantFilter,
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
         [Alias('id')]
-        [string]$QueryId
+        [string]$QueryId,
+        [switch]$CountOnly
     )
 
     process {
-        New-GraphGetRequest -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999' -f $QueryId) -AsApp $true -tenantid $TenantFilter -ErrorAction Stop
+        $GraphRequest = @{
+            Uri      = ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999&$count=true' -f $QueryId)
+            AsApp    = $true
+            tenantid = $TenantFilter
+        }
+        if ($CountOnly.IsPresent) {
+            $GraphRequest.CountOnly = $true
+        }
+
+        New-GraphGetRequest @GraphRequest -ErrorAction Stop
     }
 }

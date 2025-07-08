@@ -8,7 +8,7 @@ function Send-CIPPAlert {
         $JSONContent,
         $TenantFilter,
         $APIName = 'Send Alert',
-        $ExecutingUser,
+        $Headers,
         $TableName,
         $RowKey = [string][guid]::NewGuid()
     )
@@ -35,15 +35,16 @@ function Send-CIPPAlert {
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
                 if ($PSCmdlet.ShouldProcess($($Recipients.EmailAddress.Address -join ', '), 'Sending email')) {
-                    New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
+                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
                 }
             }
-            Write-LogMessage -API 'Webhook Alerts' -message "Sent a webhook alert to email: $Title" -tenant $TenantFilter -sev info
-
+            Write-LogMessage -API 'Webhook Alerts' -message "Sent an email alert: $Title" -tenant $TenantFilter -sev info
+            return "Sent an email alert: $Title"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
+            return "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
         }
     }
 
@@ -105,9 +106,9 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
         }
     }
-    Write-Information 'Trying to send to PSA'
 
     if ($Type -eq 'psa') {
+        Write-Information 'Trying to send to PSA'
         if ($config.sendtoIntegration) {
             if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
                 try {
@@ -118,7 +119,6 @@ function Send-CIPPAlert {
                     }
                     New-CippExtAlert -Alert $Alert
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
-
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"

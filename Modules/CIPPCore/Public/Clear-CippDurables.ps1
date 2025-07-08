@@ -19,6 +19,16 @@ function Clear-CippDurables {
         }
     }
 
+    Remove-AzDataTable @InstancesTable
+    Remove-AzDataTable @HistoryTable
+    $BlobContainer = '{0}-largemessages' -f $FunctionName
+    if (Get-AzStorageContainer -Name $BlobContainer -Context $StorageContext -ErrorAction SilentlyContinue) {
+        Write-Information "- Removing blob container: $BlobContainer"
+        if ($PSCmdlet.ShouldProcess($BlobContainer, 'Remove Blob Container')) {
+            Remove-AzStorageContainer -Name $BlobContainer -Context $StorageContext -Confirm:$false -Force
+        }
+    }
+
     $QueueTable = Get-CippTable -TableName 'CippQueue'
     $CippQueue = Invoke-ListCippQueue
     $QueueEntities = foreach ($Queue in $CippQueue) {
@@ -29,31 +39,23 @@ function Clear-CippDurables {
     }
     if (($QueueEntities | Measure-Object).Count -gt 0) {
         if ($PSCmdlet.ShouldProcess('Queues', 'Mark Failed')) {
-            Update-AzDataTableEntity @QueueTable -Entity $QueueEntities
+            Update-AzDataTableEntity -Force @QueueTable -Entity $QueueEntities
         }
     }
 
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
-    $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "Status eq 'Running'" -Property RowKey, PartitionKey, Status
+    $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and Status eq 'Running'" -Property RowKey, PartitionKey, Status
     if (($RunningTasks | Measure-Object).Count -gt 0) {
         if ($PSCmdlet.ShouldProcess('Tasks', 'Mark Failed')) {
             $UpdatedTasks = foreach ($Task in $RunningTasks) {
                 $Task.Status = 'Failed'
                 $Task
             }
-            Update-AzDataTableEntity @CippQueueTasks -Entity $UpdatedTasks
+            Update-AzDataTableEntity -Force @CippQueueTasks -Entity $UpdatedTasks
         }
     }
 
-    Remove-AzDataTable @InstancesTable
-    Remove-AzDataTable @HistoryTable
-    $BlobContainer = '{0}-largemessages' -f $FunctionName
-    if (Get-AzStorageContainer -Name $BlobContainer -Context $StorageContext -ErrorAction SilentlyContinue) {
-        Write-Information "- Removing blob container: $BlobContainer"
-        if ($PSCmdlet.ShouldProcess($BlobContainer, 'Remove Blob Container')) {
-            Remove-AzStorageContainer -Name $BlobContainer -Context $StorageContext -Confirm:$false -Force
-        }
-    }
     $null = Get-CippTable -TableName ('{0}History' -f $FunctionName)
     Write-Information 'Durable Orchestrators and Queues have been cleared'
+    return $true
 }

@@ -7,7 +7,8 @@ function Start-UserTasksOrchestrator {
     param()
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
+    $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Running' and Timestamp lt datetime'$1HourAgo')"
     $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     $Batch = [System.Collections.Generic.List[object]]::new()
     $TenantList = Get-Tenants -IncludeErrors
@@ -16,11 +17,11 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Running'
+                    TaskState    = 'Planned'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
@@ -34,9 +35,13 @@ function Start-UserTasksOrchestrator {
                 }
 
                 if ($task.Tenant -eq 'AllTenants') {
-                    $AllTenantCommands = foreach ($Tenant in $TenantList) {
+                    $ExcludedTenants = $task.excludedTenants -split ','
+                    Write-Host "Excluded Tenants from this task: $ExcludedTenants"
+                    $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
-                        $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                            $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        }
                         [pscustomobject]@{
                             Command      = $task.Command
                             Parameters   = $NewParams
@@ -46,13 +51,15 @@ function Start-UserTasksOrchestrator {
                     }
                     $Batch.AddRange($AllTenantCommands)
                 } else {
-                    $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                        $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    }
                     $Batch.Add($ScheduledCommand)
                 }
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"

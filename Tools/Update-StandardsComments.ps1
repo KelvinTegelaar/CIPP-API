@@ -62,34 +62,34 @@ foreach ($Standard in $StandardsInfo) {
         Write-Host "No file found for standard $($Standard.name)" -ForegroundColor Yellow
         continue
     }
-    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd() + "`r`n"
+    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd() + "`n"
 
     # Remove random newlines before the param block
     $regexPattern = '#>\s*\r?\n\s*\r?\n\s*param'
-    $Content = $Content -replace $regexPattern, "#>`r`n`r`n    param"
+    $Content = $Content -replace $regexPattern, "#>`n`n    param"
 
     # Regex to match the existing comment block
     $Regex = '<#(.|\n)*?\.FUNCTIONALITY\s*Internal(.|\n)*?#>'
 
     if ($Content -match $Regex) {
         $NewComment = [System.Collections.Generic.List[string]]::new()
-        # Add the initial scatic comments
-        $NewComment.Add("<#`r`n")
-        $NewComment.Add("   .FUNCTIONALITY`r`n")
-        $NewComment.Add("       Internal`r`n")
-        $NewComment.Add("   .COMPONENT`r`n")
-        $NewComment.Add("       (APIName) $($Standard.name -replace 'standards.', '')`r`n")
-        $NewComment.Add("   .SYNOPSIS`r`n")
-        $NewComment.Add("       (Label) $($Standard.label.ToString())`r`n")
-        $NewComment.Add("   .DESCRIPTION`r`n")
+        # Add the initial static comments
+        $NewComment.Add("<#`n")
+        $NewComment.Add("   .FUNCTIONALITY`n")
+        $NewComment.Add("       Internal`n")
+        $NewComment.Add("   .COMPONENT`n")
+        $NewComment.Add("       (APIName) $($Standard.name -replace 'standards.', '')`n")
+        $NewComment.Add("   .SYNOPSIS`n")
+        $NewComment.Add("       (Label) $($Standard.label.ToString())`n")
+        $NewComment.Add("   .DESCRIPTION`n")
         if ([string]::IsNullOrWhiteSpace($Standard.docsDescription)) {
-            $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.helpText.ToString()))`r`n")
+            $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.helpText.ToString()))`n")
         } else {
-            $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.docsDescription.ToString()))`r`n")
+            $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.docsDescription.ToString()))`n")
         }
-        $NewComment.Add("   .NOTES`r`n")
+        $NewComment.Add("   .NOTES`n")
 
         # Loop through the rest of the properties of the standard and add them to the NOTES field
         foreach ($Property in $Standard.PSObject.Properties) {
@@ -100,25 +100,33 @@ foreach ($Standard in $StandardsInfo) {
                 'helpText' { continue }
                 'label' { continue }
                 Default {
-                    $NewComment.Add("       $($Property.Name.ToUpper())`r`n")
+                    $NewComment.Add("       $($Property.Name.ToUpper())`n")
                     if ($Property.Value -is [System.Object[]]) {
                         foreach ($Value in $Property.Value) {
-                            $NewComment.Add("           $(ConvertTo-Json -InputObject $Value -Depth 5 -Compress)`r`n")
+                            $NewComment.Add("           $(ConvertTo-Json -InputObject $Value -Depth 5 -Compress)`n")
                         }
                         continue
+                    } elseif ($Property.Value -is [System.Management.Automation.PSCustomObject]) {
+                        $NewComment.Add("           $(ConvertTo-Json -InputObject $Property.Value -Depth 5 -Compress)`n")
+                        continue
+                    } else {
+                        if ($null -ne $Property.Value) {
+                            $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
+                        }
                     }
-                    $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`r`n")
                 }
             }
 
         }
 
         # Add header about how to update the comment block with this script
-        $NewComment.Add("       UPDATECOMMENTBLOCK`r`n")
-        $NewComment.Add("           Run the Tools\Update-StandardsComments.ps1 script to update this comment block`r`n")
+        $NewComment.Add("       UPDATECOMMENTBLOCK`n")
+        $NewComment.Add("           Run the Tools\Update-StandardsComments.ps1 script to update this comment block`n")
         # -Online help link
-        $NewComment.Add("   .LINK`r`n")
-        $NewComment.Add("       https://docs.cipp.app/user-documentation/tenant/standards/edit-standards`r`n")
+        $NewComment.Add("   .LINK`n")
+        $DocsLink = 'https://docs.cipp.app/user-documentation/tenant/standards/list-standards'
+
+        $NewComment.Add("       $DocsLink`n")
         $NewComment.Add('   #>')
 
         # Write the new comment block to the file

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecPartnerMode {
+function Invoke-ExecPartnerMode {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,43 +10,67 @@ Function Invoke-ExecPartnerMode {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $roles = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userRoles
-    if ('superadmin' -notin $roles) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::Forbidden
-                Body       = @{ error = 'You do not have permission to perform this action.' }
-            })
-        return
-    } else {
-        $Table = Get-CippTable -tablename 'tenantMode'
-        if ($request.body.TenantMode) {
-            Add-CIPPAzDataTableEntity @Table -Entity @{
-                PartitionKey = 'Setting'
-                RowKey       = 'PartnerModeSetting'
-                state        = $request.body.TenantMode
-            } -Force
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::OK
-                    Body       = @{ results = "Set Tenant mode to $($Request.body.TenantMode)" }
-                })
 
-        }
+    $Table = Get-CippTable -tablename 'tenantMode'
+    if ($request.body.TenantMode) {
+        Add-CIPPAzDataTableEntity @Table -Entity @{
+            PartitionKey = 'Setting'
+            RowKey       = 'PartnerModeSetting'
+            state        = $request.body.TenantMode
+        } -Force
 
-        if ($request.query.action -eq 'ListCurrent') {
-            $CurrentState = Get-CIPPAzDataTableEntity @Table
-            $CurrentState = if (!$CurrentState) {
-                [PSCustomObject]@{
-                    TenantMode = 'default'
-                }
-            } else {
-                [PSCustomObject]@{
-                    TenantMode = $CurrentState.state
+        if ($Request.Body.TenantMode -eq 'default') {
+            $Table = Get-CippTable -tablename 'Tenants'
+            $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($env:TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
+            if ($Tenant) {
+                try {
+                    Remove-AzDataTableEntity -Force @Table -Entity $Tenant
+                } catch {
                 }
             }
+        } elseif ($Request.Body.TenantMode -eq 'PartnerTenantAvailable') {
+            $InputObject = [PSCustomObject]@{
+                Batch            = @(
+                    @{
+                        FunctionName = 'UpdateTenants'
+                    }
+                )
+                OrchestratorName = 'UpdateTenants'
+                SkipLog          = $true
+            }
+            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
         }
+
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{
+                    results = @(
+                        @{
+                            resultText = "Set Tenant mode to $($Request.body.TenantMode)"
+                            state      = 'success'
+                        }
+                    )
+                }
+            })
+
+    }
+
+    if ($request.query.action -eq 'ListCurrent') {
+        $CurrentState = Get-CIPPAzDataTableEntity @Table
+        $CurrentState = if (!$CurrentState) {
+            [PSCustomObject]@{
+                TenantMode = 'default'
+            }
+        } else {
+            [PSCustomObject]@{
+                TenantMode = $CurrentState.state
+            }
+        }
+
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $CurrentState
             })
     }
+
 }

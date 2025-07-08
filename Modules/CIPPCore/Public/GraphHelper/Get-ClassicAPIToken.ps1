@@ -11,7 +11,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         #Write-Host 'Using classic'
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
         $Body = @{
-            client_id     = $ENV:ApplicationID
+            client_id     = $env:ApplicationID
             client_secret = $env:ApplicationSecret
             resource      = $Resource
             refresh_token = $env:RefreshToken
@@ -38,7 +38,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             $Tenant.LastGraphError = $_.Exception.Message
             $Tenant.GraphErrorCount++
 
-            Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             Throw "Failed to obtain Classic API Token for $TenantID - $_"
         }
     }

@@ -10,29 +10,25 @@ Function Invoke-ExecClrImmId {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    # Interact with body parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $UserID = $Request.Query.ID ?? $Request.Body.ID
 
-    # Interact with query parameters or the body of the request.
-    Try {
-        $TenantFilter = $Request.Query.TenantFilter
-        $UserID = $Request.Query.ID
-        $Body = [pscustomobject]@{ onPremisesImmutableId = $null }
-        $Body = ConvertTo-Json -InputObject $Body -Depth 5 -Compress
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserID" -tenantid $TenantFilter -type PATCH -body $Body
-        $Results = [pscustomobject]@{'Results' = 'Successfully Cleared ImmutableId' }
+    try {
+        $Result = Clear-CIPPImmutableID -UserID $UserID -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception
-        $Results = [pscustomobject]@{'Results' = "Failed. $ErrorMessage"; colour = 'danger' }
-        $_.Exception
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 }

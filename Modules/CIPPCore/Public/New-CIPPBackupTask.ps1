@@ -23,7 +23,7 @@ function New-CIPPBackupTask {
         }
         'ca' {
             Write-Host "Backup Conditional Access Policies for $TenantFilter"
-            $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
+            $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -AsApp $true
             Write-Host 'Creating templates for found Conditional Access Policies'
             foreach ($policy in $policies) {
                 try {
@@ -40,6 +40,9 @@ function New-CIPPBackupTask {
                 "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=999"
                 "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
                 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies'
+                'https://graph.microsoft.com/beta/deviceManagement/windowsFeatureUpdateProfiles'
+                'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdatePolicies'
+                'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles'
             )
 
             $Policies = foreach ($url in $GraphURLS) {
@@ -122,20 +125,13 @@ function New-CIPPBackupTask {
         'CippWebhookAlerts' {
             Write-Host "Backup Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
-            Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $TenantFilter -in ($_.Tenants | ConvertFrom-Json).fullvalue.defaultDomainName }
+            Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $TenantFilter -in ($_.Tenants | ConvertFrom-Json).value }
         }
         'CippScriptedAlerts' {
             Write-Host "Backup Scripted Alerts for $TenantFilter"
             $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
             Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
         }
-        'CippStandards' {
-            Write-Host "Backup Standards for $TenantFilter"
-            $Table = Get-CippTable -tablename 'standards'
-            $Filter = "PartitionKey eq 'standards' and RowKey eq '$($TenantFilter)'"
-            (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
-        }
-
     }
     return $BackupData
 }

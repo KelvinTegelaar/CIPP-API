@@ -13,17 +13,19 @@ function Invoke-CIPPStandardDisableTNEF {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-04-26
         POWERSHELLEQUIVALENT
             Set-RemoteDomain -Identity 'Default' -TNEFEnabled \$false
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param ($Tenant, $Settings)
@@ -36,7 +38,7 @@ function Invoke-CIPPStandardDisableTNEF {
 
         if ($CurrentState.TNEFEnabled -ne $false) {
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RemoteDomain' -cmdParams @{Identity = 'Default'; TNEFEnabled = $false } -useSystemmailbox $true
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RemoteDomain' -cmdParams @{Identity = 'Default'; TNEFEnabled = $false } -useSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled TNEF for Default Remote Domain' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -51,12 +53,15 @@ function Invoke-CIPPStandardDisableTNEF {
         if ($CurrentState.TNEFEnabled -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'TNEF is disabled for Default Remote Domain' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'TNEF is not disabled for Default Remote Domain' -sev Alert
+            $Object = $CurrentState | Select-Object -Property TNEFEnabled
+            Write-StandardsAlert -message 'TNEF is not disabled for Default Remote Domain' -object $Object -tenant $tenant -standardName 'DisableTNEF' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'TNEF is not disabled for Default Remote Domain' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         $State = if ($CurrentState.TNEFEnabled -ne $false) { $false } else { $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableTNEF' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'TNEFDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 

@@ -10,19 +10,46 @@ Function Invoke-ExecSharePointPerms {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $tenantFilter = $Request.Body.TenantFilter
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
+
+    $TenantFilter = $Request.Body.tenantFilter
+
+    Write-Host '===================================='
+    Write-Host 'Request Body:'
+    Write-Host (ConvertTo-Json $Request.body -Depth 10)
+    Write-Host '===================================='
+
+
+    # The UPN or ID of the users OneDrive we are changing permissions on
+    $UserId = $Request.Body.UPN
+    # The UPN of the user we are adding or removing permissions for
+    $OnedriveAccessUser = $Request.Body.onedriveAccessUser.value ?? $Request.Body.user.value
+    $URL = $Request.Body.URL
+    $RemovePermission = $Request.Body.RemovePermission
+
     try {
-        $State = Set-CIPPSharePointPerms -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName -RemovePermission $request.body.RemovePermission -URL $Request.Body.URL
-        $Results = [pscustomobject]@{'Results' = "$State" }
+
+        $State = Set-CIPPSharePointPerms -tenantFilter $TenantFilter `
+            -UserId $UserId `
+            -OnedriveAccessUser $OnedriveAccessUser `
+            -Headers $Headers `
+            -APIName $APIName `
+            -RemovePermission $RemovePermission `
+            -URL $URL
+        $Result = "$State"
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = $_.Exception.Message
+        $Result = "Failed. Error: $ErrorMessage"
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 
 }

@@ -8,7 +8,8 @@ function New-GraphBulkRequest {
         $NoAuthCheck,
         $scope,
         $asapp,
-        $Requests
+        $Requests,
+        $NoPaginateIds = @()
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
@@ -43,8 +44,12 @@ function New-GraphBulkRequest {
                 $Return
             }
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
+                if ($NoPaginateIds -contains $MoreData.id) {
+                    continue
+                }
                 Write-Host 'Getting more'
-                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck:$NoAuthCheck
+                Write-Host $MoreData.body.'@odata.nextLink'
+                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck $NoAuthCheck -scope $scope -AsApp $asapp
                 $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                 $AdditionalValues | ForEach-Object { $NewValues.add($_) }
                 $MoreData.body.value = $NewValues
@@ -56,7 +61,7 @@ function New-GraphBulkRequest {
             if ($Message -ne 'Request not applicable to target tenant.') {
                 $Tenant.LastGraphError = $Message ?? ''
                 $Tenant.GraphErrorCount++
-                Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             throw $Message
         }
@@ -66,7 +71,7 @@ function New-GraphBulkRequest {
         } else {
             $Tenant.LastGraphError = ''
         }
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
 
         return $ReturnedData.responses
     } else {

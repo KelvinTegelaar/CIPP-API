@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecCaCheck {
+function Invoke-ExecCaCheck {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,30 +10,31 @@ Function Invoke-ExecCaCheck {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenant = $request.body.tenantFilter
-    $UserID = $request.body.userId.value
-    if ($Request.body.IncludeApplications.value) {
-        $IncludeApplications = $Request.body.IncludeApplications.value
+    $Tenant = $Request.Body.tenantFilter
+    $UserID = $Request.Body.userID.value
+    if ($Request.Body.IncludeApplications.value) {
+        $IncludeApplications = $Request.Body.IncludeApplications.value
     } else {
         $IncludeApplications = '67ad5377-2d78-4ac2-a867-6300cda00e85'
     }
     $results = try {
         $CAContext = @{
-            '@odata.type'         = '#microsoft.graph.whatIfApplicationContext'
+            '@odata.type'         = '#microsoft.graph.applicationContext'
             'includeApplications' = @($IncludeApplications)
         }
         $ConditionalAccessWhatIfDefinition = @{
-            'conditionalAccessWhatIfSubject'    = @{
-                '@odata.type' = '#microsoft.graph.userSubject'
+            'signInIdentity'   = @{
+                '@odata.type' = '#microsoft.graph.userSignIn'
                 'userId'      = "$userId"
             }
-            'conditionalAccessContext'          = $CAContext
-            'conditionalAccessWhatIfConditions' = @{}
+            'signInContext'    = $CAContext
+            'signInConditions' = @{}
         }
-        $whatIfConditions = $ConditionalAccessWhatIfDefinition.conditionalAccessWhatIfConditions
+        $whatIfConditions = $ConditionalAccessWhatIfDefinition.signInConditions
         if ($Request.body.UserRiskLevel) { $whatIfConditions.userRiskLevel = $Request.body.UserRiskLevel.value }
         if ($Request.body.SignInRiskLevel) { $whatIfConditions.signInRiskLevel = $Request.body.SignInRiskLevel.value }
         if ($Request.body.ClientAppType) { $whatIfConditions.clientAppType = $Request.body.ClientAppType.value }

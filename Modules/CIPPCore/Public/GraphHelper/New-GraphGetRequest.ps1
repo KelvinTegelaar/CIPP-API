@@ -3,24 +3,31 @@ function New-GraphGetRequest {
     .FUNCTIONALITY
     Internal
     #>
-    Param(
-        $uri,
-        $tenantid,
-        $scope,
+    [CmdletBinding()]
+    param(
+        [string]$uri,
+        [string]$tenantid,
+        [string]$scope,
         $AsApp,
-        $noPagination,
-        $NoAuthCheck,
-        $skipTokenCache,
+        [bool]$noPagination,
+        $NoAuthCheck = $false,
+        [bool]$skipTokenCache,
         $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
-        [switch]$IncludeResponseHeaders
+        [switch]$IncludeResponseHeaders,
+        [hashtable]$extraHeaders
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ($NoAuthCheck -eq $false) {
+        $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
+    } else {
+        $IsAuthorised = $true
+    }
+
+    if ($NoAuthCheck -eq $true -or $IsAuthorised) {
         if ($scope -eq 'ExchangeOnline') {
-            $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-            $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
+            $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
         } else {
             $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
@@ -29,7 +36,11 @@ function New-GraphGetRequest {
             $headers['ConsistencyLevel'] = 'eventual'
         }
         $nextURL = $uri
-
+        if ($extraHeaders) {
+            foreach ($key in $extraHeaders.Keys) {
+                $headers[$key] = $extraHeaders[$key]
+            }
+        }
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
@@ -60,7 +71,7 @@ function New-GraphGetRequest {
                     $NextURL = $null
                 } else {
                     if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
-                    if ($noPagination) {
+                    if ($noPagination -eq $true) {
                         if ($Caller -eq 'Get-GraphRequestList') {
                             @{ 'nextLink' = $data.'@odata.nextLink' }
                         }
@@ -85,8 +96,11 @@ function New-GraphGetRequest {
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
+                    if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+                    }
                     $Tenant.GraphErrorCount++
-                    Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                    Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
                 }
                 throw $Message
             }
@@ -96,8 +110,12 @@ function New-GraphGetRequest {
         } else {
             $Tenant.LastGraphError = ''
         }
-        $Tenant.GraphErrorCount = 0
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+        } else {
+            $Tenant.GraphErrorCount = 0
+        }
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

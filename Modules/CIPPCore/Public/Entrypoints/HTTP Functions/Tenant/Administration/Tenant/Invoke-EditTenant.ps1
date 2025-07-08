@@ -1,66 +1,90 @@
 using namespace System.Net
 
-Function Invoke-EditTenant {
+function Invoke-EditTenant {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.ReadWrite
+        Tenant.Config.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $tenantDisplayName = $request.body.displayName
-    $tenantDefaultDomainName = $request.body.defaultDomainName
-    $Tenant = $request.body.tenantid
-    $customerContextId = $request.body.customerId
+    # Interact with query parameters or the body of the request.
+    $customerId = $Request.Body.customerId
+    $tenantAlias = $Request.Body.tenantAlias
+    $tenantGroups = $Request.Body.tenantGroups
 
-    $tokens = try {
-        $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')
-        $allTenantsDetails = (Invoke-RestMethod -Method GET -Uri 'https://graph.windows.net/myorganization/contracts?api-version=1.6' -ContentType 'application/json' -Headers $AADGraphtoken)
-        $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
-    }
-    catch {
-        $Results = "Failed to retrieve list of tenants. Error: $($_.Exception.Message)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error:$($_.Exception.Message)" -Sev 'Error'
-    }
+    $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
+    $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$customerId'"
+    $Tenant = Get-Tenants -TenantFilter $customerId
+    $TenantTable = Get-CippTable -TableName 'Tenants'
+    $GroupMembersTable = Get-CippTable -TableName 'TenantGroupMembers'
 
-
-    if ($tenantObjectId) {
-        try {
-            $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '"}'
-            $patchTenant = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($tenantObjectId.objectId)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken -ErrorAction Stop)
-            $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $tenantDefaultDomainName
-            try {
-                $TenantsTable = Get-CippTable -tablename Tenants
-                $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
-                $Tenant.displayName = $tenantDisplayName
-                Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+    try {
+        $AliasEntity = $Existing | Where-Object { $_.RowKey -eq 'Alias' }
+        if (!$tenantAlias) {
+            if ($AliasEntity) {
+                Write-Host 'Removing alias'
+                Remove-AzDataTableEntity @PropertiesTable -Entity $AliasEntity
+                $null = Get-Tenants -TenantFilter $customerId -TriggerRefresh
             }
-            catch {
-                $AddedText = 'but could not edit the tenant cache. Clear the tenant cache to display the updated details'
+        } else {
+            $aliasEntity = @{
+                PartitionKey = $customerId
+                RowKey       = 'Alias'
+                Value        = $tenantAlias
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Edited tenant $tenantDisplayName" -Sev 'Info'
-            $results = "Successfully amended details for $($Tenant.displayName) $AddedText"
+            $null = Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
+            Write-Host "Setting alias to $tenantAlias"
+            $Tenant | Add-Member -NotePropertyName 'originalDisplayName' -NotePropertyValue $tenant.displayName -Force
+            $Tenant.displayName = $tenantAlias
+            $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
         }
-        catch {
-            $results = "Failed to amend details for $tenantDisplayName : $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Failed amending details $tenantDisplayName. Error:$($_.Exception.Message)" -Sev 'Error'
+
+        # Update tenant groups
+        $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$customerId'"
+        foreach ($Group in $tenantGroups) {
+            $GroupEntity = $CurrentGroupMemberships | Where-Object { $_.GroupId -eq $Group.groupId }
+            if (!$GroupEntity) {
+                $GroupEntity = @{
+                    PartitionKey = 'Member'
+                    RowKey       = '{0}-{1}' -f $Group.groupId, $customerId
+                    GroupId      = $Group.groupId
+                    customerId   = $customerId
+                }
+                Add-CIPPAzDataTableEntity @GroupMembersTable -Entity $GroupEntity -Force
+            }
         }
+
+        # Remove any groups that are no longer selected
+        foreach ($Group in $CurrentGroupMemberships) {
+            if ($tenantGroups.GroupId -notcontains $Group.GroupId) {
+                Remove-AzDataTableEntity @GroupMembersTable -Entity $Group
+            }
+        }
+
+        $response = @{
+            state      = 'success'
+            resultText = 'Tenant details updated successfully'
+        }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $response
+            })
+    } catch {
+        Write-LogMessage -headers $Headers -tenant $customerId -API $APINAME -message "Edit Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
+        $response = @{
+            state      = 'error'
+            resultText = $_.Exception.Message
+        }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $response
+            })
     }
-    else {
-        $Results = 'Could not find the tenant to edit in the contract endpoint. Please ensure you have a reseller relationship with the tenant you are trying to edit.'
-    }
-
-    $body = [pscustomobject]@{'Results' = $results }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
-        })
-
 }

@@ -10,23 +10,37 @@ Function Invoke-ExecSetSharePointMember {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    if ($Request.body.SharePointType -eq 'Group') {
-        $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)'" -tenantid $Request.Body.TenantFilter).id
-        if ($Request.body.Add -eq $true) {
-            $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.input -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Body.tenantFilter
+
+    try {
+        if ($Request.Body.SharePointType -eq 'Group') {
+            $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)' or proxyAddresses/any(x:endsWith(x,'$($Request.Body.GroupID)'))&`$count=true" -ComplexFilter -tenantid $TenantFilter).id
+            if ($Request.Body.Add -eq $true) {
+                $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.user.value -TenantFilter $TenantFilter -Headers $Headers
+            } else {
+                $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.user.value)" -tenantid $TenantFilter).id
+                $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $TenantFilter -Headers $Headers
+            }
         } else {
-            $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.input)" -tenantid $Request.Body.TenantFilter).id
-            $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+            $StatusCode = [HttpStatusCode]::BadRequest
+            $Results = 'This type of SharePoint site is not supported.'
         }
-    } else {
-        $Results = 'This type of SharePoint site is not supported.'
+    } catch {
+        $Results = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    $body = [pscustomobject]@{'Results' = $Results }
+
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{ 'Results' = $Results }
         })
 
 }

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecOffboardUser {
+function Invoke-ExecOffboardUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,16 +9,17 @@ Function Invoke-ExecOffboardUser {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    if ($Request.body.user.value) { $AllUsers = $Request.body.user.value } else { $AllUsers = @($Request.body.user) }
+    $AllUsers = $Request.Body.user.value
+    $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
     $Results = foreach ($username in $AllUsers) {
         try {
             $APIName = 'ExecOffboardUser'
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+            $Headers = $Request.Headers
+            Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-            $Tenantfilter = $request.body.tenantfilter
-            if ($Request.body.Scheduled.enabled) {
+            if ($Request.Body.Scheduled.enabled) {
                 $taskObject = [PSCustomObject]@{
-                    TenantFilter  = $Tenantfilter
+                    TenantFilter  = $TenantFilter
                     Name          = "Offboarding: $Username"
                     Command       = @{
                         value = 'Invoke-CIPPOffboardingJob'
@@ -26,28 +27,28 @@ Function Invoke-ExecOffboardUser {
                     Parameters    = [pscustomobject]@{
                         Username     = $Username
                         APIName      = 'Scheduled Offboarding'
-                        options      = $request.body
+                        options      = $Request.Body
                         RunScheduled = $true
                     }
-                    ScheduledTime = $Request.body.scheduled.date
+                    ScheduledTime = $Request.Body.Scheduled.date
                     PostExecution = @{
                         Webhook = [bool]$Request.Body.PostExecution.webhook
                         Email   = [bool]$Request.Body.PostExecution.email
                         PSA     = [bool]$Request.Body.PostExecution.psa
                     }
                 }
-                Add-CIPPScheduledTask -Task $taskObject -hidden $false
+                Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
             } else {
-                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $Tenantfilter -Options $Request.body -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
+                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $TenantFilter -Options $Request.Body -APIName $APIName -Headers $Headers
             }
             $StatusCode = [HttpStatusCode]::OK
 
         } catch {
             $StatusCode = [HttpStatusCode]::Forbidden
-            $body = $_.Exception.message
+            $_.Exception.message
         }
     }
-    $body = [pscustomobject]@{'Results' = @($results) }
+    $body = [pscustomobject]@{'Results' = @($Results) }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body

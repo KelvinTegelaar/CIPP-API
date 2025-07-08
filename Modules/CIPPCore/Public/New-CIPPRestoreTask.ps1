@@ -4,7 +4,9 @@ function New-CIPPRestoreTask {
         $Task,
         $TenantFilter,
         $backup,
-        $overwrite
+        $overwrite,
+        $APINAME,
+        $Headers
     )
     $Table = Get-CippTable -tablename 'ScheduledBackup'
     $BackupData = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$backup'"
@@ -41,7 +43,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore user $($UPN): $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore user $($UPN): $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore user $($UPN): $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -77,7 +79,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore group $DisplayName : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore group $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore group $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -91,7 +93,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Conditional Access Policy $DisplayName : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Conditional Access Policy $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Conditional Access Policy $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -99,11 +101,11 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intuneconfig | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
             #Convert the manual method to a function
@@ -112,11 +114,11 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intunecompliance | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Compliance $DisplayName : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -126,11 +128,11 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intuneprotection | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Protection $DisplayName : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -146,9 +148,9 @@ function New-CIPPRestoreTask {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 "Could not obtain Anti-Spam Configuration: $($ErrorMessage.NormalizedError) "
-                Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not obtain Anti-Spam Configuration: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -Headers $Headers -API $APINAME -message "Could not obtain Anti-Spam Configuration: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
             }
-     
+
             $policyparams = @(
                 'AddXHeaderValue',
                 'AdminDisplayName',
@@ -227,7 +229,7 @@ function New-CIPPRestoreTask {
                             $cmdparams = @{
                                 Identity = $policy.Identity
                             }
-        
+
                             foreach ($param in $policyparams) {
                                 if ($policy.PSObject.Properties[$param]) {
                                     if ($param -eq 'IntraOrgFilterState' -and $policy.$param -eq 'Default') {
@@ -237,7 +239,7 @@ function New-CIPPRestoreTask {
                                     }
                                 }
                             }
-        
+
                             New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
                             Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
@@ -266,7 +268,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Anti-spam policy $($policy.Identity) : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Anti-spam policy $($policy.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Anti-spam policy $($policy.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -277,17 +279,17 @@ function New-CIPPRestoreTask {
                             $cmdparams = @{
                                 Identity = $rule.Identity
                             }
-        
+
                             foreach ($param in $ruleparams) {
                                 if ($rule.PSObject.Properties[$param]) {
                                     if ($param -eq 'Enabled') {
-                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                     } else {
                                         $cmdparams[$param] = $rule.$param
                                     }
                                 }
                             }
-        
+
                             New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
                             Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
@@ -301,7 +303,7 @@ function New-CIPPRestoreTask {
                         foreach ($param in $ruleparams) {
                             if ($rule.PSObject.Properties[$param]) {
                                 if ($param -eq 'Enabled') {
-                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                 } else {
                                     $cmdparams[$param] = $rule.$param
                                 }
@@ -316,7 +318,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Anti-spam rule $($rule.Identity) : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Anti-spam rule $($rule.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Anti-spam rule $($rule.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -331,9 +333,9 @@ function New-CIPPRestoreTask {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 "Could not obtain Anti-Phishing Configuration: $($ErrorMessage.NormalizedError) "
-                Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not obtain Anti-Phishing Configuration: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -Headers $Headers -API $APINAME -message "Could not obtain Anti-Phishing Configuration: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
             }
-     
+
             $policyparams = @(
                 'AdminDisplayName',
                 'AuthenticationFailAction',
@@ -392,13 +394,13 @@ function New-CIPPRestoreTask {
                             $cmdparams = @{
                                 Identity = $policy.Identity
                             }
-        
+
                             foreach ($param in $policyparams) {
                                 if ($policy.PSObject.Properties[$param]) {
                                     $cmdparams[$param] = $policy.$param
                                 }
                             }
-        
+
                             New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
                             Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
@@ -423,7 +425,7 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Anti-phishing policy $($policy.Identity) : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Anti-phishing policy $($policy.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Anti-phishing policy $($policy.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -434,17 +436,17 @@ function New-CIPPRestoreTask {
                             $cmdparams = @{
                                 Identity = $rule.Identity
                             }
-        
+
                             foreach ($param in $ruleparams) {
                                 if ($rule.PSObject.Properties[$param]) {
                                     if ($param -eq 'Enabled') {
-                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                     } else {
                                         $cmdparams[$param] = $rule.$param
                                     }
                                 }
                             }
-        
+
                             New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
                             Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
@@ -458,7 +460,7 @@ function New-CIPPRestoreTask {
                         foreach ($param in $ruleparams) {
                             if ($rule.PSObject.Properties[$param]) {
                                 if ($param -eq 'Enabled') {
-                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                 } else {
                                     $cmdparams[$param] = $rule.$param
                                 }
@@ -473,11 +475,10 @@ function New-CIPPRestoreTask {
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Anti-phishing rule $($rule.Identity) : $($ErrorMessage.NormalizedError) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Anti-phishing rule $($rule.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Anti-phishing rule $($rule.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
-
         'CippWebhookAlerts' {
             Write-Host "Restore Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
@@ -500,18 +501,6 @@ function New-CIPPRestoreTask {
                 "Could not restore Scripted Alerts $ErrorMessage "
             }
         }
-        'CippStandards' {
-            Write-Host "Restore Standards for $TenantFilter"
-            $Table = Get-CippTable -tablename 'standards'
-            $StandardsBackup = $BackupData.CippStandards | ConvertFrom-Json
-            try {
-                Add-CIPPAzDataTableEntity @Table -Entity $StandardsBackup -Force
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                "Could not restore Standards $ErrorMessage "
-            }
-        }
-
     }
     return $RestoreData
 }
