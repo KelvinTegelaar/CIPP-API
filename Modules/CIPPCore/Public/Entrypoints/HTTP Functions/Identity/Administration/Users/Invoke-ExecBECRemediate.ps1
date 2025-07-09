@@ -88,6 +88,7 @@ function Invoke-ExecBECRemediate {
             Write-LogMessage -headers $Headers -API $APIName -message "Retrieved $(($Rules | Measure-Object).Count) total rules for $Username" -Sev 'Info' -tenant $TenantFilter
             $RuleDisabled = 0
             $RuleFailed = 0
+            $DelegateRulesSkipped = 0
             $RuleMessages = [System.Collections.Generic.List[string]]::new()
 
             if (($Rules | Measure-Object).Count -eq 0) {
@@ -100,13 +101,7 @@ function Invoke-ExecBECRemediate {
                 # Rules exist, filter and process them
                 $ProcessableRules = $Rules | Where-Object {
                     $_.Name -ne 'Junk E-Mail Rule' -and
-                    $_.Name -notlike 'Microsoft.Exchange.OOF.*' -and
-                    -not (
-                        # Only skip legitimate system delegate rules (exact pattern + legacy identity)
-                        $_.Name -match '^Delegate Rule -\d+$' -and  # Exact: "Delegate Rule -[numbers]"
-                        $_.Identity -match '\\' -and                 # Has backslash (legacy format)
-                        $_.Identity -notmatch '@'                    # No @ symbol
-                    )
+                    $_.Name -notlike 'Microsoft.Exchange.OOF.*'
                 }
 
                 if (($ProcessableRules | Measure-Object).Count -eq 0) {
@@ -130,10 +125,17 @@ function Invoke-ExecBECRemediate {
                             Write-LogMessage -headers $Headers -API $APIName -message "Successfully disabled rule: $($CurrentRule.Name)" -Sev 'Info' -tenant $TenantFilter
                             $RuleDisabled++
                         } catch {
-                            $ErrorMsg = "Could not disable rule '$($CurrentRule.Name)': $($_.Exception.Message)"
-                            Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Error' -tenant $TenantFilter
-                            $RuleMessages.Add($ErrorMsg)
-                            $RuleFailed++
+                            # Check if this is a system delegate rule, if so we can ignore the error
+                            if ($CurrentRule.Name -match '^Delegate Rule -\d+$') {
+                                Write-LogMessage -headers $Headers -API $APIName -message "Skipping delegate rule '$($CurrentRule.Name)' - unable to disable (expected behavior)" -Sev 'Info' -tenant $TenantFilter
+                                $DelegateRulesSkipped++
+                            } else {
+                                # Handle as normal error
+                                $ErrorMsg = "Could not disable rule '$($CurrentRule.Name)': $($_.Exception.Message)"
+                                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Error' -tenant $TenantFilter
+                                $RuleMessages.Add($ErrorMsg)
+                                $RuleFailed++
+                            }
                         }
                     }
 
@@ -142,6 +144,12 @@ function Invoke-ExecBECRemediate {
                         $AllResults.Add([pscustomobject]@{
                             resultText = "Successfully disabled $RuleDisabled inbox rules for $Username"
                             state      = 'success'
+                        })
+                    } elseif ($DelegateRulesSkipped -gt 0 -and $RuleDisabled -eq 0 -and $RuleFailed -eq 0) {
+                        # Only system rules were found, report as no processable rules
+                        $AllResults.Add([pscustomobject]@{
+                            resultText = "No processable inbox rules found for $Username"
+                            state      = 'info'
                         })
                     }
 
@@ -162,8 +170,8 @@ function Invoke-ExecBECRemediate {
                 }
             }
 
-            $TotalProcessed = $RuleDisabled + $RuleFailed
-            Write-LogMessage -headers $Headers -API $APIName -message "Completed inbox rules processing for $Username. Total rules: $(($Rules | Measure-Object).Count), Processed: $TotalProcessed, Disabled: $RuleDisabled, Failed: $RuleFailed, System delegate rules skipped: $DelegateRulesSkipped" -Sev 'Info' -tenant $TenantFilter
+            $TotalProcessed = $RuleDisabled + $RuleFailed + $DelegateRulesSkipped
+            Write-LogMessage -headers $Headers -API $APIName -message "Completed inbox rules processing for $Username. Total rules: $(($Rules | Measure-Object).Count), Processed: $TotalProcessed, Disabled: $RuleDisabled, Failed: $RuleFailed, Delegate rules skipped: $DelegateRulesSkipped" -Sev 'Info' -tenant $TenantFilter
 
         } catch {
             $ErrorMsg = "Failed to process inbox rules: $($_.Exception.Message)"
