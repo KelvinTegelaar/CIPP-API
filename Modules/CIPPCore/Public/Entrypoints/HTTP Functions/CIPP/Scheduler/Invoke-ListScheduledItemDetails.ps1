@@ -66,7 +66,7 @@ function Invoke-ListScheduledItemDetails {
                 $TenantGroupForDisplay = [PSCustomObject]@{
                     label = $TenantGroupObject.label
                     value = $TenantGroupObject.value
-                    type = 'Group'
+                    type  = 'Group'
                 }
                 $Task | Add-Member -NotePropertyName TenantGroupInfo -NotePropertyValue $TenantGroupForDisplay -Force
                 # Update the tenant to show the group object for proper formatting
@@ -81,7 +81,7 @@ function Invoke-ListScheduledItemDetails {
         $TenantForDisplay = [PSCustomObject]@{
             label = $Task.Tenant
             value = $Task.Tenant
-            type = 'Tenant'
+            type  = 'Tenant'
         }
         $Task.Tenant = $TenantForDisplay
     }

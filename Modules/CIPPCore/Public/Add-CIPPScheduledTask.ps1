@@ -99,17 +99,17 @@ function Add-CIPPScheduledTask {
         $excludedTenants = if ($task.excludedTenants.value) {
             $task.excludedTenants.value -join ','
         }
-        
+
         # Handle tenant filter - support both single tenant and tenant groups
         $tenantFilter = $task.TenantFilter.value ? $task.TenantFilter.value : $task.TenantFilter
         $originalTenantFilter = $task.TenantFilter
-        
+
         # If tenant filter is a complex object (from form), extract the value
         if ($tenantFilter -is [PSCustomObject] -and $tenantFilter.value) {
             $originalTenantFilter = $tenantFilter
             $tenantFilter = $tenantFilter.value
         }
-        
+
         # If tenant filter is a string but still seems to be JSON, try to parse it
         if ($tenantFilter -is [string] -and $tenantFilter.StartsWith('{')) {
             try {
@@ -123,7 +123,7 @@ function Add-CIPPScheduledTask {
                 Write-Warning "Could not parse tenant filter JSON: $tenantFilter"
             }
         }
-        
+
         $entity = @{
             PartitionKey         = [string]'ScheduledTask'
             TaskState            = [string]'Planned'
@@ -140,7 +140,7 @@ function Add-CIPPScheduledTask {
             Hidden               = [bool]$Hidden
             Results              = 'Planned'
         }
-        
+
         # Store the original tenant filter for group expansion during execution
         if ($originalTenantFilter -is [PSCustomObject] -and $originalTenantFilter.type -eq 'Group') {
             $entity['TenantGroup'] = [string]($originalTenantFilter | ConvertTo-Json -Compress)

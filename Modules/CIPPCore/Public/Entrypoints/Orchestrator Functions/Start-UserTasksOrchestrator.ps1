@@ -55,20 +55,20 @@ function Start-UserTasksOrchestrator {
                     try {
                         $TenantGroupObject = $task.TenantGroup | ConvertFrom-Json
                         Write-Host "Expanding tenant group: $($TenantGroupObject.label) with ID: $($TenantGroupObject.value)"
-                        
+
                         # Create a tenant filter object for expansion
                         $TenantFilterForExpansion = @([PSCustomObject]@{
-                            type = 'Group'
-                            value = $TenantGroupObject.value
-                            label = $TenantGroupObject.label
-                        })
-                        
+                                type  = 'Group'
+                                value = $TenantGroupObject.value
+                                label = $TenantGroupObject.label
+                            })
+
                         # Expand the tenant group to individual tenants
                         $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
-                        
+
                         $ExcludedTenants = $task.excludedTenants -split ','
                         Write-Host "Excluded Tenants from this task: $ExcludedTenants"
-                        
+
                         $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {
                             $NewParams = $task.Parameters.Clone()
                             if ((Get-Command $task.Command).Parameters.TenantFilter) {
@@ -85,7 +85,7 @@ function Start-UserTasksOrchestrator {
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
-                        
+
                         # Fall back to treating as single tenant
                         if ((Get-Command $task.Command).Parameters.TenantFilter) {
                             $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
