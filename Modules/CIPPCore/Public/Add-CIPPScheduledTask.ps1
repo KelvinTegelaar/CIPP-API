@@ -99,11 +99,36 @@ function Add-CIPPScheduledTask {
         $excludedTenants = if ($task.excludedTenants.value) {
             $task.excludedTenants.value -join ','
         }
+        
+        # Handle tenant filter - support both single tenant and tenant groups
+        $tenantFilter = $task.TenantFilter.value ? $task.TenantFilter.value : $task.TenantFilter
+        $originalTenantFilter = $task.TenantFilter
+        
+        # If tenant filter is a complex object (from form), extract the value
+        if ($tenantFilter -is [PSCustomObject] -and $tenantFilter.value) {
+            $originalTenantFilter = $tenantFilter
+            $tenantFilter = $tenantFilter.value
+        }
+        
+        # If tenant filter is a string but still seems to be JSON, try to parse it
+        if ($tenantFilter -is [string] -and $tenantFilter.StartsWith('{')) {
+            try {
+                $parsedTenantFilter = $tenantFilter | ConvertFrom-Json
+                if ($parsedTenantFilter.value) {
+                    $originalTenantFilter = $parsedTenantFilter
+                    $tenantFilter = $parsedTenantFilter.value
+                }
+            } catch {
+                # If parsing fails, use the string as is
+                Write-Warning "Could not parse tenant filter JSON: $tenantFilter"
+            }
+        }
+        
         $entity = @{
             PartitionKey         = [string]'ScheduledTask'
             TaskState            = [string]'Planned'
             RowKey               = [string]$RowKey
-            Tenant               = $task.TenantFilter.value ? "$($task.TenantFilter.value)" : "$($task.TenantFilter)"
+            Tenant               = [string]$tenantFilter
             excludedTenants      = [string]$excludedTenants
             Name                 = [string]$task.Name
             Command              = [string]$task.Command.value
@@ -114,6 +139,21 @@ function Add-CIPPScheduledTask {
             AdditionalProperties = [string]$AdditionalProperties
             Hidden               = [bool]$Hidden
             Results              = 'Planned'
+        }
+        
+        # Store the original tenant filter for group expansion during execution
+        if ($originalTenantFilter -is [PSCustomObject] -and $originalTenantFilter.type -eq 'Group') {
+            $entity['TenantGroup'] = [string]($originalTenantFilter | ConvertTo-Json -Compress)
+        } elseif ($originalTenantFilter -is [string] -and $originalTenantFilter.StartsWith('{')) {
+            # Check if it's a serialized group object
+            try {
+                $parsedOriginal = $originalTenantFilter | ConvertFrom-Json
+                if ($parsedOriginal.type -eq 'Group') {
+                    $entity['TenantGroup'] = [string]$originalTenantFilter
+                }
+            } catch {
+                # Not a JSON object, ignore
+            }
         }
         if ($SyncType) {
             $entity.SyncType = $SyncType
