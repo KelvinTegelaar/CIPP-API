@@ -105,6 +105,18 @@ function Test-CIPPAccess {
         #Write-Information ($User | ConvertTo-Json -Depth 5)
         # Return user permissions
         if ($Request.Params.CIPPEndpoint -eq 'me') {
+
+            if (!$User.userRoles) {
+                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::OK
+                        Body       = (
+                            @{
+                                'clientPrincipal' = $null
+                                'permissions'     = @()
+                            } | ConvertTo-Json -Depth 5)
+                    })
+            }
+
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
