@@ -89,14 +89,18 @@ function Invoke-ListScheduledItems {
                     }
                     $Task | Add-Member -NotePropertyName TenantGroupInfo -NotePropertyValue $TenantGroupForDisplay -Force
                     # Update the tenant to show the group object for proper formatting
-                    $Task.Tenant = @($TenantGroupForDisplay)
+                    $Task.Tenant = $TenantGroupForDisplay
                 }
             } catch {
                 Write-Warning "Failed to parse tenant group information for task $($Task.RowKey): $($_.Exception.Message)"
                 # Fall back to keeping original tenant value
             }
         } else {
-            $Task.Tenant = @($Task.Tenant)
+            $Task.Tenant = [PSCustomObject]@{
+                label = $Task.Tenant
+                value = $Task.Tenant
+                type  = 'Tenant'
+            }
         }
 
         $Task
