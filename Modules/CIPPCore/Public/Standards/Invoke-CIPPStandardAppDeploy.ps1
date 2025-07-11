@@ -47,15 +47,60 @@ function Invoke-CIPPStandardAppDeploy {
             $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
             if ($Template) {
                 $TemplateData = $Template.JSON | ConvertFrom-Json
-                if ($TemplateData.AppId) {
-                    $TemplateData.AppId ?? $TemplateData.GalleryTemplateId
+                # Default to EnterpriseApp for backward compatibility with older templates
+                $AppType = $TemplateData.AppType
+                if (-not $AppType) {
+                    $AppType = 'EnterpriseApp'
+                }
+
+                # Return different identifiers based on app type for checking
+                if ($AppType -eq 'ApplicationManifest') {
+                    # For Application Manifests, use display name for checking
+                    $TemplateData.AppName
+                } elseif ($AppType -eq 'GalleryTemplate') {
+                    # For Gallery Templates, use gallery template ID
+                    $TemplateData.GalleryTemplateId
+                } else {
+                    # For Enterprise Apps, use app ID
+                    $TemplateData.AppId
                 }
             }
         }
     }
-    $MissingApps = foreach ($App in $AppsToAdd) {
-        if ($App -notin $AppExists.appId -and $App -notin $AppExists.applicationTemplateId) {
-            $App
+
+    # Check for missing apps based on template type
+    $MissingApps = [System.Collections.Generic.List[string]]::new()
+    if ($Mode -eq 'template') {
+        $Table = Get-CIPPTable -TableName 'templates'
+        foreach ($TemplateId in $Settings.templateIds.value) {
+            $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
+            if ($Template) {
+                $TemplateData = $Template.JSON | ConvertFrom-Json
+                $AppType = $TemplateData.AppType ?? 'EnterpriseApp'
+
+                $IsAppMissing = $false
+                if ($AppType -eq 'ApplicationManifest') {
+                    # For Application Manifests, check by display name
+                    $IsAppMissing = $TemplateData.AppName -notin $AppExists.displayName
+                } elseif ($AppType -eq 'GalleryTemplate') {
+                    # For Gallery Templates, check by application template ID
+                    $IsAppMissing = $TemplateData.GalleryTemplateId -notin $AppExists.applicationTemplateId
+                } else {
+                    # For Enterprise Apps, check by app ID
+                    $IsAppMissing = $TemplateData.AppId -notin $AppExists.appId
+                }
+
+                if ($IsAppMissing) {
+                    $MissingApps.Add($TemplateData.AppName ?? $TemplateData.AppId ?? $TemplateData.GalleryTemplateId)
+                }
+            }
+        }
+    } else {
+        # For copy mode, check by app ID as before
+        $MissingApps = foreach ($App in $AppsToAdd) {
+            if ($App -notin $AppExists.appId -and $App -notin $AppExists.applicationTemplateId) {
+                $App
+            }
         }
     }
     if ($Settings.remediate -eq $true) {
@@ -76,8 +121,6 @@ function Invoke-CIPPStandardAppDeploy {
             }
         } elseif ($Mode -eq 'template') {
             $TemplateIds = $Settings.templateIds.value
-            $TemplateName = $Settings.templateIds.label
-            $AppIds = $Settings.templateIds.addedFields.AppId
 
             # Get template data to determine deployment type for each template
             $Table = Get-CIPPTable -TableName 'templates'
@@ -127,6 +170,56 @@ function Invoke-CIPPStandardAppDeploy {
                             New-CIPPApplicationCopy -App $InstantiateResult.application.appId -Tenant $Tenant
                         } else {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Gallery Template deployment completed but application ID not returned for $($TemplateData.AppName) in tenant $Tenant" -sev Warning
+                        }
+
+                    } elseif ($AppType -eq 'ApplicationManifest') {
+                        # Handle Application Manifest deployment
+                        Write-Information "Deploying Application Manifest $($TemplateData.AppName) to tenant $Tenant."
+
+                        $ApplicationManifest = $TemplateData.ApplicationManifest
+                        if (!$ApplicationManifest) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Application Manifest not found in template data for $($TemplateData.TemplateName)" -sev Error
+                            continue
+                        }
+
+                        # Check if an application with the same display name already exists
+                        $ExistingApp = $AppExists | Where-Object { $_.displayName -eq $TemplateData.AppName }
+                        if ($ExistingApp) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Application with name '$($TemplateData.AppName)' already exists in tenant $Tenant" -sev Info
+                            continue
+                        }
+
+                        $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
+
+                        # Strip tenant-specific data that might cause conflicts
+                        $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+                        foreach ($Property in $PropertiesToRemove) {
+                            $CleanManifest.PSObject.Properties.Remove($Property)
+                        }
+                        # Create the application from manifest
+                        try {
+                            $CreateBody = $CleanManifest | ConvertTo-Json -Depth 10
+                            $CreatedApp = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/applications' -type POST -tenantid $Tenant -body $CreateBody
+
+                            if ($CreatedApp.appId) {
+                                # Create service principal for the application
+                                $ServicePrincipalBody = @{
+                                    appId = $CreatedApp.appId
+                                } | ConvertTo-Json
+
+                                $ServicePrincipal = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body $ServicePrincipalBody
+
+                                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully deployed Application Manifest $($TemplateData.AppName) to tenant $Tenant. Application ID: $($CreatedApp.appId)" -sev Info
+
+                                if ($CreatedApp.requiredResourceAccess) {
+                                    Add-CIPPDelegatedPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $Tenant
+                                    Add-CIPPApplicationPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $Tenant
+                                }
+                            } else {
+                                Write-LogMessage -API 'Standards' -tenant $tenant -message "Application Manifest deployment failed - no application ID returned for $($TemplateData.AppName) in tenant $Tenant" -sev Error
+                            }
+                        } catch {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Error creating application from manifest in tenant $Tenant - $($_.Exception.Message)" -sev Error
                         }
 
                     } else {
