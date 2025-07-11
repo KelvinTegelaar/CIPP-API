@@ -17,6 +17,7 @@ function Invoke-ExecCAExclusion {
         #If UserId is a guid, get the user's UPN
         $TenantFilter = $Request.Body.tenantFilter
         $UserID = $Request.Body.UserID
+        $Username = $Request.Body.Username
         $Users = $Request.Body.Users
         $EndDate = $Request.Body.EndDate
         $PolicyId = $Request.Body.PolicyId
@@ -26,7 +27,7 @@ function Invoke-ExecCAExclusion {
             $UserID = $Users.value
             $Username = $Users.addedFields.userPrincipalName -join ', '
         } else {
-            if ($UserID -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+            if ($UserID -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$' -and -not $Username) {
                 $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserID)" -tenantid $TenantFilter).userPrincipalName
             }
         }
