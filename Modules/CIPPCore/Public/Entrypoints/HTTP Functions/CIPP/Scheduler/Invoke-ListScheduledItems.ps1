@@ -109,7 +109,7 @@ function Invoke-ListScheduledItems {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($ScheduledTasks | Sort-Object -Property ExecutedTime -Descending)
+            Body       = @($ScheduledTasks | Sort-Object -Property ScheduledTime, ExecutedTime -Descending)
         })
 
 }

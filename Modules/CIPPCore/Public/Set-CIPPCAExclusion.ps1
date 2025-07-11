@@ -13,13 +13,15 @@ function Set-CIPPCAExclusion {
         $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
         if ($ExclusionType -eq 'add') {
             if ($Users) {
-                $Username =
+                $Username = $Users.addedFields.userPrincipalName
                 $ExcludeUsers = [System.Collections.Generic.List[string]]::new()
                 foreach ($User in $CheckExististing.conditions.users.excludeUsers) {
                     $ExcludeUsers.Add($User)
                 }
                 foreach ($User in $Users.value) {
-                    $ExcludeUsers.Add($User)
+                    if ($ExcludeUsers -notcontains $User) {
+                        $ExcludeUsers.Add($User)
+                    }
                 }
                 $NewExclusions = [pscustomobject]@{
                     conditions = [pscustomobject]@{ users = [pscustomobject]@{
@@ -48,7 +50,7 @@ function Set-CIPPCAExclusion {
         if ($ExclusionType -eq 'remove') {
             if ($Users) {
                 $UserID = $Users.value
-                $Username = $Users.addedFields.userPrincipalName -join ', '
+                $Username = $Users.addedFields.userPrincipalName
             } else {
                 if ($UserID -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
                     $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserID)" -tenantid $TenantFilter).userPrincipalName
@@ -66,11 +68,16 @@ function Set-CIPPCAExclusion {
                 New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
-        "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)"
-        Write-LogMessage -headers $Headers -API 'Set-CIPPConditionalAccessExclusion' -message "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
+
+        foreach ($User in $Username) {
+            "Successfully performed $($ExclusionType) exclusion for $User from policy $($PolicyId)"
+            Write-LogMessage -headers $Headers -API 'Set-CIPPCAExclusion' -message "Successfully performed $($ExclusionType) exclusion for $User from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
+        }
     } catch {
-        "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $($_.Exception.Message)"
-        Write-LogMessage -headers $Headers -API 'Set-CIPPConditionalAccessExclusion' -message "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
+        foreach ($User in $Username) {
+            "Failed to $($ExclusionType) user exclusion for $User from policy $($PolicyId): $($_.Exception.Message)"
+            Write-LogMessage -headers $Headers -API 'Set-CIPPCAExclusion' -message "Failed to $($ExclusionType) user exclusion for $User from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
+        }
     }
 }
 
