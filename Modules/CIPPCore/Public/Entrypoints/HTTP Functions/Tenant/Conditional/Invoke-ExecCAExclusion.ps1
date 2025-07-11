@@ -22,8 +22,6 @@ function Invoke-ExecCAExclusion {
         $PolicyId = $Request.Body.PolicyId
         $ExclusionType = $Request.Body.ExclusionType
 
-        $Policy = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)?`$select=id,displayName" -tenantid $TenantFilter
-
         if ($Users) {
             $UserID = $Users.value
             $Username = $Users.addedFields.userPrincipalName -join ', '
@@ -32,6 +30,14 @@ function Invoke-ExecCAExclusion {
                 $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserID)" -tenantid $TenantFilter).userPrincipalName
             }
         }
+
+        $Policy = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)?`$select=id,displayName" -tenantid $TenantFilter -asApp $true
+
+        if (-not $Policy) {
+            throw "Policy with ID $PolicyId not found in tenant $TenantFilter."
+        }
+
+        $PolicyName = $Policy.displayName
         if ($Request.Body.vacation -eq 'true') {
             $StartDate = $Request.Body.StartDate
             $EndDate = $Request.Body.EndDate
