@@ -22,6 +22,7 @@ function Invoke-ExecCAExclusion {
         $PolicyId = $Request.Body.PolicyId
         $ExclusionType = $Request.Body.ExclusionType
 
+        $Policy = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)?`$select=id,displayName" -tenantid $TenantFilter
 
         if ($Users) {
             $UserID = $Users.value
@@ -48,7 +49,7 @@ function Invoke-ExecCAExclusion {
 
             $TaskBody = [pscustomobject]@{
                 TenantFilter  = $TenantFilter
-                Name          = "Add CA Exclusion Vacation Mode: $Username - $($TenantFilter)"
+                Name          = "Add CA Exclusion Vacation Mode: $PolicyName"
                 Command       = @{
                     value = 'Set-CIPPCAExclusion'
                     label = 'Set-CIPPCAExclusion'
@@ -62,7 +63,7 @@ function Invoke-ExecCAExclusion {
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
             #Removal of the exclusion
             $TaskBody.Parameters.ExclusionType = 'Remove'
-            $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $Username - $($TenantFilter)"
+            $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $PolicyName"
             $TaskBody.ScheduledTime = $EndDate
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
             $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
