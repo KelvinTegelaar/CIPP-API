@@ -38,11 +38,23 @@ function Invoke-CIPPStandardAppDeploy {
     $Mode = $Settings.mode ?? 'copy'
 
     if ($Mode -eq 'template') {
-        $AppsToAdd = $Settings.templateIds.addedFields.AppId
-    }
+        # For template mode, we need to check each template individually
+        # since Gallery Templates and Enterprise Apps have different deployment methods
+        $AppsToAdd = @()
+        $Table = Get-CIPPTable -TableName 'templates'
 
+        $AppsToAdd = foreach ($TemplateId in $Settings.templateIds.value) {
+            $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
+            if ($Template) {
+                $TemplateData = $Template.JSON | ConvertFrom-Json
+                if ($TemplateData.AppId) {
+                    $TemplateData.AppId ?? $TemplateData.GalleryTemplateId
+                }
+            }
+        }
+    }
     $MissingApps = foreach ($App in $AppsToAdd) {
-        if ($App -notin $AppExists.appId) {
+        if ($App -notin $AppExists.appId -and $App -notin $AppExists.applicationTemplateId) {
             $App
         }
     }
@@ -67,21 +79,74 @@ function Invoke-CIPPStandardAppDeploy {
             $TemplateName = $Settings.templateIds.label
             $AppIds = $Settings.templateIds.addedFields.AppId
 
-            foreach ($AppId in $AppIds) {
-                if ($AppId -notin $AppExists.appId) {
-                    Write-Information "Adding $AppId to tenant $Tenant."
-                    $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$AppId`" }"
-                    Write-LogMessage -message "Added $AppId to tenant $Tenant" -tenant $Tenant -API 'Add Multitenant App' -sev Info
-                }
-            }
+            # Get template data to determine deployment type for each template
+            $Table = Get-CIPPTable -TableName 'templates'
+
             foreach ($TemplateId in $TemplateIds) {
                 try {
-                    Add-CIPPApplicationPermission -TemplateId $TemplateId -TenantFilter $Tenant
-                    Add-CIPPDelegatedPermission -TemplateId $TemplateId -TenantFilter $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application(s) from template $($TemplateName) and updated it's permissions" -sev Info
+                    # Get the template data to determine if it's a Gallery Template or Enterprise App
+                    $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
+
+                    if (!$Template) {
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Template $TemplateId not found" -sev Error
+                        continue
+                    }
+
+                    $TemplateData = $Template.JSON | ConvertFrom-Json
+                    # Default to EnterpriseApp for backward compatibility with older templates
+                    $AppType = $TemplateData.AppType
+                    if (-not $AppType) {
+                        $AppType = 'EnterpriseApp'
+                    }
+
+                    if ($AppType -eq 'GalleryTemplate') {
+                        # Handle Gallery Template deployment
+                        Write-Information "Deploying Gallery Template $($TemplateData.AppName) to tenant $Tenant."
+
+                        $GalleryTemplateId = $TemplateData.GalleryTemplateId
+                        if (!$GalleryTemplateId) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Gallery Template ID not found in template data for $($TemplateData.TemplateName)" -sev Error
+                            continue
+                        }
+
+                        # Check if the app already exists in the tenant
+                        if ($TemplateData.GalleryTemplateId -in $AppExists.applicationTemplateId) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Gallery Template app $($TemplateData.AppName) already exists in tenant $Tenant" -sev Info
+                            continue
+                        }
+
+                        # Instantiate the gallery template
+                        $InstantiateBody = @{
+                            displayName = $TemplateData.AppName
+                        } | ConvertTo-Json -Depth 10
+
+                        $InstantiateResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applicationTemplates/$GalleryTemplateId/instantiate" -type POST -tenantid $Tenant -body $InstantiateBody
+
+                        if ($InstantiateResult.application.appId) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully deployed Gallery Template $($TemplateData.AppName) to tenant $Tenant. Application ID: $($InstantiateResult.application.appId)" -sev Info
+                            New-CIPPApplicationCopy -App $InstantiateResult.application.appId -Tenant $Tenant
+                        } else {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Gallery Template deployment completed but application ID not returned for $($TemplateData.AppName) in tenant $Tenant" -sev Warning
+                        }
+
+                    } else {
+                        # Handle Enterprise App deployment (existing logic)
+                        $AppId = $TemplateData.AppId
+                        if ($AppId -notin $AppExists.appId) {
+                            Write-Information "Adding $AppId to tenant $Tenant."
+                            $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$AppId`" }"
+                            Write-LogMessage -message "Added $AppId to tenant $Tenant" -tenant $Tenant -API 'Standards' -sev Info
+                        }
+
+                        # Apply permissions for Enterprise Apps
+                        Add-CIPPApplicationPermission -TemplateId $TemplateId -TenantFilter $Tenant
+                        Add-CIPPDelegatedPermission -TemplateId $TemplateId -TenantFilter $Tenant
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application $($TemplateData.AppName) from Enterprise App template and updated its permissions" -sev Info
+                    }
+
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app from approval template $($TemplateName). Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to deploy template $TemplateId. Error: $ErrorMessage" -sev Error
                 }
             }
         }
