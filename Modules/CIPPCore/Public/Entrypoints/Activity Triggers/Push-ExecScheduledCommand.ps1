@@ -74,9 +74,12 @@ function Push-ExecScheduledCommand {
             if ($results -is [String]) {
                 $results = @{ Results = $results }
             }
-            if ($results -is [array] -and $results[0] -is [string]) {
-                $results = $results | Where-Object { $_ -is [string] }
-                $results = $results | ForEach-Object { @{ Results = $_ } }
+            if ($results -is [array] -and $results[0] -is [string] -or $results[0].resultText -is [string]) {
+                $results = $results | Where-Object { $_ -is [string] -or $_.resultText -is [string] }
+                $results = $results | ForEach-Object {
+                    $Message = $_.resultText ?? $_
+                    @{ Results = $Message }
+                }
             }
 
             if ($results -is [string]) {

@@ -11,7 +11,9 @@ function Invoke-CIPPOffboardingJob {
     if ($Options -is [string]) {
         $Options = $Options | ConvertFrom-Json
     }
-    $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id" -tenantid $TenantFilter).id
+    $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName" -tenantid $TenantFilter
+    $UserID = $User.id
+    $DisplayName = $User.displayName
     Write-Host "Running offboarding job for $Username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
         { $_.ConvertToShared -eq $true } {
@@ -30,7 +32,7 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.ResetPass -eq $true } {
             try {
-                Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
+                Set-CIPPResetPassword -tenantFilter $TenantFilter -DisplayName -UserID $username -Headers $Headers -APIName $APIName
             } catch {
                 $_.Exception.Message
             }
