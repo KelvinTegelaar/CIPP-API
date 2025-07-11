@@ -62,6 +62,7 @@ function Push-ExecScheduledCommand {
             $results = & $Item.Command @commandParameters
         } catch {
             $results = "Task Failed: $($_.Exception.Message)"
+            $State = 'Failed'
         }
 
         Write-Host 'ran the command. Processing results'

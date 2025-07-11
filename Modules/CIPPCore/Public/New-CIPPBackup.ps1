@@ -102,7 +102,6 @@ function New-CIPPBackup {
     return [pscustomobject]@{
         BackupName  = $RowKey
         BackupState = $State
-        BackupData  = $BackupData
     }
 }
 

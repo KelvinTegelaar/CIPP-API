@@ -28,7 +28,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
 
     if (-not $Task) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
