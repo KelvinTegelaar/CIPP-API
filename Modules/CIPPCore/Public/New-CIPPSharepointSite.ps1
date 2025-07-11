@@ -32,7 +32,7 @@ function New-CIPPSharepointSite {
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$SiteName,
 
@@ -139,7 +139,14 @@ function New-CIPPSharepointSite {
             'accept'        = 'application/json;odata.metadata=none'
             'odata-version' = '4.0'
         }
-        $Results = New-GraphPostRequest -scope "$($SharePointInfo.AdminUrl)/.default" -uri "$($SharePointInfo.AdminUrl)/_api/SPSiteManager/create" -Body ($body | ConvertTo-Json -Compress -Depth 10) -tenantid $TenantFilter -ContentType 'application/json' -AddedHeaders $AddedHeaders
+        try {
+            $Results = New-GraphPOSTRequest -scope "$($SharePointInfo.AdminUrl)/.default" -uri "$($SharePointInfo.AdminUrl)/_api/SPSiteManager/create" -body (ConvertTo-Json -Depth 10 -InputObject $body) -tenantid $TenantFilter -AddedHeaders $AddedHeaders
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
+            throw $Result
+        }
     }
 
     # Check the results. This response is weird. https://learn.microsoft.com/en-us/sharepoint/dev/apis/site-creation-rest
@@ -147,29 +154,29 @@ function New-CIPPSharepointSite {
         '0' {
             $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. The site doesn't exist."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
-            throw $Results
+            throw $Result
         }
         '1' {
             $Result = "Successfully created new SharePoint site $SiteName with URL $SiteUrl. The site is however currently being provisioned. Please wait for it to finish."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-            return $Results
+            return $Result
         }
         '2' {
             $Result = "Successfully created new SharePoint site $SiteName with URL $SiteUrl"
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-            return $Results
+            return $Result
         }
         '3' {
             $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. An error occurred while provisioning the site."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
-            throw $Results
+            throw $Result
         }
         '4' {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error
             $Result = "Failed to create new SharePoint site $SiteName with URL $SiteUrl. The site already exists."
             throw $Result
         }
-        Default {}
+        default {}
     }
 
 
