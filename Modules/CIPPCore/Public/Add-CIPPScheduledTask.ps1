@@ -59,7 +59,7 @@ function Add-CIPPScheduledTask {
             if ($null -eq $Param -or $Param -eq '' -or ($Param | Measure-Object).Count -eq 0) {
                 continue
             }
-            if ($Param -is [System.Collections.IDictionary] -or $Param.Key) {
+            if ($Param -is [System.Collections.IDictionary] -and $Param.Key) {
                 $ht = @{}
                 foreach ($p in $Param.GetEnumerator()) {
                     $ht[$p.Key] = $p.Value
@@ -77,6 +77,9 @@ function Add-CIPPScheduledTask {
         $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
         $AdditionalProperties = [System.Collections.Hashtable]@{}
         foreach ($Prop in $task.AdditionalProperties) {
+            if ($null -eq $Prop.Value -or $Prop.Value -eq '' -or ($Prop.Value | Measure-Object).Count -eq 0) {
+                continue
+            }
             $AdditionalProperties[$Prop.Key] = $Prop.Value
         }
         $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
