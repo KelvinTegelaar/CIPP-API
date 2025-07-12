@@ -77,7 +77,7 @@ function Invoke-ListTenantAlignment {
             # Extract tenant values from the tenantFilter array
             $TenantValues = $Template.tenantFilter | ForEach-Object { $_.value }
 
-            if ($TenantValues -contains "AllTenants") {
+            if ($TenantValues -contains 'AllTenants') {
                 $AppliestoAllTenants = $true
                 Write-Host "Template '$($Template.templateName)' applies to all tenants (AllTenants)"
             } else {
@@ -112,7 +112,7 @@ function Invoke-ListTenantAlignment {
             # Frontend logic: actions.filter(action => action?.value.toLowerCase() === "report" || action?.value.toLowerCase() === "remediate").length > 0
             $ReportingEnabled = $false
             if ($Actions -and $Actions.Count -gt 0) {
-                $ReportingEnabled = ($Actions | Where-Object { $_.value -and ($_.value.ToLower() -eq "report" -or $_.value.ToLower() -eq "remediate") }).Count -gt 0
+                $ReportingEnabled = ($Actions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
             }
 
             # Add to all standards list
@@ -141,7 +141,7 @@ function Invoke-ListTenantAlignment {
                         # Check if reporting is enabled for this Intune template
                         $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
                         Write-Host "    Intune template $IntuneStandardId actions: $($IntuneActions | ForEach-Object { $_.value } | Join-String -Separator ', ')"
-                        $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq "report" -or $_.value.ToLower() -eq "remediate") }).Count -gt 0
+                        $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
                         Write-Host "    Intune template $IntuneStandardId reporting enabled: $IntuneReportingEnabled"
 
                         # Add to all standards list
@@ -199,37 +199,37 @@ function Invoke-ListTenantAlignment {
                     # Count based on reporting status like the frontend
                     if ($IsReportingDisabled) {
                         $ReportingDisabledStandardsCount++
-                        $ComplianceStatus = "Reporting Disabled"
+                        $ComplianceStatus = 'Reporting Disabled'
                     } elseif ($IsCompliant) {
                         $CompliantStandards++
-                        $ComplianceStatus = "Compliant"
+                        $ComplianceStatus = 'Compliant'
                     } else {
                         $NonCompliantStandards++
-                        $ComplianceStatus = "Non-Compliant"
+                        $ComplianceStatus = 'Non-Compliant'
                     }
 
                     $ComparisonTable += [PSCustomObject]@{
-                        StandardName = $StandardKey
-                        Compliant = $IsCompliant
-                        StandardValue = ($Value | ConvertTo-Json -Compress)
-                        ComplianceStatus = $ComplianceStatus
+                        StandardName      = $StandardKey
+                        Compliant         = $IsCompliant
+                        StandardValue     = ($Value | ConvertTo-Json -Compress)
+                        ComplianceStatus  = $ComplianceStatus
                         ReportingDisabled = $IsReportingDisabled
                     }
                 } else {
                     # If standard not found, count as non-compliant if reporting enabled, or reporting disabled if reporting disabled
                     if ($IsReportingDisabled) {
                         $ReportingDisabledStandardsCount++
-                        $ComplianceStatus = "Reporting Disabled"
+                        $ComplianceStatus = 'Reporting Disabled'
                     } else {
                         $NonCompliantStandards++
-                        $ComplianceStatus = "Non-Compliant"
+                        $ComplianceStatus = 'Non-Compliant'
                     }
 
                     $ComparisonTable += [PSCustomObject]@{
-                        StandardName = $StandardKey
-                        Compliant = $false
-                        StandardValue = "NOT FOUND"
-                        ComplianceStatus = $ComplianceStatus
+                        StandardName      = $StandardKey
+                        Compliant         = $false
+                        StandardValue     = 'NOT FOUND'
+                        ComplianceStatus  = $ComplianceStatus
                         ReportingDisabled = $IsReportingDisabled
                     }
                 }
@@ -253,15 +253,15 @@ function Invoke-ListTenantAlignment {
             Write-Host "TENANT-ONLY STANDARDS (not in template): $($TenantOnlyStandards -join ', ')"
 
             Write-Host "CALCULATION: $CompliantStandards compliant / ($AllCount total - $ReportingDisabledStandardsCount reporting disabled) = $AlignmentPercentage%"
-            Write-Host ""
+            Write-Host ''
             Write-Host ($ComparisonTable | Format-Table -Property StandardName, Compliant, ComplianceStatus, ReportingDisabled, StandardValue -AutoSize | Out-String)
 
             $Result = [PSCustomObject]@{
-                tenantFilter   = $TenantName
-                standardName   = $Template.templateName
-                standardId     = $Template.GUID
-                alignmentScore = $AlignmentPercentage
-                latestDataCollection = if ($LatestDataCollection) { $LatestDataCollection.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
+                tenantFilter         = $TenantName
+                standardName         = $Template.templateName
+                standardId           = $Template.GUID
+                alignmentScore       = $AlignmentPercentage
+                latestDataCollection = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
             }
 
             $Results.Add($Result)
