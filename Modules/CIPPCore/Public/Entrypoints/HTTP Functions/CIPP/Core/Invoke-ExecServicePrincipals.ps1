@@ -3,7 +3,7 @@ function Invoke-ExecServicePrincipals {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.ReadWrite
+        Tenant.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
