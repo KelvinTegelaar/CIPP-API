@@ -74,7 +74,7 @@ function Invoke-ExecApplication {
 
     try {
         if ($Action -eq 'RemoveKey' -or $Action -eq 'RemovePassword') {
-            # Handle credential removal by patching the object
+            # Handle credential removal
             $KeyIds = $Request.Body.KeyIds.value ?? $Request.Body.KeyIds
             if (-not $KeyIds -or $KeyIds.Count -eq 0) {
                 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -84,29 +84,49 @@ function Invoke-ExecApplication {
                 return
             }
 
-            # Get the current application/service principal
-            $CurrentObject = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter -AsApp $true
-
             if ($Action -eq 'RemoveKey') {
-                # Filter out the key credentials to remove
+                # For key credentials, use a single PATCH request
+                $CurrentObject = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter -AsApp $true
                 $UpdatedKeyCredentials = $CurrentObject.keyCredentials | Where-Object { $_.keyId -notin $KeyIds }
                 $PatchBody = @{
                     keyCredentials = @($UpdatedKeyCredentials)
                 }
-            } else {
-                # Filter out the password credentials to remove
-                $UpdatedPasswordCredentials = $CurrentObject.passwordCredentials | Where-Object { $_.keyId -notin $KeyIds }
-                $PatchBody = @{
-                    passwordCredentials = @($UpdatedPasswordCredentials)
+
+                $Response = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body ($PatchBody | ConvertTo-Json -Depth 10) -tenantid $TenantFilter -AsApp $true
+
+                $Results = @{
+                    resultText = "Successfully removed $($KeyIds.Count) key credential(s) from $Type"
+                    state      = 'success'
+                    details    = @($Response)
                 }
-            }
+            } else {
+                # For password credentials, use bulk removePassword requests
+                $BulkRequests = foreach ($KeyId in $KeyIds) {
+                    $RemoveBody = @{
+                        keyId = $KeyId
+                    }
 
-            # Update the object with the filtered credentials
-            $null = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body ($PatchBody | ConvertTo-Json -Depth 10) -tenantid $TenantFilter -AsApp $true
+                    @{
+                        id      = $KeyId
+                        method  = 'POST'
+                        url     = "$($Type)$($IdPath)/removePassword"
+                        body    = $RemoveBody
+                        headers = @{
+                            'Content-Type' = 'application/json'
+                        }
+                    }
+                }
 
-            $Results = @{
-                resultText = "Successfully removed $($KeyIds.Count) credential(s) from $Type"
-                state      = 'success'
+                $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter -AsApp $true
+
+                $SuccessCount = ($BulkResults | Where-Object { $_.status -eq 204 }).Count
+                $FailureCount = ($BulkResults | Where-Object { $_.status -ne 204 }).Count
+
+                $Results = @{
+                    resultText = "Bulk RemovePassword completed. Success: $SuccessCount, Failures: $FailureCount"
+                    state      = if ($FailureCount -eq 0) { 'success' } else { 'error' }
+                    details    = @($BulkResults)
+                }
             }
         } else {
             # Handle regular actions
