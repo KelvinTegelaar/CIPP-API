@@ -23,11 +23,13 @@ function Invoke-ListConditionalAccessPolicies {
             $Locations
         )
         if ($id -eq 'All') {
-            return @{label = 'All'; value = 'All' }
+            return 'All'
         }
         $DisplayName = $Locations | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
-        if (![string]::IsNullOrEmpty($displayName)) {
-            return @{label = $DisplayName; value = $ID }
+        if ([string]::IsNullOrEmpty($displayName)) {
+            return  $ID
+        } else {
+            return $DisplayName
         }
     }
 
@@ -39,13 +41,13 @@ function Invoke-ListConditionalAccessPolicies {
             $RoleDefinitions
         )
         if ($id -eq 'All') {
-            return @{label = 'All'; value = 'All' }
+            return 'All'
         }
         $DisplayName = $RoleDefinitions | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
         if ([string]::IsNullOrEmpty($displayName)) {
-            return @{label = $ID; value = $ID }
+            return $ID
         } else {
-            return @{label = $DisplayName; value = $ID }
+            return $DisplayName
         }
     }
 
@@ -57,13 +59,13 @@ function Invoke-ListConditionalAccessPolicies {
             $Users
         )
         if ($id -eq 'All') {
-            return @{label = 'All'; value = 'All' }
+            return 'All'
         }
         $DisplayName = $Users | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
         if ([string]::IsNullOrEmpty($displayName)) {
-            return @{label = $ID; value = $ID }
+            return $ID
         } else {
-            return @{label = $DisplayName; value = $ID }
+            return $DisplayName
         }
     }
 
@@ -74,13 +76,13 @@ function Invoke-ListConditionalAccessPolicies {
             $Groups
         )
         if ($id -eq 'All') {
-            return @{label = 'All'; value = 'All' }
+            return 'All'
         }
         $DisplayName = $Groups | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
         if ([string]::IsNullOrEmpty($displayName)) {
-            return @{label = 'No Data'; value = 'No Data' }
+            return 'No Data'
         } else {
-            return @{label = $DisplayName; value = $ID }
+            return $DisplayName
         }
     }
 
@@ -93,7 +95,7 @@ function Invoke-ListConditionalAccessPolicies {
             $ServicePrincipals
         )
         if ($id -eq 'All') {
-            return @{label = 'All'; value = 'All' }
+            return 'All'
         }
 
         $return = $ServicePrincipals | Where-Object { $_.appId -eq $ID } | Select-Object -ExpandProperty DisplayName
@@ -110,10 +112,7 @@ function Invoke-ListConditionalAccessPolicies {
             $return = ''
         }
 
-        if ($return) {
-            $return = @{label = $return; value = $ID }
-            return $return
-        }
+        return $return
     }
 
     # Interact with query parameters or the body of the request.
@@ -177,25 +176,25 @@ function Invoke-ListConditionalAccessPolicies {
                 createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime } else { '' })
                 modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime }else { '' })
                 state                                       = $cap.state
-                clientAppTypes                              = @(if ($cap.conditions.clientAppTypes) { $cap.conditions.clientAppTypes | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                includePlatforms                            = @(if ($cap.conditions.platforms.includePlatforms) { $cap.conditions.platforms.includePlatforms | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                excludePlatforms                            = @(if ($cap.conditions.platforms.excludePlatforms) { $cap.conditions.platforms.excludePlatforms | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                includeLocations                            = @(Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations)
-                excludeLocations                            = @(Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations)
-                includeApplications                         = @(Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $cap.conditions.applications.includeApplications)
-                excludeApplications                         = @(Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $cap.conditions.applications.excludeApplications)
-                includeUserActions                          = @($cap.conditions.applications.includeUserActions )
-                includeAuthenticationContextClassReferences = @($cap.conditions.applications.includeAuthenticationContextClassReferences )
-                includeUsers                                = @($cap.conditions.users.includeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ })
-                excludeUsers                                = @($cap.conditions.users.excludeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ })
-                includeGroups                               = @($cap.conditions.users.includeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ })
-                excludeGroups                               = @($cap.conditions.users.excludeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ })
-                includeRoles                                = @($cap.conditions.users.includeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ })
-                excludeRoles                                = @($cap.conditions.users.excludeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ })
-                grantControlsOperator                       = @(if ($cap.grantControls.operator) { $cap.grantControls.operator | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                builtInControls                             = @(if ($cap.grantControls.builtInControls) { $cap.grantControls.builtInControls | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                customAuthenticationFactors                 = @(if ($cap.grantControls.customAuthenticationFactors) { $cap.grantControls.customAuthenticationFactors | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
-                termsOfUse                                  = @(if ($cap.grantControls.termsOfUse) { $cap.grantControls.termsOfUse | ForEach-Object { return @{label = $_; value = $_ } } } else { @() })
+                clientAppTypes                              = ($cap.conditions.clientAppTypes) -join ','
+                includePlatforms                            = ($cap.conditions.platforms.includePlatforms) -join ','
+                excludePlatforms                            = ($cap.conditions.platforms.excludePlatforms) -join ','
+                includeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations) -join ','
+                excludeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations) -join ','
+                includeApplications                         = ($cap.conditions.applications.includeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
+                excludeApplications                         = ($cap.conditions.applications.excludeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
+                includeUserActions                          = ($cap.conditions.applications.includeUserActions | Out-String)
+                includeAuthenticationContextClassReferences = ($cap.conditions.applications.includeAuthenticationContextClassReferences | Out-String)
+                includeUsers                                = ($cap.conditions.users.includeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
+                excludeUsers                                = ($cap.conditions.users.excludeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
+                includeGroups                               = ($cap.conditions.users.includeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
+                excludeGroups                               = ($cap.conditions.users.excludeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
+                includeRoles                                = ($cap.conditions.users.includeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
+                excludeRoles                                = ($cap.conditions.users.excludeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
+                grantControlsOperator                       = ($cap.grantControls.operator) -join ','
+                builtInControls                             = ($cap.grantControls.builtInControls) -join ','
+                customAuthenticationFactors                 = ($cap.grantControls.customAuthenticationFactors) -join ','
+                termsOfUse                                  = ($cap.grantControls.termsOfUse) -join ','
                 rawjson                                     = ($cap | ConvertTo-Json -Depth 100)
             }
             $temp
