@@ -31,11 +31,10 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
 
-    If ($Settings.remediate -eq $true) {
-
+    if ($Settings.remediate -eq $true) {
+        $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant
         foreach ($Setting in $Settings) {
             try {
-
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Setting.TemplateList.value)'"
                 $JSONObj = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
@@ -45,7 +44,21 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
             }
         }
-
-
+    }
+    if ($Settings.report -eq $true) {
+        $Policies = $Settings.TemplateList.JSON | ConvertFrom-Json -Depth 10
+        #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
+        $MissingPolicies = foreach ($policy in $Policies) {
+            $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $policy.displayname
+            if (!$CheckExististing) {
+                $policy.displayname
+            }
+        }
+        if ($MissingPolicies.Count -eq 0) {
+            $fieldValue = $true
+        } else {
+            $fieldValue = $MissingPolicies -join ', '
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }

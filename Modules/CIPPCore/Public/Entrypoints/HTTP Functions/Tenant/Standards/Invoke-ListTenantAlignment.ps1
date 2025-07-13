@@ -20,11 +20,12 @@ function Invoke-ListTenantAlignment {
         # Transform the data to match the expected API response format
         $Results = $AlignmentData | ForEach-Object {
             [PSCustomObject]@{
-                tenantFilter         = $_.TenantFilter
-                standardName         = $_.StandardName
-                standardId           = $_.StandardId
-                alignmentScore       = $_.AlignmentScore
-                latestDataCollection = $_.LatestDataCollection
+                tenantFilter             = $_.TenantFilter
+                standardName             = $_.StandardName
+                standardId               = $_.StandardId
+                alignmentScore           = $_.AlignmentScore
+                LicenseMissingPercentage = $_.LicenseMissingPercentage
+                latestDataCollection     = $_.LatestDataCollection
             }
         }
 

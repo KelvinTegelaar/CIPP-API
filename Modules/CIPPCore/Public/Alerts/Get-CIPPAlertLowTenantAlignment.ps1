@@ -14,7 +14,7 @@ function Get-CIPPAlertLowTenantAlignment {
         Get-CIPPAlertLowTenantAlignment -TenantFilter "contoso.onmicrosoft.com" -InputValue 75
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory)]
         $TenantFilter,
         [Alias('input')]
@@ -31,7 +31,16 @@ function Get-CIPPAlertLowTenantAlignment {
             return
         }
 
-        $LowAlignmentAlerts = $AlignmentData | Where-Object { $_.AlignmentScore -lt $InputValue }
+        $LowAlignmentAlerts = $AlignmentData | Where-Object { $_.AlignmentScore -lt $InputValue } | ForEach-Object {
+            [PSCustomObject]@{
+                TenantFilter             = $_.TenantFilter
+                StandardName             = $_.StandardName
+                StandardId               = $_.StandardId
+                AlignmentScore           = $_.AlignmentScore
+                LicenseMissingPercentage = $_.LicenseMissingPercentage
+                LatestDataCollection     = $_.LatestDataCollection
+            }
+        }
 
         if ($LowAlignmentAlerts.Count -gt 0) {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $LowAlignmentAlerts

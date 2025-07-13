@@ -179,11 +179,14 @@ function Get-CIPPTenantAlignment {
                         }
 
                         $IsCompliant = ($Value -eq $true)
+                        $IsLicenseMissing = ($Value -is [string] -and $Value -like "License Missing:*")
 
                         if ($IsReportingDisabled) {
                             $ComplianceStatus = 'Reporting Disabled'
                         } elseif ($IsCompliant) {
                             $ComplianceStatus = 'Compliant'
+                        } elseif ($IsLicenseMissing) {
+                            $ComplianceStatus = 'License Missing'
                         } else {
                             $ComplianceStatus = 'Non-Compliant'
                         }
@@ -214,6 +217,7 @@ function Get-CIPPTenantAlignment {
 
                 $CompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Compliant' }).Count
                 $NonCompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' }).Count
+                $LicenseMissingStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'License Missing' }).Count
                 $ReportingDisabledStandardsCount = ($ComparisonTable | Where-Object { $_.ReportingDisabled }).Count
 
                 $AlignmentPercentage = if (($AllCount - $ReportingDisabledStandardsCount) -gt 0) {
@@ -222,17 +226,25 @@ function Get-CIPPTenantAlignment {
                     0
                 }
 
+                $LicenseMissingPercentage = if ($AllCount -gt 0) {
+                    [Math]::Round(($LicenseMissingStandards / $AllCount) * 100)
+                } else {
+                    0
+                }
+
                 $Result = [PSCustomObject]@{
-                    TenantFilter           = $TenantName
-                    StandardName           = $Template.templateName
-                    StandardId             = $Template.GUID
-                    AlignmentScore         = $AlignmentPercentage
-                    CompliantStandards     = $CompliantStandards
-                    NonCompliantStandards  = $NonCompliantStandards
-                    TotalStandards         = $AllCount
+                    TenantFilter         = $TenantName
+                    StandardName         = $Template.templateName
+                    StandardId           = $Template.GUID
+                    AlignmentScore       = $AlignmentPercentage
+                    LicenseMissingPercentage = $LicenseMissingPercentage
+                    CompliantStandards   = $CompliantStandards
+                    NonCompliantStandards = $NonCompliantStandards
+                    LicenseMissingStandards = $LicenseMissingStandards
+                    TotalStandards       = $AllCount
                     ReportingDisabledCount = $ReportingDisabledStandardsCount
-                    LatestDataCollection   = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
-                    ComparisonDetails      = $ComparisonTable
+                    LatestDataCollection = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
+                    ComparisonDetails    = $ComparisonTable
                 }
 
                 $Results.Add($Result)
