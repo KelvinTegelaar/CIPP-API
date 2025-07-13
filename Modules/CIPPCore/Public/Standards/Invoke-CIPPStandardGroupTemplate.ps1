@@ -130,6 +130,6 @@ function Invoke-CIPPStandardGroupTemplate {
             $fieldValue = $MissingGroups -join ', '
         }
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -FieldValue $fieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }
