@@ -71,8 +71,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         $MailboxResults = @($Mailboxes) | ForEach-Object {
 
             $Mailbox = $_
-            #if the mailbox username contains a guid, we can assume it's a system mailbox and skip it
-            if ($Mailbox.UserPrincipalName -match '^[^@]+@[^.]+\.[^.]+$') {
+            if ($Mailbox.UserPrincipalName -like 'DiscoverySearchMailbox*' -or $Mailbox.UserPrincipalName -like 'SystemMailbox*') {
                 return
             }
             # Safe hashtable lookup - check if MailboxPlanId exists and is not null
