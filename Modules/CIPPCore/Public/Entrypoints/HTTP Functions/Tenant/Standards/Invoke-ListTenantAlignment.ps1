@@ -89,7 +89,6 @@ function Invoke-ListTenantAlignment {
             Write-Host "Template '$($Template.templateName)' applies to all tenants (no tenantFilter)"
         }
 
-        # Track all standards and their reporting status like the frontend does
         $AllStandards = [System.Collections.Generic.List[string]]::new()
         $ReportingEnabledStandards = [System.Collections.Generic.List[string]]::new()
         $ReportingDisabledStandards = [System.Collections.Generic.List[string]]::new()
@@ -98,8 +97,7 @@ function Invoke-ListTenantAlignment {
             $StandardConfig = $TemplateStandards.$StandardKey
             $StandardId = "standards.$StandardKey"
 
-            # Check if reporting is enabled for this standard (same logic as frontend)
-            # Try multiple possible action property locations
+
             $Actions = @()
             if ($StandardConfig.action) {
                 $Actions = $StandardConfig.action
@@ -109,13 +107,11 @@ function Invoke-ListTenantAlignment {
                 $Actions = $StandardConfig.PSObject.Properties['action'].Value
             }
 
-            # Frontend logic: actions.filter(action => action?.value.toLowerCase() === "report" || action?.value.toLowerCase() === "remediate").length > 0
             $ReportingEnabled = $false
             if ($Actions -and $Actions.Count -gt 0) {
                 $ReportingEnabled = ($Actions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
             }
 
-            # Add to all standards list
             $AllStandards.Add($StandardId)
 
             if ($ReportingEnabled) {
@@ -124,9 +120,7 @@ function Invoke-ListTenantAlignment {
                 $ReportingDisabledStandards.Add($StandardId)
             }
 
-            # Handle IntuneTemplate arrays - don't count the base IntuneTemplate, only the specific instances
             if ($StandardKey -eq 'IntuneTemplate' -and $StandardConfig -is [array]) {
-                # Remove the base IntuneTemplate standard since we'll add specific instances
                 $AllStandards.Remove($StandardId)
                 if ($ReportingEnabled) {
                     $ReportingEnabledStandards.Remove($StandardId)
@@ -138,44 +132,32 @@ function Invoke-ListTenantAlignment {
                     if ($IntuneTemplate.TemplateList.value) {
                         $IntuneStandardId = "standards.IntuneTemplate.$($IntuneTemplate.TemplateList.value)"
 
-                        # Check if reporting is enabled for this Intune template
                         $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
-                        Write-Host "    Intune template $IntuneStandardId actions: $($IntuneActions | ForEach-Object { $_.value } | Join-String -Separator ', ')"
                         $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
-                        Write-Host "    Intune template $IntuneStandardId reporting enabled: $IntuneReportingEnabled"
 
-                        # Add to all standards list
                         $AllStandards.Add($IntuneStandardId)
 
                         if ($IntuneReportingEnabled) {
                             $ReportingEnabledStandards.Add($IntuneStandardId)
-                            Write-Host "    Added $IntuneStandardId to reporting enabled"
                         } else {
                             $ReportingDisabledStandards.Add($IntuneStandardId)
-                            Write-Host "    Added $IntuneStandardId to reporting disabled"
                         }
                     }
                 }
             }
         }
 
-        # Process each tenant against this template (but only if template applies to this tenant)
         foreach ($TenantName in $TenantStandards.Keys) {
-            # Skip this tenant if template is assigned to specific tenants and this tenant is not in the list
             if (-not $AppliestoAllTenants -and $TenantName -notin $TemplateAssignedTenants) {
                 Write-Host "Skipping tenant '$TenantName' for template '$($Template.templateName)' - not in assigned tenant list"
                 continue
             }
             $AllCount = $AllStandards.Count
 
-            # Check compliance for ALL standards (both reporting enabled and disabled)
-            # But track them separately like the frontend does
             $CompliantStandards = 0
             $NonCompliantStandards = 0
             $ReportingDisabledStandardsCount = 0
             $LatestDataCollection = $null
-
-            # Create a table to compare with frontend
             $ComparisonTable = @()
 
             foreach ($StandardKey in $AllStandards) {
@@ -185,7 +167,6 @@ function Invoke-ListTenantAlignment {
                     $StandardObject = $TenantStandards[$TenantName][$StandardKey]
                     $Value = $StandardObject.Value
 
-                    # Track the latest data collection timestamp
                     if ($StandardObject.LastRefresh) {
                         $RefreshTime = [DateTime]::Parse($StandardObject.LastRefresh)
                         if (-not $LatestDataCollection -or $RefreshTime -gt $LatestDataCollection) {
@@ -193,10 +174,8 @@ function Invoke-ListTenantAlignment {
                         }
                     }
 
-                    # Use strict compliance logic - only explicit TRUE is compliant
                     $IsCompliant = ($Value -eq $true)
 
-                    # Count based on reporting status like the frontend
                     if ($IsReportingDisabled) {
                         $ReportingDisabledStandardsCount++
                         $ComplianceStatus = 'Reporting Disabled'
@@ -216,7 +195,6 @@ function Invoke-ListTenantAlignment {
                         ReportingDisabled = $IsReportingDisabled
                     }
                 } else {
-                    # If standard not found, count as non-compliant if reporting enabled, or reporting disabled if reporting disabled
                     if ($IsReportingDisabled) {
                         $ReportingDisabledStandardsCount++
                         $ComplianceStatus = 'Reporting Disabled'
@@ -235,26 +213,14 @@ function Invoke-ListTenantAlignment {
                 }
             }
 
-            # Calculate percentage using the exact same formula as the frontend
-            # Frontend: Math.round((compliantCount / (allCount - reportingDisabledCount || 1)) * 100)
+
             $AlignmentPercentage = if (($AllCount - $ReportingDisabledStandardsCount) -gt 0) {
                 [Math]::Round(($CompliantStandards / ($AllCount - $ReportingDisabledStandardsCount)) * 100)
             } else {
                 0
             }
 
-            # Output comparison table for debugging
-            Write-Host "=== TENANT: $TenantName | TEMPLATE: $($Template.templateName) ==="
-            Write-Host "TEMPLATE STANDARDS FOUND: $($AllStandards -join ', ')"
-            Write-Host "TENANT STANDARDS AVAILABLE: $($TenantStandards[$TenantName].Keys | Sort-Object | Join-String -Separator ', ')"
-
-            # Check for tenant standards that might be missing from template
             $TenantOnlyStandards = $TenantStandards[$TenantName].Keys | Where-Object { $_ -notin $AllStandards }
-            Write-Host "TENANT-ONLY STANDARDS (not in template): $($TenantOnlyStandards -join ', ')"
-
-            Write-Host "CALCULATION: $CompliantStandards compliant / ($AllCount total - $ReportingDisabledStandardsCount reporting disabled) = $AlignmentPercentage%"
-            Write-Host ''
-            Write-Host ($ComparisonTable | Format-Table -Property StandardName, Compliant, ComplianceStatus, ReportingDisabled, StandardValue -AutoSize | Out-String)
 
             $Result = [PSCustomObject]@{
                 tenantFilter         = $TenantName
