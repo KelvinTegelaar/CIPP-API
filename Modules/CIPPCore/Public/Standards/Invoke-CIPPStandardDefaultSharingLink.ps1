@@ -43,11 +43,11 @@ function Invoke-CIPPStandardDefaultSharingLink {
     $DesiredSharingLinkTypeValue = $SharingLinkTypeMap[$DesiredSharingLinkType]
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
+    Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
 
     # Check if the current state matches the desired configuration
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq $DesiredSharingLinkTypeValue) -and ($CurrentState.DefaultLinkPermission -eq 1)
-
+    Write-Host "currentstate: $($CurrentState.DefaultSharingLinkType), $($CurrentState.DefaultLinkPermission). Desired: $DesiredSharingLinkTypeValue, 1"
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Default sharing link settings are already configured correctly (Type: $DesiredSharingLinkType, Permission: View)" -Sev Info
