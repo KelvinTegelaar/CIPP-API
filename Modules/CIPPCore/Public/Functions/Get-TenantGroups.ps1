@@ -30,9 +30,9 @@ function Get-TenantGroups {
     }
     $Tenants = Get-Tenants @TenantParams
 
-    if ($GroupFilter) {
-        $Groups = Get-CIPPAzDataTableEntity @GroupTable -Filter "RowKey eq '$GroupFilter'"
-        $AllMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "GroupId eq '$GroupFilter'"
+    if ($GroupId) {
+        $Groups = Get-CIPPAzDataTableEntity @GroupTable -Filter "RowKey eq '$GroupId'"
+        $AllMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "GroupId eq '$GroupId'"
     } else {
         $Groups = Get-CIPPAzDataTableEntity @GroupTable
         $AllMembers = Get-CIPPAzDataTableEntity @MembersTable
@@ -49,10 +49,10 @@ function Get-TenantGroups {
             $Group = $Groups | Where-Object { $_.RowKey -eq $Group.GroupId }
             if ($Group) {
                 $Results.Add([PSCustomObject]@{
-                    Id          = $Group.RowKey
-                    Name        = $Group.Name
-                    Description = $Group.Description
-                })
+                        Id          = $Group.RowKey
+                        Name        = $Group.Name
+                        Description = $Group.Description
+                    })
             }
         }
         return $Results | Sort-Object Name
@@ -66,10 +66,10 @@ function Get-TenantGroups {
                     $Tenant = $Tenants | Where-Object { $Member.customerId -eq $_.customerId }
                     if ($Tenant) {
                         $MembersList.Add(@{
-                            customerId        = $Tenant.customerId
-                            displayName       = $Tenant.displayName
-                            defaultDomainName = $Tenant.defaultDomainName
-                        })
+                                customerId        = $Tenant.customerId
+                                displayName       = $Tenant.displayName
+                                defaultDomainName = $Tenant.defaultDomainName
+                            })
                     }
                 }
                 $SortedMembers = $MembersList | Sort-Object displayName
@@ -77,11 +77,11 @@ function Get-TenantGroups {
                 $SortedMembers = @()
             }
             $Results.Add([PSCustomObject]@{
-                Id          = $Group.RowKey
-                Name        = $Group.Name
-                Description = $Group.Description
-                Members     = @($SortedMembers)
-            })
+                    Id          = $Group.RowKey
+                    Name        = $Group.Name
+                    Description = $Group.Description
+                    Members     = @($SortedMembers)
+                })
         }
         return $Results | Sort-Object Name
     }

@@ -28,8 +28,9 @@ function Invoke-CIPPStandardGroupTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
-
+    $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
     if ($Settings.remediate -eq $true) {
         #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
         $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
@@ -40,7 +41,7 @@ function Invoke-CIPPStandardGroupTemplate {
                 $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$($Template.value)'"
                 $groupobj = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
                 $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($Tenant)" }
-                $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant | Where-Object -Property displayName -EQ $groupobj.displayname
+                $CheckExististing = $existingGroups | Where-Object -Property displayName -EQ $groupobj.displayname
                 $BodyToship = [pscustomobject] @{
                     'displayName'   = $groupobj.Displayname
                     'description'   = $groupobj.Description
@@ -113,5 +114,23 @@ function Invoke-CIPPStandardGroupTemplate {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to $ActionType group $($groupobj.displayname). Error: $ErrorMessage" -sev 'Error'
             }
         }
+    }
+    if ($Settings.report -eq $true) {
+        $Groups = $Settings.groupTemplate.JSON | ConvertFrom-Json -Depth 10
+        #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
+        $MissingGroups = foreach ($Group in $Groups) {
+            $CheckExististing = $existingGroups | Where-Object -Property displayName -EQ $Group.displayname
+            if (!$CheckExististing) {
+                $Group.displayname
+            }
+        }
+
+        if ($MissingGroups.Count -eq 0) {
+            $fieldValue = $true
+        } else {
+            $fieldValue = $MissingGroups -join ', '
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }

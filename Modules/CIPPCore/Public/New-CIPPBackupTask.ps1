@@ -45,7 +45,7 @@ function New-CIPPBackupTask {
                 'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles'
             )
 
-            $Policies = foreach ($url in $GraphURLS) {
+            foreach ($url in $GraphURLS) {
                 try {
                     $Policies = New-GraphGetRequest -uri "$($url)" -tenantid $TenantFilter
                     $URLName = (($url).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''

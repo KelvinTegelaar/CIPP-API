@@ -30,6 +30,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SendReceiveLimitTenant' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     # Input validation
     if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {
@@ -37,31 +38,21 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         return
     }
 
+    # Input validation
     if ([Int32]$Settings.ReceiveLimit -lt 1 -or [Int32]$Settings.ReceiveLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid ReceiveLimit parameter set' -sev Error
         return
     }
 
+
     $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
-    $MaxSendSize = "$($Settings.SendLimit)MB"
-    $MaxReceiveSize = "$($Settings.ReceiveLimit)MB"
-    $MaxSendSizeBytes = $Settings.SendLimit * 1MB
-    $MaxReceiveSizeBytes = $Settings.ReceiveLimit * 1MB
+    $MaxSendSize = [int64]"$($Settings.SendLimit)MB"
+    $MaxReceiveSize = [int64]"$($Settings.ReceiveLimit)MB"
 
     $NotSetCorrectly = foreach ($MailboxPlan in $AllMailBoxPlans) {
-        if ($MailboxPlan.MaxSendSize -eq 'Unlimited') {
-            $PlanMaxSendSize = [int64]::MaxValue
-        } else {
-            $PlanMaxSendSize = [int64]($MailboxPlan.MaxSendSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
-        }
-
-        if ($MailboxPlan.MaxReceiveSize -eq 'Unlimited') {
-            $PlanMaxReceiveSize = [int64]::MaxValue
-        } else {
-            $PlanMaxReceiveSize = [int64]($MailboxPlan.MaxReceiveSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
-        }
-
-        if ($PlanMaxSendSize -ne $MaxSendSizeBytes -or $PlanMaxReceiveSize -ne $MaxReceiveSizeBytes) {
+        $PlanMaxSendSize = [int64]($MailboxPlan.MaxSendSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
+        $PlanMaxReceiveSize = [int64]($MailboxPlan.MaxReceiveSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
+        if ($PlanMaxSendSize -ne $MaxSendSize -or $PlanMaxReceiveSize -ne $MaxReceiveSize) {
             $MailboxPlan
         }
     }
@@ -86,6 +77,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     }
 
     if ($Settings.alert -eq $true) {
+
         if ($NotSetCorrectly.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are set correctly" -sev Info
         } else {

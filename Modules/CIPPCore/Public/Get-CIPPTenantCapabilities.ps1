@@ -7,12 +7,11 @@ function Get-CIPPTenantCapabilities {
         $Headers
     )
 
-    $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter
-    $Plans = $Org.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | Sort-Object -Property service -Unique | Select-Object capabilityStatus, service
-
+    $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
+    $Plans = $Org.servicePlans | Where-Object { $_.provisioningStatus -eq 'Success' } | Sort-Object -Property serviceplanName -Unique | Select-Object servicePlanName, provisioningStatus
     $Results = @{}
     foreach ($Plan in $Plans) {
-        $Results."$($Plan.service)" = $Plan.capabilityStatus -eq 'Enabled'
+        $Results."$($Plan.servicePlanName)" = $Plan.provisioningStatus -eq 'Success'
     }
     [PSCustomObject]$Results
 }

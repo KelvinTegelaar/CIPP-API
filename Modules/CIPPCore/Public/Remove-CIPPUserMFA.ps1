@@ -23,16 +23,21 @@ function Remove-CIPPUserMFA {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [Parameter(Mandatory = $false)]
-        $Headers
+        $Headers,
+        [Parameter(Mandatory = $false)]
+        $APIName = 'Remove MFA Methods'
     )
 
     Write-Information "Getting auth methods for $UserPrincipalName"
     try {
         $AuthMethods = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UserPrincipalName/authentication/methods" -tenantid $TenantFilter -AsApp $true
     } catch {
-        Write-LogMessage -headers $Headers -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to get MFA methods for user $UserPrincipalName" -sev 'Error' -LogData (Get-CippException -Exception $_)
-        return "Failed to get MFA methods for user $UserPrincipalName - $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        $Message = "Failed to get MFA methods for user $UserPrincipalName. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error' -LogData $ErrorMessage
+        throw $Message
     }
+
     $Requests = [System.Collections.Generic.List[object]]::new()
     foreach ($Method in $AuthMethods) {
         if ($Method.'@odata.type' -and $Method.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod') {
@@ -44,22 +49,31 @@ function Remove-CIPPUserMFA {
                 })
         }
     }
+
     if (($Requests | Measure-Object).Count -eq 0) {
-        Write-LogMessage -headers $Headers -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "No MFA methods found for user $UserPrincipalName" -sev 'Info'
-        $Results = "No MFA methods found for user $($UserPrincipalName)"
+        $Results = "No MFA methods found for user $UserPrincipalName"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev 'Info'
+        return $Results
     } else {
         if ($PSCmdlet.ShouldProcess("Remove MFA methods for $UserPrincipalName")) {
-            $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -erroraction stop
-            if ($Results.status -eq 204) {
-                Write-LogMessage -headers $Headers -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Successfully removed MFA methods for user $UserPrincipalName" -sev 'Info'
-                $Results = [pscustomobject]@{'Results' = "Successfully completed request. User $($Request.Query.ID) must supply MFA at next logon" }
-            } else {
-                $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
-                Write-LogMessage -headers $Headers -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to remove MFA methods for $FailedAuthMethods" -sev 'Error'
-                $Results = "Failed to reset MFA methods for $FailedAuthMethods"
+            try {
+                $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -ErrorAction Stop
+                if ($Results.status -eq 204) {
+                    $Message = "Successfully removed MFA methods for user $UserPrincipalName. User must supply MFA at next logon"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Info'
+                    return $Message
+                } else {
+                    $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
+                    $Message = "Failed to remove MFA methods for $FailedAuthMethods on user $UserPrincipalName"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error'
+                    throw $Message
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $Message = "Failed to remove MFA methods for user $UserPrincipalName. Error: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error' -LogData $ErrorMessage
+                throw $Message
             }
         }
     }
-
-    return $Results
 }

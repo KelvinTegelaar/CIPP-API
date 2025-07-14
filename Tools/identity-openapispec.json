@@ -1,0 +1,1774 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CIPP Identity API",
+    "description": "API endpoints for identity management in CIPP",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/ListGraphRequest": {
+      "get": {
+        "summary": "List Graph Request",
+        "description": "Generic endpoint for making Graph API requests with different parameters",
+        "parameters": [
+          {
+            "name": "Endpoint",
+            "in": "query",
+            "description": "The Graph API endpoint to call",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "examples": {
+              "users": {
+                "value": "users"
+              },
+              "devices": {
+                "value": "devices"
+              },
+              "identityProtection/riskDetections": {
+                "value": "identityProtection/riskDetections"
+              },
+              "identityProtection/riskyUsers": {
+                "value": "identityProtection/riskyUsers"
+              }
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Whether to use manual pagination",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Fields to select",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$count",
+            "in": "query",
+            "description": "Whether to include count",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Field to order by",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$top",
+            "in": "query",
+            "description": "Number of records to return",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "$format",
+            "in": "query",
+            "description": "Response format",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "Metadata": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecCreateTAP": {
+      "post": {
+        "summary": "Create Temporary Access Password",
+        "description": "Creates a temporary access password for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecResetMFA": {
+      "post": {
+        "summary": "Reset MFA",
+        "description": "Re-requires MFA registration for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecSendPush": {
+      "post": {
+        "summary": "Send MFA Push",
+        "description": "Sends an MFA push notification to a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "UserEmail": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["UserEmail"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecPerUserMFA": {
+      "post": {
+        "summary": "Set Per-User MFA",
+        "description": "Sets per-user MFA for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "State": {
+                    "type": "string",
+                    "enum": ["Enforced", "Enabled", "Disabled"],
+                    "description": "MFA State"
+                  }
+                },
+                "required": ["userId", "State"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecConvertMailbox": {
+      "post": {
+        "summary": "Convert Mailbox",
+        "description": "Converts a mailbox between shared and regular types",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "MailboxType": {
+                    "type": "string",
+                    "enum": ["!Shared", "!Regular"],
+                    "description": "Mailbox Type"
+                  }
+                },
+                "required": ["ID", "MailboxType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecEnableArchive": {
+      "post": {
+        "summary": "Enable Online Archive",
+        "description": "Enables online archive for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecSetOoO": {
+      "post": {
+        "summary": "Set Out of Office",
+        "description": "Sets or disables out of office for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "AutoReplyState": {
+                    "type": "string",
+                    "enum": ["Enabled", "Disabled"],
+                    "description": "Auto Reply State"
+                  },
+                  "input": {
+                    "type": "string",
+                    "description": "Out of Office Message"
+                  }
+                },
+                "required": ["userId", "AutoReplyState"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/EditGroup": {
+      "post": {
+        "summary": "Edit Group",
+        "description": "Edits a group, including adding/removing members and owners",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantId": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "Group ID"
+                  },
+                  "AddMember": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Members to add"
+                  },
+                  "AddOwner": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Owners to add"
+                  },
+                  "RemoveMember": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Members to remove"
+                  },
+                  "RemoveOwner": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Owners to remove"
+                  },
+                  "addMember": {
+                    "type": "string",
+                    "description": "Single member to add"
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "description": "Group ID to add member to"
+                  }
+                },
+                "required": ["tenantId", "groupId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListGroups": {
+      "get": {
+        "summary": "List Groups",
+        "description": "Lists groups in the tenant",
+        "parameters": [
+          {
+            "name": "groupID",
+            "in": "query",
+            "description": "Group ID to get details for",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant to filter by",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "members",
+            "in": "query",
+            "description": "Whether to include members",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "owners",
+            "in": "query",
+            "description": "Whether to include owners",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "groupInfo": {
+                      "type": "object"
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "owners": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecEmailForward": {
+      "post": {
+        "summary": "Email Forwarding",
+        "description": "Manages email forwarding for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "userid": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "ForwardOption": {
+                    "type": "string",
+                    "description": "Forward Option"
+                  }
+                },
+                "required": ["username", "userid", "ForwardOption"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecOneDriveProvision": {
+      "post": {
+        "summary": "Provision OneDrive",
+        "description": "Pre-provisions OneDrive for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "UserPrincipalName": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["UserPrincipalName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecOneDriveShortCut": {
+      "post": {
+        "summary": "Add OneDrive Shortcut",
+        "description": "Adds a shortcut to a SharePoint site in a user's OneDrive",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "userid": {
+                    "type": "string",
+                    "description": "User ID"
+                  },
+                  "siteUrl": {
+                    "type": "string",
+                    "description": "SharePoint Site URL"
+                  }
+                },
+                "required": ["username", "userid", "siteUrl"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListSites": {
+      "get": {
+        "summary": "List Sites",
+        "description": "Lists SharePoint sites",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Type of sites to list",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "URLOnly",
+            "in": "query",
+            "description": "Whether to return only URLs",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "webUrl": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecDisableUser": {
+      "post": {
+        "summary": "Disable/Enable User",
+        "description": "Blocks or unblocks sign-in for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User ID"
+                  },
+                  "Enable": {
+                    "type": "boolean",
+                    "description": "Whether to enable the user"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecResetPass": {
+      "post": {
+        "summary": "Reset Password",
+        "description": "Resets a user's password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "MustChange": {
+                    "type": "boolean",
+                    "description": "Whether the user must change password at next logon"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "User Display Name"
+                  }
+                },
+                "required": ["MustChange", "ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecClrImmId": {
+      "post": {
+        "summary": "Clear Immutable ID",
+        "description": "Clears the immutable ID for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User ID"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecRevokeSessions": {
+      "post": {
+        "summary": "Revoke Sessions",
+        "description": "Revokes all sessions for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User ID"
+                  },
+                  "Username": {
+                    "type": "string",
+                    "description": "User Principal Name"
+                  }
+                },
+                "required": ["ID", "Username"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/RemoveUser": {
+      "post": {
+        "summary": "Remove User",
+        "description": "Deletes a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "User ID"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/AddUser": {
+      "post": {
+        "summary": "Add User",
+        "description": "Creates a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "givenName": {
+                    "type": "string",
+                    "description": "First Name"
+                  },
+                  "surname": {
+                    "type": "string",
+                    "description": "Last Name"
+                  },
+                  "mailNickname": {
+                    "type": "string",
+                    "description": "Mail Nickname"
+                  },
+                  "primDomain": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "Primary Domain"
+                  },
+                  "usageLocation": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "Usage Location"
+                  }
+                },
+                "required": ["tenantFilter", "givenName", "surname", "mailNickname", "primDomain"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListMFAUsers": {
+      "get": {
+        "summary": "List MFA Users",
+        "description": "Lists users with MFA information",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "UPN": {
+                        "type": "string"
+                      },
+                      "AccountEnabled": {
+                        "type": "string"
+                      },
+                      "isLicensed": {
+                        "type": "string"
+                      },
+                      "MFARegistration": {
+                        "type": "string"
+                      },
+                      "PerUser": {
+                        "type": "string"
+                      },
+                      "CoveredBySD": {
+                        "type": "string"
+                      },
+                      "CoveredByCA": {
+                        "type": "string"
+                      },
+                      "MFAMethods": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "CAPolicies": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ListSignIns": {
+      "get": {
+        "summary": "List Sign Ins",
+        "description": "Lists sign-in events",
+        "parameters": [
+          {
+            "name": "Days",
+            "in": "query",
+            "description": "Number of days to look back",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Custom filter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "failedLogonsOnly",
+            "in": "query",
+            "description": "Whether to show only failed logons",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "FailureThreshold",
+            "in": "query",
+            "description": "Failure threshold",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "createdDateTime": {
+                        "type": "string"
+                      },
+                      "userPrincipalName": {
+                        "type": "string"
+                      },
+                      "clientAppUsed": {
+                        "type": "string"
+                      },
+                      "authenticationRequirement": {
+                        "type": "string"
+                      },
+                      "errorCode": {
+                        "type": "string"
+                      },
+                      "additionalDetails": {
+                        "type": "string"
+                      },
+                      "ipAddress": {
+                        "type": "string"
+                      },
+                      "locationcipp": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ListInactiveAccounts": {
+      "get": {
+        "summary": "List Inactive Accounts",
+        "description": "Lists inactive user accounts (6 months)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tenantDisplayName": {
+                        "type": "string"
+                      },
+                      "userPrincipalName": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "lastSignInDateTime": {
+                        "type": "string"
+                      },
+                      "lastNonInteractiveSignInDateTime": {
+                        "type": "string"
+                      },
+                      "numberOfAssignedLicenses": {
+                        "type": "integer"
+                      },
+                      "lastRefreshedDateTime": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ListAzureADConnectStatus": {
+      "get": {
+        "summary": "List Azure AD Connect Status",
+        "description": "Lists Azure AD Connect status",
+        "parameters": [
+          {
+            "name": "DataToReturn",
+            "in": "query",
+            "description": "Type of data to return",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "ObjectType": {
+                        "type": "string"
+                      },
+                      "createdDateTime": {
+                        "type": "string"
+                      },
+                      "onPremisesProvisioningErrors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecGroupsHideFromGAL": {
+      "post": {
+        "summary": "Hide/Unhide Group from GAL",
+        "description": "Hides or unhides a group from the Global Address List",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Group Email"
+                  },
+                  "GroupType": {
+                    "type": "string",
+                    "description": "Group Type"
+                  },
+                  "HidefromGAL": {
+                    "type": "boolean",
+                    "description": "Whether to hide from GAL"
+                  }
+                },
+                "required": ["ID", "GroupType", "HidefromGAL"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecGroupsDeliveryManagement": {
+      "post": {
+        "summary": "Manage Group Delivery Settings",
+        "description": "Manages delivery settings for a group",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Group Email"
+                  },
+                  "GroupType": {
+                    "type": "string",
+                    "description": "Group Type"
+                  },
+                  "OnlyAllowInternal": {
+                    "type": "boolean",
+                    "description": "Whether to only allow internal messages"
+                  }
+                },
+                "required": ["ID", "GroupType", "OnlyAllowInternal"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecGroupsDelete": {
+      "post": {
+        "summary": "Delete Group",
+        "description": "Deletes a group",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Group ID"
+                  },
+                  "GroupType": {
+                    "type": "string",
+                    "description": "Group Type"
+                  },
+                  "DisplayName": {
+                    "type": "string",
+                    "description": "Group Display Name"
+                  }
+                },
+                "required": ["ID", "GroupType", "DisplayName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/AddGroup": {
+      "post": {
+        "summary": "Add Group",
+        "description": "Creates a new group",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "groupName": {
+                    "type": "string",
+                    "description": "Group Name"
+                  },
+                  "groupType": {
+                    "type": "string",
+                    "description": "Group Type"
+                  }
+                },
+                "required": ["tenantFilter", "groupName", "groupType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListRoles": {
+      "get": {
+        "summary": "List Roles",
+        "description": "Lists roles in the tenant",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Description": {
+                        "type": "string"
+                      },
+                      "Members": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecDismissRiskyUser": {
+      "post": {
+        "summary": "Dismiss Risky User",
+        "description": "Dismisses the risk for a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "User ID"
+                  },
+                  "userDisplayName": {
+                    "type": "string",
+                    "description": "User Display Name"
+                  }
+                },
+                "required": ["userId", "userDisplayName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecJITAdmin": {
+      "post": {
+        "summary": "Execute JIT Admin",
+        "description": "Creates or updates a JIT admin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "userAction": {
+                    "type": "string",
+                    "enum": ["create", "select"],
+                    "description": "User Action"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "description": "First Name"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "description": "Last Name"
+                  },
+                  "userName": {
+                    "type": "string",
+                    "description": "Username"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Domain Name"
+                  },
+                  "existingUser": {
+                    "type": "string",
+                    "description": "Existing User"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Start Date"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "End Date"
+                  },
+                  "adminRoles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Admin Roles"
+                  },
+                  "UseTAP": {
+                    "type": "boolean",
+                    "description": "Generate TAP"
+                  },
+                  "expireAction": {
+                    "type": "string",
+                    "enum": ["DeleteUser", "DisableUser", "RemoveRoles"],
+                    "description": "Expiration Action"
+                  },
+                  "postExecution": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["Webhook", "email", "PSA"]
+                    },
+                    "description": "Notification Action"
+                  }
+                },
+                "required": ["tenantFilter", "userAction", "startDate", "endDate", "adminRoles"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      },
+      "get": {
+        "summary": "List JIT Admins",
+        "description": "Lists JIT admins",
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "description": "Action to perform",
+            "schema": {
+              "type": "string",
+              "enum": ["List"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecDeviceDelete": {
+      "post": {
+        "summary": "Manage Device",
+        "description": "Enables, disables, or deletes a device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Device ID"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": ["!Enable", "!Disable", "!Delete"],
+                    "description": "Action to perform"
+                  }
+                },
+                "required": ["ID", "action"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecGetRecoveryKey": {
+      "post": {
+        "summary": "Get Recovery Key",
+        "description": "Retrieves BitLocker recovery keys for a device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "Device ID"
+                  }
+                },
+                "required": ["GUID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListDeletedItems": {
+      "get": {
+        "summary": "List Deleted Items",
+        "description": "Lists deleted items",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "TargetType": {
+                        "type": "string"
+                      },
+                      "userPrincipalName": {
+                        "type": "string"
+                      },
+                      "deletedDateTime": {
+                        "type": "string"
+                      },
+                      "onPremisesSyncEnabled": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecRestoreDeleted": {
+      "post": {
+        "summary": "Restore Deleted Object",
+        "description": "Restores a deleted object",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Object ID"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ExecOffboardUser": {
+      "post": {
+        "summary": "Offboard User",
+        "description": "Offboards a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "user": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Users to offboard"
+                  },
+                  "Scheduled": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      }
+                    },
+                    "description": "Scheduled offboarding"
+                  }
+                },
+                "required": ["tenantFilter", "user"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListExtensionsConfig": {
+      "get": {
+        "summary": "List Extensions Configuration",
+        "description": "Lists extensions configuration",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "GitHub": {
+                      "type": "object",
+                      "properties": {
+                        "Enabled": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecCommunityRepo": {
+      "post": {
+        "summary": "Execute Community Repository Action",
+        "description": "Executes an action on a community repository",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": ["UploadTemplate"],
+                    "description": "Action to perform"
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "Template GUID"
+                  },
+                  "FullName": {
+                    "type": "string",
+                    "description": "Repository Full Name"
+                  },
+                  "Message": {
+                    "type": "string",
+                    "description": "Commit Message"
+                  }
+                },
+                "required": ["Action", "GUID", "FullName", "Message"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListCommunityRepos": {
+      "get": {
+        "summary": "List Community Repositories",
+        "description": "Lists community repositories",
+        "parameters": [
+          {
+            "name": "WriteAccess",
+            "in": "query",
+            "description": "Whether to only show repositories with write access",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "FullName": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/RemoveGroupTemplate": {
+      "post": {
+        "summary": "Remove Group Template",
+        "description": "Removes a group template",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Template GUID"
+                  }
+                },
+                "required": ["ID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/ListGroupTemplates": {
+      "get": {
+        "summary": "List Group Templates",
+        "description": "Lists group templates",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Displayname": {
+                        "type": "string"
+                      },
+                      "Description": {
+                        "type": "string"
+                      },
+                      "groupType": {
+                        "type": "string"
+                      },
+                      "GUID": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/AddGroupTemplate": {
+      "post": {
+        "summary": "Add Group Template",
+        "description": "Creates a new group template",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "Displayname": {
+                    "type": "string",
+                    "description": "Template Display Name"
+                  },
+                  "Description": {
+                    "type": "string",
+                    "description": "Template Description"
+                  },
+                  "groupType": {
+                    "type": "string",
+                    "description": "Group Type"
+                  }
+                },
+                "required": ["Displayname", "Description", "groupType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}

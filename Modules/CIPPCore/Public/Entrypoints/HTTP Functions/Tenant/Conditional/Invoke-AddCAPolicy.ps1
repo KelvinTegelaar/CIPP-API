@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddCAPolicy {
+function Invoke-AddCAPolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,7 +19,7 @@ Function Invoke-AddCAPolicy {
 
     $results = foreach ($Tenant in $tenants) {
         try {
-            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.Body.replacename -Overwrite $request.Body.overwrite -TenantFilter $Tenant -state $Request.Body.NewState -RawJSON $Request.Body.RawJSON -APIName $APIName -Headers $Headers
+            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.Body.replacename -Overwrite $request.Body.overwrite -TenantFilter $Tenant -state $Request.Body.NewState -DisableSD $Request.Body.DisableSD -RawJSON $Request.Body.RawJSON -APIName $APIName -Headers $Headers
             "$CAPolicy"
         } catch {
             "$($_.Exception.Message)"

@@ -28,7 +28,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, Hidden, Results, Timestamp
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
 
     if (-not $Task) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -56,6 +56,35 @@ function Invoke-ListScheduledItemDetails {
     try {
         $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
     } catch {}
+
+    # Handle tenant group display information (similar to Invoke-ListScheduledItems)
+    if ($Task.TenantGroup) {
+        try {
+            $TenantGroupObject = $Task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($TenantGroupObject) {
+                # Create a tenant group object for the frontend formatting
+                $TenantGroupForDisplay = [PSCustomObject]@{
+                    label = $TenantGroupObject.label
+                    value = $TenantGroupObject.value
+                    type  = 'Group'
+                }
+                $Task | Add-Member -NotePropertyName TenantGroupInfo -NotePropertyValue $TenantGroupForDisplay -Force
+                # Update the tenant to show the group object for proper formatting
+                $Task.Tenant = $TenantGroupForDisplay
+            }
+        } catch {
+            Write-Warning "Failed to parse tenant group information for task $($Task.RowKey): $($_.Exception.Message)"
+            # Fall back to keeping original tenant value
+        }
+    } else {
+        # For regular tenants, create a tenant object for consistent formatting
+        $TenantForDisplay = [PSCustomObject]@{
+            label = $Task.Tenant
+            value = $Task.Tenant
+            type  = 'Tenant'
+        }
+        $Task.Tenant = $TenantForDisplay
+    }
 
     # Get the results if available
     $ResultsTable = Get-CIPPTable -TableName 'ScheduledTaskResults'

@@ -1,0 +1,749 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CIPP Teams & Share API",
+    "description": "API endpoints for Teams, SharePoint, and OneDrive management in CIPP",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/ListSites": {
+      "get": {
+        "summary": "List sites",
+        "description": "List SharePoint sites or OneDrive accounts based on the type parameter",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["SharePointSiteUsage", "OneDriveUsageAccount"]
+            },
+            "description": "Type of sites to list"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Site"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecSetSharePointMember": {
+      "post": {
+        "summary": "Add or remove SharePoint site member",
+        "description": "Add or remove a user as a member of a SharePoint site",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["groupId", "add", "URL", "SharePointType", "user"],
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "description": "Owner principal name"
+                  },
+                  "add": {
+                    "type": "boolean",
+                    "description": "True to add, false to remove"
+                  },
+                  "URL": {
+                    "type": "string",
+                    "description": "Web URL of the site"
+                  },
+                  "SharePointType": {
+                    "type": "string",
+                    "description": "Root web template"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "User principal name to add or remove"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful"
+          }
+        }
+      }
+    },
+    "/api/ExecSharePointPerms": {
+      "post": {
+        "summary": "Manage SharePoint or OneDrive permissions",
+        "description": "Add or remove a user as a site admin for SharePoint or add/remove permissions for OneDrive",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["UPN", "RemovePermission", "URL"],
+                "properties": {
+                  "UPN": {
+                    "type": "string",
+                    "description": "Owner principal name"
+                  },
+                  "RemovePermission": {
+                    "type": "boolean",
+                    "description": "True to remove permission, false to add"
+                  },
+                  "URL": {
+                    "type": "string",
+                    "description": "Web URL of the site or OneDrive"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "User principal name to add or remove permissions for"
+                  },
+                  "onedriveAccessUser": {
+                    "type": "string",
+                    "description": "User principal name to add or remove OneDrive access for"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful"
+          }
+        }
+      }
+    },
+    "/api/AddSite": {
+      "post": {
+        "summary": "Add a new SharePoint site",
+        "description": "Create a new SharePoint site",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["siteName", "siteDescription", "SiteOwner", "TemplateName", "siteDesign"],
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "siteName": {
+                    "type": "string",
+                    "description": "Name of the site"
+                  },
+                  "siteDescription": {
+                    "type": "string",
+                    "description": "Description of the site"
+                  },
+                  "SiteOwner": {
+                    "type": "string",
+                    "description": "User principal name of the site owner"
+                  },
+                  "TemplateName": {
+                    "type": "string",
+                    "enum": ["team", "communication"],
+                    "description": "Template name"
+                  },
+                  "siteDesign": {
+                    "type": "string",
+                    "enum": ["blank", "Showcase", "Topic"],
+                    "description": "Site design template"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Site created successfully"
+          }
+        }
+      }
+    },
+    "/api/AddSiteBulk": {
+      "post": {
+        "summary": "Add multiple SharePoint sites",
+        "description": "Create multiple SharePoint sites in bulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenantFilter", "bulkSites"],
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "bulkSites": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "SiteName": {
+                          "type": "string",
+                          "description": "Name of the site"
+                        },
+                        "siteDescription": {
+                          "type": "string",
+                          "description": "Description of the site"
+                        },
+                        "siteOwner": {
+                          "type": "string",
+                          "description": "User principal name of the site owner"
+                        },
+                        "TemplateName": {
+                          "type": "string",
+                          "description": "Template name"
+                        },
+                        "siteDesign": {
+                          "type": "string",
+                          "description": "Site design template"
+                        },
+                        "sensitivityLabel": {
+                          "type": "string",
+                          "description": "Sensitivity label"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sites created successfully"
+          }
+        }
+      }
+    },
+    "/api/ListTeams": {
+      "get": {
+        "summary": "List Teams",
+        "description": "List Microsoft Teams",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["list"]
+            },
+            "description": "Type of Teams list"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/AddTeam": {
+      "post": {
+        "summary": "Add a new Team",
+        "description": "Create a new Microsoft Team",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tenantID", "displayName", "owner", "visibility"],
+                "properties": {
+                  "tenantID": {
+                    "type": "string",
+                    "description": "Tenant ID"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "Display name of the team"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the team"
+                  },
+                  "owner": {
+                    "type": "string",
+                    "description": "User principal name of the team owner"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": ["public", "private"],
+                    "description": "Team visibility"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Team created successfully"
+          }
+        }
+      }
+    },
+    "/api/ListTeamsActivity": {
+      "get": {
+        "summary": "List Teams activity",
+        "description": "List Microsoft Teams user activity",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["TeamsUserActivityUser"]
+            },
+            "description": "Type of Teams activity"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsActivity"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ListTeamsVoice": {
+      "get": {
+        "summary": "List Teams voice phone numbers",
+        "description": "List Microsoft Teams voice phone numbers",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsVoice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ExecTeamsVoicePhoneNumberAssignment": {
+      "post": {
+        "summary": "Assign Teams voice phone number",
+        "description": "Assign a phone number to a user or set emergency location",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["PhoneNumber"],
+                "properties": {
+                  "PhoneNumber": {
+                    "type": "string",
+                    "description": "Phone number to assign"
+                  },
+                  "PhoneNumberType": {
+                    "type": "string",
+                    "description": "Type of phone number"
+                  },
+                  "locationOnly": {
+                    "type": "boolean",
+                    "description": "True if only setting emergency location"
+                  },
+                  "input": {
+                    "type": "string",
+                    "description": "User principal name or location ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful"
+          }
+        }
+      }
+    },
+    "/api/ExecRemoveTeamsVoicePhoneNumberAssignment": {
+      "post": {
+        "summary": "Unassign Teams voice phone number",
+        "description": "Unassign a phone number from a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["PhoneNumber", "AssignedTo", "PhoneNumberType"],
+                "properties": {
+                  "PhoneNumber": {
+                    "type": "string",
+                    "description": "Phone number to unassign"
+                  },
+                  "AssignedTo": {
+                    "type": "string",
+                    "description": "User the phone number is assigned to"
+                  },
+                  "PhoneNumberType": {
+                    "type": "string",
+                    "description": "Type of phone number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successful"
+          }
+        }
+      }
+    },
+    "/api/ListTeamsLisLocation": {
+      "get": {
+        "summary": "List Teams emergency locations",
+        "description": "List Microsoft Teams emergency locations",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsLocation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/listUsers": {
+      "get": {
+        "summary": "List users",
+        "description": "List users for selection in forms",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ListGraphRequest": {
+      "get": {
+        "summary": "List Graph API resources",
+        "description": "List resources from Microsoft Graph API",
+        "parameters": [
+          {
+            "name": "Endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Graph API endpoint"
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "OData filter"
+          },
+          {
+            "name": "$top",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Maximum number of results"
+          },
+          {
+            "name": "$count",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Include count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Order by field"
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fields to select"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Site": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "Display name of the site"
+          },
+          "createdDateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date and time when the site was created"
+          },
+          "ownerPrincipalName": {
+            "type": "string",
+            "description": "Principal name of the site owner"
+          },
+          "lastActivityDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date of last activity"
+          },
+          "fileCount": {
+            "type": "integer",
+            "description": "Number of files"
+          },
+          "storageUsedInGigabytes": {
+            "type": "number",
+            "format": "float",
+            "description": "Storage used in gigabytes"
+          },
+          "storageAllocatedInGigabytes": {
+            "type": "number",
+            "format": "float",
+            "description": "Storage allocated in gigabytes"
+          },
+          "reportRefreshDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date when the report was refreshed"
+          },
+          "webUrl": {
+            "type": "string",
+            "description": "URL of the site"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the site"
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "Display name of the team"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the team"
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Visibility of the team"
+          },
+          "mailNickname": {
+            "type": "string",
+            "description": "Mail nickname of the team"
+          },
+          "id": {
+            "type": "string",
+            "description": "ID of the team"
+          }
+        }
+      },
+      "TeamsActivity": {
+        "type": "object",
+        "properties": {
+          "UPN": {
+            "type": "string",
+            "description": "User principal name"
+          },
+          "LastActive": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date and time of last activity"
+          },
+          "MeetingCount": {
+            "type": "integer",
+            "description": "Number of meetings"
+          },
+          "CallCount": {
+            "type": "integer",
+            "description": "Number of calls"
+          },
+          "TeamsChat": {
+            "type": "integer",
+            "description": "Number of Teams chats"
+          }
+        }
+      },
+      "TeamsVoice": {
+        "type": "object",
+        "properties": {
+          "AssignedTo": {
+            "type": "string",
+            "description": "User the phone number is assigned to"
+          },
+          "TelephoneNumber": {
+            "type": "string",
+            "description": "Phone number"
+          },
+          "AssignmentStatus": {
+            "type": "string",
+            "description": "Assignment status"
+          },
+          "NumberType": {
+            "type": "string",
+            "description": "Type of phone number"
+          },
+          "AcquiredCapabilities": {
+            "type": "string",
+            "description": "Capabilities of the phone number"
+          },
+          "IsoCountryCode": {
+            "type": "string",
+            "description": "ISO country code"
+          },
+          "PlaceName": {
+            "type": "string",
+            "description": "Place name"
+          },
+          "ActivationState": {
+            "type": "string",
+            "description": "Activation state"
+          },
+          "IsOperatorConnect": {
+            "type": "boolean",
+            "description": "Whether the number is operator connect"
+          },
+          "AcquisitionDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date when the number was acquired"
+          }
+        }
+      },
+      "TeamsLocation": {
+        "type": "object",
+        "properties": {
+          "Description": {
+            "type": "string",
+            "description": "Description of the location"
+          },
+          "LocationId": {
+            "type": "string",
+            "description": "ID of the location"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "Display name of the user"
+          },
+          "userPrincipalName": {
+            "type": "string",
+            "description": "User principal name"
+          },
+          "id": {
+            "type": "string",
+            "description": "ID of the user"
+          }
+        }
+      }
+    }
+  }
+}

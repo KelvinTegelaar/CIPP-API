@@ -7,7 +7,7 @@ function Invoke-ExecTenantGroup {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        TenantGroups.Config.ReadWrite
+        Tenant.Groups.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

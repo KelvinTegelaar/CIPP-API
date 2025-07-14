@@ -11,7 +11,8 @@ Function Invoke-ExecEditMailboxPermissions {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
     $Username = $request.body.userID
     $Tenantfilter = $request.body.tenantfilter
     if ($username -eq $null) { exit }
