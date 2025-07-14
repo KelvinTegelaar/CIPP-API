@@ -35,5 +35,4 @@ function Invoke-RemoveScheduledItem {
             Body       = @{ Results = 'Task removed successfully.' }
         })
 
-
 }

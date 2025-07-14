@@ -29,6 +29,7 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'DisableAddShortcutsToOneDrive' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAddShortcutsToOneDrive'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive

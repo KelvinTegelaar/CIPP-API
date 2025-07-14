@@ -29,6 +29,7 @@ function Invoke-CIPPStandardTwoClickEmailProtection {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TwoClickEmailProtection' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TwoClickEmailProtection'
 
     # Get state value using null-coalescing operator
