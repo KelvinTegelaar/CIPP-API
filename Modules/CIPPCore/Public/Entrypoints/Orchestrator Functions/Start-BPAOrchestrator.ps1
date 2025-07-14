@@ -46,7 +46,7 @@ function Start-BPAOrchestrator {
                         PartitionKey = 'BPATemplate'
                         GUID         = "$($_.name)"
                     }
-                    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+                    Add-CIPPAzDataTableEntity @BPATemplateTable -Entity $Entity -Force
                 }
                 $TemplateRows = Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter
             }

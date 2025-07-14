@@ -52,7 +52,7 @@ function Invoke-ExecSendPush {
 
         $SPBody = [pscustomobject]@{
             appId = $MFAAppID
-        }
+        } | ConvertTo-Json -Depth 5
         $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -AsApp $true).id
     }
 

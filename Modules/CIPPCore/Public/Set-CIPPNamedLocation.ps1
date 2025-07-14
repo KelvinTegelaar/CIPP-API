@@ -3,45 +3,75 @@ function Set-CIPPNamedLocation {
     param(
         $NamedLocationId,
         $TenantFilter,
-        #$change should be one of 'addip','addlocation','removeip','removelocation'
-        [ValidateSet('addip', 'addlocation', 'removeip', 'removelocation')]
-        $change,
-        $content,
+        #$Change should be one of 'addIp','addLocation','removeIp','removeLocation','rename','setTrusted','setUntrusted','delete'
+        [ValidateSet('addIp', 'addLocation', 'removeIp', 'removeLocation', 'rename', 'setTrusted', 'setUntrusted', 'delete')]
+        $Change,
+        $Content,
         $APIName = 'Set Named Location',
         $Headers
     )
 
     try {
-        $NamedLocations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -Tenantid $tenantfilter
-        switch ($change) {
-            'addip' {
-                $NamedLocations.ipRanges = @($NamedLocations.ipRanges + @{ cidrAddress = $content; '@odata.type' = '#microsoft.graph.iPv4CidrRange' })
+        $NamedLocations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -Tenantid $TenantFilter
+
+        switch ($Change) {
+            'addIp' {
+                $NamedLocations.ipRanges = @($NamedLocations.ipRanges + @{ cidrAddress = $Content; '@odata.type' = '#microsoft.graph.iPv4CidrRange' })
+                $ActionDescription = "Adding IP $Content to named location"
             }
-            'addlocation' {
-                $NamedLocations.countriesAndRegions = $NamedLocations.countriesAndRegions + $content
+            'addLocation' {
+                $NamedLocations.countriesAndRegions = $NamedLocations.countriesAndRegions + $Content
+                $ActionDescription = "Adding location $Content to named location"
             }
-            'removeip' {
-                $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object -Property cidrAddress -NE $content)
+            'removeIp' {
+                $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object -Property cidrAddress -NE $Content)
+                $ActionDescription = "Removing IP $Content from named location"
             }
-            'removelocation' {
-                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $content })
+            'removeLocation' {
+                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $Content })
+                $ActionDescription = "Removing location $Content from named location"
+            }
+            'rename' {
+                $NamedLocations.displayName = $Content
+                $ActionDescription = "Renaming named location to: $Content"
+            }
+            'setTrusted' {
+                $NamedLocations.isTrusted = $true
+                $ActionDescription = 'Setting named location as trusted'
+            }
+            'setUntrusted' {
+                $NamedLocations.isTrusted = $false
+                $ActionDescription = 'Setting named location as untrusted'
+            }
+            'delete' {
+                $ActionDescription = 'Deleting named location'
             }
         }
-        if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
-            #Remove unneeded propertie
-            if ($change -like '*location*') {
-                $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'countriesAndRegions', 'includeUnknownCountriesAndRegions'
+
+        if ($PSCmdlet.ShouldProcess($NamedLocations.displayName, $ActionDescription)) {
+            if ($Change -eq 'delete') {
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type DELETE
+                $Result = "Deleted named location: $($NamedLocations.displayName)"
             } else {
-                $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'ipRanges', 'isTrusted'
+                # PATCH operations - remove unneeded properties
+                if ($NamedLocations.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') {
+                    $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'countriesAndRegions', 'includeUnknownCountriesAndRegions'
+                } elseif ($NamedLocations.'@odata.type' -eq '#microsoft.graph.ipNamedLocation') {
+                    $NamedLocations = $NamedLocations | Select-Object '@odata.type', 'displayName', 'ipRanges', 'isTrusted'
+                }
+
+                $JsonBody = ConvertTo-Json -InputObject $NamedLocations -Compress -Depth 10
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type PATCH -body $JsonBody
+                $Result = "Edited named location: $($NamedLocations.displayName). Change: $Change$(if ($Content) { " with content $Content" })"
             }
 
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type PATCH -body $($NamedLocations | ConvertTo-Json -Compress -Depth 10)
-            Write-LogMessage -headers $Headers -API $APIName -message "Edited named location. Change: $change with content $($content)" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         }
-        return "Edited named location. Change: $change with content $($content)"
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return "Failed to edit named location. Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to edit named location: $($NamedLocations.displayName). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        throw $Result
     }
 }

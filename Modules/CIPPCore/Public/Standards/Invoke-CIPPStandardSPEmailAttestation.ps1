@@ -66,7 +66,9 @@ function Invoke-CIPPStandardSPEmailAttestation {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Re-authentication with verification code is restricted.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Re-authentication with verification code is not restricted.' -Sev Alert
+            $Message = 'Re-authentication with verification code is not set to the desired value.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPEmailAttestation' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message $Message -Sev Alert
         }
     }
 

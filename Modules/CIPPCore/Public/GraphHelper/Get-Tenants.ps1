@@ -67,7 +67,7 @@ function Get-Tenants {
                 relationshipEnd = $Relationship.endDateTime
             }
         }
-        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
+        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false and delegatedPrivilegeStatus ne 'directTenant'"
         $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId -and $_.customerId -ne $env:TenantID } | ForEach-Object {
             Remove-AzDataTableEntity -Force @TenantsTable -Entity $_
         }

@@ -1816,7 +1816,7 @@ function Invoke-NinjaOneTenantSync {
             Set-Location $CIPPRoot
 
             try {
-                $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
+                $StandardsDefinitions = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/refs/heads/main/src/data/standards.json'
                 $AppliedStandards = Get-CIPPStandards -TenantFilter $Customer.defaultDomainName
                 $Templates = Get-CIPPTable 'templates'
                 $StandardTemplates = Get-CIPPAzDataTableEntity @Templates | Where-Object { $_.PartitionKey -eq 'StandardsTemplateV2' }

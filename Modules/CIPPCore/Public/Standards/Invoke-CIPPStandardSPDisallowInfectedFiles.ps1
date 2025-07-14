@@ -59,7 +59,9 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading SharePoint infected files are disallowed.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading SharePoint infected files are allowed.' -Sev Alert
+            $Message = 'Downloading SharePoint infected files is not set to the desired value.'
+            Write-StandardsAlert -message $Message -object $CurrentState -tenant $Tenant -standardName 'SPDisallowInfectedFiles' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message $Message -Sev Alert
         }
     }
 

@@ -11,23 +11,24 @@ Function Invoke-ExecClrImmId {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
+
+    # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev Debug
     $UserID = $Request.Query.ID ?? $Request.Body.ID
 
-    Try {
-        $Result = Clear-CIPPImmutableId -userid $UserID -TenantFilter $TenantFilter -Headers $Request.Headers -APIName $APIName
+    try {
+        $Result = Clear-CIPPImmutableID -UserID $UserID -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        $Result = $ErrorMessage.NormalizedError
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{'Results' = $Result }
         })
 }
