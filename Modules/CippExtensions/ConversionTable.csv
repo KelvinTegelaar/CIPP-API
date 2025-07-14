@@ -20,6 +20,7 @@ Clipchamp Premium,Clipchamp_Premium,0fe440c5-f2bf-442b-a4f4-9a7af77a200b,ONEDRIV
 Clipchamp Standard,Clipchamp_Standard,481f3bc2-5756-4b28-9375-5c8c86b99e6b,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Clipchamp Standard,Clipchamp_Standard,481f3bc2-5756-4b28-9375-5c8c86b99e6b,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
 Clipchamp Standard,Clipchamp_Standard,481f3bc2-5756-4b28-9375-5c8c86b99e6b,ONEDRIVECLIPCHAMP,f7e5b77d-f293-410a-bae8-f941f19fe680,OneDrive for Business (Clipchamp)
+Clipchamp Premium Add-on,Clipchamp_Premium_Add_on,4b2c20e4-939d-4bf4-9dd8-6870240cfe19,CLIPCHAMP_PREMIUM,430b908f-78e1-4812-b045-cf83320e7d5d,Microsoft Clipchamp Premium
 Microsoft 365 Audio Conferencing,MCOMEETADV,0c266dff-15dd-4b49-8397-2bb16070ed52,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Microsoft Entra ID Basic,AAD_BASIC,2b9c8e7c-319c-43a2-a2a0-48c5c6161de7,AAD_BASIC,c4da7f8a-5ee2-4c99-a7e1-87d2df57f6fe,Microsoft Entra BASIC
 Microsoft Entra ID P1,AAD_PREMIUM,078d2b04-f1bd-4111-bbd4-b4b1b354cef4,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
@@ -418,6 +419,13 @@ Dynamics 365 Guides vTrial,Dynamics_365_Guides_vTrial,99cb3f83-fbec-4aa1-8262-96
 Dynamics 365 Guides vTrial,Dynamics_365_Guides_vTrial,99cb3f83-fbec-4aa1-8262-9679e6df7c53,DYN365_CDS_VIRAL,17ab22cd-a0b3-4536-910a-cb6eb12696c0,Common Data Service
 Dynamics 365 Guides vTrial,Dynamics_365_Guides_vTrial,99cb3f83-fbec-4aa1-8262-9679e6df7c53,POWER_APPS_DYN365_VIRAL_TRIAL_MIXED_REALITY,066e2fd1-ba15-40e7-aa96-d6636b1cdf71,Power Apps for Dynamics 365 Mixed Reality
 Dynamics 365 Guides vTrial,Dynamics_365_Guides_vTrial,99cb3f83-fbec-4aa1-8262-9679e6df7c53,POWER_AUTOMATE_DYN365_VIRAL_TRIAL_MIXED_REALITY,26fa8a18-2812-4b3d-96b4-864818ce26be,Power Automate for Dynamics 365 Mixed Reality
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,Forms_Pro_Talent,1c4ae475-5608-43fa-b3f7-d20e07cf24b4,Microsoft Dynamics 365 Customer Voice for Talent
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,Power_Pages_Internal_User,60bf28f9-2b70-4522-96f7-335f5e06c941,Power Pages Internal User
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,D365_HR_SELF_SERVICE_OPS,835b837b-63c1-410e-bf6b-bdef201ad129,Dynamics 365 Human Resource Self Service
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,D365_HR_OPS,8b21a5dc-5485-49ed-a2d4-0e772c830f6d,Dynamics 365 Human Resources
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,D365_HR_Attach,3219525a-4064-45ec-9c35-a33ea6b39a49,Dynamics 365 Human Resources Attach
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,D365_HR_ATTACH_OPS,90d8cb62-e98a-4639-8342-8c7d2c8215ba,Dynamics 365 Human Resources Attach License
+Dynamics 365 Human Resources Attach to Qualifying Dynamics 365 Base Offer,DYN365_HUMAN_RESOURCES_ATTACH,83c489a4-94b6-4dcc-9fdc-ff9b107a4621,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Dynamics 365 Hybrid Connector,CRM_HYBRIDCONNECTOR,de176c31-616d-4eae-829a-718918d7ec23,CRM_HYBRIDCONNECTOR,0210d5c8-49d2-4dd1-a01b-a91c7c14e0bf,CRM Hybrid Connector
 Dynamics 365 Hybrid Connector,CRM_HYBRIDCONNECTOR,de176c31-616d-4eae-829a-718918d7ec23,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Dynamics 365 for Marketing Additional Application,DYN365_MARKETING_APPLICATION_ADDON,99c5688b-6c75-4496-876f-07f0fbd69add,DYN365_MARKETING_APPLICATION_ADDON,51cf0638-4861-40c0-8b20-1161ab2f80be,Dynamics 365 for Marketing Additional Application
@@ -967,111 +975,129 @@ Microsoft 365 A3 - Unattended License for students use benefit,M365EDU_A3_STUUSE
 Microsoft 365 A3 - Unattended License for students use benefit,M365EDU_A3_STUUSEBNFT_RPA1,1aa94593-ca12-4254-a738-81a5972958e8,INTUNE_EDU,da24caf9-af8e-485c-b7c8-e73336da2693,Microsoft Intune for Education
 Microsoft 365 A3 - Unattended License for students use benefit,M365EDU_A3_STUUSEBNFT_RPA1,1aa94593-ca12-4254-a738-81a5972958e8,POWERAPPS_O365_P2,c68f8d98-5534-41c8-bf36-22fa496fa792,Power Apps for Office 365
 Microsoft 365 A3 - Unattended License for students use benefit,M365EDU_A3_STUUSEBNFT_RPA1,1aa94593-ca12-4254-a738-81a5972958e8,FLOW_O365_P2,76846ad7-7776-4c40-a281-a386362dd1b9,Power Automate for Office 365
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CDS_O365_P3,afa73018-811e-46e9-988f-f75d2b1b8430,Common Data Service for Teams
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,LOCKBOX_ENTERPRISE,9f431833-0334-42de-a7dc-70aa40db46db,Customer Lockbox
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_Exchange,cd31b152-6326-4d1b-ae1b-997b625182e6,Data Classification in Microsoft 365
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCHANGE_S_ENTERPRISE,efb87545-963c-4e0d-99df-69c6916d9eb0,Exchange Online (Plan 2)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INFORMATION_BARRIERS,c4801e8a-cb58-4c35-aca6-f2dcc106f287,Information Barriers
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Content_Explorer,d9fa6af4-e046-4c89-9226-729a0786685d,Information Protection and Governance Analytics - Premium
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ContentExplorer_Standard,2b815d45-56e4-4e3a-b65c-66cb9175b560,Information Protection and Governance Analytics – Standard
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_CLP2,efb0351d-3b08-4503-993d-383af8de41e3,Information Protection for Office 365 - Premium
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_CLP1,5136a095-5cf0-4aff-bec3-e84448b38ea5,Information Protection for Office 365 - Standard
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,M365_ADVANCED_AUDITING,2f442157-a11c-46b9-ae5b-6e39ff4e5849,Microsoft 365 Advanced Auditing
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,OFFICESUBSCRIPTION,43de0ff5-c92c-492b-9116-175376d08c38,Microsoft 365 Apps for Enterprise
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFT_COMMUNICATION_COMPLIANCE,a413a9ff-720c-4822-98ef-2f37c2a21f4c,Microsoft 365 Communication Compliance
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MTP,bf28f719-7844-4079-9c78-c1307898e192,Microsoft 365 Defender
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,COMMUNICATIONS_DLP,6dc145d6-95dd-4191-b9c3-185575ee6f6b,Microsoft Communications DLP
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CUSTOMER_KEY,6db1f1db-2b46-403f-be40-e39395f08dbb,Microsoft Customer Key
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,DATA_INVESTIGATIONS,46129a58-a698-46f0-aa5b-17f6586297d9,Microsoft Data Investigations
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ATP_ENTERPRISE,f20fedf3-f3c3-43c3-8267-2bfdd51c0939,Microsoft Defender for Office 365 (Plan 1)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,THREAT_INTELLIGENCE,8e0c0a52-6a6c-4d40-8370-dd62790dcd70,Microsoft Defender for Office 365 (Plan 2)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCEL_PREMIUM,531ee2f8-b1cb-453b-9c21-d2180d014ca5,Microsoft Excel Advanced Analytics
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,OFFICE_FORMS_PLAN_3,96c1e14a-ef43-418d-b115-9636cdaa8eed,Microsoft Forms (Plan 3)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INFO_GOVERNANCE,e26c2fcc-ab91-4a61-b35c-03cdc8dddf66,Microsoft Information Governance
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INSIDER_RISK,d587c7a3-bda9-4f99-8776-9bcf59c84f75,Microsoft Insider Risk Management
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,KAIZALA_STANDALONE,0898bdbb-73b0-471a-81e5-20f1fe4dd66e,Microsoft Kaizala Pro
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ML_CLASSIFICATION,d2d51368-76c9-4317-ada2-a12c004c432f,Microsoft ML-Based Classification
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCHANGE_ANALYTICS,34c0d7a0-a70f-4668-9238-47f9fc208882,Microsoft MyAnalytics (Full)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RECORDS_MANAGEMENT,65cc641f-cccd-4643-97e0-a17e3045e541,Microsoft Records Management
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,STREAM_O365_E5,6c6042f5-6f01-4d67-b8c1-eb99d36eed3e,Microsoft Stream for Office 365 E5
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MINECRAFT_EDUCATION_EDITION,4c246bbc-f513-4311-beff-eba54c353256,Minecraft Education Edition
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EQUIVIO_ANALYTICS,4de31727-a228-4ec3-a5bf-8e45b5ca48cc,Office 365 Advanced eDiscovery
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ADALLOM_S_O365,8c098270-9dd4-4350-9b30-ba4703f3b36b,Office 365 Cloud App Security
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PAM_ENTERPRISE,b1188c4c-1b36-4018-b48b-ee07604f6feb,Office 365 Privileged Access Management
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SAFEDOCS,bf6f5520-59e3-4f82-974b-7dbbc4fd27c7,Office 365 SafeDocs
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SHAREPOINTWAC_EDU,e03c7e47-402c-463c-ab25-949079bedb21,Office for the Web for Education
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,POWERAPPS_O365_P3,9c0dab89-a30c-4117-86e7-97bda240acd2,Power Apps for Office 365 (Plan 3)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,BI_AZURE_P2,70d33638-9c74-4d01-bfd3-562de28bd4ba,Power BI Pro
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PREMIUM_ENCRYPTION,617b097b-4b93-4ede-83de-5f075bb5fb2f,Premium Encryption in Office 365
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PROJECT_O365_P3,b21a6b06-1988-436e-a07b-51ec6d9f52ad,Project for Office (Plan E5)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,COMMUNICATIONS_COMPLIANCE,41fcdd7d-4733-4863-9cf4-c65b83ce2df4,Microsoft Communications Compliance
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INSIDER_RISK_MANAGEMENT,9d0c4ee5-e4a1-4625-ab39-d82b619b1a34,Microsoft Insider Risk Management
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SCHOOL_DATA_SYNC_P2,500b6a2a-7a50-4f40-b5f9-160e5b8c2f48,School Data Sync (Plan 2)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SHAREPOINTENTERPRISE_EDU,63038b2c-28d0-45f6-bc36-33062963b498,SharePoint (Plan 2) for Education
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,BPOS_S_TODO_3,3fb82609-8c27-4f7b-bd51-30634711ee67,To-Do (Plan 3)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WHITEBOARD_PLAN3,4a51bca5-1eff-43f5-878c-177680f191af,Whiteboard (Plan 3)
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,YAMMER_EDU,2078e8df-cff6-4290-98cb-5408261a760a,Yammer for Academic
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WINDEFATP,871d91ec-ec1a-452b-a83f-bd76c7d770ef,Microsoft Defender for Endpoint
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFTENDPOINTDLP,64bfac92-2b17-4482-b5e5-a0304429de3e,Microsoft Endpoint DLP
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,UNIVERSAL_PRINT_01,795f6fe0-cc4d-4773-b050-5dde4dc704c9,Universal Print
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Virtualization Rights for Windows 10 (E3/E5+VDA),e7c91390-7625-45be-94e0-e16907e03118,Windows 10/11 Enterprise
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE,7bf960f6-2cd9-443a-8046-5dbff9558365,Windows Update for Business Deployment Service
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_PREMIUM_P2,eec0eb4f-6444-4f95-aba0-50c24d67f998,Microsoft Entra ID P2
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_PREMIUM,6c57d4b6-3b23-47a5-9bc9-69f17b4947b3,Azure Information Protection Premium P1
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_PREMIUM2,5689bec4-755d-4753-8b61-40975025187c,Azure Information Protection Premium P2
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MFA_PREMIUM,8a256a2b-b617-496d-b51b-e76466e88db0,Microsoft Azure Multi-Factor Authentication
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ADALLOM_S_STANDALONE,2e2ddb96-6af9-4b1d-a3f0-d6ecfd22edb2,Microsoft Defender for Cloud Apps
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ATA,14ab5db5-e6c4-4b20-b4bc-13e36fd2227f,Microsoft Defender for Identity
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_EDU,da24caf9-af8e-485c-b7c8-e73336da2693,Microsoft Intune for Education
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,FLOW_O365_P3,07699545-9485-468e-95b6-2fca3738be01,Power Automate for Office 365
-Microsoft 365 A5 for Faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CDS_O365_P3,afa73018-811e-46e9-988f-f75d2b1b8430,Common Data Service for Teams
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,LOCKBOX_ENTERPRISE,9f431833-0334-42de-a7dc-70aa40db46db,Customer Lockbox
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CustomerLockboxA_Enterprise,3ec18638-bd4c-4d3b-8905-479ed636b83e,Customer Lockbox (A)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_Exchange,cd31b152-6326-4d1b-ae1b-997b625182e6,Data Classification in Microsoft 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,COMMON_DEFENDER_PLATFORM_FOR_OFFICE,a312bdeb-1e21-40d0-84b1-0e73f128144f,Defender Platform for Office 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCHANGE_S_ENTERPRISE,efb87545-963c-4e0d-99df-69c6916d9eb0,Exchange Online (Plan 2)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INFORMATION_BARRIERS,c4801e8a-cb58-4c35-aca6-f2dcc106f287,Information Barriers
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Content_Explorer,d9fa6af4-e046-4c89-9226-729a0786685d,Information Protection and Governance Analytics - Premium
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ContentExplorer_Standard,2b815d45-56e4-4e3a-b65c-66cb9175b560,Information Protection and Governance Analytics – Standard
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_CLP2,efb0351d-3b08-4503-993d-383af8de41e3,Information Protection for Office 365 - Premium
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MIP_S_CLP1,5136a095-5cf0-4aff-bec3-e84448b38ea5,Information Protection for Office 365 - Standard
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,M365_ADVANCED_AUDITING,2f442157-a11c-46b9-ae5b-6e39ff4e5849,Microsoft 365 Advanced Auditing
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,OFFICESUBSCRIPTION,43de0ff5-c92c-492b-9116-175376d08c38,Microsoft 365 Apps for enterprise
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,M365_AUDIT_PLATFORM,f6de4823-28fa-440b-b886-4783fa86ddba,Microsoft 365 Audit Platform
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFT_COMMUNICATION_COMPLIANCE,a413a9ff-720c-4822-98ef-2f37c2a21f4c,Microsoft 365 Communication Compliance
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MTP,bf28f719-7844-4079-9c78-c1307898e192,Microsoft 365 Defender
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,COMMUNICATIONS_DLP,6dc145d6-95dd-4191-b9c3-185575ee6f6b,Microsoft Communications DLP
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,CUSTOMER_KEY,6db1f1db-2b46-403f-be40-e39395f08dbb,Microsoft Customer Key
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ATP_ENTERPRISE,f20fedf3-f3c3-43c3-8267-2bfdd51c0939,Microsoft Defender for Office 365 (Plan 1)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,THREAT_INTELLIGENCE,8e0c0a52-6a6c-4d40-8370-dd62790dcd70,Microsoft Defender for Office 365 (Plan 2)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCEL_PREMIUM,531ee2f8-b1cb-453b-9c21-d2180d014ca5,Microsoft Excel Advanced Analytics
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,OFFICE_FORMS_PLAN_3,96c1e14a-ef43-418d-b115-9636cdaa8eed,Microsoft Forms (Plan 3)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INFO_GOVERNANCE,e26c2fcc-ab91-4a61-b35c-03cdc8dddf66,Microsoft Information Governance
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INSIDER_RISK,d587c7a3-bda9-4f99-8776-9bcf59c84f75,Microsoft Insider Risk Management
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INSIDER_RISK_MANAGEMENT,9d0c4ee5-e4a1-4625-ab39-d82b619b1a34,Microsoft Insider Risk Management - Exchange
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,KAIZALA_STANDALONE,0898bdbb-73b0-471a-81e5-20f1fe4dd66e,Microsoft Kaizala Pro
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFT_LOOP,c4b8c31a-fb44-4c65-9837-a21f55fcabda,Microsoft Loop
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ML_CLASSIFICATION,d2d51368-76c9-4317-ada2-a12c004c432f,Microsoft ML-Based Classification
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EXCHANGE_ANALYTICS,34c0d7a0-a70f-4668-9238-47f9fc208882,Microsoft MyAnalytics (Full)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RECORDS_MANAGEMENT,65cc641f-cccd-4643-97e0-a17e3045e541,Microsoft Records Management
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,STREAM_O365_E5,6c6042f5-6f01-4d67-b8c1-eb99d36eed3e,Microsoft Stream for Office 365 E5
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MINECRAFT_EDUCATION_EDITION,4c246bbc-f513-4311-beff-eba54c353256,Minecraft Education Edition
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,EQUIVIO_ANALYTICS,4de31727-a228-4ec3-a5bf-8e45b5ca48cc,Office 365 Advanced eDiscovery
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ADALLOM_S_O365,8c098270-9dd4-4350-9b30-ba4703f3b36b,Office 365 Cloud App Security
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PAM_ENTERPRISE,b1188c4c-1b36-4018-b48b-ee07604f6feb,Office 365 Privileged Access Management
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SAFEDOCS,bf6f5520-59e3-4f82-974b-7dbbc4fd27c7,Office 365 SafeDocs
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SHAREPOINTWAC_EDU,e03c7e47-402c-463c-ab25-949079bedb21,Office for the Web for Education
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,POWERAPPS_O365_P3,9c0dab89-a30c-4117-86e7-97bda240acd2,Power Apps for Office 365 (Plan 3)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,BI_AZURE_P2,70d33638-9c74-4d01-bfd3-562de28bd4ba,Power BI Pro
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PREMIUM_ENCRYPTION,617b097b-4b93-4ede-83de-5f075bb5fb2f,Premium Encryption in Office 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PROJECT_O365_P3,b21a6b06-1988-436e-a07b-51ec6d9f52ad,Project for Office (Plan E5)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,COMMUNICATIONS_COMPLIANCE,41fcdd7d-4733-4863-9cf4-c65b83ce2df4,RETIRED - Microsoft Communications Compliance
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,DATA_INVESTIGATIONS,46129a58-a698-46f0-aa5b-17f6586297d9,Retired - Microsoft Data Investigations
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SCHOOL_DATA_SYNC_P2,500b6a2a-7a50-4f40-b5f9-160e5b8c2f48,School Data Sync (Plan 2)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SHAREPOINTENTERPRISE_EDU,63038b2c-28d0-45f6-bc36-33062963b498,SharePoint (Plan 2) for Education
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,BPOS_S_TODO_3,3fb82609-8c27-4f7b-bd51-30634711ee67,To-Do (Plan 3)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WHITEBOARD_PLAN3,4a51bca5-1eff-43f5-878c-177680f191af,Whiteboard (Plan 3)
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,YAMMER_EDU,2078e8df-cff6-4290-98cb-5408261a760a,Yammer for Academic
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WINDEFATP,871d91ec-ec1a-452b-a83f-bd76c7d770ef,Microsoft Defender for Endpoint
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MICROSOFTENDPOINTDLP,64bfac92-2b17-4482-b5e5-a0304429de3e,Microsoft Endpoint DLP
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,UNIVERSAL_PRINT_01,795f6fe0-cc4d-4773-b050-5dde4dc704c9,Universal Print
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Virtualization Rights for Windows 10 (E3/E5+VDA),e7c91390-7625-45be-94e0-e16907e03118,Windows 10/11 Enterprise
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE,7bf960f6-2cd9-443a-8046-5dbff9558365,Windows Update for Business Deployment Service
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_PREMIUM,6c57d4b6-3b23-47a5-9bc9-69f17b4947b3,Azure Information Protection Premium P1
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,RMS_S_PREMIUM2,5689bec4-755d-4753-8b61-40975025187c,Azure Information Protection Premium P2
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,Intune_ServiceNow,3eeb8536-fecf-41bf-a3f8-d6f17a9f3efc,Intune ServiceNow Integration
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,MFA_PREMIUM,8a256a2b-b617-496d-b51b-e76466e88db0,Microsoft Azure Multi-Factor Authentication
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ADALLOM_S_STANDALONE,2e2ddb96-6af9-4b1d-a3f0-d6ecfd22edb2,Microsoft Defender for Cloud Apps
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,ATA,14ab5db5-e6c4-4b20-b4bc-13e36fd2227f,Microsoft Defender for Identity
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,AAD_PREMIUM_P2,eec0eb4f-6444-4f95-aba0-50c24d67f998,Microsoft Entra ID P2
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune Plan 1
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,INTUNE_EDU,da24caf9-af8e-485c-b7c8-e73336da2693,Microsoft Intune Plan 1 for Education
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,FLOW_O365_P3,07699545-9485-468e-95b6-2fca3738be01,Power Automate for Office 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
+Microsoft 365 A5 for faculty,M365EDU_A5_FACULTY,e97c048c-37a4-45fb-ab50-922fbf07a370,REMOTE_HELP,a4c6cf29-1168-4076-ba5c-e8fe0e62b17e,Remote help
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,CDS_O365_P3,afa73018-811e-46e9-988f-f75d2b1b8430,Common Data Service for Teams
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,LOCKBOX_ENTERPRISE,9f431833-0334-42de-a7dc-70aa40db46db,Customer Lockbox
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,CustomerLockboxA_Enterprise,3ec18638-bd4c-4d3b-8905-479ed636b83e,Customer Lockbox (A)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MIP_S_Exchange,cd31b152-6326-4d1b-ae1b-997b625182e6,Data Classification in Microsoft 365
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,COMMON_DEFENDER_PLATFORM_FOR_OFFICE,a312bdeb-1e21-40d0-84b1-0e73f128144f,Defender Platform for Office 365
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,EXCHANGE_S_ENTERPRISE,efb87545-963c-4e0d-99df-69c6916d9eb0,Exchange Online (Plan 2)
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INFORMATION_BARRIERS,c4801e8a-cb58-4c35-aca6-f2dcc106f287,Information Barriers
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,Content_Explorer,d9fa6af4-e046-4c89-9226-729a0786685d,Information Protection and Governance Analytics - Premium
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,ContentExplorer_Standard,2b815d45-56e4-4e3a-b65c-66cb9175b560,Information Protection and Governance Analytics – Standard
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MIP_S_CLP2,efb0351d-3b08-4503-993d-383af8de41e3,Information Protection for Office 365 - Premium
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MIP_S_CLP1,5136a095-5cf0-4aff-bec3-e84448b38ea5,Information Protection for Office 365 - Standard
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,M365_ADVANCED_AUDITING,2f442157-a11c-46b9-ae5b-6e39ff4e5849,Microsoft 365 Advanced Auditing
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,OFFICESUBSCRIPTION,43de0ff5-c92c-492b-9116-175376d08c38,Microsoft 365 Apps for Enterprise
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,OFFICESUBSCRIPTION,43de0ff5-c92c-492b-9116-175376d08c38,Microsoft 365 Apps for enterprise
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,M365_AUDIT_PLATFORM,f6de4823-28fa-440b-b886-4783fa86ddba,Microsoft 365 Audit Platform
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MICROSOFT_COMMUNICATION_COMPLIANCE,a413a9ff-720c-4822-98ef-2f37c2a21f4c,Microsoft 365 Communication Compliance
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MTP,bf28f719-7844-4079-9c78-c1307898e192,Microsoft 365 Defender
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,COMMUNICATIONS_DLP,6dc145d6-95dd-4191-b9c3-185575ee6f6b,Microsoft Communications DLP
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,CUSTOMER_KEY,6db1f1db-2b46-403f-be40-e39395f08dbb,Microsoft Customer Key
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,DATA_INVESTIGATIONS,46129a58-a698-46f0-aa5b-17f6586297d9,Microsoft Data Investigations
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,ATP_ENTERPRISE,f20fedf3-f3c3-43c3-8267-2bfdd51c0939,Microsoft Defender for Office 365 (Plan 1)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,THREAT_INTELLIGENCE,8e0c0a52-6a6c-4d40-8370-dd62790dcd70,Microsoft Defender for Office 365 (Plan 2)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,EXCEL_PREMIUM,531ee2f8-b1cb-453b-9c21-d2180d014ca5,Microsoft Excel Advanced Analytics
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,OFFICE_FORMS_PLAN_3,96c1e14a-ef43-418d-b115-9636cdaa8eed,Microsoft Forms (Plan 3)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INFO_GOVERNANCE,e26c2fcc-ab91-4a61-b35c-03cdc8dddf66,Microsoft Information Governance
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INSIDER_RISK,d587c7a3-bda9-4f99-8776-9bcf59c84f75,Microsoft Insider Risk Management
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INSIDER_RISK_MANAGEMENT,9d0c4ee5-e4a1-4625-ab39-d82b619b1a34,Microsoft Insider Risk Management - Exchange
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,KAIZALA_STANDALONE,0898bdbb-73b0-471a-81e5-20f1fe4dd66e,Microsoft Kaizala Pro
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MICROSOFT_LOOP,c4b8c31a-fb44-4c65-9837-a21f55fcabda,Microsoft Loop
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,ML_CLASSIFICATION,d2d51368-76c9-4317-ada2-a12c004c432f,Microsoft ML-Based Classification
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,EXCHANGE_ANALYTICS,34c0d7a0-a70f-4668-9238-47f9fc208882,Microsoft MyAnalytics (Full)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
@@ -1091,8 +1117,10 @@ Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,BI_AZURE_P2,70d33638-9c74-4d01-bfd3-562de28bd4ba,Power BI Pro
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,PREMIUM_ENCRYPTION,617b097b-4b93-4ede-83de-5f075bb5fb2f,Premium Encryption in Office 365
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,PROJECT_O365_P3,b21a6b06-1988-436e-a07b-51ec6d9f52ad,Project for Office (Plan E5)
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,COMMUNICATIONS_COMPLIANCE,41fcdd7d-4733-4863-9cf4-c65b83ce2df4,RETIRED - Microsoft Communications Compliance
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INSIDER_RISK_MANAGEMENT,9d0c4ee5-e4a1-4625-ab39-d82b619b1a34,RETIRED - Microsoft Insider Risk Management
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,DATA_INVESTIGATIONS,46129a58-a698-46f0-aa5b-17f6586297d9,Retired - Microsoft Data Investigations
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,SCHOOL_DATA_SYNC_P2,500b6a2a-7a50-4f40-b5f9-160e5b8c2f48,School Data Sync (Plan 2)
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,SHAREPOINTENTERPRISE_EDU,63038b2c-28d0-45f6-bc36-33062963b498,SharePoint (Plan 2) for Education
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
@@ -1105,18 +1133,20 @@ Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,UNIVERSAL_PRINT_01,795f6fe0-cc4d-4773-b050-5dde4dc704c9,Universal Print
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,Virtualization Rights for Windows 10 (E3/E5+VDA),e7c91390-7625-45be-94e0-e16907e03118,Windows 10/11 Enterprise
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE,7bf960f6-2cd9-443a-8046-5dbff9558365,Windows Update for Business Deployment Service
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_PREMIUM_P2,eec0eb4f-6444-4f95-aba0-50c24d67f998,Microsoft Entra ID P2
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,RMS_S_PREMIUM,6c57d4b6-3b23-47a5-9bc9-69f17b4947b3,Azure Information Protection Premium P1
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,RMS_S_PREMIUM2,5689bec4-755d-4753-8b61-40975025187c,Azure Information Protection Premium P2
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,Intune_ServiceNow,3eeb8536-fecf-41bf-a3f8-d6f17a9f3efc,Intune ServiceNow Integration
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,MFA_PREMIUM,8a256a2b-b617-496d-b51b-e76466e88db0,Microsoft Azure Multi-Factor Authentication
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,ADALLOM_S_STANDALONE,2e2ddb96-6af9-4b1d-a3f0-d6ecfd22edb2,Microsoft Defender for Cloud Apps
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,ATA,14ab5db5-e6c4-4b20-b4bc-13e36fd2227f,Microsoft Defender for Identity
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune
-Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INTUNE_EDU,da24caf9-af8e-485c-b7c8-e73336da2693,Microsoft Intune for Education
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,AAD_PREMIUM_P2,eec0eb4f-6444-4f95-aba0-50c24d67f998,Microsoft Entra ID P2
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune Plan 1
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,INTUNE_EDU,da24caf9-af8e-485c-b7c8-e73336da2693,Microsoft Intune Plan 1 for Education
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,FLOW_O365_P3,07699545-9485-468e-95b6-2fca3738be01,Power Automate for Office 365
 Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
+Microsoft 365 A5 for Students,M365EDU_A5_STUDENT,46c119d4-0379-4a9d-85e4-97c66d3f909e,REMOTE_HELP,a4c6cf29-1168-4076-ba5c-e8fe0e62b17e,Remote help
 Microsoft 365 A5 for students use benefit,M365EDU_A5_STUUSEBNFT,31d57bc7-3a05-4867-ab53-97a17835a411,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
 Microsoft 365 A5 for students use benefit,M365EDU_A5_STUUSEBNFT,31d57bc7-3a05-4867-ab53-97a17835a411,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
 Microsoft 365 A5 for students use benefit,M365EDU_A5_STUUSEBNFT,31d57bc7-3a05-4867-ab53-97a17835a411,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
@@ -3633,13 +3663,19 @@ Microsoft Dynamics CRM Online,CRMSTANDARD,d17b27af-3f49-4822-99f9-56a661538792,M
 Microsoft Dynamics CRM Online,CRMSTANDARD,d17b27af-3f49-4822-99f9-56a661538792,NBPROFESSIONALFORCRM,3e58e97c-9abe-ebab-cd5f-d543d1529634,MICROSOFT SOCIAL ENGAGEMENT PROFESSIONAL - ELIGIBILITY CRITERIA APPLY
 Microsoft Dynamics CRM Online,CRMSTANDARD,d17b27af-3f49-4822-99f9-56a661538792,POWERAPPS_DYN_APPS,874fc546-6efe-4d22-90b8-5c4e7aa59f4b,POWERAPPS FOR DYNAMICS 365
 Microsoft Entra ID Governance,Microsoft_Entra_ID_Governance,cf6b0d46-4093-4546-a0ab-0b1546dcc10e,Entra_Identity_Governance,e866a266-3cff-43a3-acca-0c90a7e00c8b,Entra Identity Governance
+Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Entra_Premium_Internet_Access,8d23cb83-ab07-418f-8517-d7aca77307dc,Microsoft Entra Internet Access
+Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Entra_Premium_Private_Access,f057aab1-b184-49b2-85c0-881b02a405c5,Microsoft Entra Private Access
+Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Verifiable_Credentials_Service_Request,aae826b7-14cd-4691-8178-2b312f7072ea,Verifiable Credentials Service Request
+Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Entra_Identity_Governance,e866a266-3cff-43a3-acca-0c90a7e00c8b,Entra Identity Governance
 Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,BI_AZURE_P0,2049e525-b859-401b-b2a0-e0a31c4b1fe4,Power BI (free)
+Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
 Microsoft Fabric (Free) for faculty,POWER_BI_STANDARD_FACULTY,ade29b5f-397e-4eb9-a287-0344bd46c68d,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,EXCHANGE_S_FOUNDATION
 Microsoft Fabric (Free) for faculty,POWER_BI_STANDARD_FACULTY,ade29b5f-397e-4eb9-a287-0344bd46c68d,BI_AZURE_P0,2049e525-b859-401b-b2a0-e0a31c4b1fe4,BI_AZURE_P0
 Microsoft Fabric (Free) for student,POWER_BI_STANDARD_STUDENT,bdcaf6aa-04c1-4b8f-b64e-6e3bd505ac64,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,EXCHANGE_S_FOUNDATION
 Microsoft Fabric (Free) for student,POWER_BI_STANDARD_STUDENT,bdcaf6aa-04c1-4b8f-b64e-6e3bd505ac64,BI_AZURE_P0,2049e525-b859-401b-b2a0-e0a31c4b1fe4,BI_AZURE_P0
 Microsoft Imagine Academy,IT_ACADEMY_AD,ba9a34de-4489-469d-879c-0f0f145321cd,IT_ACADEMY_AD,d736def0-1fde-43f0-a5be-e3f8b2de6e41,MS IMAGINE ACADEMY
+Microsoft Intune Advanced Analytics,Microsoft_Intune_Advanced_Analytics,5e36d0d4-e9e5-4052-aba0-0257465c9b86,Intune_AdvancedEA,2a4baa0e-5e99-4c38-b1f2-6864960f1bd1,Microsoft Intune Advanced Analytics
 Microsoft Intune Device,INTUNE_A_D,2b317a4a-77a6-4188-9437-b68a77b4e2c6,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Intune Device,INTUNE_A_D,2b317a4a-77a6-4188-9437-b68a77b4e2c6,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune
 Microsoft Intune Device for Government,INTUNE_A_D_GOV,2c21e77a-e0d6-4570-b38a-7ff2dc17d2ca,EXCHANGE_S_FOUNDATION_GOV,922ba911-5694-4e99-a794-73aed9bfeec8,Exchange Foundation for Government
@@ -3696,6 +3732,10 @@ Microsoft Stream Storage Add-On (500 GB),STREAM_STORAGE,9bd7c846-9556-4453-a542-
 Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,CDS_CLOUD_FOR_SUSTAINABILITY_PLUS,ba80223c-e515-4642-a838-3e7d66f70cb6,Common Data Services for Cloud for Sustainability Plus
 Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,MCS_BIZAPPS_CLOUD_FOR_SUSTAINABILITY_PLUS,ed29ae92-ff5f-4446-8460-83c54d0e7088,MCS - BizApps Cloud for Sustainability Plus
 Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Microsoft Sustainability Manager Premium USL Plus,MICROSOFT_SUSTAINABILITY_MANAGER_PREMIUM_USL_ADDON,9d576ffb-dd32-4c33-91ee-91625b61424a,MCS_BIZAPPS_CLOUD_FOR_SUSTAINABILITY_USL_PLUS,beaf5b5c-d11c-4417-b5cb-cd9f9e6719b0,MCS - BizApps Cloud for Sustainability USL Plus
+Microsoft Sustainability Manager Premium USL Plus,MICROSOFT_SUSTAINABILITY_MANAGER_PREMIUM_USL_ADDON,9d576ffb-dd32-4c33-91ee-91625b61424a,POWER_APPS_FOR_MCS_USL_PLUS,c5502fe7-406d-442a-827f-4948b821ba08,Power Apps for Cloud for Sustainability USL Plus
+Microsoft Sustainability Manager Premium USL Plus,MICROSOFT_SUSTAINABILITY_MANAGER_PREMIUM_USL_ADDON,9d576ffb-dd32-4c33-91ee-91625b61424a,POWER_AUTOMATE_FOR_MCS_USL_PLUS,1c22bb50-96fb-49e5-baa6-195cab19eee2,Power Automate for Cloud for Sustainability USL Plus
+Microsoft Sustainability Manager Premium USL Plus,MICROSOFT_SUSTAINABILITY_MANAGER_PREMIUM_USL_ADDON,9d576ffb-dd32-4c33-91ee-91625b61424a,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,MCS_BizApps_Cloud_for_Sustainability_USL,c46c42af-d654-4385-8c85-29a84f3dfb22,MCS - BizApps - Cloud for Sustainability USL
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,POWER_APPS_FOR_MCS_USL,5ffd371c-037a-41a2-98a3-6452f8c5de17,Power Apps for Cloud for Sustainability USL
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,POWER_AUTOMATE_FOR_MCS_USL,ccbe468e-7973-442c-8ec4-5fbe16438711,Power Automate for Cloud for Sustainability USL
@@ -3808,18 +3848,20 @@ Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
 Microsoft Teams Rooms Pro,Microsoft_Teams_Rooms_Pro,4cde982a-ede4-4409-9ae6-b003453c8ea6,WHITEBOARD_PLAN3,4a51bca5-1eff-43f5-878c-177680f191af,Whiteboard (Plan 3)
-Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
+Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MTRProManagement,ecc74eae-eeb7-4ad5-9c88-e8b2bfca75b8,Microsoft Teams Rooms Pro Management
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,Teams_Rooms_Pro,0374d34c-6be4-4dbb-b3f0-26105db0b28a,Teams Rooms Pro
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,Teams_Room_Basic,8081ca9c-188c-4b49-a8e5-c23b5e9463a8,Teams Rooms Test 1
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,Teams_Room_Pro,ec17f317-f4bc-451e-b2da-0167e5c260f9,Teams Rooms Test 2
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,WHITEBOARD_PLAN3,4a51bca5-1eff-43f5-878c-177680f191af,Whiteboard (Plan 3)
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,WINDEFATP,871d91ec-ec1a-452b-a83f-bd76c7d770ef,Microsoft Defender for Endpoint
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
 Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune Plan 1
+Microsoft Teams Rooms Pro for EDU,Microsoft_Teams_Rooms_Pro_FAC,c25e2b36-e161-4946-bef2-69239729f690,SPECIALTY_DEVICES,cfce7ae3-4b41-4438-999c-c0e91f3b7fb9,Specialty devices
 Microsoft Teams Rooms Pro for GCC,Microsoft_Teams_Rooms_Pro_GCC,31ecb341-2a17-483e-9140-c473006d1e1a,MCOMEETADV_GOV,f544b08d-1645-4287-82de-8d91f37c02a1,Microsoft 365 Audio Conferencing for Government
 Microsoft Teams Rooms Pro for GCC,Microsoft_Teams_Rooms_Pro_GCC,31ecb341-2a17-483e-9140-c473006d1e1a,MCOEV_GOV,db23fce2-a974-42ef-9002-d78dd42a0f22,Microsoft 365 Phone System for Government
 Microsoft Teams Rooms Pro for GCC,Microsoft_Teams_Rooms_Pro_GCC,31ecb341-2a17-483e-9140-c473006d1e1a,TEAMS_GOV,304767db-7d23-49e8-a945-4a7eb65f9f28,Microsoft Teams for Government
@@ -3914,14 +3956,14 @@ Office 365 Multi-Geo Capabilities,OFFICE365_MULTIGEO,84951599-62b7-46f3-9c9d-305
 Office 365 Multi-Geo Capabilities,OFFICE365_MULTIGEO,84951599-62b7-46f3-9c9d-30551b2ad607,TEAMSMULTIGEO,41eda15d-6b52-453b-906f-bc4a5b25a26b,Teams Multi-Geo
 Nonprofit Portal,NONPROFIT_PORTAL,aa2695c9-8d59-4800-9dc8-12e01f1735af,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Nonprofit Portal,NONPROFIT_PORTAL,aa2695c9-8d59-4800-9dc8-12e01f1735af,NONPROFIT_PORTAL,7dbc2d88-20e2-4eb6-b065-4510b38d6eb2,Nonprofit Portal
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service - O365 P1
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,INFORMATION_BARRIERS,c4801e8a-cb58-4c35-aca6-f2dcc106f287,Information Barriers
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Microsoft Microsoft Entra Rights
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,OFFICE_FORMS_PLAN_2,9b5de886-f035-4ff2-b3d8-c9127bea3620,Microsoft Forms (Plan 2)
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro Plan 2
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
@@ -3931,9 +3973,8 @@ Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c897
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,SHAREPOINTWAC_EDU,e03c7e47-402c-463c-ab25-949079bedb21,Office for the Web for Education
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,OFFICEMOBILE_SUBSCRIPTION,c63d4d19-e8cb-460e-b37c-4d6c34603745,Office Mobile Apps for Office 365
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,POWERAPPS_O365_P2,c68f8d98-5534-41c8-bf36-22fa496fa792,Power Apps for Office 365
-Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,FLOW_O365_P2,76846ad7-7776-4c40-a281-a386362dd1b9,Power Automate for Office 365
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,PROJECT_O365_P1,a55dfd10-0864-46d9-a3cd-da5991a3e0e2,Project for Office (Plan E1)
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,SCHOOL_DATA_SYNC_P1,c33802dd-1b50-4b9a-8bb9-f13d2cdeadac,School Data Sync (Plan 1)
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,SHAREPOINTSTANDARD_EDU,0a4983bb-d3e5-4a09-95d8-b2d0127b3df5,SharePoint (Plan 1) for Education
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
@@ -3942,6 +3983,9 @@ Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c897
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
 Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,YAMMER_EDU,2078e8df-cff6-4290-98cb-5408261a760a,Yammer for Academic
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,POWERAPPS_O365_P2,c68f8d98-5534-41c8-bf36-22fa496fa792,Power Apps for Office 365
+Office 365 A1 for faculty,STANDARDWOFFPACK_FACULTY,94763226-9b3c-4e75-a931-5c89701abe66,FLOW_O365_P2,76846ad7-7776-4c40-a281-a386362dd1b9,Power Automate for Office 365
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service - O365 P1
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
@@ -3969,14 +4013,14 @@ Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-89
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
 Office 365 A1 Plus for faculty,STANDARDWOFFPACK_IW_FACULTY,78e66a63-337a-4a9a-8959-41c6654dfb56,YAMMER_EDU,2078e8df-cff6-4290-98cb-5408261a760a,Yammer for Academic
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service - O365 P1
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Azure Active Directory Basic for Education
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,INFORMATION_BARRIERS,c4801e8a-cb58-4c35-aca6-f2dcc106f287,Information Barriers
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Microsoft Microsoft Entra Rights
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,OFFICE_FORMS_PLAN_2,9b5de886-f035-4ff2-b3d8-c9127bea3620,Microsoft Forms (Plan 2)
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro Plan 2
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
@@ -3985,9 +4029,8 @@ Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,SHAREPOINTWAC_EDU,e03c7e47-402c-463c-ab25-949079bedb21,Office for the Web for Education
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,OFFICEMOBILE_SUBSCRIPTION,c63d4d19-e8cb-460e-b37c-4d6c34603745,Office Mobile Apps for Office 365
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,POWERAPPS_O365_P2,c68f8d98-5534-41c8-bf36-22fa496fa792,Power Apps for Office 365
-Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,FLOW_O365_P2,76846ad7-7776-4c40-a281-a386362dd1b9,Power Automate for Office 365
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,PROJECT_O365_P1,a55dfd10-0864-46d9-a3cd-da5991a3e0e2,Project for Office (Plan E1)
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,SCHOOL_DATA_SYNC_P1,c33802dd-1b50-4b9a-8bb9-f13d2cdeadac,School Data Sync (Plan 1)
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,SHAREPOINTSTANDARD_EDU,0a4983bb-d3e5-4a09-95d8-b2d0127b3df5,SharePoint (Plan 1) for Education
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
@@ -3995,6 +4038,9 @@ Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,BPOS_S_TODO_2,c87f142c-d1e9-4363-8630-aaea9c4d9ae5,To-Do (Plan 2)
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
 Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,YAMMER_EDU,2078e8df-cff6-4290-98cb-5408261a760a,Yammer for Academic
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,POWERAPPS_O365_P2,c68f8d98-5534-41c8-bf36-22fa496fa792,Power Apps for Office 365
+Office 365 A1 for students,STANDARDWOFFPACK_STUDENT,314c4481-f395-4525-be8b-2ec4bb1e9d91,FLOW_O365_P2,76846ad7-7776-4c40-a281-a386362dd1b9,Power Automate for Office 365
 Office 365 A1 Plus for students,STANDARDWOFFPACK_IW_STUDENT,e82ae690-a2d5-4d76-8d30-7c6e01e6022e,AAD_BASIC_EDU,1d0f309f-fdf9-4b2a-9ae7-9c48b91f1426,Microsoft Entra ID Basic for Education
 Office 365 A1 Plus for students,STANDARDWOFFPACK_IW_STUDENT,e82ae690-a2d5-4d76-8d30-7c6e01e6022e,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service - O365 P1
 Office 365 A1 Plus for students,STANDARDWOFFPACK_IW_STUDENT,e82ae690-a2d5-4d76-8d30-7c6e01e6022e,EducationAnalyticsP1,a9b86446-fa4e-498f-a92a-41b447e03337,Education Analytics
@@ -5059,8 +5105,11 @@ Power Apps Per User BD Only,POWERAPPS_PER_USER_BD_ONLY,2ced8a00-3ed1-4295-ab7c-5
 Power Apps Per User BD Only,POWERAPPS_PER_USER_BD_ONLY,2ced8a00-3ed1-4295-ab7c-57170ff28e58,CDS_ POWERAPPS_PER_USER_CUSTOM,2e8dde43-6986-479d-b179-7dbe31c31f60,CDS Power Apps Per User Custom
 Power Apps Per User BD Only,POWERAPPS_PER_USER_BD_ONLY,2ced8a00-3ed1-4295-ab7c-57170ff28e58,POWERAPPS_PER_USER,ea2cf03b-ac60-46ae-9c1d-eeaeb63cec86,Power Apps per User Plan
 Power Apps Per User BD Only,POWERAPPS_PER_USER_BD_ONLY,2ced8a00-3ed1-4295-ab7c-57170ff28e58,Flow_PowerApps_PerUser,dc789ed8-0170-4b65-a415-eb77d5bb350a,Power Automate for Power Apps per User Plan
-Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,DYN365_CDS_P2,6ea4c1ef-c259-46df-bce2-943342cd3cb2,Common Data Service - P2
+Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,Power_Pages_Internal_User,60bf28f9-2b70-4522-96f7-335f5e06c941,Power Pages Internal User
 Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,CDSAICAPACITY_PERUSER_NEW,74d93933-6f22-436e-9441-66d205435abb,AI Builder capacity Per User add-on
+Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,DYN365_CDS_P2,6ea4c1ef-c259-46df-bce2-943342cd3cb2,Common Data Service
+Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,CDSAICAPACITY_PERUSER,91f50f7b-2204-4803-acac-5cf5668b8b39,DO NOT USE - AI Builder capacity Per User add-on
 Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,POWERAPPS_PER_USER,ea2cf03b-ac60-46ae-9c1d-eeaeb63cec86,Power Apps per User Plan
 Power Apps Premium,POWERAPPS_PER_USER,b30411f5-fea1-4a59-9ad9-3db7c7ead579,Flow_PowerApps_PerUser,dc789ed8-0170-4b65-a415-eb77d5bb350a,Power Automate for Power Apps per User Plan
 Power Apps Premium for Government,POWERAPPS_PER_USER_GCC,8e4c6baa-f2ff-4884-9c38-93785d0d7ba1,CDSAICAPACITY_PERUSER,91f50f7b-2204-4803-acac-5cf5668b8b39,AI Builder capacity Per User add-on
@@ -5130,6 +5179,8 @@ Power BI Premium Per User,PBI_PREMIUM_PER_USER,c1d032e0-5619-4761-9b5c-75b6831e1
 Power BI Premium Per User,PBI_PREMIUM_PER_USER,c1d032e0-5619-4761-9b5c-75b6831e1711,BI_AZURE_P3,0bf3c642-7bb5-4ccc-884e-59d09df0266c,Power BI Premium Per User
 Power BI Premium Per User,PBI_PREMIUM_PER_USER,c1d032e0-5619-4761-9b5c-75b6831e1711,BI_AZURE_P2,70d33638-9c74-4d01-bfd3-562de28bd4ba,Power BI Pro
 Power BI Premium Per User Add-On,PBI_PREMIUM_PER_USER_ADDON,de376a03-6e5b-42ec-855f-093fb50b8ca5,BI_AZURE_P3,0bf3c642-7bb5-4ccc-884e-59d09df0266c,Power BI Premium Per User
+Power BI Premium Per User Add-On for Faculty,PBI_PREMIUM_PER_USER_ADDON_FACULTY,c05b235f-be75-4029-8851-6a4170758eef,BI_AZURE_P3,0bf3c642-7bb5-4ccc-884e-59d09df0266c,Power BI Premium Per User
+Power BI Premium Per User Add-On for Faculty,PBI_PREMIUM_PER_USER_ADDON_FACULTY,c05b235f-be75-4029-8851-6a4170758eef,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
 Power BI Premium Per User Add-On for GCC,PBI_PREMIUM_PER_USER_ADDON_CE_GCC,66024bbf-4cd4-4329-95c8-c932e2ae01a8,BI_AZURE_P3_GOV,32d15238-9a8c-46da-af3f-21fc5351d365,Power BI Premium Per User for Government
 Power BI Premium Per User Add-On for GCC,PBI_PREMIUM_PER_USER_ADDON_GCC,1b572d5e-1bf8-4b19-9259-f9eda31a6972,BI_AZURE_P3_GOV,32d15238-9a8c-46da-af3f-21fc5351d365,Power BI Premium Per User for Government
 Power BI Premium Per User Dept,PBI_PREMIUM_PER_USER_DEPT,f168a3fb-7bcf-4a27-98c3-c235ea4b78b4,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
@@ -5426,6 +5477,14 @@ Teams Premium (for Departments),Teams_Premium_(for_Departments),52ea0e27-ae73-49
 Teams Premium (for Departments),Teams_Premium_(for_Departments),52ea0e27-ae73-4983-a08f-13561ebdb823,TEAMSPRO_VIRTUALAPPT,9104f592-f2a7-4f77-904c-ca5a5715883f,Microsoft Teams Premium Virtual Appointment
 Teams Premium (for Departments),Teams_Premium_(for_Departments),52ea0e27-ae73-4983-a08f-13561ebdb823,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
 Teams Premium (for Departments),Teams_Premium_(for_Departments),52ea0e27-ae73-4983-a08f-13561ebdb823,TEAMSPRO_WEBINAR,78b58230-ec7e-4309-913c-93a45cc4735b,Microsoft Teams Premium Webinar
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,MICROSOFT_ECDN,85704d55-2e73-47ee-93b4-4b8ea14db92b,Microsoft eCDN
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,TEAMSPRO_MGMT,0504111f-feb8-4a3c-992a-70280f9a2869,Microsoft Teams Premium Intelligent
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,TEAMSPRO_CUST,cc8c0802-a325-43df-8cba-995d0c6cb373,Microsoft Teams Premium Personalized
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,TEAMSPRO_PROTECTION,f8b44f54-18bb-46a3-9658-44ab58712968,Microsoft Teams Premium Secure
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,TEAMSPRO_VIRTUALAPPT,9104f592-f2a7-4f77-904c-ca5a5715883f,Microsoft Teams Premium Virtual Appointment
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,MCO_VIRTUAL_APPT,711413d0-b36e-4cd4-93db-0a50a4ab7ea3,Microsoft Teams Premium Virtual Appointments
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,TEAMSPRO_WEBINAR,78b58230-ec7e-4309-913c-93a45cc4735b,Microsoft Teams Premium Webinar
+Teams Premium for Faculty,Teams_Premium_for_Faculty,960a972f-d017-4a17-8f64-b42c8035bc7d,QUEUES_APP,ab2d4fb5-f80a-4bf1-a11d-7f1da254041b,Queues app for Microsoft Teams
 Teams Rooms Premium,MTR_PREM,4fb214cb-a430-4a91-9c91-4976763aa78f,MMR_P1,bdaa59a3-74fd-4137-981a-31d4f84eb8a0,Meeting Room Managed Services
 Teams Rooms Premium,MTR_PREM,4fb214cb-a430-4a91-9c91-4976763aa78f,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Teams Rooms Premium,MTR_PREM,4fb214cb-a430-4a91-9c91-4976763aa78f,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System

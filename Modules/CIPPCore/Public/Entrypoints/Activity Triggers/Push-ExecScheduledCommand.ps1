@@ -10,7 +10,12 @@ function Push-ExecScheduledCommand {
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
+
+    # Handle tenant resolution - support both direct tenant and group-expanded tenants
     $Tenant = $Item.Parameters.TenantFilter ?? $Item.TaskInfo.Tenant
+
+    # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
+    # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
 
     $null = Update-AzDataTableEntity -Force @Table -Entity @{
@@ -57,6 +62,7 @@ function Push-ExecScheduledCommand {
             $results = & $Item.Command @commandParameters
         } catch {
             $results = "Task Failed: $($_.Exception.Message)"
+            $State = 'Failed'
         }
 
         Write-Host 'ran the command. Processing results'
@@ -68,9 +74,12 @@ function Push-ExecScheduledCommand {
             if ($results -is [String]) {
                 $results = @{ Results = $results }
             }
-            if ($results -is [array] -and $results[0] -is [string]) {
-                $results = $results | Where-Object { $_ -is [string] }
-                $results = $results | ForEach-Object { @{ Results = $_ } }
+            if ($results -is [array] -and $results[0] -is [string] -or $results[0].resultText -is [string]) {
+                $results = $results | Where-Object { $_ -is [string] -or $_.resultText -is [string] }
+                $results = $results | ForEach-Object {
+                    $Message = $_.resultText ?? $_
+                    @{ Results = $Message }
+                }
             }
 
             if ($results -is [string]) {
@@ -81,14 +90,14 @@ function Push-ExecScheduledCommand {
             }
         }
 
-        if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants') {
+        if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants' -or $task.TenantGroup) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
                 PartitionKey = $task.RowKey
                 RowKey       = $Tenant
                 Results      = [string](ConvertTo-Json -Compress -Depth 20 $results)
             }
-            $null = Add-AzDataTableEntity @TaskResultsTable -Entity $TaskResults -Force
+            $null = Add-CIPPAzDataTableEntity @TaskResultsTable -Entity $TaskResults -Force
             $StoredResults = @{ Results = 'Completed, details are available in the More Info pane' } | ConvertTo-Json -Compress
         }
     } catch {

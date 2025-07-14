@@ -20,8 +20,7 @@ Function Invoke-ExecRevokeSessions {
     $Username = $Request.Query.Username ?? $Request.Body.Username
 
     try {
-        $Result = Revoke-CIPPSessions -UserID $ID -TenantFilter $TenantFilter -Username $Username -APIName $APIName -Headers $Request.Headers
-        if ($Result -match '^Failed') { throw $Result }
+        $Result = Revoke-CIPPSessions -UserID $ID -TenantFilter $TenantFilter -Username $Username -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message

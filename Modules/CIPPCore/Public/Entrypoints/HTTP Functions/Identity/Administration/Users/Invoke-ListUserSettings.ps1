@@ -17,15 +17,31 @@ function Invoke-ListUserSettings {
 
     try {
         $Table = Get-CippTable -tablename 'UserSettings'
-        $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'allUsers'"
-        if (!$UserSettings) { $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Username'" }
-        $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+        $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq 'allUsers'"
+        if (!$UserSettings) { $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'" }
+
+        try {
+            $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+        } catch {
+            Write-Warning "Failed to convert UserSettings JSON: $($_.Exception.Message)"
+            $UserSettings = [pscustomobject]@{
+                direction      = 'ltr'
+                paletteMode    = 'light'
+                currentTheme   = @{ value = 'light'; label = 'light' }
+                pinNav         = $true
+                showDevtools   = $false
+                customBranding = @{
+                    colour = '#F77F00'
+                    logo   = $null
+                }
+            }
+        }
         #Get branding settings
         if ($UserSettings) {
             $brandingTable = Get-CippTable -tablename 'Config'
-            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "RowKey eq 'BrandingSettings'"
+            $BrandingSettings = Get-CIPPAzDataTableEntity @brandingTable -Filter "PartitionKey eq 'BrandingSettings' and RowKey eq 'BrandingSettings'"
             if ($BrandingSettings) {
-                $UserSettings | Add-Member -MemberType NoteProperty -Name 'BrandingSettings' -Value $BrandingSettings -Force | Out-Null
+                $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $BrandingSettings -Force | Out-Null
             }
         }
         $StatusCode = [HttpStatusCode]::OK

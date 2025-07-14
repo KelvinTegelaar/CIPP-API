@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSharedMailbox {
+function Invoke-AddSharedMailbox {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,10 +14,10 @@ Function Invoke-AddSharedMailbox {
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Results = [System.Collections.ArrayList]@()
+    $Results = [System.Collections.Generic.List[string]]::new()
     $MailboxObject = $Request.Body
     $Tenant = $MailboxObject.tenantID
-    $Aliases = $MailboxObject.addedAliases -Split '\n'
+    $Aliases = $MailboxObject.addedAliases -split '\n'
 
     try {
 
@@ -29,18 +29,18 @@ Function Invoke-AddSharedMailbox {
             Shared             = $true
         }
         $AddSharedRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-Mailbox' -cmdParams $BodyToShip
-        $Body = $Results.Add("Successfully created shared mailbox: $Email")
+        $Results.Add("Successfully created shared mailbox: $Email.")
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message "Created shared mailbox $($MailboxObject.displayName) with email $Email" -Sev 'Info'
 
         # Block sign-in for the mailbox
         try {
             $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APIName -Headers $Headers -AccountEnabled $false
-            $Body = $Results.Add("Blocked sign-in for shared mailbox $Email")
+            $Results.Add("Blocked sign-in for shared mailbox $Email")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Message = "Failed to block sign-in for shared mailbox $Email Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
-            $Body = $Results.Add($Message)
+            $Results.Add($Message)
         }
 
         # Add aliases to the mailbox if any are provided
@@ -54,13 +54,13 @@ Function Invoke-AddSharedMailbox {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Mailbox' -cmdParams $AliasBodyToShip -UseSystemMailbox $true
                 $Message = "Added aliases to $Email : $($Aliases -join ',')"
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Info'
-                $Body = $Results.Add($Message)
+                $Results.Add($Message)
 
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $Message = "Failed to add aliases to $Email : $($ErrorMessage.NormalizedError)"
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
-                $Body = $Results.Add($Message)
+                $Results.Add($Message)
             }
         }
         $StatusCode = [HttpStatusCode]::OK
@@ -68,16 +68,15 @@ Function Invoke-AddSharedMailbox {
         $ErrorMessage = Get-CippException -Exception $_
         $Message = "Failed to create shared mailbox. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
-        $Body = $Results.Add($Message)
+        $Results.Add($Message)
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
 
-    $Body = [pscustomobject] @{ Results = @($Results) }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Body
+            Body       = @{ Results = @($Results) }
         })
 
 }

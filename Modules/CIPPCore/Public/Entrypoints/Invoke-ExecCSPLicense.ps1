@@ -1,11 +1,11 @@
 using namespace System.Net
 
-Function Invoke-ExecCSPLicense {
+function Invoke-ExecCSPLicense {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Directory.Read
+        Tenant.Directory.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,7 +17,7 @@ Function Invoke-ExecCSPLicense {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
     $Action = $Request.Body.Action
-    $SKU = $Request.Body.SKU
+    $SKU = $Request.Body.SKU.value ?? $Request.Body.SKU
 
     try {
         if ($Action -eq 'Add') {

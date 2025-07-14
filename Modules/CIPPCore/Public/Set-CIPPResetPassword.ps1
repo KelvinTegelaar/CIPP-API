@@ -22,31 +22,35 @@ function Set-CIPPResetPassword {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserID)" -tenantid $TenantFilter -type PATCH -body $passwordProfile -verbose
 
         #PWPush
-        $PasswordLink = New-PwPushLink -Payload $password
-        if ($PasswordLink) {
-            $password = $PasswordLink
+        $PasswordLink = $null
+        try {
+            $PasswordLink = New-PwPushLink -Payload $password
+            if ($PasswordLink -and $PasswordLink -ne $false) {
+                $password = $PasswordLink
+            }
         }
-        Write-LogMessage -headers $Headers -API $APIName -message "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
+        catch {
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to create PwPush link, using plain password. Error: $($_.Exception.Message)" -Sev 'Warning' -tenant $TenantFilter
+        }
+        Write-LogMessage -headers $Headers -API $APIName -message "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 
         if ($UserDetails.onPremisesSyncEnabled -eq $true) {
             return [pscustomobject]@{
-                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
+                resultText = "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
                 copyField  = $password
                 state      = 'warning'
             }
         } else {
             return [pscustomobject]@{
-                resultText = "Reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
+                resultText = "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
                 copyField  = $password
                 state      = 'success'
             }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return [pscustomobject]@{
-            resultText = "Could not reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)"
-            state      = 'Error'
-        }
+        $Message = "Failed to reset password for $DisplayName, $($UserID). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Message
     }
 }

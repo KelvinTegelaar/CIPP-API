@@ -30,22 +30,36 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
+    Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
 
-    If ($Settings.remediate -eq $true) {
-
+    if ($Settings.remediate -eq $true) {
+        $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant
         foreach ($Setting in $Settings) {
             try {
-
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Setting.TemplateList.value)'"
                 $JSONObj = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
-                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers
+                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers -DisableSD $Setting.DisableSD
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
             }
         }
-
-
+    }
+    if ($Settings.report -eq $true) {
+        $Policies = $Settings.TemplateList.JSON | ConvertFrom-Json -Depth 10
+        #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
+        $MissingPolicies = foreach ($policy in $Policies) {
+            $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $policy.displayname
+            if (!$CheckExististing) {
+                $policy.displayname
+            }
+        }
+        if ($MissingPolicies.Count -eq 0) {
+            $fieldValue = $true
+        } else {
+            $fieldValue = $MissingPolicies -join ', '
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.ConditionalAccessTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }

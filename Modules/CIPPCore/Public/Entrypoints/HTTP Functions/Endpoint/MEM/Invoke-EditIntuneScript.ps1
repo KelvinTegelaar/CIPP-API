@@ -72,6 +72,12 @@ function Invoke-EditIntuneScript {
             }
         }
         'PATCH' {
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = "Method $($Request.Method) is not supported."
+            })
+        }
+        'POST' {
             # Parse the script data to determine type
             $scriptData = $Request.Body.IntuneScript | ConvertFrom-Json
             $scriptType = $Request.Body.ScriptType
@@ -115,9 +121,6 @@ function Invoke-EditIntuneScript {
                         Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"
                     })
             }
-        }
-        'POST' {
-            Write-Output 'Adding script'
         }
     }
 }

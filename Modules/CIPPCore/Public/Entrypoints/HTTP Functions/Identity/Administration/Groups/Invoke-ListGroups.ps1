@@ -69,14 +69,14 @@ function Invoke-ListGroups {
         # get the outside the organization RequireSenderAuthenticationEnabled setting
         $OnlyAllowInternal = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled' -useSystemMailbox $true | Select-Object -ExpandProperty RequireSenderAuthenticationEnabled
     } elseif ($GroupType -eq 'Microsoft 365') {
-        $UnifiedGroup = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers' -useSystemMailbox $true
-        $OnlyAllowInternal = $UnifiedGroup.RequireSenderAuthenticationEnabled
+        $UnifiedGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers,HiddenFromExchangeClientsEnabled' -useSystemMailbox $true
+        $OnlyAllowInternal = $UnifiedGroupInfo.RequireSenderAuthenticationEnabled
     } else {
         $OnlyAllowInternal = $null
     }
 
     if ($GroupType -eq 'Microsoft 365') {
-        if ($UnifiedGroup.subscriptionEnabled -eq $true -and $UnifiedGroup.AutoSubscribeNewMembers -eq $true) { $SendCopies = $true } else { $SendCopies = $false }
+        if ($UnifiedGroupInfo.subscriptionEnabled -eq $true -and $UnifiedGroupInfo.AutoSubscribeNewMembers -eq $true) { $SendCopies = $true } else { $SendCopies = $false }
     } else {
         $SendCopies = $null
     }
@@ -85,7 +85,7 @@ function Invoke-ListGroups {
         if ($BulkRequestArrayList.Count -gt 0) {
             $RawGraphRequest = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($BulkRequestArrayList) -asapp $true
             $GraphRequest = [PSCustomObject]@{
-                groupInfo     = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
+                groupInfo              = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
                 @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true } else { $false } } },
                 @{Name = 'calculatedGroupType'; Expression = {
                         if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
@@ -94,10 +94,11 @@ function Invoke-ListGroups {
                         if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
                     }
                 }, @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
-                members       = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value
-                owners        = ($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value
-                allowExternal = (!$OnlyAllowInternal)
-                sendCopies    = $SendCopies
+                members                = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value
+                owners                 = ($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value
+                allowExternal          = (!$OnlyAllowInternal)
+                sendCopies             = $SendCopies
+                hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
             }
         } else {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
