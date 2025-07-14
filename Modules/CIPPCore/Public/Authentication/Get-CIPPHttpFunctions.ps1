@@ -1,5 +1,5 @@
 function Get-CIPPHttpFunctions {
-    Param(
+    param(
         [switch]$ByRole,
         [switch]$ByRoleGroup
     )
@@ -8,7 +8,7 @@ function Get-CIPPHttpFunctions {
         $Functions = Get-Command -Module CIPPCore | Where-Object { $_.Visibility -eq 'Public' -and $_.Name -match 'Invoke-*' }
         $Results = foreach ($Function in $Functions) {
             $Help = Get-Help $Function
-            if ($Help.Functionality -ne 'Entrypoint') { continue }
+            if ($Help.Functionality -notmatch 'Entrypoint') { continue }
             if ($Help.Role -eq 'Public') { continue }
             [PSCustomObject]@{
                 Function = $Function.Name

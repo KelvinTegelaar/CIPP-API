@@ -29,6 +29,7 @@ function Invoke-CIPPStandardTeamsGuestAccess {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TeamsGuestAccess' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
 
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object AllowGuestUser
 

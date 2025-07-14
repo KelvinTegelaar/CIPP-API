@@ -32,7 +32,7 @@ function Invoke-CIPPStandardAddDKIM {
 
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
-
+    Test-CIPPStandardLicense -StandardName 'AddDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     $DkimRequest = @(
         @{
@@ -103,7 +103,7 @@ function Invoke-CIPPStandardAddDKIM {
     $NewDomains = $AllDomains | Where-Object { $DKIM.Domain -notcontains $_ }
     $SetDomains = $DKIM | Where-Object { $AllDomains -contains $_.Domain -and $_.Enabled -eq $false }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($null -eq $NewDomains -and $null -eq $SetDomains) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DKIM is already enabled for all available domains.' -sev Info

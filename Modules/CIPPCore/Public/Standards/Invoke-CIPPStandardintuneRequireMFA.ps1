@@ -27,6 +27,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'intuneRequireMFA' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
 
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
