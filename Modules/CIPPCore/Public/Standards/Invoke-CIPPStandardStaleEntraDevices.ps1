@@ -32,6 +32,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'StaleEntraDevices' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     # Get all Entra devices
     $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }

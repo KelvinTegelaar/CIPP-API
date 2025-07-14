@@ -31,6 +31,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'DisableOutlookAddins' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableOutlookAddins'
 
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' | Where-Object { $_.IsDefault -eq $true }

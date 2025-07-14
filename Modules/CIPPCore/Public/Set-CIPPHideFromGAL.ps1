@@ -15,8 +15,8 @@ function Set-CIPPHideFromGAL {
         return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to hide $($UserId) from GAL. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return $Result
+        $Message = "Failed to set $($UserId) to $Text in GAL. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Message
     }
 }
