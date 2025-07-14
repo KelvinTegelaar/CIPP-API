@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddSite {
+function Invoke-AddSite {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -24,7 +24,7 @@ Function Invoke-AddSite {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
-        $Result = "Failed to create SharePoint Site: $($_.Exception.Message)"
+        $Result = $_.Exception.Message
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
