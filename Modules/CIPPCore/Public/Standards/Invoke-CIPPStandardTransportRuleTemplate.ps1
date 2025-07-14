@@ -26,6 +26,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TransportRuleTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TransportRuleTemplate'
     $existingRules = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet 'Get-TransportRule' -useSystemMailbox $true
     if ($Settings.remediate -eq $true) {

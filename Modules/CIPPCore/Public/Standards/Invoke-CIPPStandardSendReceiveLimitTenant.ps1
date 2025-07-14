@@ -30,6 +30,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SendReceiveLimitTenant' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     # Input validation
     if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {

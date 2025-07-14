@@ -30,6 +30,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'MailboxRecipientLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     # Input validation
     if ([Int32]$Settings.RecipientLimit -lt 0 -or [Int32]$Settings.RecipientLimit -gt 10000) {

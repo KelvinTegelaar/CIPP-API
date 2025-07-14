@@ -31,6 +31,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SafeSendersDisable' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($Settings.remediate -eq $true) {
         try {

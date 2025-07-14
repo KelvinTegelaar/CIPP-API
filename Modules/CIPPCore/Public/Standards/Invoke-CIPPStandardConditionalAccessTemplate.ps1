@@ -30,6 +30,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
+    Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
 
     if ($Settings.remediate -eq $true) {
         $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant
@@ -59,6 +60,6 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         } else {
             $fieldValue = $MissingPolicies -join ', '
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -FieldValue $fieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.ConditionalAccessTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }
