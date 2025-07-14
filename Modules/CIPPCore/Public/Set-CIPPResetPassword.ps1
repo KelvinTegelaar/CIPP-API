@@ -22,9 +22,15 @@ function Set-CIPPResetPassword {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserID)" -tenantid $TenantFilter -type PATCH -body $passwordProfile -verbose
 
         #PWPush
-        $PasswordLink = New-PwPushLink -Payload $password
-        if ($PasswordLink) {
-            $password = $PasswordLink
+        $PasswordLink = $null
+        try {
+            $PasswordLink = New-PwPushLink -Payload $password
+            if ($PasswordLink -and $PasswordLink -ne $false) {
+                $password = $PasswordLink
+            }
+        }
+        catch {
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to create PwPush link, using plain password. Error: $($_.Exception.Message)" -Sev 'Warning' -tenant $TenantFilter
         }
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 
