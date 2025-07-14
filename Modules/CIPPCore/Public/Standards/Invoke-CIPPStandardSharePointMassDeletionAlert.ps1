@@ -31,7 +31,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
     #>
 
     param ($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('RMS_S_PREMIUM2')
 
     $PolicyName = 'CIPP SharePoint mass deletion of files by a user'
 
