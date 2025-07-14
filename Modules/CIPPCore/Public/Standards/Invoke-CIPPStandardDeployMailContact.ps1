@@ -33,6 +33,7 @@ function Invoke-CIPPStandardDeployMailContact {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'DeployMailContact' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.DisplayName)) {

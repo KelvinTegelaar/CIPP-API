@@ -106,7 +106,7 @@ function Test-CIPPAccessTenant {
         try {
             $null = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
 
-            $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ RoleAssignee = 'Organization Management'; Delegating = $false } | Select-Object -Property Role, Guid
+            $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ Delegating = $false } | Where-Object { $_.RoleAssigneeName -eq 'Organization Management' } | Select-Object -Property Role, Guid
             Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
             $Results.OrgManagementRoles = $OrgManagementRoles
 

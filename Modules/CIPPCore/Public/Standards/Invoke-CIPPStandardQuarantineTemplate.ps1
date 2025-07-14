@@ -40,6 +40,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'QuarantineTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     $APIName = 'Standards'
 

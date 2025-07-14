@@ -35,6 +35,7 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'EXOOutboundSpamLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     # Make sure it handles the frontend being both autocomplete and a text field
     $ActionWhenThresholdReached = $Settings.ActionWhenThresholdReached.value ?? $Settings.ActionWhenThresholdReached

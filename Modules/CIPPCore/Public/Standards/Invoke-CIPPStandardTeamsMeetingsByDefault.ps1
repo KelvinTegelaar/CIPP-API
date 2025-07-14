@@ -29,6 +29,7 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TeamsMeetingsByDefault' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingsByDefault'
 
     # Get state value using null-coalescing operator
@@ -41,7 +42,7 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'TeamsMeetingsByDefault: Invalid state parameter set' -sev Error
-        Return
+        return
     }
 
     if ($Settings.remediate -eq $true) {
@@ -64,7 +65,7 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant TeamsMeetingsByDefault is set correctly to $state" -sev Info
         } else {
-            Write-StandardsAlert -message "The tenant TeamsMeetingsByDefault is not set correctly to $state" -object @{CurrentState = $CurrentState; WantedState = $WantedState} -tenant $Tenant -standardName 'TeamsMeetingsByDefault' -standardId $Settings.standardId
+            Write-StandardsAlert -message "The tenant TeamsMeetingsByDefault is not set correctly to $state" -object @{CurrentState = $CurrentState; WantedState = $WantedState } -tenant $Tenant -standardName 'TeamsMeetingsByDefault' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant TeamsMeetingsByDefault is not set correctly to $state" -sev Info
         }
     }

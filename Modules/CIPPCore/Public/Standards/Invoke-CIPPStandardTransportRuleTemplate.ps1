@@ -26,9 +26,10 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TransportRuleTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TransportRuleTemplate'
-
-    If ($Settings.remediate -eq $true) {
+    $existingRules = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet 'Get-TransportRule' -useSystemMailbox $true
+    if ($Settings.remediate -eq $true) {
         Write-Host "Settings: $($Settings | ConvertTo-Json)"
         $Settings.transportRuleTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.transportRuleTemplate) : $null
         foreach ($Template in $Settings.TemplateList) {
@@ -36,8 +37,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
             $Table = Get-CippTable -tablename 'templates'
             $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$($Template.value)'"
             $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
-            $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet 'Get-TransportRule' -useSystemMailbox $true | Where-Object -Property Identity -EQ $RequestParams.name
-
+            $Existing = $existingRules | Where-Object -Property Identity -EQ $RequestParams.name
 
             try {
                 if ($Existing) {
@@ -57,5 +57,22 @@ function Invoke-CIPPStandardTransportRuleTemplate {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not create transport rule for $($tenantFilter): $ErrorMessage" -sev 'Error'
             }
         }
+    }
+    if ($Settings.report -eq $true) {
+        $rules = $Settings.transportRuleTemplate.JSON | ConvertFrom-Json -Depth 10
+        $MissingRules = foreach ($rule in $rules) {
+            $CheckExististing = $existingRules | Where-Object -Property identity -EQ $rule.displayname
+            if (!$CheckExististing) {
+                $rule.displayname
+            }
+        }
+
+        if ($MissingRules.Count -eq 0) {
+            $fieldValue = $true
+        } else {
+            $fieldValue = $MissingRules -join ', '
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.TransportRuleTemplate' -FieldValue $fieldValue -Tenant $Tenant
     }
 }

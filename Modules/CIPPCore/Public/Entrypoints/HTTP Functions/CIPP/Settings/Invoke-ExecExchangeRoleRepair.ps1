@@ -15,7 +15,7 @@ function Invoke-ExecExchangeRoleRepair {
 
     try {
         Write-Information "Starting Exchange Organization Management role repair for tenant: $($Tenant.defaultDomainName)"
-        $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ RoleAssignee = 'Organization Management'; Delegating = $false } | Select-Object -Property Role, Guid
+        $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ Delegating = $false } | Where-Object { $_.RoleAssigneeName -eq 'Organization Management' } | Select-Object -Property Role, Guid
         Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
 
         $RoleDefinitions = New-GraphGetRequest -tenantid $Tenant.customerId -uri 'https://graph.microsoft.com/beta/roleManagement/exchange/roleDefinitions'
@@ -53,7 +53,7 @@ function Invoke-ExecExchangeRoleRepair {
                     state      = 'success'
                     resultText = "Successfully repaired the missing Organization Management roles: $($MissingOrgMgmtRoles.displayName -join ', ')"
                 }
-                Write-LogMessage -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Successfully repaired the missing Organization Management roles: $($MissingOrgMgmtRoles.displayName -join ', '). Run another Tenant Access check after waiting a bit for replication." -sev 'Info'
+                Write-LogMessage -API 'ExecExchangeRoleRepair' -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Successfully repaired the missing Organization Management roles: $($MissingOrgMgmtRoles.displayName -join ', '). Run another Tenant Access check after waiting a bit for replication." -sev 'Info'
             } else {
                 # Get roles that failed to repair
                 $FailedRoles = $RepairResults | Where-Object { $_.status -ne 201 } | ForEach-Object {
@@ -65,11 +65,13 @@ function Invoke-ExecExchangeRoleRepair {
                 if ($RepairResults.status -in (401, 403, 500)) {
                     $PermissionError = $true
                 }
+                $LogData = $RepairResults | Select-Object -Property id, status, body
                 $Results = @{
                     state      = 'error'
                     resultText = "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ').$(if ($PermissionError) { " This may be due to insufficient permissions. The required Graph Permission is 'Application - RoleManagement.ReadWrite.Exchange'" })"
                 }
-                Write-LogMessage -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ')" -sev 'Error'
+                Write-LogMessage -API 'ExecExchangeRoleRepair' -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Failed to repair the missing Organization Management roles: $($FailedRoles -join ', ')" -sev 'Error' -LogData $LogData
+                Write-Warning 'Exchange role repair failed'
             }
         } else {
             $Results = @{
@@ -80,7 +82,7 @@ function Invoke-ExecExchangeRoleRepair {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Warning "Exception during Exchange Organization Management role repair: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Exchange Organization Management role repair failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -API 'ExecExchangeRoleRepair' -headers $Headers -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -Message "Exchange Organization Management role repair failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
         $Results = @{
             state      = 'error'
             resultText = "Exchange Organization Management role repair failed: $($ErrorMessage.NormalizedError)"

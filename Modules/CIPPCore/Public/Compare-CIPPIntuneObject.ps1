@@ -257,7 +257,7 @@ function Compare-CIPPIntuneObject {
                         }
                     }
                 }
-                Default {
+                default {
                     if ($settingInstance.simpleSettingValue?.value) {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName
@@ -337,6 +337,9 @@ function Compare-CIPPIntuneObject {
                                         } else {
                                             $child.choiceSettingValue.value
                                         }
+                                        if (!$childValue -and $child.simpleSettingValue.value) {
+                                            $childValue = $child.simpleSettingValue.value
+                                        }
                                     }
 
                                     # Add object to our temporary list
@@ -351,7 +354,7 @@ function Compare-CIPPIntuneObject {
                         }
                     }
                 }
-                Default {
+                default {
                     if ($settingInstance.simpleSettingValue?.value) {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName

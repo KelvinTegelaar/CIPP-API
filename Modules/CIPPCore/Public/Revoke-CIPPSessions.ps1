@@ -9,15 +9,15 @@ function Revoke-CIPPSessions {
     )
 
     try {
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}' -verbose
-        Write-LogMessage -headers $Headers -API $APIName -message "Revoked sessions for $($username)" -Sev 'Info' -tenant $TenantFilter
-        return "Success. All sessions by $username have been revoked"
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserID)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}' -verbose
+        $Result = "Successfully revoked sessions for $($Username)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        return $Result
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to revoke sessions for $($username). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to revoke sessions for $($Username). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        # TODO - needs to be changed to throw, but the rest of the functions using this cant handle anything but a return.
-        return $Result
+        throw $Result
     }
 }

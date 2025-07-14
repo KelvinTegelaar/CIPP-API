@@ -3,19 +3,21 @@ function New-GraphBulkRequest {
     .FUNCTIONALITY
     Internal
     #>
-    Param(
+    param(
         $tenantid,
         $NoAuthCheck,
         $scope,
         $asapp,
         $Requests,
-        $NoPaginateIds = @()
+        $NoPaginateIds = @(),
+        [ValidateSet('v1.0', 'beta')]
+        $Version = 'beta'
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
 
-        $URL = 'https://graph.microsoft.com/beta/$batch'
+        $URL = "https://graph.microsoft.com/$Version/`$batch"
 
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
