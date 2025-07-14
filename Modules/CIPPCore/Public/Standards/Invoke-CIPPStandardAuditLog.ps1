@@ -32,6 +32,7 @@ function Invoke-CIPPStandardAuditLog {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'AuditLog' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AuditLog'
 
     Write-Host ($Settings | ConvertTo-Json)

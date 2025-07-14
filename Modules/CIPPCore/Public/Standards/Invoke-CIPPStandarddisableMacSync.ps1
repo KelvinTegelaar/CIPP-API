@@ -28,6 +28,7 @@ function Invoke-CIPPStandarddisableMacSync {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'disableMacSync' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'disableMacSync'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
