@@ -30,7 +30,7 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
 
     param ($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GlobalQuarantineNotifications'
-
+    Test-CIPPStandardLicense -StandardName 'GlobalQuarantineNotifications' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' } | Select-Object -ExcludeProperty '*data.type'
 
     # This might take the cake on ugly hacky stuff i've done,

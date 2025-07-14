@@ -30,6 +30,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'DisableBasicAuthSMTP' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableBasicAuthSMTP'
 
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
