@@ -1,0 +1,1622 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CIPP Tenant API",
+    "description": "API for Tenant Management in Cloud Identity and Policy Platform (CIPP)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "CIPP API Server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "Results": {
+            "type": "object",
+            "description": "The results of the operation"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/ListAlertsQueue": {
+      "get": {
+        "summary": "List Alerts Queue",
+        "description": "Retrieves a list of alerts in the queue",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "Alerts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "RowKey": {
+                        "type": "string",
+                        "description": "Unique identifier for the alert"
+                      },
+                      "PartitionKey": {
+                        "type": "string",
+                        "description": "Partition key for the alert"
+                      },
+                      "LogType": {
+                        "type": "string",
+                        "description": "Type of log"
+                      },
+                      "RawAlert": {
+                        "type": "object",
+                        "description": "Raw alert data"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/AddAlert": {
+      "post": {
+        "summary": "Add Alert",
+        "description": "Adds a new alert",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "array",
+                    "description": "List of tenants to apply the alert to",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Tenant ID"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Tenant name"
+                        }
+                      }
+                    }
+                  },
+                  "excludedTenants": {
+                    "type": "array",
+                    "description": "List of tenants to exclude from the alert",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Tenant ID"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Tenant name"
+                        }
+                      }
+                    }
+                  },
+                  "logbook": {
+                    "type": "object",
+                    "description": "Log source",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Log source value"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Log source label"
+                      }
+                    }
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "description": "Alert conditions",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "Property": {
+                          "type": "object",
+                          "description": "Property to check",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Property value"
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Property label"
+                            }
+                          }
+                        },
+                        "Operator": {
+                          "type": "object",
+                          "description": "Comparison operator",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Operator value"
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Operator label"
+                            }
+                          }
+                        },
+                        "Input": {
+                          "type": "object",
+                          "description": "Input value",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Input value"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Actions": {
+                    "type": "array",
+                    "description": "Actions to take",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Action value"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Action label"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Alert added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/AddScheduledItem": {
+      "post": {
+        "summary": "Add Scheduled Item",
+        "description": "Adds a new scheduled item",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "parameters": [
+          {
+            "name": "hidden",
+            "in": "query",
+            "description": "Whether to hide the scheduled item",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "DisallowDuplicateName",
+            "in": "query",
+            "description": "Whether to disallow duplicate names",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "RowKey": {
+                    "type": "string",
+                    "description": "Unique identifier for the scheduled item"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant to apply the scheduled item to"
+                  },
+                  "excludedTenants": {
+                    "type": "array",
+                    "description": "List of tenants to exclude from the scheduled item",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Tenant ID"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Tenant name"
+                        }
+                      }
+                    }
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "Name of the scheduled item"
+                  },
+                  "Command": {
+                    "type": "object",
+                    "description": "Command to execute",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Command value"
+                      }
+                    }
+                  },
+                  "Parameters": {
+                    "type": "object",
+                    "description": "Parameters for the command"
+                  },
+                  "ScheduledTime": {
+                    "type": "integer",
+                    "description": "When the job is scheduled to run (Unix timestamp)"
+                  },
+                  "Recurrence": {
+                    "type": "string",
+                    "description": "How often the job recurs"
+                  },
+                  "PostExecution": {
+                    "type": "array",
+                    "description": "Actions to take after execution",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Action value"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Action label"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scheduled item added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/listCSPLicenses": {
+      "get": {
+        "summary": "List CSP Licenses",
+        "description": "Retrieves a list of CSP licenses",
+        "tags": [
+          "Tenant Reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "CSP licenses retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Tenant": {
+                        "type": "string",
+                        "description": "Tenant name"
+                      },
+                      "TenantId": {
+                        "type": "string",
+                        "description": "Tenant ID"
+                      },
+                      "SubscriptionId": {
+                        "type": "string",
+                        "description": "Subscription ID"
+                      },
+                      "SkuId": {
+                        "type": "string",
+                        "description": "SKU ID"
+                      },
+                      "SkuName": {
+                        "type": "string",
+                        "description": "SKU name"
+                      },
+                      "Status": {
+                        "type": "string",
+                        "description": "Subscription status"
+                      },
+                      "Quantity": {
+                        "type": "integer",
+                        "description": "License quantity"
+                      },
+                      "BillingCycle": {
+                        "type": "string",
+                        "description": "Billing cycle"
+                      },
+                      "RenewalDate": {
+                        "type": "string",
+                        "description": "Renewal date"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecCSPLicense": {
+      "post": {
+        "summary": "Execute CSP License Operation",
+        "description": "Executes an operation on CSP licenses",
+        "tags": [
+          "Tenant Reports"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Action to perform",
+                    "enum": ["!Add", "!Remove", "!Cancel"]
+                  },
+                  "sku": {
+                    "type": "string",
+                    "description": "SKU ID"
+                  },
+                  "add": {
+                    "type": "integer",
+                    "description": "Number of licenses to add"
+                  },
+                  "Remove": {
+                    "type": "integer",
+                    "description": "Number of licenses to remove"
+                  },
+                  "SubscriptionIds": {
+                    "type": "string",
+                    "description": "Subscription IDs to cancel"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CSP license operation executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListLicenses": {
+      "get": {
+        "summary": "List Licenses",
+        "description": "Retrieves a list of licenses",
+        "tags": [
+          "Tenant Reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Licenses retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Tenant": {
+                        "type": "string",
+                        "description": "Tenant name"
+                      },
+                      "License": {
+                        "type": "string",
+                        "description": "License name"
+                      },
+                      "CountUsed": {
+                        "type": "integer",
+                        "description": "Number of licenses used"
+                      },
+                      "CountAvailable": {
+                        "type": "integer",
+                        "description": "Number of licenses available"
+                      },
+                      "TotalLicenses": {
+                        "type": "integer",
+                        "description": "Total number of licenses"
+                      },
+                      "TermInfo": {
+                        "type": "object",
+                        "description": "Term information"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListStandards": {
+      "get": {
+        "summary": "List Standards",
+        "description": "Retrieves a list of standards",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "responses": {
+          "200": {
+            "description": "Standards retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "RowKey": {
+                        "type": "string",
+                        "description": "Unique identifier for the standard"
+                      },
+                      "Standard": {
+                        "type": "string",
+                        "description": "Standard name"
+                      },
+                      "Tenant": {
+                        "type": "string",
+                        "description": "Tenant name"
+                      },
+                      "Enabled": {
+                        "type": "boolean",
+                        "description": "Whether the standard is enabled"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/listStandardTemplates": {
+      "get": {
+        "summary": "List Standard Templates",
+        "description": "Retrieves a list of standard templates",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "responses": {
+          "200": {
+            "description": "Standard templates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "GUID": {
+                        "type": "string",
+                        "description": "Unique identifier for the template"
+                      },
+                      "templateName": {
+                        "type": "string",
+                        "description": "Template name"
+                      },
+                      "tenantFilter": {
+                        "type": "array",
+                        "description": "List of tenants to apply the template to",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Tenant ID"
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Tenant name"
+                            }
+                          }
+                        }
+                      },
+                      "excludedTenants": {
+                        "type": "array",
+                        "description": "List of tenants to exclude from the template",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Tenant ID"
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Tenant name"
+                            }
+                          }
+                        }
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "description": "When the template was last updated"
+                      },
+                      "updatedBy": {
+                        "type": "string",
+                        "description": "Who last updated the template"
+                      },
+                      "runManually": {
+                        "type": "boolean",
+                        "description": "Whether the template is run manually"
+                      },
+                      "standards": {
+                        "type": "array",
+                        "description": "List of standards in the template",
+                        "items": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecStandardsRun": {
+      "get": {
+        "summary": "Execute Standards Run",
+        "description": "Executes a standards run",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "parameters": [
+          {
+            "name": "TemplateId",
+            "in": "query",
+            "description": "Template ID to run",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Standards run executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/RemoveStandardTemplate": {
+      "post": {
+        "summary": "Remove Standard Template",
+        "description": "Removes a standard template",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ID"
+                ],
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "Template ID to remove"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard template removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/execStandardConvert": {
+      "post": {
+        "summary": "Convert Standards",
+        "description": "Converts legacy standards to the new format",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "responses": {
+          "200": {
+            "description": "Standards converted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListNamedLocations": {
+      "get": {
+        "summary": "List Named Locations",
+        "description": "Retrieves a list of named locations",
+        "tags": [
+          "Tenant Conditional Access"
+        ],
+        "responses": {
+          "200": {
+            "description": "Named locations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the named location"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "description": "Display name"
+                      },
+                      "@odata.type": {
+                        "type": "string",
+                        "description": "Type of named location"
+                      },
+                      "includeUnknownCountriesAndRegions": {
+                        "type": "boolean",
+                        "description": "Whether to include unknown countries and regions"
+                      },
+                      "isTrusted": {
+                        "type": "boolean",
+                        "description": "Whether the location is trusted"
+                      },
+                      "rangeOrLocation": {
+                        "type": "string",
+                        "description": "Range or location"
+                      },
+                      "modifiedDateTime": {
+                        "type": "string",
+                        "description": "When the named location was last modified"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecNamedLocation": {
+      "post": {
+        "summary": "Execute Named Location Operation",
+        "description": "Executes an operation on a named location",
+        "tags": [
+          "Tenant Conditional Access"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "namedLocationId",
+                  "change",
+                  "input"
+                ],
+                "properties": {
+                  "namedLocationId": {
+                    "type": "string",
+                    "description": "Named location ID"
+                  },
+                  "change": {
+                    "type": "string",
+                    "description": "Change to make",
+                    "enum": ["addLocation", "removeLocation", "addIp", "removeIp"]
+                  },
+                  "input": {
+                    "type": "string",
+                    "description": "Input value (country code or IP)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Named location operation executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/AddNamedLocation": {
+      "post": {
+        "summary": "Add Named Location",
+        "description": "Adds a new named location",
+        "tags": [
+          "Tenant Conditional Access"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "description": "Display name"
+                  },
+                  "locationType": {
+                    "type": "string",
+                    "description": "Type of location",
+                    "enum": ["country", "ip"]
+                  },
+                  "countriesAndRegions": {
+                    "type": "array",
+                    "description": "List of countries and regions",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "includeUnknownCountriesAndRegions": {
+                    "type": "boolean",
+                    "description": "Whether to include unknown countries and regions"
+                  },
+                  "ipRanges": {
+                    "type": "array",
+                    "description": "List of IP ranges",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "cidrAddress": {
+                          "type": "string",
+                          "description": "CIDR address"
+                        }
+                      }
+                    }
+                  },
+                  "isTrusted": {
+                    "type": "boolean",
+                    "description": "Whether the location is trusted"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Named location added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListConditionalAccessPolicies": {
+      "get": {
+        "summary": "List Conditional Access Policies",
+        "description": "Retrieves a list of conditional access policies",
+        "tags": [
+          "Tenant Conditional Access"
+        ],
+        "responses": {
+          "200": {
+            "description": "Conditional access policies retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Unique identifier for the policy"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "description": "Display name"
+                      },
+                      "state": {
+                        "type": "string",
+                        "description": "State of the policy"
+                      },
+                      "conditions": {
+                        "type": "object",
+                        "description": "Conditions for the policy"
+                      },
+                      "grantControls": {
+                        "type": "object",
+                        "description": "Grant controls for the policy"
+                      },
+                      "sessionControls": {
+                        "type": "object",
+                        "description": "Session controls for the policy"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecCAExclusion": {
+      "post": {
+        "summary": "Execute Conditional Access Exclusion",
+        "description": "Executes a conditional access exclusion",
+        "tags": [
+          "Tenant Conditional Access"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "object",
+                    "description": "Tenant filter",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Tenant ID"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Tenant name"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "object",
+                    "description": "User to exclude",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "User ID"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "User name"
+                      }
+                    }
+                  },
+                  "policy": {
+                    "type": "object",
+                    "description": "Policy to exclude from",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Policy ID"
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "Policy name"
+                      }
+                    }
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "description": "Start date for the exclusion"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "description": "End date for the exclusion"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conditional access exclusion executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListGraphRequest": {
+      "get": {
+        "summary": "List Graph Request",
+        "description": "Retrieves data from Microsoft Graph API",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "parameters": [
+          {
+            "name": "Endpoint",
+            "in": "query",
+            "description": "Graph API endpoint",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Fields to select",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$count",
+            "in": "query",
+            "description": "Whether to include count",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "$top",
+            "in": "query",
+            "description": "Number of results to return",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Graph request executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListAuditLogs": {
+      "get": {
+        "summary": "List Audit Logs",
+        "description": "Retrieves a list of audit logs",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "parameters": [
+          {
+            "name": "RelativeTime",
+            "in": "query",
+            "description": "Relative time filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "StartDate",
+            "in": "query",
+            "description": "Start date filter",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "EndDate",
+            "in": "query",
+            "description": "End date filter",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Timestamp": {
+                            "type": "string",
+                            "description": "When the log entry was created"
+                          },
+                          "Tenant": {
+                            "type": "string",
+                            "description": "Tenant name"
+                          },
+                          "Title": {
+                            "type": "string",
+                            "description": "Log title"
+                          },
+                          "LogId": {
+                            "type": "string",
+                            "description": "Unique identifier for the log"
+                          },
+                          "Actions": {
+                            "type": "string",
+                            "description": "Actions taken"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecListBackup": {
+      "get": {
+        "summary": "List Backups",
+        "description": "Retrieves a list of backups",
+        "tags": [
+          "Tenant Backup"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Tenant filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Backups retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "BackupName": {
+                        "type": "string",
+                        "description": "Name of the backup"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "description": "When the backup was created"
+                      },
+                      "Backup": {
+                        "type": "string",
+                        "description": "The backup data (JSON string)"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListCSPsku": {
+      "get": {
+        "summary": "List CSP SKUs",
+        "description": "Retrieves a list of CSP SKUs",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "CSP SKUs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sku": {
+                        "type": "string",
+                        "description": "SKU ID"
+                      },
+                      "name": {
+                        "type": "array",
+                        "description": "SKU names",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "SKU name"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListCommunityRepos": {
+      "get": {
+        "summary": "List Community Repositories",
+        "description": "Retrieves a list of community repositories",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "parameters": [
+          {
+            "name": "WriteAccess",
+            "in": "query",
+            "description": "Whether to only include repositories with write access",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community repositories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "FullName": {
+                            "type": "string",
+                            "description": "Full name of the repository"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecCommunityRepo": {
+      "post": {
+        "summary": "Execute Community Repository Operation",
+        "description": "Executes an operation on a community repository",
+        "tags": [
+          "Tenant Standards"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "Action",
+                  "GUID",
+                  "FullName",
+                  "Message"
+                ],
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Action to perform",
+                    "enum": ["UploadTemplate"]
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "Template GUID"
+                  },
+                  "FullName": {
+                    "type": "string",
+                    "description": "Repository full name"
+                  },
+                  "Message": {
+                    "type": "string",
+                    "description": "Commit message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Community repository operation executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListExtensionsConfig": {
+      "get": {
+        "summary": "List Extensions Configuration",
+        "description": "Retrieves the configuration for extensions",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "Extensions configuration retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "Enabled": {
+                        "type": "boolean",
+                        "description": "Whether the extension is enabled"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  }
+}

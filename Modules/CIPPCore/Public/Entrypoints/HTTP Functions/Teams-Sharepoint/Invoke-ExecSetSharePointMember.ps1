@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSetSharePointMember {
+function Invoke-ExecSetSharePointMember {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -27,6 +27,7 @@ Function Invoke-ExecSetSharePointMember {
                 $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.user.value)" -tenantid $TenantFilter).id
                 $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $TenantFilter -Headers $Headers
             }
+            $StatusCode = [HttpStatusCode]::OK
         } else {
             $StatusCode = [HttpStatusCode]::BadRequest
             $Results = 'This type of SharePoint site is not supported.'
