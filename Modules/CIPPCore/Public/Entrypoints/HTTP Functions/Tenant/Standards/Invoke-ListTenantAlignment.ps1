@@ -25,6 +25,7 @@ function Invoke-ListTenantAlignment {
                 standardId               = $_.StandardId
                 alignmentScore           = $_.AlignmentScore
                 LicenseMissingPercentage = $_.LicenseMissingPercentage
+                combinedAlignmentScore   = $_.CombinedScore
                 latestDataCollection     = $_.LatestDataCollection
             }
         }

@@ -179,7 +179,7 @@ function Get-CIPPTenantAlignment {
                         }
 
                         $IsCompliant = ($Value -eq $true)
-                        $IsLicenseMissing = ($Value -is [string] -and $Value -like "License Missing:*")
+                        $IsLicenseMissing = ($Value -is [string] -and $Value -like 'License Missing:*')
 
                         if ($IsReportingDisabled) {
                             $ComplianceStatus = 'Reporting Disabled'
@@ -233,18 +233,19 @@ function Get-CIPPTenantAlignment {
                 }
 
                 $Result = [PSCustomObject]@{
-                    TenantFilter         = $TenantName
-                    StandardName         = $Template.templateName
-                    StandardId           = $Template.GUID
-                    AlignmentScore       = $AlignmentPercentage
+                    TenantFilter             = $TenantName
+                    StandardName             = $Template.templateName
+                    StandardId               = $Template.GUID
+                    AlignmentScore           = $AlignmentPercentage
                     LicenseMissingPercentage = $LicenseMissingPercentage
-                    CompliantStandards   = $CompliantStandards
-                    NonCompliantStandards = $NonCompliantStandards
-                    LicenseMissingStandards = $LicenseMissingStandards
-                    TotalStandards       = $AllCount
-                    ReportingDisabledCount = $ReportingDisabledStandardsCount
-                    LatestDataCollection = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
-                    ComparisonDetails    = $ComparisonTable
+                    CombinedScore            = $AlignmentPercentage + $LicenseMissingPercentage
+                    CompliantStandards       = $CompliantStandards
+                    NonCompliantStandards    = $NonCompliantStandards
+                    LicenseMissingStandards  = $LicenseMissingStandards
+                    TotalStandards           = $AllCount
+                    ReportingDisabledCount   = $ReportingDisabledStandardsCount
+                    LatestDataCollection     = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
+                    ComparisonDetails        = $ComparisonTable
                 }
 
                 $Results.Add($Result)
