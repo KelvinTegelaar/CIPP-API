@@ -7,7 +7,6 @@ function New-CIPPIntuneTemplate {
         $CIPPURL,
         $ODataType
     )
-    Write-Host "These are all bound params: $urlname, $id, $TenantFilter, $ActionResults, $CIPPURL, $ODataType"
     if ($ODataType) {
         switch -wildcard ($ODataType) {
             '*CompliancePolicy' {
