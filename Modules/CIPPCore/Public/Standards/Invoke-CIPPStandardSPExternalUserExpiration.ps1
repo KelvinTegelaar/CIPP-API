@@ -31,6 +31,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SPExternalUserExpiration' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property _ObjectIdentity_, TenantFilter, ExternalUserExpireInDays, ExternalUserExpirationRequired

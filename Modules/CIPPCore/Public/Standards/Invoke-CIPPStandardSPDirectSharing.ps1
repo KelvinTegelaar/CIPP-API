@@ -31,6 +31,7 @@ function Invoke-CIPPStandardSPDirectSharing {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SPDirectSharing' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'This standard has been deprecated in favor of the "Set Default Sharing Link Settings" standard. Please update your standards to use new standard. However this will continue to function.' -Sev Alert
 

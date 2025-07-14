@@ -27,6 +27,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SPDisableLegacyWorkflows' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property *

@@ -30,6 +30,7 @@ function Invoke-CIPPStandardSPAzureB2B {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SPAzureB2B' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAzureADB2BIntegration

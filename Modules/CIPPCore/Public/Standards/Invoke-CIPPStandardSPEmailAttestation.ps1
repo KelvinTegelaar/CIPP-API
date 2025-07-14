@@ -32,6 +32,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'SPEmailAttestation' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property _ObjectIdentity_, TenantFilter, EmailAttestationReAuthDays, EmailAttestationRequired
 

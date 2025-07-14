@@ -30,6 +30,7 @@ function Invoke-CIPPStandardDefaultSharingLink {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'DefaultSharingLink' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     # Determine the desired sharing link type (default to Internal if not specified)
     $DesiredSharingLinkType = $Settings.SharingLinkType.value ?? 'Internal'

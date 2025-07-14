@@ -29,6 +29,7 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'TenantDefaultTimezone' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TenantDefaultTimezone'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true

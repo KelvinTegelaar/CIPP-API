@@ -30,6 +30,7 @@ function Invoke-CIPPStandardunmanagedSync {
     #>
 
     param($Tenant, $Settings)
+    Test-CIPPStandardLicense -StandardName 'unmanagedSync' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'unmanagedSync'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
