@@ -72,6 +72,10 @@ function Invoke-CIPPStandardIntuneTemplate {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compared JSON: $($Compare | ConvertTo-Json -Compress)"
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No existing policy found."
+            $compare = [pscustomobject]@{
+                MatchFailed = $true
+                Difference  = 'This policy does not exist in Intune.'
+            }
         }
         if ($Compare) {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
@@ -112,7 +116,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         }
     }
 
-    If ($true -in $Settings.remediate) {
+    if ($true -in $Settings.remediate) {
         Write-Host 'starting template deploy'
         foreach ($TemplateFile in $CompareList | Where-Object -Property remediate -EQ $true) {
             Write-Host "working on template deploy: $($TemplateFile.displayname)"
@@ -146,7 +150,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($true -in $Settings.report) {
-        foreach ($Template in $CompareList | Where-Object -Property report -EQ $true) {
+        foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
             Write-Host "working on template report: $($Template.displayname)"
             $id = $Template.templateId
             $CompareObj = $Template.compare
