@@ -809,7 +809,7 @@ function Invoke-NinjaOneTenantSync {
                 $UserMailSettings = [pscustomobject]@{
                     ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
                     ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
-                    LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
+                    LitigationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
                     HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
                     EWSEnabled               = $CASRequest.EwsEnabled
                     MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
@@ -973,7 +973,7 @@ function Invoke-NinjaOneTenantSync {
                     $MailboxSettingsCard = [PSCustomObject]@{
                         'Forward and Deliver'       = "$($UserMailSettings.ForwardAndDeliver)"
                         'Forwarding Address'        = "$($UserMailSettings.ForwardingAddress)"
-                        'Litiation Hold'            = "$($UserMailSettings.LitiationHold)"
+                        'Litigation Hold'            = "$($UserMailSettings.LitigationHold)"
                         'Hidden From Address Lists' = "$($UserMailSettings.HiddenFromAddressLists)"
                         'EWS Enabled'               = "$($UserMailSettings.EWSEnabled)"
                         'MAPI Enabled'              = "$($UserMailSettings.MailboxMAPIEnabled)"
