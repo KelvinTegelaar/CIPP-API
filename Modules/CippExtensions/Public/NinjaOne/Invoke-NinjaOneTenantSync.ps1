@@ -1236,7 +1236,7 @@ function Invoke-NinjaOneTenantSync {
 
                 }
             } catch {
-                Write-Error "User $($User.UserPrincipalName): A fatal error occured while processing user $_"
+                Write-Error "User $($User.UserPrincipalName): A fatal error occurred while processing user $_"
             }
 
         }
