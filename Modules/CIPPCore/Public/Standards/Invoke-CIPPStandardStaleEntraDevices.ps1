@@ -32,9 +32,14 @@ function Invoke-CIPPStandardStaleEntraDevices {
     #>
 
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'StaleEntraDevices' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'StaleEntraDevices' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     # Get all Entra devices
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
     $Date = (Get-Date).AddDays( - [int]$Settings.deviceAgeThreshold)
     $StaleDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $Date }

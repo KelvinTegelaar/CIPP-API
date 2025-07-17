@@ -30,7 +30,12 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
     #>
 
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'IntuneComplianceSettings' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneComplianceSettings' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant | Select-Object secureByDefault, deviceComplianceCheckinThresholdDays
 

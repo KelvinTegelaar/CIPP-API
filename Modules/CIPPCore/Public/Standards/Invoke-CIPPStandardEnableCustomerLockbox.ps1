@@ -32,7 +32,12 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableCustomerLockbox'
-    Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('CustomerLockbox')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('CustomerLockbox')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
     if ($Settings.remediate -eq $true) {

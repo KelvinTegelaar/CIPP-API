@@ -31,8 +31,13 @@ function Invoke-CIPPStandardIntuneTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'IntuneTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
     $Request = @{body = $null }
@@ -72,6 +77,10 @@ function Invoke-CIPPStandardIntuneTemplate {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compared JSON: $($Compare | ConvertTo-Json -Compress)"
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No existing policy found."
+            $compare = [pscustomobject]@{
+                MatchFailed = $true
+                Difference  = 'This policy does not exist in Intune.'
+            }
         }
         if ($Compare) {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
@@ -112,7 +121,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         }
     }
 
-    If ($true -in $Settings.remediate) {
+    if ($true -in $Settings.remediate) {
         Write-Host 'starting template deploy'
         foreach ($TemplateFile in $CompareList | Where-Object -Property remediate -EQ $true) {
             Write-Host "working on template deploy: $($TemplateFile.displayname)"
@@ -146,7 +155,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($true -in $Settings.report) {
-        foreach ($Template in $CompareList | Where-Object -Property report -EQ $true) {
+        foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
             Write-Host "working on template report: $($Template.displayname)"
             $id = $Template.templateId
             $CompareObj = $Template.compare

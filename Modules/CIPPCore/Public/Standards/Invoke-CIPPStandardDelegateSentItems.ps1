@@ -29,7 +29,12 @@ function Invoke-CIPPStandardDelegateSentItems {
     #>
 
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'DelegateSentItems' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DelegateSentItems' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
 
 
