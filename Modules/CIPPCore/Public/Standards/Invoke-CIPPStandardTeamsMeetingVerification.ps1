@@ -33,7 +33,12 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingVerification'
 
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'TeamsMeetingVerification' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingVerification' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } | Select-Object CaptchaVerificationForMeetingJoin
     $CaptchaVerificationForMeetingJoin = $Settings.CaptchaVerificationForMeetingJoin.value ?? $Settings.CaptchaVerificationForMeetingJoin
     $StateIsCorrect = ($CurrentState.CaptchaVerificationForMeetingJoin -eq $CaptchaVerificationForMeetingJoin)

@@ -44,12 +44,13 @@ function Test-CIPPStandardLicense {
             Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Tenant does not have the required capability to run standard $StandardName`: The tenant needs one of the following service plans: $($RequiredCapabilities -join ',')" -sev Error
             Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: This tenant is not licensed for the following capabilities: $($RequiredCapabilities -join ',')" -Tenant $TenantFilter
             Write-Host "Tenant does not have the required capability to run standard $StandardName - $($RequiredCapabilities -join ','). Exiting"
-            exit 0
+            return $false
         }
         Write-Host "Tenant has the required capabilities for standard $StandardName"
+        return $true
     } catch {
         Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Error checking license capabilities for standard $StandardName`: $($_.Exception.Message)" -sev Error
         Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: Error checking license capabilities - $($_.Exception.Message)" -Tenant $TenantFilter
-        exit 0
+        return $false
     }
 }
