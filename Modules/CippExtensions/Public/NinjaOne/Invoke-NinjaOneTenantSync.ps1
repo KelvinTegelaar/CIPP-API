@@ -611,7 +611,7 @@ function Invoke-NinjaOneTenantSync {
                     if ($Device.complianceState -eq 'compliant') {
                         $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>&nbsp;&nbsp; Compliant'
                     } else {
-                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
+                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliant" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
                     }
 
                     # Device Details
@@ -843,7 +843,7 @@ function Invoke-NinjaOneTenantSync {
                     if ($UserDevice.Compliance -eq 'compliant') {
                         $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>'
                     } else {
-                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>'
+                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliant" style="color:#D53948;"></i>'
                     }
 
                     # OS Icon
