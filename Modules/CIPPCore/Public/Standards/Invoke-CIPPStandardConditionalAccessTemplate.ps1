@@ -30,7 +30,12 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
-    Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     if ($Settings.remediate -eq $true) {
         $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant
