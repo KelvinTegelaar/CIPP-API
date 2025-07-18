@@ -29,7 +29,12 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     #>
 
     param($Tenant, $Settings)
-    Test-CIPPStandardLicense -StandardName 'RetentionPolicyTag' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'RetentionPolicyTag' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $PolicyName = 'CIPP Deleted Items'
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicyTag' |
