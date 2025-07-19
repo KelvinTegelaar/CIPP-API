@@ -107,12 +107,32 @@ function Push-ExecScheduledCommand {
     } catch {
         Write-Host "Failed to run task: $($_.Exception.Message)"
         $errorMessage = $_.Exception.Message
+        #if recurrence is just a number, add it in days.
+        if ($task.Recurrence -match '^\d+$') {
+            $task.Recurrence = $task.Recurrence + 'd'
+        }
+        $secondsToAdd = switch -Regex ($task.Recurrence) {
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { 0 }
+        }
+
+        if ($secondsToAdd -gt 0) {
+            $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+            if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
+                $task.ScheduledTime = $unixtimeNow
+            }
+        }
+
+        $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Update-AzDataTableEntity -Force @Table -Entity @{
-            PartitionKey = $task.PartitionKey
-            RowKey       = $task.RowKey
-            Results      = "$errorMessage"
-            TaskState    = $State
+            PartitionKey  = $task.PartitionKey
+            RowKey        = $task.RowKey
+            Results       = "$errorMessage"
+            ScheduledTime = "$nextRunUnixTime"
+            TaskState     = $State
         }
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
