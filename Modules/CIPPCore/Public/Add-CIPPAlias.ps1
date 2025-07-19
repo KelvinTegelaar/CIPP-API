@@ -5,7 +5,7 @@ function Add-CIPPAlias {
         $Aliases,
         $UserprincipalName,
         $TenantFilter,
-        $APIName = 'Set Manager',
+        $APIName = 'Add Alias',
         $Headers
     )
 

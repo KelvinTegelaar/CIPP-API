@@ -217,7 +217,7 @@ function Sync-CippExtensionData {
             try {
                 $TenantResults = New-GraphBulkRequest -Requests @($TenantRequests) -tenantid $TenantFilter
             } catch {
-                Throw "Failed to fetch bulk company data: $_"
+                throw "Failed to fetch bulk company data: $_"
             }
 
             $TenantResults | Select-Object id, body | ForEach-Object {
@@ -302,7 +302,6 @@ function Sync-CippExtensionData {
             }
         }
 
-
         $LastSync.LastSync = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         $LastSync.Status = 'Completed'
         $LastSync.Error = ''
@@ -313,4 +312,5 @@ function Sync-CippExtensionData {
     } finally {
         Add-CIPPAzDataTableEntity @Table -Entity $LastSync -Force
     }
+    return $LastSync
 }

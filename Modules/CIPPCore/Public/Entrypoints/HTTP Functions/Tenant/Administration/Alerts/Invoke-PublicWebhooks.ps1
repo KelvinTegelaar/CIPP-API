@@ -74,7 +74,7 @@ function Invoke-PublicWebhooks {
             $Body = 'This webhook is not authorized.'
             $StatusCode = [HttpStatusCode]::Forbidden
         }
-        $Body = 'Webhook Recieved'
+        $Body = 'Webhook Received'
         $StatusCode = [HttpStatusCode]::OK
 
     } else {
