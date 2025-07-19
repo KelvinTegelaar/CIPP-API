@@ -48,7 +48,7 @@ function Invoke-NinjaOneTenantSync {
         Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "Processing NinjaOne Synchronization for $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)" -Sev 'Info'
 
         if (($Customer | Measure-Object).count -ne 1) {
-            throw "Unable to match the recieved ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
+            throw "Unable to match the received ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
         }
 
         $TenantFilter = $Customer.defaultDomainName
@@ -611,7 +611,7 @@ function Invoke-NinjaOneTenantSync {
                     if ($Device.complianceState -eq 'compliant') {
                         $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>&nbsp;&nbsp; Compliant'
                     } else {
-                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
+                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliant" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
                     }
 
                     # Device Details
@@ -809,7 +809,7 @@ function Invoke-NinjaOneTenantSync {
                 $UserMailSettings = [pscustomobject]@{
                     ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
                     ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
-                    LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
+                    LitigationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
                     HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
                     EWSEnabled               = $CASRequest.EwsEnabled
                     MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
@@ -843,7 +843,7 @@ function Invoke-NinjaOneTenantSync {
                     if ($UserDevice.Compliance -eq 'compliant') {
                         $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>'
                     } else {
-                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>'
+                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliant" style="color:#D53948;"></i>'
                     }
 
                     # OS Icon
@@ -973,7 +973,7 @@ function Invoke-NinjaOneTenantSync {
                     $MailboxSettingsCard = [PSCustomObject]@{
                         'Forward and Deliver'       = "$($UserMailSettings.ForwardAndDeliver)"
                         'Forwarding Address'        = "$($UserMailSettings.ForwardingAddress)"
-                        'Litiation Hold'            = "$($UserMailSettings.LitiationHold)"
+                        'Litigation Hold'            = "$($UserMailSettings.LitigationHold)"
                         'Hidden From Address Lists' = "$($UserMailSettings.HiddenFromAddressLists)"
                         'EWS Enabled'               = "$($UserMailSettings.EWSEnabled)"
                         'MAPI Enabled'              = "$($UserMailSettings.MailboxMAPIEnabled)"
@@ -1236,7 +1236,7 @@ function Invoke-NinjaOneTenantSync {
 
                 }
             } catch {
-                Write-Error "User $($User.UserPrincipalName): A fatal error occured while processing user $_"
+                Write-Error "User $($User.UserPrincipalName): A fatal error occurred while processing user $_"
             }
 
         }
