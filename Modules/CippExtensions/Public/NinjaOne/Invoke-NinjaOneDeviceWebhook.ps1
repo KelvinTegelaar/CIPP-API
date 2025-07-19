@@ -13,7 +13,7 @@ function Invoke-NinjaOneDeviceWebhook {
         }
 
         if ($MappedFields.DeviceCompliance) {
-            Write-LogMessage -Headers $Headers -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -Headers $Headers -API $APIName -message "Webhook Received - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
             $tenantfilter = $Data.tenantId
             $M365DeviceID = $Data.resourceData.id
 
