@@ -127,7 +127,7 @@ function Push-ExecScheduledCommand {
 
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
-        Write-Host "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
+        Write-Host "The job is recurring, but failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         Update-AzDataTableEntity -Force @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
