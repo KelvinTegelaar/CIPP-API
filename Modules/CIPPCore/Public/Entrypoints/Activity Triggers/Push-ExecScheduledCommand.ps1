@@ -66,10 +66,13 @@ function Push-ExecScheduledCommand {
         }
 
         Write-Host 'ran the command. Processing results'
+        Write-Host "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($item.command -like 'Get-CIPPAlert*') {
+            Write-Host 'This is an alert task. Processing results as alerts.'
             $results = @($results)
             $TaskType = 'Alert'
         } else {
+            Write-Host 'This is a scheduled task. Processing results as scheduled task.'
             $TaskType = 'Scheduled Task'
             if ($results -is [String]) {
                 $results = @{ Results = $results }
@@ -81,7 +84,8 @@ function Push-ExecScheduledCommand {
                     @{ Results = $Message }
                 }
             }
-
+            Write-Host "Results after processing: $($results | ConvertTo-Json -Depth 10)"
+            write0host 'Moving onto storing results'
             if ($results -is [string]) {
                 $StoredResults = $results
             } else {
