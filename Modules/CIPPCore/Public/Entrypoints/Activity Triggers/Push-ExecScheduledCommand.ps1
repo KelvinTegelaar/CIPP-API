@@ -89,7 +89,7 @@ function Push-ExecScheduledCommand {
                 $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
             }
         }
-
+        Write-Host "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants' -or $task.TenantGroup) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
@@ -101,6 +101,7 @@ function Push-ExecScheduledCommand {
             $StoredResults = @{ Results = 'Completed, details are available in the More Info pane' } | ConvertTo-Json -Compress
         }
     } catch {
+        Write-Host "Failed to run task: $($_.Exception.Message)"
         $errorMessage = $_.Exception.Message
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Update-AzDataTableEntity -Force @Table -Entity @{
