@@ -52,27 +52,22 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         }
     }
     if ($Settings.report -eq $true -or $Settings.remediate -eq $true) {
-        Write-Host 'REPORT: Checking if all policies are present in the tenant.'
-        Write-Host "REPORT: Templates in policy: $($Settings.TemplateList.label)"
         $Filter = "PartitionKey eq 'CATemplate'"
         $Policies = (Get-CippAzDataTableEntity @Table -Filter $Filter | Where-Object RowKey -In $Settings.TemplateList.value).JSON | ConvertFrom-Json -Depth 10
-        Write-Host "REPORT: Found $($Policies.Count) policies in the template."
         #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
         $MissingPolicies = foreach ($Setting in $Settings.TemplateList) {
-            Write-Host "REPORT: Checking if policy $($Setting.displayname) exists in the tenant."
             $policy = $Policies | Where-Object { $_.displayName -eq $Setting.label }
-            Write-Host "REPORT: Policy data is: $($policy | ConvertTo-Json -Depth 10)"
-            $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Setting.displayname
+            $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Setting.label
             if (!$CheckExististing) {
-                Write-Host "REPORT: Policy $($Setting.value) with does not exist in the tenant."
                 Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Setting.label) is missing from this tenant." -Tenant $Tenant
             } else {
-                $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -compareObject $CheckExististing
+                $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CheckExististing
+                if (!$Compare) {
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $Compare -Tenant $Tenant
+                } else {
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $true -Tenant $Tenant
+                }
             }
         }
-        Write-Host "REPORT: Found $($MissingPolicies.Count) policies that are missing in the tenant."
-
-        Write-Host "REPORT: The following policies are missing: $fieldValue"
-        Write-Host "REPORT: Setting field value to $fieldValue"
     }
 }
