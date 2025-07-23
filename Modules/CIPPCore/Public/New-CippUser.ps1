@@ -26,12 +26,14 @@ function New-CIPPUser {
             'userPrincipalName' = $UserPrincipalName
             'usageLocation'     = $UserObj.usageLocation.value ? $UserObj.usageLocation.value : $UserObj.usageLocation
             'city'              = $UserObj.City
+            'state'             = $UserObj.state
             'country'           = $UserObj.Country
             'jobtitle'          = $UserObj.Jobtitle
             'mobilePhone'       = $UserObj.MobilePhone
             'streetAddress'     = $UserObj.streetAddress
             'postalCode'        = $UserObj.PostalCode
             'companyName'       = $UserObj.CompanyName
+            'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
             'passwordProfile'   = @{
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass
                 'password'                      = $password
