@@ -25,6 +25,7 @@ function New-CIPPUser {
             'mailNickname'      = $UserObj.username ? $UserObj.username : $UserObj.mailNickname
             'userPrincipalName' = $UserPrincipalName
             'usageLocation'     = $UserObj.usageLocation.value ? $UserObj.usageLocation.value : $UserObj.usageLocation
+            'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
             'jobTitle'          = $UserObj.jobTitle
             'mobilePhone'       = $UserObj.mobilePhone
             'streetAddress'     = $UserObj.streetAddress
