@@ -61,7 +61,8 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
             if (!$CheckExististing) {
                 Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Setting.label) is missing from this tenant." -Tenant $Tenant
             } else {
-                $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CheckExististing
+                $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject (New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing)
+                $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CompareObj
                 if (!$Compare) {
                     Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $Compare -Tenant $Tenant
                 } else {
