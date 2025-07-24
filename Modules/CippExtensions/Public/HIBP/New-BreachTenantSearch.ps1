@@ -30,7 +30,12 @@ function New-BreachTenantSearch {
 
     #Add user breaches to table
     if ($usersResults) {
-        $entity = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
-        return $LatestBreach.Result
+        try {
+            $null = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
+            return $LatestBreach.Result
+        } catch {
+            Write-Error "Failed to add breaches to table: $($_.Exception.Message)"
+            return $null
+        }
     }
 }
