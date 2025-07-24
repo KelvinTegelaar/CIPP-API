@@ -28,6 +28,19 @@ function Invoke-ExecAuditLogSearch {
         return
     }
 
+    # Convert StartTime and EndTime to DateTime from unixtime
+    if ($Query.StartTime -match '^\d+$') {
+        $Query.StartTime = [DateTime]::UnixEpoch.AddSeconds([long]$Query.StartTime)
+    } else {
+        $Query.StartTime = [DateTime]$Query.StartTime
+    }
+
+    if ($Query.EndTime -match '^\d+$') {
+        $Query.EndTime = [DateTime]::UnixEpoch.AddSeconds([long]$Query.EndTime)
+    } else {
+        $Query.EndTime = [DateTime]$Query.EndTime
+    }
+
     $Command = Get-Command New-CippAuditLogSearch
     $AvailableParameters = $Command.Parameters.Keys
     $BadProps = foreach ($Prop in $Query.PSObject.Properties.Name) {
@@ -44,8 +57,23 @@ function Invoke-ExecAuditLogSearch {
     }
 
     try {
+        Write-Information "Executing audit log search with parameters: $($Query | ConvertTo-Json -Depth 10)"
+
         $Query = $Query | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
-        $Results = New-CippAuditLogSearch @Query
+        $NewSearch = New-CippAuditLogSearch @Query
+
+        if ($NewSearch) {
+            $Results = @{
+                resultText = "Created audit log search: $($NewSearch.displayName)"
+                state      = 'success'
+                details    = $NewSearch
+            }
+        } else {
+            $Results = @{
+                resultText = 'Failed to initiate search'
+                state      = 'error'
+            }
+        }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $Results
