@@ -42,6 +42,8 @@ function Invoke-ExecAuditLogSearch {
             $Table = Get-CIPPTable -TableName 'AuditLogSearches'
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 
+            Write-LogMessage -headers $Headers -API $APIName -message "Queued search for processing: $($Search.displayName)" -Sev 'Info' -tenant $TenantFilter
+
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
@@ -102,12 +104,14 @@ function Invoke-ExecAuditLogSearch {
                 $NewSearch = New-CippAuditLogSearch @Query
 
                 if ($NewSearch) {
+                    Write-LogMessage -headers $Headers -API $APIName -message "Created audit log search: $($NewSearch.displayName)" -Sev 'Info' -tenant $TenantFilter
                     $Results = @{
                         resultText = "Created audit log search: $($NewSearch.displayName)"
                         state      = 'success'
                         details    = $NewSearch
                     }
                 } else {
+                    Write-LogMessage -headers $Headers -API $APIName -message 'Failed to create audit log search' -Sev 'Error' -tenant $TenantFilter
                     $Results = @{
                         resultText = 'Failed to initiate search'
                         state      = 'error'
