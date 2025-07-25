@@ -77,7 +77,6 @@ function New-GraphGetRequest {
                 if ($ReturnRawResponse) {
                     if (Test-Json -Json $Data.Content) {
                         $Content = $Data.Content | ConvertFrom-Json
-                        $Content
                     } else {
                         $Content = $Data.Content
                     }
