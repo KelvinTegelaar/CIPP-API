@@ -12,7 +12,7 @@ function Invoke-ListDirectoryObjects {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Body.tenantFilter
+    $TenantFilter = $Request.Body.partnerLookup ? $env:TenantID : $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Ids = $Request.Body.ids
 
