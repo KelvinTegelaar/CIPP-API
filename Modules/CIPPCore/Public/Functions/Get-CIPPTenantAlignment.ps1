@@ -236,6 +236,8 @@ function Get-CIPPTenantAlignment {
                     TenantFilter             = $TenantName
                     StandardName             = $Template.templateName
                     StandardId               = $Template.GUID
+                    standardType             = $Template.type
+                    standardSettings         = $Template.Standards
                     AlignmentScore           = $AlignmentPercentage
                     LicenseMissingPercentage = $LicenseMissingPercentage
                     CombinedScore            = $AlignmentPercentage + $LicenseMissingPercentage

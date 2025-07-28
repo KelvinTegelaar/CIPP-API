@@ -1,6 +1,6 @@
 using namespace System.Net
 
-function Invoke-ListTenantAlignment {
+function Invoke-ListTenantDrift {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,24 +11,15 @@ function Invoke-ListTenantAlignment {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
 
     try {
         # Use the new Get-CIPPTenantAlignment function to get alignment data
-        $AlignmentData = Get-CIPPTenantAlignment
-
-        # Transform the data to match the expected API response format
-        $Results = $AlignmentData | ForEach-Object {
-            [PSCustomObject]@{
-                tenantFilter             = $_.TenantFilter
-                standardName             = $_.StandardName
-                standardType             = $_.StandardType ? $_.StandardType : 'Classic Standard'
-                standardId               = $_.StandardId
-                alignmentScore           = $_.AlignmentScore
-                LicenseMissingPercentage = $_.LicenseMissingPercentage
-                combinedAlignmentScore   = $_.CombinedScore
-                latestDataCollection     = $_.LatestDataCollection
-            }
+        if ($Request.Query.TenantFilter) {
+            $TenantFilter = $Request.Query.TenantFilter
+            $Results = Get-CIPPDrift -TenantFilter $TenantFilter
+        } else {
+            $Tenants = Get-Tenants
+            $Results = $Tenants | ForEach-Object { Get-CIPPDrift -AllTenants -TenantFilter $_.defaultDomainName }
         }
 
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
