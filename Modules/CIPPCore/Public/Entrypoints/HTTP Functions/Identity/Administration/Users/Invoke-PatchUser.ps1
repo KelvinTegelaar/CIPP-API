@@ -24,8 +24,7 @@ function Invoke-PatchUser {
             $HttpResponse.StatusCode = [HttpStatusCode]::BadRequest
             $HttpResponse.Body = @{'Results' = @('Failed to patch user. No user ID provided') }
         } else {
-            $UserObj
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $tenantFilter -type PATCH -body $($UserObj | ConvertTo-Json) -Verbose
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $tenantFilter -type PATCH -body $($UserObj | ConvertTo-Json)
             $HttpResponse.Body = @{'Results' = @("Properties on user $($UserObj.id) patched successfully") }
         }
 
