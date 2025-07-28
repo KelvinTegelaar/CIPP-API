@@ -30,7 +30,7 @@ function Get-CIPPDrift {
     )
 
     try {
-        $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter -TemplateId $TemplateId
+        $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter -TemplateId $TemplateId | Where-Object -Property standardType -EQ 'drift'
         if (-not $AlignmentData) {
             Write-Warning "No alignment data found for tenant $TenantFilter"
             return @()
@@ -58,7 +58,7 @@ function Get-CIPPDrift {
             # Process standards compliance deviations
             if ($Alignment.ComparisonDetails) {
                 foreach ($ComparisonItem in $Alignment.ComparisonDetails) {
-                    if ($ComparisonItem.Compliant -eq $false -and $ComparisonItem.ComplianceStatus -eq 'Non-Compliant') {
+                    if ($ComparisonItem.Compliant -ne $true) {
                         $Status = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) {
                             $ExistingDriftStates[$ComparisonItem.StandardName]
                         } else {
@@ -196,9 +196,9 @@ function Get-CIPPDrift {
 
                     $CacheEntity = @{
                         PartitionKey = 'drift'
-                        RowKey = $TenantFilter
-                        IntuneJson = $IntuneJsonString
-                        CAJson = $CAJsonString
+                        RowKey       = $TenantFilter
+                        IntuneJson   = $IntuneJsonString
+                        CAJson       = $CAJsonString
                     }
                     Add-CIPPAzDataTableEntity @CacheTable -Entity $CacheEntity -Force
                 } catch {
@@ -285,7 +285,7 @@ function Get-CIPPDrift {
                     $PolicyDeviation = [PSCustomObject]@{
                         standardName        = $PolicyKey
                         standardDisplayName = "Intune - $TenantPolicyName"
-                        expectedValue       = 'Not defined in template'
+                        expectedValue       = 'This policy only exists in the tenant, not in the template.'
                         receivedValue       = ($TenantPolicy.Policy | ConvertTo-Json -Depth 10 -Compress)
                         state               = 'current'
                         Status              = $Status
@@ -315,7 +315,7 @@ function Get-CIPPDrift {
                     $PolicyDeviation = [PSCustomObject]@{
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
-                        expectedValue       = 'Not defined in template'
+                        expectedValue       = 'This policy only exists in the tenant, not in the template.'
                         receivedValue       = ($TenantCAPolicy | ConvertTo-Json -Depth 10 -Compress)
                         state               = 'current'
                         Status              = $Status
