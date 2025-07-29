@@ -38,6 +38,21 @@ function Invoke-ExecUpdateDriftDeviation {
                         result  = $Result
                     }
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status)" -Sev 'Info'
+                    if ($Deviation.status -eq 'DeniedRemediate') {
+                        $Setting = $Deviation.standardName -replace 'standards.', ''
+                        $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
+                        $StandardTemplate = $StandardTemplate.$Setting
+                        $StandardTemplate.action = @(
+                            @{label = 'Report'; value = 'Report' },
+                            @{ label = 'Remediate'; value = 'Remediate' }
+                        )
+                        #idea here is to make a system job that triggers the remediation process, so that users can click on "Deniedremediate"
+                        #That job then launches a single standard run, it gets the same input as an orch, but is just a scheduled job.
+
+                    }
+                    if ($Deviation.status -eq 'deniedDelete') {
+                        #Here we look at the policy ID received and the type, and nuke it.
+                    }
                 } catch {
                     [PSCustomObject]@{
                         standardName = $Deviation.standardName

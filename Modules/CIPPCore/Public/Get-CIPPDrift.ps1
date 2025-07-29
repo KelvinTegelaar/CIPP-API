@@ -188,22 +188,6 @@ function Get-CIPPDrift {
                     $TenantCAPolicies = @()
                 }
 
-                # Always update cache with fresh data
-                try {
-                    $CacheTable = Get-CippTable -tablename 'cacheDrift'
-                    $IntuneJsonString = "`"$($TenantIntunePolicies | ConvertTo-Json -Depth 10 -Compress | ForEach-Object { $_ -replace '"', '\"' })`""
-                    $CAJsonString = "`"$($TenantCAPolicies | ConvertTo-Json -Depth 10 -Compress | ForEach-Object { $_ -replace '"', '\"' })`""
-
-                    $CacheEntity = @{
-                        PartitionKey = 'drift'
-                        RowKey       = $TenantFilter
-                        IntuneJson   = $IntuneJsonString
-                        CAJson       = $CAJsonString
-                    }
-                    Add-CIPPAzDataTableEntity @CacheTable -Entity $CacheEntity -Force
-                } catch {
-                    Write-Warning "Failed to cache policy data: $($_.Exception.Message)"
-                }
             }
 
             if ($Alignment.standardSettings) {

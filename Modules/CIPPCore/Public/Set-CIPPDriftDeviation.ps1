@@ -27,7 +27,7 @@ function Set-CIPPDriftDeviation {
         [string]$StandardName,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Accepted', 'New', 'Denied', 'CustomerSpecific')]
+        [ValidateSet('Accepted', 'New', 'Denied', 'CustomerSpecific', 'DeniedRemediate', 'DeniedDelete')]
         [string]$Status
     )
 
