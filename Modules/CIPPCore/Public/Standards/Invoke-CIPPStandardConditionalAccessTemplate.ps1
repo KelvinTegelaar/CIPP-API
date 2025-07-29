@@ -31,7 +31,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
     $Table = Get-CippTable -tablename 'templates'
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplates_general' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
         $settings.TemplateList | ForEach-Object {

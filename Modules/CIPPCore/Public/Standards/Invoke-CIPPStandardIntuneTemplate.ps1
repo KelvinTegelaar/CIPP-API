@@ -31,7 +31,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
 
     if ($TestResult -eq $false) {
