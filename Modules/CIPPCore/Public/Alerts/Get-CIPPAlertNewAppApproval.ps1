@@ -29,6 +29,7 @@ function Get-CIPPAlertNewAppApproval {
                     }
 
                     $Message = [PSCustomObject]@{
+                        RequestId   = $_.id
                         AppName     = $App.appDisplayName
                         RequestUser = $_.createdBy.user.userPrincipalName
                         Reason      = $_.reason
