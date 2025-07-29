@@ -101,7 +101,13 @@ function Get-CIPPTenantAlignment {
 
             if ($Template.tenantFilter -and $Template.tenantFilter.Count -gt 0) {
                 # Extract tenant values from the tenantFilter array
-                $TenantValues = $Template.tenantFilter | ForEach-Object { $_.value }
+                $TenantValues = $Template.tenantFilter | ForEach-Object {
+                    if ($_.type -eq 'group') {
+                        (Get-TenantGroups -GroupId $_.value).members.defaultDomainName
+                    } else {
+                        $_.value
+                    }
+                }
 
                 if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
