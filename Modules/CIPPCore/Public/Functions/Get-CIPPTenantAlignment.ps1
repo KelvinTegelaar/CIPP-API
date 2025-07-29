@@ -52,7 +52,7 @@ function Get-CIPPTenantAlignment {
 
         # Get standards comparison data
         $StandardsTable = Get-CIPPTable -TableName 'CippStandardsReports'
-        $AllStandards = Get-CIPPAzDataTableEntity @StandardsTable
+        $AllStandards = Get-CIPPAzDataTableEntity @StandardsTable -Filter "PartitionKey ne 'StandardReport'"
 
         # Filter by tenant if specified
         $Standards = if ($TenantFilter) {
@@ -263,6 +263,7 @@ function Get-CIPPTenantAlignment {
         return $Results
     } catch {
         Write-Error "Error getting tenant alignment data: $($_.Exception.Message)"
+        Write-Information $_.InvocationInfo.PositionMessage
         throw
     }
 }
