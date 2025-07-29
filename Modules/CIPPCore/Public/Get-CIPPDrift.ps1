@@ -207,7 +207,7 @@ function Get-CIPPDrift {
             }
 
             if ($Alignment.standardSettings) {
-                if ($Alignment.standardSettings.IntuneTemplates) {
+                if ($Alignment.standardSettings.IntuneTemplate) {
                     $IntuneTemplateIds = $Alignment.standardSettings.IntuneTemplate.TemplateList | ForEach-Object { $_.value }
                 }
                 if ($Alignment.standardSettings.ConditionalAccessTemplate) {
