@@ -43,7 +43,7 @@ function Get-CIPPDrift {
         try {
             $DriftEntities = Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter
             foreach ($Entity in $DriftEntities) {
-                $ExistingDriftStates[$Entity.StandardName] = $Entity.Status
+                $ExistingDriftStates[$Entity.StandardName] = $Entity
             }
         } catch {
             Write-Warning "Failed to get existing drift states: $($_.Exception.Message)"
@@ -60,16 +60,20 @@ function Get-CIPPDrift {
                 foreach ($ComparisonItem in $Alignment.ComparisonDetails) {
                     if ($ComparisonItem.Compliant -ne $true) {
                         $Status = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) {
-                            $ExistingDriftStates[$ComparisonItem.StandardName]
+                            $ExistingDriftStates[$ComparisonItem.StandardName].Status
                         } else {
                             'New'
                         }
+                        $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }
+                        $User = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].User }
                         $StandardsDeviations.Add([PSCustomObject]@{
-                                standardName  = $ComparisonItem.StandardName
-                                expectedValue = 'Compliant'
-                                receivedValue = $ComparisonItem.StandardValue
-                                state         = 'current'
-                                Status        = $Status
+                                standardName      = $ComparisonItem.StandardName
+                                expectedValue     = 'Compliant'
+                                receivedValue     = $ComparisonItem.StandardValue
+                                state             = 'current'
+                                Status            = $Status
+                                Reason            = $reason
+                                lastChangedByUser = $User
                             })
                     }
                 }
@@ -233,7 +237,7 @@ function Get-CIPPDrift {
                 if (-not $PolicyFound) {
                     $PolicyKey = "IntuneTemplates.$($TenantPolicy.Policy.id)"
                     $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
-                        $ExistingDriftStates[$PolicyKey]
+                        $ExistingDriftStates[$PolicyKey].Status
                     } else {
                         'New'
                     }
@@ -263,7 +267,7 @@ function Get-CIPPDrift {
                 if (-not $PolicyFound) {
                     $PolicyKey = "ConditionalAccessTemplates.$($TenantCAPolicy.id)"
                     $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
-                        $ExistingDriftStates[$PolicyKey]
+                        $ExistingDriftStates[$PolicyKey].Status
                     } else {
                         'New'
                     }
