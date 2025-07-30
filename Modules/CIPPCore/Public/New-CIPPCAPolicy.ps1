@@ -230,7 +230,7 @@ function New-CIPPCAPolicy {
         #Send request to disable security defaults.
         $body = '{ "isEnabled": false }'
         $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -ContentType 'application/json'
-        Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
+        Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
         Start-Sleep 3
     }
     $RawJSON = ConvertTo-Json -InputObject $JSONObj -Depth 10 -Compress
