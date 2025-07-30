@@ -40,7 +40,14 @@ function Invoke-CIPPStandardCloudMessageRecall {
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 
-    $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
+    try {
+        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the CloudMessageRecall state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 

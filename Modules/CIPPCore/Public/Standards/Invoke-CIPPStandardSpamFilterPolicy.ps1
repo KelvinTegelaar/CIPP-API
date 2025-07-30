@@ -60,7 +60,16 @@ function Invoke-CIPPStandardSpamFilterPolicy {
 
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' | Where-Object -Property Name -EQ $PolicyName | Select-Object -Property *
+    try {
+        $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpamFilterPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $SpamAction = $Settings.SpamAction.value ?? $Settings.SpamAction
     $SpamQuarantineTag = $Settings.SpamQuarantineTag.value ?? $Settings.SpamQuarantineTag
