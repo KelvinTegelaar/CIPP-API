@@ -288,7 +288,7 @@ function Get-CIPPDrift {
             # Filter deviations by status for counting
             $NewDeviations = $AllDeviations | Where-Object { $_.Status -eq 'New' }
             $AcceptedDeviations = $AllDeviations | Where-Object { $_.Status -eq 'Accepted' }
-            $DeniedDeviations = $AllDeviations | Where-Object { $_.Status -eq 'Denied' }
+            $DeniedDeviations = $AllDeviations | Where-Object { $_.Status -like 'Denied*' }
             $CustomerSpecificDeviations = $AllDeviations | Where-Object { $_.Status -eq 'CustomerSpecific' }
 
             # Current deviations are New + Denied (not accepted or customer specific)

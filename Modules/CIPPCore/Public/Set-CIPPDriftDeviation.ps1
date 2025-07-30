@@ -10,25 +10,28 @@ function Set-CIPPDriftDeviation {
     .PARAMETER StandardName
         The standard name (used as RowKey, with '.' replaced by '_')
     .PARAMETER Status
-        The status to set. Valid values: Accepted, New, Denied, CustomerSpecific
+        The status to set. Valid values: Accepted, New, Denied, CustomerSpecific, DeniedRemediate, DeniedDelete
+    .PARAMETER Reason
+        Optional reason for the status change
     .FUNCTIONALITY
         Internal
     .EXAMPLE
-        Set-CIPPDriftDeviation -TenantFilter "contoso.onmicrosoft.com" -StandardName "IntuneTemplates.12345" -Status "Accepted"
+        Set-CIPPDriftDeviation -TenantFilter "contoso.onmicrosoft.com" -StandardName "IntuneTemplates.12345" -Status "Accepted" -Reason "Business requirement"
     .EXAMPLE
-        Set-CIPPDriftDeviation -TenantFilter "contoso.onmicrosoft.com" -StandardName "standards.passwordComplexity" -Status "CustomerSpecific"
+        Set-CIPPDriftDeviation -TenantFilter "contoso.onmicrosoft.com" -StandardName "standards.passwordComplexity" -Status "CustomerSpecific" -Reason "Custom security policy"
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-
         [Parameter(Mandatory = $true)]
         [string]$StandardName,
-
         [Parameter(Mandatory = $true)]
         [ValidateSet('Accepted', 'New', 'Denied', 'CustomerSpecific', 'DeniedRemediate', 'DeniedDelete')]
-        [string]$Status
+        [string]$Status,
+        [Parameter(Mandatory = $false)]
+        [string]$Reason,
+        [string]$user
     )
 
     try {
@@ -39,8 +42,15 @@ function Set-CIPPDriftDeviation {
             RowKey       = $RowKey
             StandardName = $StandardName
             Status       = $Status
+            User         = $user
             LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         }
+
+        # Add reason if provided
+        if ($Reason) {
+            $Entity.Reason = $Reason
+        }
+
         $Result = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
         Write-Verbose "Successfully set drift deviation status for $StandardName to $Status"

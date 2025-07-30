@@ -30,14 +30,15 @@ function Invoke-ExecUpdateDriftDeviation {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed all drift customizations for tenant $TenantFilter" -Sev 'Info'
         } else {
             $Deviations = $Request.Body.deviations
+            $Reason = $Request.Body.reason
             $Results = foreach ($Deviation in $Deviations) {
                 try {
-                    $Result = Set-CIPPDriftDeviation -TenantFilter $TenantFilter -StandardName $Deviation.standardName -Status $Deviation.status
+                    $Result = Set-CIPPDriftDeviation -TenantFilter $TenantFilter -StandardName $Deviation.standardName -Status $Deviation.status -Reason $Reason -user $request.headers.'x-ms-client-principal'
                     [PSCustomObject]@{
                         success = $true
                         result  = $Result
                     }
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status)" -Sev 'Info'
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
                     if ($Deviation.status -eq 'DeniedRemediate') {
                         $Setting = $Deviation.standardName -replace 'standards.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
