@@ -62,8 +62,10 @@ function Push-CippDriftManagement {
                 TenantFilter = $TenantFilter
             }
             Send-CIPPAlert @CIPPAlert
+            return $true
         } else {
             Write-LogMessage -API 'DriftStandards' -tenant $Item.Tenant -message "No new drift deviations found for tenant $($Item.Tenant)" -sev Info
+            return $true
         }
         Write-Information "Drift management completed for tenant $($Item.Tenant)"
     } catch {
