@@ -76,118 +76,89 @@ function Get-CIPPDrift {
             }
 
             # Perform full policy collection
-            if ($AllTenants) {
-                # Use cached data when processing all tenants
-                $CacheTable = Get-CippTable -tablename 'cacheDrift'
-                $CacheFilter = "PartitionKey eq 'drift' and RowKey eq '$TenantFilter'"
-                $CachedData = $null
 
-                try {
-                    $CachedData = Get-CIPPAzDataTableEntity @CacheTable -Filter $CacheFilter | Select-Object -First 1
-                } catch {
-                    # Cache doesn't exist or error reading
+            # Always get live data when not in AllTenants mode
+            $IntuneRequests = @(
+                @{
+                    id     = 'deviceAppManagement'
+                    url    = 'deviceAppManagement/managedAppPolicies'
+                    method = 'GET'
                 }
+                @{
+                    id     = 'deviceCompliancePolicies'
+                    url    = 'deviceManagement/deviceCompliancePolicies'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'groupPolicyConfigurations'
+                    url    = 'deviceManagement/groupPolicyConfigurations'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'deviceConfigurations'
+                    url    = 'deviceManagement/deviceConfigurations'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'configurationPolicies'
+                    url    = 'deviceManagement/configurationPolicies'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'windowsDriverUpdateProfiles'
+                    url    = 'deviceManagement/windowsDriverUpdateProfiles'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'windowsFeatureUpdateProfiles'
+                    url    = 'deviceManagement/windowsFeatureUpdateProfiles'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'windowsQualityUpdatePolicies'
+                    url    = 'deviceManagement/windowsQualityUpdatePolicies'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'windowsQualityUpdateProfiles'
+                    url    = 'deviceManagement/windowsQualityUpdateProfiles'
+                    method = 'GET'
+                }
+            )
 
-                if ($CachedData -and $CachedData.CAJson -and $CachedData.IntuneJson) {
-                    # Use cached data
-                    try {
-                        $TenantIntunePolicies = $CachedData.IntuneJson | ConvertFrom-Json
-                        $TenantCAPolicies = $CachedData.CAJson | ConvertFrom-Json
-                    } catch {
-                        Write-Warning "Failed to parse cached data for tenant $TenantFilter"
-                        $TenantIntunePolicies = @()
-                        $TenantCAPolicies = @()
+            $TenantIntunePolicies = [System.Collections.Generic.List[object]]::new()
+
+            try {
+                $IntuneGraphRequest = New-GraphBulkRequest -Requests $IntuneRequests -tenantid $TenantFilter -asapp $true
+
+                foreach ($Request in $IntuneGraphRequest) {
+                    if ($Request.body.value) {
+                        foreach ($Policy in $Request.body.value) {
+                            $TenantIntunePolicies.Add([PSCustomObject]@{
+                                    Type   = $Request.id
+                                    Policy = $Policy
+                                })
+                        }
                     }
-                } else {
-                    # No cache available, skip policy collection for AllTenants mode
-                    $TenantIntunePolicies = @()
-                    $TenantCAPolicies = @()
                 }
-            } else {
-                # Always get live data when not in AllTenants mode
-                $IntuneRequests = @(
+            } catch {
+                Write-Warning "Failed to get Intune policies: $($_.Exception.Message)"
+            }
+
+            # Get Conditional Access policies
+            try {
+                $CARequests = @(
                     @{
-                        id     = 'deviceAppManagement'
-                        url    = 'deviceAppManagement/managedAppPolicies'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'deviceCompliancePolicies'
-                        url    = 'deviceManagement/deviceCompliancePolicies'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'groupPolicyConfigurations'
-                        url    = 'deviceManagement/groupPolicyConfigurations'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'deviceConfigurations'
-                        url    = 'deviceManagement/deviceConfigurations'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'configurationPolicies'
-                        url    = 'deviceManagement/configurationPolicies'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'windowsDriverUpdateProfiles'
-                        url    = 'deviceManagement/windowsDriverUpdateProfiles'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'windowsFeatureUpdateProfiles'
-                        url    = 'deviceManagement/windowsFeatureUpdateProfiles'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'windowsQualityUpdatePolicies'
-                        url    = 'deviceManagement/windowsQualityUpdatePolicies'
-                        method = 'GET'
-                    }
-                    @{
-                        id     = 'windowsQualityUpdateProfiles'
-                        url    = 'deviceManagement/windowsQualityUpdateProfiles'
+                        id     = 'policies'
+                        url    = 'identity/conditionalAccess/policies'
                         method = 'GET'
                     }
                 )
-
-                $TenantIntunePolicies = [System.Collections.Generic.List[object]]::new()
-
-                try {
-                    $IntuneGraphRequest = New-GraphBulkRequest -Requests $IntuneRequests -tenantid $TenantFilter -asapp $true
-
-                    foreach ($Request in $IntuneGraphRequest) {
-                        if ($Request.body.value) {
-                            foreach ($Policy in $Request.body.value) {
-                                $TenantIntunePolicies.Add([PSCustomObject]@{
-                                        Type   = $Request.id
-                                        Policy = $Policy
-                                    })
-                            }
-                        }
-                    }
-                } catch {
-                    Write-Warning "Failed to get Intune policies: $($_.Exception.Message)"
-                }
-
-                # Get Conditional Access policies
-                try {
-                    $CARequests = @(
-                        @{
-                            id     = 'policies'
-                            url    = 'identity/conditionalAccess/policies'
-                            method = 'GET'
-                        }
-                    )
-                    $CAGraphRequest = New-GraphBulkRequest -Requests $CARequests -tenantid $TenantFilter -asapp $true
-                    $TenantCAPolicies = ($CAGraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
-                } catch {
-                    Write-Warning "Failed to get Conditional Access policies: $($_.Exception.Message)"
-                    $TenantCAPolicies = @()
-                }
-
+                $CAGraphRequest = New-GraphBulkRequest -Requests $CARequests -tenantid $TenantFilter -asapp $true
+                $TenantCAPolicies = ($CAGraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
+            } catch {
+                Write-Warning "Failed to get Conditional Access policies: $($_.Exception.Message)"
+                $TenantCAPolicies = @()
             }
 
             if ($Alignment.standardSettings) {

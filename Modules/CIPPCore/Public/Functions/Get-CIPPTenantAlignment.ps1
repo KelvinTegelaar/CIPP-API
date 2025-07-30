@@ -150,6 +150,21 @@ function Get-CIPPTenantAlignment {
                             }
                         }
                     }
+                }
+                # Handle Conditional Access templates specially
+                elseif ($StandardKey -eq 'ConditionalAccessTemplate' -and $StandardConfig -is [array]) {
+                    foreach ($CATemplate in $StandardConfig) {
+                        if ($CATemplate.TemplateList.value) {
+                            $CAStandardId = "standards.ConditionalAccessTemplate.$($CATemplate.TemplateList.value)"
+                            $CAActions = if ($CATemplate.action) { $CATemplate.action } else { @() }
+                            $CAReportingEnabled = ($CAActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+
+                            [PSCustomObject]@{
+                                StandardId       = $CAStandardId
+                                ReportingEnabled = $CAReportingEnabled
+                            }
+                        }
+                    }
                 } else {
                     [PSCustomObject]@{
                         StandardId       = $StandardId
