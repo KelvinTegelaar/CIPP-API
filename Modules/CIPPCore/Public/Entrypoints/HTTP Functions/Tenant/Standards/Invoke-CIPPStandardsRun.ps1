@@ -70,7 +70,6 @@ function Invoke-CIPPStandardsRun {
                 StandardParams = @{
                     TenantFilter = $TenantFilter
                     runManually  = $runManually
-                    Drift        = $Drift.IsPresent
                 }
             }
             SkipLog          = $true
