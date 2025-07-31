@@ -12,8 +12,9 @@ function Push-CippDriftManagement {
     try {
         $Drift = Get-CIPPDrift -TenantFilter $Item.Tenant
         if ($Drift.newDeviationsCount -gt 0) {
-            $email = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift').standardSettings.email
-            $webhook = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift').standardSettings.webhook
+            $Settings = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift')
+            $email = $Settings.driftAlertEmail
+            $webhook = $Settings.driftAlertWebhook
             $CippConfigTable = Get-CippTable -tablename Config
             $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
             $CIPPURL = 'https://{0}' -f $CippConfig.Value

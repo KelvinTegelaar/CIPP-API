@@ -27,7 +27,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     success = $true
                     result  = "All drift customizations removed for tenant $TenantFilter"
                 })
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed all drift customizations for tenant $TenantFilter" -Sev 'Info'
+            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed all drift customizations for tenant $TenantFilter" -Sev 'Info'
         } else {
             $Deviations = $Request.Body.deviations
             $Reason = $Request.Body.reason
@@ -40,18 +40,36 @@ function Invoke-ExecUpdateDriftDeviation {
                         success = $true
                         result  = $Result
                     }
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
+                    Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
                     if ($Deviation.status -eq 'DeniedRemediate') {
                         $Setting = $Deviation.standardName -replace 'standards.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
-                        $StandardTemplate = $StandardTemplate.$Setting
-                        $StandardTemplate.action = @(
-                            @{label = 'Report'; value = 'Report' },
-                            @{ label = 'Remediate'; value = 'Remediate' }
-                        )
-                        #idea here is to make a system job that triggers the remediation process, so that users can click on "Deniedremediate"
-                        #That job then launches a single standard run, it gets the same input as an orch, but is just a scheduled job.
+                        $StandardTemplate = $StandardTemplate.standardSettings.$Setting
 
+                        $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                        $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+
+                        $TaskBody = @{
+                            TenantFilter  = $TenantFilter
+                            Name          = "One Off Drift Remediation: $Setting - $TenantFilter"
+                            Command       = @{
+                                value = "Invoke-CIPPStandard$Setting"
+                                label = "Invoke-CIPPStandard$Setting"
+                            }
+
+                            Parameters    = [pscustomobject]@{
+                                Tenant   = $TenantFilter
+                                Settings = $StandardTemplate.standards.$Setting
+                            }
+                            ScheduledTime = '0'
+                            PostExecution = @{
+                                Webhook = $false
+                                Email   = $false
+                                PSA     = $false
+                            }
+                        }
+                        Add-CIPPScheduledTask -Task $TaskBody -hidden $false
+                        Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
                         #Here we look at the policy ID received and the type, and nuke it.
@@ -62,7 +80,7 @@ function Invoke-ExecUpdateDriftDeviation {
                         success      = $false
                         error        = $_.Exception.Message
                     }
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to update drift deviation for $($Deviation.standardName): $($_.Exception.Message)" -Sev 'Error'
+                    Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to update drift deviation for $($Deviation.standardName): $($_.Exception.Message)" -Sev 'Error'
                 }
             }
         }
