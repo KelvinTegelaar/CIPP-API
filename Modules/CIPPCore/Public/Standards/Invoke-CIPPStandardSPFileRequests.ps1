@@ -34,15 +34,21 @@ function Invoke-CIPPStandardSPFileRequests {
     $TestResult = Test-CIPPStandardLicense -StandardName 'SPFileRequests' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'The tenant is not licenced for this standard SPFileRequests' -sev Error
         return $true
     }
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, CoreRequestFilesLinkEnabled, OneDriveRequestFilesLinkEnabled, CoreRequestFilesLinkExpirationInDays, OneDriveRequestFilesLinkExpirationInDays
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, CoreRequestFilesLinkEnabled, OneDriveRequestFilesLinkEnabled, CoreRequestFilesLinkExpirationInDays, OneDriveRequestFilesLinkExpirationInDays
+    }
+    catch {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to get current state of SPO tenant details' -sev Error
+        return
+    }
 
     # Input validation
     if (($Settings.state -eq $null) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'SPFileRequests: Invalid state parameter set' -sev Error
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'Invalid state parameter set for standard SPFileRequests' -sev Error
         return
     }
 
@@ -66,7 +72,6 @@ function Invoke-CIPPStandardSPFileRequests {
     $AllSettingsCorrect = $StateIsCorrect -and $ExpirationIsCorrect
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
 
         if ($AllSettingsCorrect -eq $false) {
             try {
