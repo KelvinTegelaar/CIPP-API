@@ -30,8 +30,12 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
 
+    if ($null -eq $CurrentInfo) {
+        throw "Failed to retrieve current authentication methods policy information"
+    }
+
     if ($Settings.remediate -eq $true) {
-        if ($CurrentInfo.policyMigrationState -eq 'migrationComplete') {
+        if ($CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authentication methods policy migration is already complete.' -sev Info
         } else {
             try {
@@ -44,14 +48,14 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($CurrentInfo.policyMigrationState -ne 'migrationComplete') {
+        if ($CurrentInfo.policyMigrationState -ne 'migrationComplete' -and $null -ne $CurrentInfo.policyMigrationState) {
             Write-StandardsAlert -message 'Authentication methods policy migration is not complete. Please check if you have legacy SSPR settings or MFA settings set: https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-authentication-methods-manage' -object $CurrentInfo -tenant $tenant -standardName 'AuthMethodsPolicyMigration' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authentication methods policy migration is not complete' -sev Alert
         }
     }
 
     if ($Settings.report -eq $true) {
-        $migrationComplete = $CurrentInfo.policyMigrationState -eq 'migrationComplete'
+        $migrationComplete = $CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState
         Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsPolicyMigration' -FieldValue $migrationComplete -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AuthMethodsPolicyMigration' -FieldValue $migrationComplete -StoreAs bool -Tenant $tenant
     }
