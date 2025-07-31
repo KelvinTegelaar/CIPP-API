@@ -23,7 +23,7 @@ function Invoke-CIPPStandardsRun {
 
     if ($Drift.IsPresent) {
         Write-Information 'Drift Standards Run'
-        $AllTasks = Get-CIPPTenantAlignment | Where-Object -Property standardtype -EQ 'drift' | Select-Object -Property Tenant | Sort-Object -Unique -Property Tenant
+        $AllTasks = Get-CIPPTenantAlignment | Where-Object -Property standardtype -EQ 'drift' | Select-Object -Property TenantFilter | Sort-Object -Unique -Property TenantFilter
 
         #For each item in our object, run the queue.
         $Queue = New-CippQueueEntry -Name 'Drift Standards' -TotalTasks ($AllTasks | Measure-Object).Count
@@ -31,7 +31,7 @@ function Invoke-CIPPStandardsRun {
         $Batch = foreach ($Task in $AllTasks) {
             [PSCustomObject]@{
                 FunctionName = 'CIPPDriftManagement'
-                Tenant       = $Task.Tenant
+                Tenant       = $Task.TenantFilter
             }
         }
 
