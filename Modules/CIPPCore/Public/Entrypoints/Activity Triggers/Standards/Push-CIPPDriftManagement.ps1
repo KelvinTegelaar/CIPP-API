@@ -7,10 +7,10 @@ function Push-CippDriftManagement {
         $Item
     )
 
-    Write-Information "Received queue item for $($Item.Tenant)"
+    Write-Information "Received drift standard item for $($Item.Tenant)"
 
     try {
-        $Drift = Get-CIPPDrift -TenantFilter $item.tenant
+        $Drift = Get-CIPPDrift -TenantFilter $Item.Tenant
         if ($Drift.newDeviationsCount -gt 0) {
             $email = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift').standardSettings.email
             $webhook = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift').standardSettings.webhook
@@ -30,12 +30,12 @@ function Push-CippDriftManagement {
                     Status           = $_.status
                 }
             }
-            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $item.tenant -InputObject 'driftStandard'
+            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.tenant -InputObject 'driftStandard'
             $CIPPAlert = @{
                 Type         = 'email'
                 Title        = $GenerateEmail.title
                 HTMLContent  = $GenerateEmail.htmlcontent
-                TenantFilter = $item.Tenant
+                TenantFilter = $Item.Tenant
             }
             Write-Host 'Going to send the mail'
             Send-CIPPAlert @CIPPAlert -altEmail $email
@@ -50,7 +50,7 @@ function Push-CippDriftManagement {
                 Type         = 'webhook'
                 Title        = $GenerateEmail.title
                 JSONContent  = $WebhookData
-                TenantFilter = $item.tenant
+                TenantFilter = $Item.tenant
             }
             Write-Host 'Sending Webhook Content'
             Send-CIPPAlert @CippAlert -altWebhook $webhook
@@ -70,7 +70,7 @@ function Push-CippDriftManagement {
         Write-Information "Drift management completed for tenant $($Item.Tenant)"
     } catch {
         Write-LogMessage -API 'DriftStandards' -tenant $Item.Tenant -message "Error running Drift Check for tenant $($Item.Tenant) - $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
-        Write-Warning "Error running standard $($Item.Standard) for tenant $($Item.Tenant) - $($_.Exception.Message)"
+        Write-Warning "Error running drift standards for tenant $($Item.Tenant) - $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
         throw $_.Exception.Message
     }
