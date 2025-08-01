@@ -39,7 +39,15 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         return $true
     } #we're done.
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object *
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' } |
+        Select-Object *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsFederationConfiguration state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $AllowAllKnownDomains = New-CsEdgeAllowAllKnownDomains
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl

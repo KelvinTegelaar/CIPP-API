@@ -32,7 +32,7 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.ResetPass -eq $true } {
             try {
-                Set-CIPPResetPassword -tenantFilter $TenantFilter -DisplayName -UserID $username -Headers $Headers -APIName $APIName
+                Set-CIPPResetPassword -tenantFilter $TenantFilter -DisplayName $DisplayName -UserID $username -Headers $Headers -APIName $APIName
             } catch {
                 $_.Exception.Message
             }

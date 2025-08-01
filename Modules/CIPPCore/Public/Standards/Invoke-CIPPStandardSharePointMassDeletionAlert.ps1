@@ -40,9 +40,16 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
 
     $PolicyName = 'CIPP SharePoint mass deletion of files by a user'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-    Where-Object { $_.Name -eq $PolicyName } |
-    Select-Object -Property *
+    try {
+        $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
+        Where-Object { $_.Name -eq $PolicyName } |
+        Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the sharingCapability state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $EmailsOutsideSettings = $CurrentState.NotifyUser | Where-Object { $_ -notin $Settings.NotifyUser.value }
     $MissingEmailsInSettings = $Settings.NotifyUser.value | Where-Object { $_ -notin $CurrentState.NotifyUser }

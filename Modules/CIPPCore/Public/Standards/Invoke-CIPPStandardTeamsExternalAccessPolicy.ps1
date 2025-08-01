@@ -38,7 +38,15 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         return $true
     } #we're done.
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' } | Select-Object *
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' } |
+        Select-Object *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsExternalAccessPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $EnableFederationAccess = $Settings.EnableFederationAccess ?? $false
     $EnableTeamsConsumerAccess = $Settings.EnableTeamsConsumerAccess ?? $false

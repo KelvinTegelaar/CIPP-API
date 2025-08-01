@@ -37,11 +37,19 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     } #we're done.
 
     $PolicyName = 'CIPP Deleted Items'
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicyTag' |
-    Where-Object -Property Identity -EQ $PolicyName
 
-    $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicy' |
-    Where-Object -Property Identity -EQ 'Default MRM Policy'
+    try {
+        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicyTag' |
+        Where-Object -Property Identity -EQ $PolicyName
+
+        $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicy' |
+        Where-Object -Property Identity -EQ 'Default MRM Policy'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the RetentionPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
     ($CurrentState.RetentionEnabled -eq $true) -and

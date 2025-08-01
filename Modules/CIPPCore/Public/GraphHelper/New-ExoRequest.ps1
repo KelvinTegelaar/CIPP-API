@@ -4,7 +4,7 @@ function New-ExoRequest {
     Internal
     #>
     [CmdletBinding(DefaultParameterSetName = 'ExoRequest')]
-    Param(
+    param(
         [Parameter(Mandatory = $true, ParameterSetName = 'ExoRequest')]
         [string]$cmdlet,
 
@@ -43,7 +43,7 @@ function New-ExoRequest {
         $token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent
 
         if ($cmdParams) {
-            #if cmdparams is a pscustomobject, convert to hashtable, otherwise leave as is
+            #if cmdParams is a pscustomobject, convert to hashtable, otherwise leave as is
             $Params = $cmdParams
         } else {
             $Params = @{}
@@ -145,7 +145,7 @@ function New-ExoRequest {
                 } until ($null -eq $URL)
 
                 Write-Verbose ($ResponseHeaders | ConvertTo-Json)
-                if ($ReturnedData.'@adminapi.warnings' -and $ReturnedData.value -eq $null) {
+                if ($ReturnedData.'@adminapi.warnings' -and $null -eq $ReturnedData.value) {
                     $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
                 }
             } catch {

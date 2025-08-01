@@ -31,7 +31,14 @@ function Invoke-CIPPStandardExternalMFATrusted {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExternalMFATrusted'
 
-    $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
+    try {
+        $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ExternalMFATrusted state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state

@@ -81,6 +81,15 @@
     "PreferredProcessor": "standards"
   },
   {
+    "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
+    "Command": "Start-DriftStandardsOrchestrator",
+    "Description": "Orchestrator to process drift standards",
+    "Cron": "0 0 */1 * * *",
+    "Priority": 5,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
+  },
+  {
     "Id": "97145a1d-28f0-4bb2-b929-5a43517d23cc",
     "Command": "Start-SchedulerOrchestrator",
     "Description": "Orchestrator to process system scheduled tasks",

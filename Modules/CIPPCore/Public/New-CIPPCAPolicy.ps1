@@ -44,14 +44,14 @@ function New-CIPPCAPolicy {
         $GroupIds = [System.Collections.Generic.List[string]]::new()
         $groupNames | ForEach-Object {
             if (Test-IsGuid $_) {
-                Write-LogMessage -Headers $User -API $APINAME -message "Already GUID, no need to replace: $_" -Sev 'Debug'
+                Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $GroupIds.Add($_) # it's a GUID, so we keep it
             } else {
                 $groupId = ($groups | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the group ID
                 if ($groupId) {
                     foreach ($gid in $groupId) {
                         Write-Warning "Replaced group name $_ with ID $gid"
-                        $null = Write-LogMessage -Headers $User -API $APINAME -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
+                        $null = Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
                         $GroupIds.Add($gid) # add the ID to the list
                     }
                 } else {
@@ -68,14 +68,14 @@ function New-CIPPCAPolicy {
         $UserIds = [System.Collections.Generic.List[string]]::new()
         $userNames | ForEach-Object {
             if (Test-IsGuid $_) {
-                Write-LogMessage -Headers $User -API $APINAME -message "Already GUID, no need to replace: $_" -Sev 'Debug'
+                Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $UserIds.Add($_) # it's a GUID, so we keep it
             } else {
                 $userId = ($users | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the user ID
                 if ($userId) {
                     foreach ($uid in $userId) {
                         Write-Warning "Replaced user name $_ with ID $uid"
-                        $null = Write-LogMessage -Headers $User -API $APINAME -message "Replaced user name $_ with ID $uid" -Sev 'Debug'
+                        $null = Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Replaced user name $_ with ID $uid" -Sev 'Debug'
                         $UserIds.Add($uid) # add the ID to the list
                     }
                 } else {
@@ -230,7 +230,7 @@ function New-CIPPCAPolicy {
         #Send request to disable security defaults.
         $body = '{ "isEnabled": false }'
         $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -ContentType 'application/json'
-        Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
+        Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
         Start-Sleep 3
     }
     $RawJSON = ConvertTo-Json -InputObject $JSONObj -Depth 10 -Compress
@@ -245,7 +245,7 @@ function New-CIPPCAPolicy {
             } else {
                 Write-Information "overwriting $($CheckExististing.id)"
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -asApp $true
-                Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Updated Conditional Access Policy $($JSONObj.Displayname) to the template standard." -Sev 'Info'
+                Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Updated Conditional Access Policy $($JSONObj.Displayname) to the template standard." -Sev 'Info'
                 return "Updated policy $displayname for $tenantfilter"
             }
         } else {
@@ -254,7 +254,7 @@ function New-CIPPCAPolicy {
                 Start-Sleep 3
             }
             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $tenantfilter -type POST -body $RawJSON -asApp $true
-            Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($JSONObj.Displayname)" -Sev 'Info'
+            Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Added Conditional Access Policy $($JSONObj.Displayname)" -Sev 'Info'
             return "Created policy $displayname for $tenantfilter"
         }
     } catch {

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRestoreBackup {
+function Invoke-ExecRestoreBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -27,7 +27,7 @@ Function Invoke-ExecRestoreBackup {
                     $Table.Entity = $ht2
                     Add-CIPPAzDataTableEntity @Table -Force
                 }
-                Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
+                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Restored backup $($Request.Body.BackupName)" -Sev 'Info'
                 $body = [pscustomobject]@{
                     'Results' = 'Successfully restored backup.'
                 }
@@ -44,7 +44,7 @@ Function Invoke-ExecRestoreBackup {
                 $Table.Entity = $ht2
                 Add-AzDataTableEntity @Table -Force
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Restored backup $($Request.Body.BackupName)" -Sev 'Info'
 
             $body = [pscustomobject]@{
                 'Results' = 'Successfully restored backup.'
