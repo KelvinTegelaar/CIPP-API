@@ -16,7 +16,7 @@ function Invoke-ExecEditTemplate {
 
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $guid = $request.body.id
+        $guid = $request.body.id ? $request.body.id : $request.body.GUID
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.body | Select-Object * -ExcludeProperty GUID)
         $Type = $request.query.Type
 
