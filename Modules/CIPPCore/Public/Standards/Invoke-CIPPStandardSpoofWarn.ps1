@@ -40,7 +40,14 @@ function Invoke-CIPPStandardSpoofWarn {
         return $true
     } #we're done.
 
-    $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
+    try {
+        $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpoofWarn state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state

@@ -28,7 +28,14 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     #>
 
     param($Tenant, $Settings)
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
+    try {
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AuthMethodsPolicyMigration state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($null -eq $CurrentInfo) {
         throw "Failed to retrieve current authentication methods policy information"
