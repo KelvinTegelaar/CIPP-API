@@ -40,7 +40,16 @@ function Invoke-CIPPStandardStaleEntraDevices {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
+
+    try {
+        $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the StaleEntraDevices state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     $Date = (Get-Date).AddDays( - [int]$Settings.deviceAgeThreshold)
     $StaleDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $Date }
 
