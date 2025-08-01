@@ -186,6 +186,27 @@ function Invoke-CIPPStandardAppDeploy {
                         $ExistingApp = $AppExists | Where-Object { $_.displayName -eq $TemplateData.AppName }
                         if ($ExistingApp) {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Application with name '$($TemplateData.AppName)' already exists in tenant $Tenant" -sev Info
+
+                            # get existing application
+                            $App = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($ExistingApp.appId)')" -tenantid $Tenant
+
+                            # compare permissions
+                            $ExistingPermissions = $App.requiredResourceAccess | ConvertTo-Json -Depth 10
+                            $NewPermissions = $ApplicationManifest.requiredResourceAccess | ConvertTo-Json -Depth 10
+                            if ($ExistingPermissions -ne $NewPermissions) {
+                                Write-LogMessage -API 'Standards' -tenant $tenant -message "Updating permissions for existing application '$($TemplateData.AppName)' in tenant $Tenant" -sev Info
+
+                                # Update permissions for existing application
+                                $UpdateBody = @{
+                                    requiredResourceAccess = $ApplicationManifest.requiredResourceAccess
+                                } | ConvertTo-Json -Depth 10
+                                $null = New-GraphPostRequest -type PATCH -uri "https://graph.microsoft.com/beta/applications(appId='$($ExistingApp.appId)')" -tenantid $Tenant -body $UpdateBody
+
+                                # consent new permissions
+                                Add-CIPPDelegatedPermission -RequiredResourceAccess $ApplicationManifest.requiredResourceAccess -ApplicationId $ExistingApp.appId -Tenantfilter $Tenant
+                                Add-CIPPApplicationPermission -RequiredResourceAccess $ApplicationManifest.requiredResourceAccess -ApplicationId $ExistingApp.appId -Tenantfilter $Tenant
+                            }
+
                             continue
                         }
 

@@ -38,17 +38,18 @@ function Invoke-EditUser {
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
             'displayName'       = $UserObj.displayName
-            'department'        = $UserObj.Department
-            'mailNickname'      = $UserObj.Username ? $UserObj.username :$UserObj.mailNickname
+            'department'        = $UserObj.department
+            'mailNickname'      = $UserObj.username ? $UserObj.username : $UserObj.mailNickname
             'userPrincipalName' = $UserPrincipalName
             'usageLocation'     = $UserObj.usageLocation.value ? $UserObj.usageLocation.value : $UserObj.usageLocation
-            'city'              = $UserObj.City
-            'country'           = $UserObj.Country
             'jobTitle'          = $UserObj.jobTitle
-            'mobilePhone'       = $UserObj.MobilePhone
+            'mobilePhone'       = $UserObj.mobilePhone
             'streetAddress'     = $UserObj.streetAddress
-            'postalCode'        = $UserObj.PostalCode
-            'companyName'       = $UserObj.CompanyName
+            'city'              = $UserObj.city
+            'state'             = $UserObj.state
+            'postalCode'        = $UserObj.postalCode
+            'country'           = $UserObj.country
+            'companyName'       = $UserObj.companyName
             'businessPhones'    = $UserObj.businessPhones ? @($UserObj.businessPhones) : @()
             'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
             'passwordProfile'   = @{
@@ -224,19 +225,13 @@ function Invoke-EditUser {
     }
 
     if ($Request.body.setManager.value) {
-        $ManagerBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setManager.value)" }
-        $ManagerBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $ManagerBody
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/manager/`$ref" -tenantid $UserObj.tenantFilter -type PUT -body $ManagerBodyJSON -Verbose
-        Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev Info
-        $Results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
+        $ManagerResult = Set-CIPPManager -User $UserPrincipalName -Manager $Request.body.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($ManagerResult)
     }
 
     if ($Request.body.setSponsor.value) {
-        $SponsorBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setSponsor.value)" }
-        $SponsorBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $SponsorBody
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/sponsors/`$ref" -tenantid $UserObj.tenantFilter -type POST -body $SponsorBodyJSON -Verbose
-        Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)" -Sev Info
-        $Results.Add("Success. Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)")
+        $SponsorResult = Set-CIPPSponsor -User $UserPrincipalName -Sponsor $Request.body.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($SponsorResult)
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

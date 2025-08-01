@@ -54,7 +54,7 @@ function New-CIPPUserTask {
 
     try {
         if ($UserObj.AddedAliases) {
-            $AliasResults = Add-CIPPAlias -user $CreationResults.Username -Aliases ($UserObj.AddedAliases -split '\s') -UserprincipalName $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName -Headers $Headers
+            $AliasResults = Add-CIPPAlias -User $CreationResults.Username -Aliases ($UserObj.AddedAliases -split '\s') -UserPrincipalName $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName -Headers $Headers
             $Results.Add($AliasResults)
         }
     } catch {
@@ -69,12 +69,12 @@ function New-CIPPUserTask {
     }
 
     if ($UserObj.setManager) {
-        $ManagerResult = Set-CIPPManager -user $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -APIName 'Set Manager' -Headers $Headers
+        $ManagerResult = Set-CIPPManager -User $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResult)
     }
 
     if ($UserObj.setSponsor) {
-        $SponsorResult = Set-CIPPManager -user $CreationResults.Username -Manager $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -APIName 'Set Sponsor' -Headers $Headers
+        $SponsorResult = Set-CIPPSponsor -User $CreationResults.Username -Sponsor $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($SponsorResult)
     }
 

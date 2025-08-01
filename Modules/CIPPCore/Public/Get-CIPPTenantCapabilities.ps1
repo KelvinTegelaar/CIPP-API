@@ -21,10 +21,10 @@ function Get-CIPPTenantCapabilities {
         }
         Add-CIPPAzDataTableEntity @ConfigTable -Entity $Entity -Force
     }
-    $Plans = $Org.servicePlans | Where-Object { $_.provisioningStatus -eq 'Success' } | Sort-Object -Property serviceplanName -Unique | Select-Object servicePlanName, provisioningStatus
+    $Plans = $Org.servicePlans | Where-Object { $_.provisioningStatus -ne 'disabled' } | Sort-Object -Property serviceplanName -Unique | Select-Object servicePlanName, provisioningStatus
     $Results = @{}
     foreach ($Plan in $Plans) {
-        $Results."$($Plan.servicePlanName)" = $Plan.provisioningStatus -eq 'Success'
+        $Results."$($Plan.servicePlanName)" = $Plan.provisioningStatus -ne 'disabled'
     }
     [PSCustomObject]$Results
 }
