@@ -43,7 +43,7 @@ function Set-CIPPCAExclusion {
 
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
             if ($PSCmdlet.ShouldProcess($PolicyId, "Add exclusion for $UserID")) {
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
 
@@ -65,7 +65,7 @@ function Set-CIPPCAExclusion {
             }
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
             if ($PSCmdlet.ShouldProcess($PolicyId, "Remove exclusion for $UserID")) {
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
 

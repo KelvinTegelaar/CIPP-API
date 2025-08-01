@@ -37,7 +37,15 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         return $true
     } #we're done.
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    try {
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TenantDefaultTimezone state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     $ExpectedTimezone = $Settings.Timezone.value
     $StateIsCorrect = $CurrentState.tenantDefaultTimezone -eq $ExpectedTimezone
 

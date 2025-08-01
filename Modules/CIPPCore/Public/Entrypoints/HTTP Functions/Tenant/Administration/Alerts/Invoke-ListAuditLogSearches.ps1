@@ -18,7 +18,6 @@ function Invoke-ListAuditLogSearches {
     $Days = $Request.Query.Days
     $Type = $Request.Query.Type
 
-
     if ($TenantFilter) {
         switch ($Type) {
             'Searches' {

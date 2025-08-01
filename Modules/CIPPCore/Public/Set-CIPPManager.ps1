@@ -1,7 +1,7 @@
 function Set-CIPPManager {
     [CmdletBinding()]
     param (
-        $user,
+        $User,
         $Manager,
         $TenantFilter,
         $APIName = 'Set Manager',
@@ -11,12 +11,13 @@ function Set-CIPPManager {
     try {
         $ManagerBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Manager)" }
         $ManagerBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $ManagerBody
-        New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($User)/manager/`$ref" -tenantid $TenantFilter -type PUT -body $ManagerBodyJSON -Verbose
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $UserObj.tenantID -message "Set $user's manager to $Manager" -Sev 'Info'
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($User)/manager/`$ref" -tenantid $TenantFilter -type PUT -body $ManagerBodyJSON
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Set $User's manager to $Manager" -Sev 'Info'
     } catch {
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($UserObj.tenantID) -message "Failed to Set Manager. Error:$($_.Exception.Message)" -Sev 'Error'
-        throw "Failed to set manager: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to Set Manager. Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $_
+        throw "Failed to set manager: $($ErrorMessage.NormalizedError)"
     }
-    return "Set $user's manager to $Manager"
+    return "Set $User's manager to $Manager"
 }
 

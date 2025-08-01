@@ -1,7 +1,7 @@
 function Invoke-ListDirectoryObjects {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
@@ -12,7 +12,7 @@ function Invoke-ListDirectoryObjects {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Body.tenantFilter
+    $TenantFilter = $Request.Body.partnerLookup ? $env:TenantID : $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Ids = $Request.Body.ids
 
@@ -28,7 +28,7 @@ function Invoke-ListDirectoryObjects {
     } | ConvertTo-Json -Depth 10
 
     try {
-        $Results = New-GraphPOSTRequest -tenantid $TenantFilter -uri $Uri -body $Body -AsApp $AsApp
+        $Results = New-GraphPOSTRequest -tenantid $TenantFilter -uri $Uri -body $Body -AsApp $AsApp -NoAuthCheck $true
         $StatusCode = [System.Net.HttpStatusCode]::OK
     } catch {
         $StatusCode = [System.Net.HttpStatusCode]::BadRequest

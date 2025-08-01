@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemovePolicy {
+function Invoke-RemovePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint

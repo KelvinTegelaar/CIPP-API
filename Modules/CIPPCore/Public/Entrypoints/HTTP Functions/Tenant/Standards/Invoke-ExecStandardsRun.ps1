@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecStandardsRun {
+function Invoke-ExecStandardsRun {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -38,7 +38,7 @@ Function Invoke-ExecStandardsRun {
 
             $ProcessorFunction = [PSCustomObject]@{
                 PartitionKey = 'Function'
-                RowKey       = "Invoke-CIPPStandardsRun-$TenantFilter"
+                RowKey       = "Invoke-CIPPStandardsRun-$TenantFilter-$TemplateId"
                 FunctionName = 'Invoke-CIPPStandardsRun'
                 Parameters   = [string](ConvertTo-Json -Compress -InputObject @{
                         TenantFilter = $TenantFilter

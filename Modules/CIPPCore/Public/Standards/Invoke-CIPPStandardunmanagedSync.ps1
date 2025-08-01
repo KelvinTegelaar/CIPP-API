@@ -38,7 +38,15 @@ function Invoke-CIPPStandardunmanagedSync {
         return $true
     } #we're done.
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+        Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the unmanagedSync state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $WantedState = [int]($Settings.state.value ?? 2) # Default to 2 (Block Access) if not set, for pre v8.0.3 standard compatibility
     $Label = $Settings.state.label ?? 'Block Access' # Default label if not set, for pre v8.0.3 standard compatibility

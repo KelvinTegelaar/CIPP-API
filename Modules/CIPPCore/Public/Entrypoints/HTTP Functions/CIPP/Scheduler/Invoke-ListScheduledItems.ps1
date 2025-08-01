@@ -61,12 +61,18 @@ function Invoke-ListScheduledItems {
         $Tasks = $Tasks | Where-Object -Property Tenant -In $AllowedTenantDomains
     }
     $ScheduledTasks = foreach ($Task in $tasks) {
+        if (!$Task.Tenant -or !$Task.Command) {
+            continue
+        }
+
         if ($Task.Parameters) {
             $Task.Parameters = $Task.Parameters | ConvertFrom-Json -ErrorAction SilentlyContinue
         } else {
             $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
         }
-        if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
+        if (!$Task.Recurrence) {
+            $Task | Add-Member -NotePropertyName Recurrence -NotePropertyValue 'Once' -Force
+        } elseif ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
             $Task.Recurrence = 'Once'
         }
         try {

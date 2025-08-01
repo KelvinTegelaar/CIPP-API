@@ -22,6 +22,7 @@ function Invoke-ListTenantAlignment {
             [PSCustomObject]@{
                 tenantFilter             = $_.TenantFilter
                 standardName             = $_.StandardName
+                standardType             = $_.StandardType ? $_.StandardType : 'Classic Standard'
                 standardId               = $_.StandardId
                 alignmentScore           = $_.AlignmentScore
                 LicenseMissingPercentage = $_.LicenseMissingPercentage

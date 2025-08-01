@@ -39,7 +39,15 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         return $true
     } #we're done.
 
-    $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
+    try {
+        $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableCustomerLockbox state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
         try {
