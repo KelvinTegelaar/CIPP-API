@@ -41,9 +41,16 @@ function Invoke-CIPPStandardPhishingSimulations {
     $PolicyName = 'CIPPPhishSim'
 
     # Fetch current Phishing Simulations Policy settings and ensure it is correctly configured
-    $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
-    Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
-    Select-Object -Property Identity,Name,Mode,Enabled
+    try {
+        $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
+        Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
+        Select-Object -Property Identity, Name, Mode, Enabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishingSimulations state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $PolicyIsCorrect = ($PolicyState.Name -eq 'PhishSimOverridePolicy') -and ($PolicyState.Enabled -eq $true)
 

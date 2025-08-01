@@ -37,9 +37,16 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     } #we're done.
     $PolicyName = 'CIPP User requested to release a quarantined message'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-    Where-Object { $_.Name -eq $PolicyName } |
-    Select-Object -Property *
+    try {
+        $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
+        Where-Object { $_.Name -eq $PolicyName } |
+        Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the QuarantineRequestAlert state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
 

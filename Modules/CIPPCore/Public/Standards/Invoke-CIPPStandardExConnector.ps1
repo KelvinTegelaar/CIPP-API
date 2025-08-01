@@ -1,4 +1,4 @@
-function Invoke-CIPPStandardExConnector {
+function Invoke-CIPPStandardExchangeConnectorTemplate {
     <#
     .FUNCTIONALITY
     Internal
@@ -12,7 +12,7 @@ function Invoke-CIPPStandardExConnector {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExConnector'
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         foreach ($Template in $Settings.TemplateList) {
             try {
@@ -20,7 +20,7 @@ function Invoke-CIPPStandardExConnector {
                 $Filter = "PartitionKey eq 'ExConnectorTemplate' and RowKey eq '$($Template.value)'"
                 $connectorType = (Get-AzDataTableEntity @Table -Filter $Filter).direction
                 $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
-                if($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue "no comment" -NotePropertyName comment -Force }
+                if ($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue 'no comment' -NotePropertyName comment -Force }
                 $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet "Get-$($ConnectorType)connector" | Where-Object -Property Identity -EQ $RequestParams.name
                 if ($Existing) {
                     $RequestParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force

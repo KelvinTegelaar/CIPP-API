@@ -38,7 +38,14 @@ function Invoke-CIPPStandardRotateDKIM {
         return $true
     } #we're done.
 
-    $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -eq 1024 -and $_.Enabled -eq $true }
+    try {
+        $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -eq 1024 -and $_.Enabled -eq $true }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DKIM state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($Settings.remediate -eq $true) {
 

@@ -36,7 +36,14 @@ function Invoke-CIPPStandardSPSyncButtonState {
         return $true
     } #we're done.
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPSyncButtonState state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
 
     # Input validation

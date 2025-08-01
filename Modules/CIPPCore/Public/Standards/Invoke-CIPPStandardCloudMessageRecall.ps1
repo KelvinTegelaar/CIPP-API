@@ -38,9 +38,16 @@ function Invoke-CIPPStandardCloudMessageRecall {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'CloudMessageRecall'
 
     # Get state value using null-coalescing operator
-    $state = $Settings.state.value
+    $state = $Settings.state.value ?? $Settings.state
 
-    $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
+    try {
+        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the CloudMessageRecall state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
@@ -53,7 +60,7 @@ function Invoke-CIPPStandardCloudMessageRecall {
 
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'MessageRecallEnabled: Invalid state parameter set' -sev Error
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'CloudMessageRecall: Invalid state parameter set' -sev Error
         return
     }
 

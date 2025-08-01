@@ -37,7 +37,14 @@ function Invoke-CIPPStandardMDMScope {
         return $true
     } #we're done.
 
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
+    try {
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MDM Scope state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentInfo.termsOfUseUrl -eq 'https://portal.manage.microsoft.com/TermsofUse.aspx') -and
         ($CurrentInfo.discoveryUrl -eq 'https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc') -and

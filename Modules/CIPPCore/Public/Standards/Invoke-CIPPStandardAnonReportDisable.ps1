@@ -31,7 +31,14 @@ function Invoke-CIPPStandardAnonReportDisable {
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'allowOTPTokens' -Settings $Settings
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
+    try {
+        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AnonReportDisable state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
 

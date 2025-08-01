@@ -41,7 +41,14 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EXODisableAutoForwarding'
 
-    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -useSystemMailbox $true
+    try {
+        $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -useSystemMailbox $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EXODisableAutoForwarding state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $StateIsCorrect = $CurrentInfo.AutoForwardingMode -eq 'Off'
 
     if ($Settings.remediate -eq $true) {

@@ -44,7 +44,14 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     }
 
     # Get mailbox plans first
-    $MailboxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' -cmdParams @{ ResultSize = 'Unlimited' }
+    try {
+        $MailboxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' -cmdParams @{ ResultSize = 'Unlimited' }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MailboxRecipientLimits state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Create a hashtable of mailbox plans for quick lookup
     $MailboxPlanLookup = @{}

@@ -27,6 +27,14 @@ function New-CIPPAlertTemplate {
     if ($Data -is [array] -and $Data[0] -is [string]) {
         $Data = $Data | ForEach-Object { @{ message = $_ } }
     }
+    if ($InputObject -eq 'driftStandard') {
+        $Title = "CIPP Alert - Standard Drift Detected for $($Tenant)"
+        $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
+        $IntroText = "<p>You've setup your instance to receive alerts when a tenant is drifting away from your standard. This seems to have happened! We've found the following deviations. </p>$dataHTML"
+        $ButtonUrl = "$CIPPURL/tenant/standards/manage-drift?tenantFilter=$($Tenant)&templateId=$($AuditLogLink)"
+        $ButtonText = 'Investigate and remediate deviations'
+        $AfterButtonText = 'Click the button above to go to the logbook and investigate the deviations. You can also use the standards page to remediate the deviations.'
+    }
 
     if ($InputObject -eq 'sherwebmig') {
         $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')

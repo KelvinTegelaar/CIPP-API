@@ -1,9 +1,9 @@
 function Add-CIPPAlias {
     [CmdletBinding()]
     param (
-        $user,
+        $User,
         $Aliases,
-        $UserprincipalName,
+        $UserPrincipalName,
         $TenantFilter,
         $APIName = 'Add Alias',
         $Headers
@@ -11,16 +11,17 @@ function Add-CIPPAlias {
 
     try {
         foreach ($Alias in $Aliases) {
-            Write-Host "Adding alias $Alias to $user"
-            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$user" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -verbose
+            Write-Host "Adding alias $Alias to $User"
+            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$User" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -verbose
         }
         Write-Host "Resetting primary alias to $User"
-        New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($user)" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$User`"}" -verbose
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($TenantFilter) -message "Added alias $($Alias) to $($UserprincipalName)" -Sev 'Info'
+        New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$User" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$User`"}" -verbose
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added alias $($Alias) to $($UserPrincipalName)" -Sev 'Info'
         return ("Added Aliases: $($Aliases -join ',')")
     } catch {
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to set alias. Error:$($_.Exception.Message)" -Sev 'Error'
-        throw "Failed to set alias: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Failed to set alias. Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        throw "Failed to set alias: $($ErrorMessage.NormalizedError)"
     }
 }
 

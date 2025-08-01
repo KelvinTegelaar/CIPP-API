@@ -68,7 +68,15 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     }
 
     # Get current settings
-    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -Select 'RecipientLimitExternalPerHour, RecipientLimitInternalPerHour, RecipientLimitPerDay, ActionWhenThresholdReached' -useSystemMailbox $true | Select-Object -ExcludeProperty *data.type*
+    try {
+        $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -Select 'RecipientLimitExternalPerHour, RecipientLimitInternalPerHour, RecipientLimitPerDay, ActionWhenThresholdReached' -useSystemMailbox $true |
+        Select-Object -ExcludeProperty *data.type*
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EXOOutboundSpamLimits state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Check if settings are already correct
     $StateIsCorrect = ($CurrentInfo.RecipientLimitExternalPerHour -eq $Settings.RecipientLimitExternalPerHour) -and

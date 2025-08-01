@@ -36,7 +36,15 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
         return $true
     } #we're done.
 
-    $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) | Where-Object -Property displayname -EQ 'Group.unified'
+    try {
+        $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) |
+        Where-Object -Property displayname -EQ 'Group.unified'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableM365GroupUsers state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         if (($CurrentState.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value -eq 'false') {

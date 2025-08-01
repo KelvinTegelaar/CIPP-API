@@ -43,7 +43,14 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         Return
     }
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $Tenant
+    try {
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ActivityBasedTimeout state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $StateIsCorrect = if ($CurrentState.definition -like "*$timeout*") { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {

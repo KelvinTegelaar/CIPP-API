@@ -39,7 +39,14 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAdditionalStorageProviders'
 
-    $AdditionalStorageProvidersState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' } -Select 'Identity, AdditionalStorageProvidersAvailable'
+    try {
+        $AdditionalStorageProvidersState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' } -Select 'Identity, AdditionalStorageProvidersAvailable'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAddShortcutsToOneDrive state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($Settings.remediate -eq $true) {
 

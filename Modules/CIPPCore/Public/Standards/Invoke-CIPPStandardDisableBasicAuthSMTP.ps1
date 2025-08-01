@@ -38,8 +38,17 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableBasicAuthSMTP'
 
-    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
-    $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } | Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
+    try {
+        $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
+
+        $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } |
+        Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableBasicAuthSMTP state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -59,7 +68,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
             # Disable SMTP Basic Authentication for all users
             $SMTPusers | ForEach-Object {
                 try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Identity; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

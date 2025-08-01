@@ -36,7 +36,14 @@ function Invoke-CIPPStandardAutoExpandArchive {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AutoExpandArchive'
 
-    $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AutoExpandingArchiveEnabled
+    try {
+        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AutoExpandingArchiveEnabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AutoExpandArchive state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

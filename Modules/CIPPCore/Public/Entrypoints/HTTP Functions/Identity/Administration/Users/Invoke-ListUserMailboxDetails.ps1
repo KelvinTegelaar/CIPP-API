@@ -18,6 +18,10 @@ function Invoke-ListUserMailboxDetails {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
+    $UserMail = $Request.Query.userMail
+    Write-Host "TenantFilter: $TenantFilter"
+    Write-Host "UserID: $UserID"
+    Write-Host "UserMail: $UserMail"
 
     try {
         $Requests = @(
@@ -53,7 +57,7 @@ function Invoke-ListUserMailboxDetails {
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-BlockedSenderAddress'
-                    Parameters = @{ Identity = $UserID }
+                    Parameters = @{ SenderAddress = $UserMail }
                 }
             },
             @{
@@ -63,7 +67,6 @@ function Invoke-ListUserMailboxDetails {
                 }
             }
         )
-        Write-Host $UserID
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
         Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
@@ -105,9 +108,9 @@ function Invoke-ListUserMailboxDetails {
 
         # Determine if the user is blocked for spam
         if ($BlockedSender -and $BlockedSender.Count -gt 0) {
-            $BlockedForSpam = $false
-        } else {
             $BlockedForSpam = $true
+        } else {
+            $BlockedForSpam = $false
         }
     } catch {
         Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"

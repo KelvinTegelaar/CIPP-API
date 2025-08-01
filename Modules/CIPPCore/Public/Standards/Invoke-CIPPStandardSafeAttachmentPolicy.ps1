@@ -64,9 +64,16 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             $RuleName = $ExistingRule.Name
         }
 
-        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+        try {
+            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+        }
+        catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.Enable -eq $true) -and

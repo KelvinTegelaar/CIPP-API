@@ -16,7 +16,7 @@ function Start-AuditLogOrchestrator {
 
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {
             Write-Information 'No audit log searches available'
-        } elseif (($WebhookRules | Measure-Object).Count -eq 0) {
+        } elseif (($AuditLogSearches | Measure-Object).Count -eq 0 -and ($WebhookRules | Measure-Object).Count -eq 0) {
             Write-Information 'No webhook rules defined'
         } else {
             Write-Information "Audit Logs: Downloading $($AuditLogSearches.Count) searches"

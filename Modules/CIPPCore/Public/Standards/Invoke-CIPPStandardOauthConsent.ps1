@@ -33,7 +33,14 @@ function Invoke-CIPPStandardOauthConsent {
 
     param($tenant, $settings)
 
-    $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
+    try {
+        $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the OauthConsent state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
     if ($Settings.remediate -eq $true) {

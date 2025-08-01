@@ -16,7 +16,8 @@ function New-GraphGetRequest {
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders,
-        [hashtable]$extraHeaders
+        [hashtable]$extraHeaders,
+        [switch]$ReturnRawResponse
     )
 
     if ($NoAuthCheck -eq $false) {
@@ -65,8 +66,24 @@ function New-GraphGetRequest {
                 if ($IncludeResponseHeaders) {
                     $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                 }
-                $Data = (Invoke-RestMethod @GraphRequest)
-                if ($CountOnly) {
+
+                if ($ReturnRawResponse) {
+                    $GraphRequest.SkipHttpErrorCheck = $true
+                    $Data = Invoke-WebRequest @GraphRequest
+                } else {
+                    $Data = (Invoke-RestMethod @GraphRequest)
+                }
+
+                if ($ReturnRawResponse) {
+                    if (Test-Json -Json $Data.Content) {
+                        $Content = $Data.Content | ConvertFrom-Json
+                    } else {
+                        $Content = $Data.Content
+                    }
+
+                    $Data | Select-Object -Property StatusCode, StatusDescription, @{Name = 'Content'; Expression = { $Content }}
+                    $nextURL = $null
+                } elseif ($CountOnly) {
                     $Data.'@odata.count'
                     $NextURL = $null
                 } else {

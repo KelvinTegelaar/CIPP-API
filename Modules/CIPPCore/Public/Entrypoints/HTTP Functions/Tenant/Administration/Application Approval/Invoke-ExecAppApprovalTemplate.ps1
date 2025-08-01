@@ -102,7 +102,6 @@ function Invoke-ExecAppApprovalTemplate {
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
                 $filter = "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$templateId'"
-                Write-LogMessage -headers $Headers -API $APIName -message "Retrieved specific template: $templateId" -Sev 'Info'
             }
 
             $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter

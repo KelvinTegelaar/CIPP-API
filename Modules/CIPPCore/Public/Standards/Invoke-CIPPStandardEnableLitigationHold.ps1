@@ -37,7 +37,15 @@ function Invoke-CIPPStandardEnableLitigationHold {
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableLitigationHold'
 
-    $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' | Where-Object { $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
+    try {
+        $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' |
+        Where-Object { $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableLitigationHold state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($Settings.remediate -eq $true) {
         if ($null -eq $MailboxesNoLitHold) {
