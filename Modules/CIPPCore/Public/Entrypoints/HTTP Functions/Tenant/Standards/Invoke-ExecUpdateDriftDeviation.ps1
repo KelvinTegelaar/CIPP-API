@@ -72,20 +72,19 @@ function Invoke-ExecUpdateDriftDeviation {
                         Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
-                        if ($Deviation.standardName -like 'ConditionalAccessTemplate*') {
-                            $ID = $Deviation.standardName -replace 'ConditionalAccessTemplates.', ''
-                            Write-Host "Going to delete CA Policy with ID $ID. Deviation Name is $($Deviation.standardName)"
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/$($ID)" -type DELETE -tenant $TenantFilter -asapp $true
-                            "Deleted CA Policy $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Conditional Access Policy with ID $($ID)" -Sev 'Info'
+                        $Policy = $Deviation.receivedValue | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        Write-Host "Policy is $($Policy)"
+                        $URLName = Get-CIPPURLName -Template $Policy
+                        if ($Policy -and $URLName) {
+                            Write-Host "Going to delete Policy with ID $($policy.ID) Deviation Name is $($Deviation.standardName)"
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($URLName)/$($policy.id)" -type DELETE -tenant $TenantFilter
+                            "Deleted Policy $($ID)"
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
+                        } else {
+                            "could not find policy with ID $($ID)"
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -Sev 'Warning'
                         }
 
-                        if ($Deviation.standardName -like 'IntuneTemplates*') {
-                            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
-                            "Deleted Intune Policy $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Intune Policy with ID $($ID)" -Sev 'Info'
-
-                        }
 
                     }
                 } catch {

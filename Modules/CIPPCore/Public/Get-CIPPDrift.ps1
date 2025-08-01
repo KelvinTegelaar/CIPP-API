@@ -84,47 +84,47 @@ function Get-CIPPDrift {
             # Always get live data when not in AllTenants mode
             $IntuneRequests = @(
                 @{
-                    id     = 'deviceAppManagement'
+                    id     = 'deviceAppManagement/managedAppPolicies'
                     url    = 'deviceAppManagement/managedAppPolicies'
                     method = 'GET'
                 }
                 @{
-                    id     = 'deviceCompliancePolicies'
+                    id     = 'deviceManagement/deviceCompliancePolicies'
                     url    = 'deviceManagement/deviceCompliancePolicies'
                     method = 'GET'
                 }
                 @{
-                    id     = 'groupPolicyConfigurations'
+                    id     = 'deviceManagement/groupPolicyConfigurations'
                     url    = 'deviceManagement/groupPolicyConfigurations'
                     method = 'GET'
                 }
                 @{
-                    id     = 'deviceConfigurations'
+                    id     = 'deviceManagement/deviceConfigurations'
                     url    = 'deviceManagement/deviceConfigurations'
                     method = 'GET'
                 }
                 @{
-                    id     = 'configurationPolicies'
+                    id     = 'deviceManagement/configurationPolicies'
                     url    = 'deviceManagement/configurationPolicies'
                     method = 'GET'
                 }
                 @{
-                    id     = 'windowsDriverUpdateProfiles'
+                    id     = 'deviceManagement/windowsDriverUpdateProfiles'
                     url    = 'deviceManagement/windowsDriverUpdateProfiles'
                     method = 'GET'
                 }
                 @{
-                    id     = 'windowsFeatureUpdateProfiles'
+                    id     = 'deviceManagement/windowsFeatureUpdateProfiles'
                     url    = 'deviceManagement/windowsFeatureUpdateProfiles'
                     method = 'GET'
                 }
                 @{
-                    id     = 'windowsQualityUpdatePolicies'
+                    id     = 'deviceManagement/windowsQualityUpdatePolicies'
                     url    = 'deviceManagement/windowsQualityUpdatePolicies'
                     method = 'GET'
                 }
                 @{
-                    id     = 'windowsQualityUpdateProfiles'
+                    id     = 'deviceManagement/windowsQualityUpdateProfiles'
                     url    = 'deviceManagement/windowsQualityUpdateProfiles'
                     method = 'GET'
                 }
@@ -220,6 +220,7 @@ function Get-CIPPDrift {
             # Check for extra Intune policies not in template
             foreach ($TenantPolicy in $TenantIntunePolicies) {
                 $PolicyFound = $false
+                $tenantPolicy.policy | Add-Member -MemberType NoteProperty -Name 'URLName' -Value $TenantPolicy.Type -Force
                 $TenantPolicyName = if ($TenantPolicy.Policy.displayName) { $TenantPolicy.Policy.displayName } else { $TenantPolicy.Policy.name }
 
                 foreach ($TemplatePolicy in $TemplateIntuneTemplates) {
