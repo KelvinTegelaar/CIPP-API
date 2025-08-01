@@ -72,7 +72,7 @@ function Get-CIPPTenantAlignment {
             if ($FieldValue -is [System.Boolean]) {
                 $FieldValue = [bool]$FieldValue
             } elseif ($FieldValue -like '*{*') {
-                $FieldValue = ConvertFrom-Json -InputObject $FieldValue -ErrorAction SilentlyContinue
+                $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction SilentlyContinue
             } else {
                 $FieldValue = [string]$FieldValue
             }
