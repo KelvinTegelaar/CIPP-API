@@ -31,7 +31,8 @@ function Push-CippDriftManagement {
                     Status           = $_.status
                 }
             }
-            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.tenant -InputObject 'driftStandard'
+            $Data | Add-Member -MemberType NoteProperty -Name 'CIPPAction' -Value @('driftManagement')
+            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.tenant -InputObject 'driftStandard' -AuditLogLink $drift.standardId
             $CIPPAlert = @{
                 Type         = 'email'
                 Title        = $GenerateEmail.title
