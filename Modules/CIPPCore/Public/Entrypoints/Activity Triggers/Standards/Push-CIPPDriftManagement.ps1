@@ -31,8 +31,8 @@ function Push-CippDriftManagement {
                     Status           = $_.status
                 }
             }
-            $Data | Add-Member -MemberType NoteProperty -Name 'CIPPAction' -Value @('driftManagement')
-            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.tenant -InputObject 'driftStandard' -AuditLogLink $drift.standardId
+
+            $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.Tenant -InputObject 'driftStandard' -AuditLogLink $drift.standardId
             $CIPPAlert = @{
                 Type         = 'email'
                 Title        = $GenerateEmail.title
@@ -52,7 +52,7 @@ function Push-CippDriftManagement {
                 Type         = 'webhook'
                 Title        = $GenerateEmail.title
                 JSONContent  = $WebhookData
-                TenantFilter = $Item.tenant
+                TenantFilter = $Item.Tenant
             }
             Write-Host 'Sending Webhook Content'
             Send-CIPPAlert @CippAlert -altWebhook $webhook
@@ -61,7 +61,7 @@ function Push-CippDriftManagement {
                 Type         = 'psa'
                 Title        = $GenerateEmail.title
                 HTMLContent  = $GenerateEmail.htmlcontent
-                TenantFilter = $TenantFilter
+                TenantFilter = $Item.Tenant
             }
             Send-CIPPAlert @CIPPAlert
             return $true
