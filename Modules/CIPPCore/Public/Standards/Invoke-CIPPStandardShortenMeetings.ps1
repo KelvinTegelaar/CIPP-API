@@ -41,7 +41,16 @@ function Invoke-CIPPStandardShortenMeetings {
     # Get state value using null-coalescing operator
     $scopeDefault = $Settings.ShortenEventScopeDefault.value ? $Settings.ShortenEventScopeDefault.value : $Settings.ShortenEventScopeDefault
 
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' | Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
+    try {
+        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' |
+        Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ShortenMeetings state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     $CorrectState = if ($CurrentState.ShortenEventScopeDefault -eq $scopeDefault -and
         $CurrentState.DefaultMinutesToReduceShortEventsBy -eq $Settings.DefaultMinutesToReduceShortEventsBy -and
         $CurrentState.DefaultMinutesToReduceLongEventsBy -eq $Settings.DefaultMinutesToReduceLongEventsBy) { $true } else { $false }

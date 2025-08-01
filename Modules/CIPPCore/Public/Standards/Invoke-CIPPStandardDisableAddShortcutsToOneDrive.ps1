@@ -37,7 +37,15 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         return $true
     } #we're done.
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+        Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAddShortcutsToOneDrive state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Input validation
     $StateValue = $Settings.state.value ?? $Settings.state

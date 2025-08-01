@@ -40,8 +40,15 @@ function Invoke-CIPPStandardSPDirectSharing {
 
 
     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'The default sharing to Direct users standard has been deprecated in favor of the "Set Default Sharing Link Settings" standard. Please update your standards to use new standard. However this will continue to function.' -Sev Alert
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-    Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDirectSharing state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq 'Direct' -or $CurrentState.DefaultSharingLinkType -eq 1)
 
