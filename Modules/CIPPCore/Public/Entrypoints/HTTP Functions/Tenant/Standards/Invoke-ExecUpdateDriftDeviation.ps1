@@ -72,7 +72,21 @@ function Invoke-ExecUpdateDriftDeviation {
                         Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
-                        #Here we look at the policy ID received and the type, and nuke it.
+                        if ($Deviation.standardName -like 'ConditionalAccessTemplate*') {
+                            $ID = $Deviation.standardName -replace 'ConditionalAccessTemplates.', ''
+                            Write-Host "Going to delete CA Policy with ID $ID. Deviation Name is $($Deviation.standardName)"
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/$($ID)" -type DELETE -tenant $TenantFilter -asapp $true
+                            "Deleted CA Policy $($ID)"
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Conditional Access Policy with ID $($ID)" -Sev 'Info'
+                        }
+
+                        if ($Deviation.standardName -like 'IntuneTemplates*') {
+                            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
+                            "Deleted Intune Policy $($ID)"
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Intune Policy with ID $($ID)" -Sev 'Info'
+
+                        }
+
                     }
                 } catch {
                     [PSCustomObject]@{
