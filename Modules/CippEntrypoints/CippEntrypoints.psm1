@@ -53,7 +53,16 @@ function Receive-CippHttpTrigger {
             if ($FunctionName -eq 'Invoke-Me') {
                 return
             }
-
+        } catch {
+            Write-Information "Access denied for $FunctionName : $($_.Exception.Message)"
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = $_.Exception.Message
+                })
+            return
+        }
+        
+        try {
             Write-Information "Access: $Access"
             if ($Access) {
                 & $FunctionName @HttpTrigger
