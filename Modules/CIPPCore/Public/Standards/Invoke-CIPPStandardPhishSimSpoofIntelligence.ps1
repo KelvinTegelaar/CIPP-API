@@ -37,8 +37,15 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
         return $true
     } #we're done.
     # Fetch current Phishing Simulations Spoof Intelligence domains and ensure it is correctly configured
-    $DomainState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
-    Select-Object -Property Identity,SendingInfrastructure
+    try {
+        $DomainState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
+        Select-Object -Property Identity, SendingInfrastructure
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishSimSpoofIntelligence state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     [String[]]$AddDomain = $Settings.AllowedDomains.value | Where-Object { $_ -notin $DomainState.SendingInfrastructure }
 

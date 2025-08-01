@@ -31,9 +31,8 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     #>
 
     param($Tenant, $Settings)
-
+    Write-Host "All params received: $Tenant, $tenant, $($Settings | ConvertTo-Json -Depth 10 -Compress)"
     $PasswordRuleTemplateId = '5cf42378-d67d-4f36-ba46-e8b86229381d'
-
     # Parse and validate banned words from input
     $BannedWordsInput = $Settings.BannedWords
     if ([string]::IsNullOrWhiteSpace($BannedWordsInput)) {

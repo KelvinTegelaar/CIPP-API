@@ -1575,7 +1575,7 @@ function Invoke-NinjaOneTenantSync {
 
                 @{
                     Name = 'CIPP Tenant Dashboard'
-                    Link = "https://$CIPPUrl?tenantFilter=$($Customer.defaultDomainName)"
+                    Link = "https://$CIPPUrl/?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-shield-halved'
                 },
                 @{

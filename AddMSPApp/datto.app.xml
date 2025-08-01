@@ -1,15 +1,15 @@
 <ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.3.0">
   <Name>install.ps1</Name>
-  <UnencryptedContentSize>705</UnencryptedContentSize>
+  <UnencryptedContentSize>693</UnencryptedContentSize>
   <FileName>datto.intunewin</FileName>
   <SetupFile>install.ps1</SetupFile>
   <EncryptionInfo>
-    <EncryptionKey>sL/LP/JZ4F4cBSykm6usgJoV1PMoqd62C6JUwuo2z24=</EncryptionKey>
-    <MacKey>PEpeqeoX7jAWxb0xHGfCkKFxh4/YRfoMTVXrP+uZWzM=</MacKey>
-    <InitializationVector>ulFPA+vYjaxX0pvq0BMAKQ==</InitializationVector>
-    <Mac>28ZFU4AT1OznwF8pfqO8i+WFUNSf9024H4Jw2H7UJWs=</Mac>
+    <EncryptionKey>jobB9Ga7J3CbO6acWJyvBRE56nFXwqGfcnGfZRMsJC4=</EncryptionKey>
+    <MacKey>53SOzs0l6Po2btsGFSMZgkV8vwhH+PxTN8BZDUcfWfg=</MacKey>
+    <InitializationVector>VjM/osrvPElbu79J+mdXuw==</InitializationVector>
+    <Mac>UZZXO53Np/tG6Ms+qvwLcNOeD1GRH6NRPFg/TuMz39M=</Mac>
     <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
-    <FileDigest>YEb+QNQCko/uZyedA+JfcP/RDm+nZOIjFN04CfhwN4c=</FileDigest>
+    <FileDigest>KtAWAl29064LG0eyDinbDs0JUbK+EK7GsJovu8obBM4=</FileDigest>
     <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
   </EncryptionInfo>
 </ApplicationInfo>

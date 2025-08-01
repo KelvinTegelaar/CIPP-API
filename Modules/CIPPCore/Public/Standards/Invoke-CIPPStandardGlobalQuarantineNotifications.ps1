@@ -36,7 +36,16 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' } | Select-Object -ExcludeProperty '*data.type'
+
+    try {
+        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' } |
+        Select-Object -ExcludeProperty '*data.type'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the GlobalQuarantineNotifications state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # This might take the cake on ugly hacky stuff i've done,
     # but i just cant understand why the API returns the values it does and not a timespan like the equivalent powershell command does

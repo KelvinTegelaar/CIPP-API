@@ -34,8 +34,15 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         return $true
     } #we're done.
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDisableLegacyWorkflows state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.StopNew2010Workflows -eq $true) -and
     ($CurrentState.StopNew2013Workflows -eq $true) -and
