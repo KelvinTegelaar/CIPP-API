@@ -15,7 +15,6 @@ function Invoke-listStandardTemplates {
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     # Interact with query parameters or the body of the request.
     $ID = $Request.Query.id
-
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {

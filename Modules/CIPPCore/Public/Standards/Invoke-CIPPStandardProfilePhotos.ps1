@@ -49,8 +49,15 @@ function Invoke-CIPPStandardProfilePhotos {
     $DesiredState = $StateValue -eq 'enabled'
 
     # Get current Graph policy state
-    $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
-    $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
+    try {
+        $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
+        $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ProfilePhotos state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $UsersCanChangePhotos = if ([string]::IsNullOrWhiteSpace($CurrentGraphState.allowedRoles) ) { $true } else { $false }
     $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
 

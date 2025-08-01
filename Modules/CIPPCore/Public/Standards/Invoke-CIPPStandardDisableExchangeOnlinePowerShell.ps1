@@ -44,7 +44,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
     try {
 
         $AdminUsers = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$expand=principal' -tenantid $Tenant).principal.userPrincipalName
-        $UsersWithPowerShell = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-User' -Select 'userPrincipalName, identity, remotePowerShellEnabled' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.userPrincipalName -notin $AdminUsers }
+        $UsersWithPowerShell = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-User' -Select 'userPrincipalName, identity, guid, remotePowerShellEnabled' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.userPrincipalName -notin $AdminUsers }
         $PowerShellEnabledCount = ($UsersWithPowerShell | Measure-Object).Count
         $StateIsCorrect = $PowerShellEnabledCount -eq 0
     } catch {
@@ -61,7 +61,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $_.Identity; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $_.Guid; RemotePowerShellEnabled = $false }
                     }
                 }
             }
