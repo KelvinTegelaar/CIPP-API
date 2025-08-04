@@ -167,8 +167,8 @@ function Test-CIPPAuditLogRules {
 
 
     $Users = $Response | Where-Object { $_.id -eq 'users' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
-    $Groups = $Response | Where-Object { $_.id -eq 'groups' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
-    $Devices = $Response | Where-Object { $_.id -eq 'devices' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
+    $Groups = $Response | Where-Object { $_.id -eq 'groups' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value ?? @()
+    $Devices = $Response | Where-Object { $_.id -eq 'devices' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value ?? @()
     $ServicePrincipals = $Response | Where-Object { $_.id -eq 'servicePrincipals' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
 
     Write-Warning '## Audit Log Configuration ##'
