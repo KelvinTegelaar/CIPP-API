@@ -76,7 +76,8 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     if ($Settings.alert -eq $true) {
 
         if ($MailboxesNoArchive) {
-            Write-StandardsAlert -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -object $MailboxesNoArchive -tenant $Tenant -standardName 'EnableOnlineArchiving' -standardId $Settings.standardId
+            $Object = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, ArchiveGuid
+            Write-StandardsAlert -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -object $Object -tenant $Tenant -standardName 'EnableOnlineArchiving' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes have Online Archiving enabled' -sev Info

@@ -49,8 +49,16 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         return
     }
 
+    try {
+        $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' |
+        Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendReceiveLimitTenant state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
-    $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
     $MaxSendSize = [int64]"$($Settings.SendLimit)MB"
     $MaxReceiveSize = [int64]"$($Settings.ReceiveLimit)MB"
 
