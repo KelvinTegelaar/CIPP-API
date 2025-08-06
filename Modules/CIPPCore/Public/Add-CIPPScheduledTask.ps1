@@ -128,8 +128,7 @@ function Add-CIPPScheduledTask {
                     $epochSeconds = [int64]$DesiredStartTime
                     # Set ScheduledTime to the desired time
                     $task.ScheduledTime = $epochSeconds
-                }
-                catch {
+                } catch {
                     Write-Warning "Failed to parse DesiredStartTime: $DesiredStartTime. Using provided ScheduledTime."
                     # Fall back to default
                     if ([int64]$task.ScheduledTime -eq 0 -or [string]::IsNullOrEmpty($task.ScheduledTime)) {
@@ -214,6 +213,7 @@ function Add-CIPPScheduledTask {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 return "Could not add task: $ErrorMessage"
             }
+            Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Added task $($entity.Name) with ID $($entity.RowKey)" -Sev 'Info' -Tenant $tenantFilter
             return "Successfully added task: $($entity.Name)"
         }
     } catch {
