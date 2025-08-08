@@ -34,7 +34,7 @@ function Get-CIPPTenantAlignment {
             $JSON = $_.JSON -replace '"Action":', '"action":'
             try {
                 $RowKey = $_.RowKey
-                $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             } catch {
                 Write-Warning "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
                 return
@@ -73,7 +73,7 @@ function Get-CIPPTenantAlignment {
                 $FieldValue = [bool]$FieldValue
             } elseif ($FieldValue -like '*{*') {
                 try {
-                    $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction SilentlyContinue
+                    $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction Stop
                 } catch {
                     Write-Warning "$($FieldName) standard report could not be loaded: $($_.Exception.Message)"
                     $FieldValue = [PSCustomObject]@{
