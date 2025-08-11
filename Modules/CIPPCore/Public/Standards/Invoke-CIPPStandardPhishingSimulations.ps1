@@ -32,12 +32,25 @@ function Invoke-CIPPStandardPhishingSimulations {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishingSimulations' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $PolicyName = 'CIPPPhishSim'
 
     # Fetch current Phishing Simulations Policy settings and ensure it is correctly configured
-    $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
-    Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
-    Select-Object -Property Identity,Name,Mode,Enabled
+    try {
+        $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
+        Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
+        Select-Object -Property Identity, Name, Mode, Enabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishingSimulations state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $PolicyIsCorrect = ($PolicyState.Name -eq 'PhishSimOverridePolicy') -and ($PolicyState.Enabled -eq $true)
 

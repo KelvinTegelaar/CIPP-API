@@ -38,9 +38,22 @@ function Invoke-CIPPStandardintuneBrandingProfile {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneBrandingProfile' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneBrandingProfile'
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60' -tenantid $Tenant -AsApp $true
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60' -tenantid $Tenant -AsApp $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneBrandingProfile state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ((-not $Settings.displayName) -or ($CurrentState.displayName -eq $Settings.displayName)) -and
     ((-not $Settings.showLogo) -or ($CurrentState.showLogo -eq $Settings.showLogo)) -and

@@ -34,9 +34,23 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalFileSharing' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalFileSharing'
-    Write-Host "TeamsExternalFileSharing: $($Settings | ConvertTo-Json)"
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' |
+        Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsExternalFileSharing state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive ?? $false ) -and
     ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile ?? $false ) -and

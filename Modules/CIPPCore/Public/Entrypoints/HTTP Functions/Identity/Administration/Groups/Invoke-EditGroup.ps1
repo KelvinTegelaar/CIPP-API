@@ -15,12 +15,12 @@ function Invoke-EditGroup {
     $Results = [System.Collections.Generic.List[string]]@()
     $UserObj = $Request.Body
     $GroupType = $UserObj.groupId.addedFields.groupType ? $UserObj.groupId.addedFields.groupType : $UserObj.groupType
-    $GroupName = $UserObj.groupName ? $UserObj.groupName : $UserObj.groupId.addedFields.groupName
+    # groupName is used in the Add to Group user action, displayName is used in the Edit Group page
+    $GroupName = $UserObj.groupName ?? $UserObj.displayName ?? $UserObj.groupId.addedFields.groupName
     $GroupId = $UserObj.groupId.value ?? $UserObj.groupId
     $OrgGroup = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter
 
     $AddMembers = $UserObj.AddMember
-
 
     $TenantId = $UserObj.tenantId ?? $UserObj.tenantFilter
 
@@ -45,12 +45,15 @@ function Invoke-EditGroup {
                     target  = $GroupId
                 })
         } else {
+            # Use new securityEnabled value if provided, otherwise keep original
+            $SecurityEnabled = $null -ne $UserObj.securityEnabled ? $UserObj.securityEnabled : $OrgGroup.securityEnabled
+
             $PatchObj = @{
                 displayName     = $UserObj.displayName
                 description     = $UserObj.description
                 mailNickname    = $UserObj.mailNickname
                 mailEnabled     = $OrgGroup.mailEnabled
-                securityEnabled = $OrgGroup.securityEnabled
+                securityEnabled = $SecurityEnabled
             }
             Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
             if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
@@ -58,6 +61,13 @@ function Invoke-EditGroup {
                 $null = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)
                 $Results.Add("Success - Edited group properties for $($GroupName) group. It might take some time to reflect the changes.")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Edited group properties for $($GroupName) group" -Sev 'Info'
+
+                # Log securityEnabled changes specifically
+                if ($null -ne $UserObj.securityEnabled -and $UserObj.securityEnabled -ne $OrgGroup.securityEnabled) {
+                    $securityStatusText = "Security capabilities $($UserObj.securityEnabled ? 'enabled' : 'disabled') for group $($GroupName)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message $securityStatusText -Sev 'Info'
+                    $Results.Add($securityStatusText)
+                }
             } catch {
                 $Results.Add("Error - Failed to edit group properties: $($_.Exception.Message)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Failed to patch group: $($_.Exception.Message)" -Sev 'Error'
@@ -69,8 +79,8 @@ function Invoke-EditGroup {
         $AddMembers | ForEach-Object {
             try {
                 # Add to group user action and edit group page sends in different formats, so we need to handle both
-                $Member = $_.value ?? $_
-                $MemberID = $_.addedFields.id
+                $Member = $_.addedFields.userPrincipalName ?? $_.value ?? $_
+                $MemberID = $_.value
                 if (!$MemberID) {
                     $MemberID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$Member" -tenantid $TenantId).id
                 }
@@ -146,8 +156,8 @@ function Invoke-EditGroup {
     try {
         if ($RemoveContact) {
             $RemoveContact | ForEach-Object {
-                $Member = $_.value
-                $MemberID = $_.addedFields.id
+                $Member = $_.addedFields.userPrincipalName ?? $_.value
+                $MemberID = $_.value
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $GroupId; Member = $MemberID ; BypassSecurityGroupManagerCheck = $true }
                     $ExoBulkRequests.Add(@{
@@ -174,8 +184,8 @@ function Invoke-EditGroup {
     try {
         if ($RemoveMembers) {
             $RemoveMembers | ForEach-Object {
-                $Member = $_.value
-                $MemberID = $_.addedFields.id
+                $Member = $_.addedFields.userPrincipalName ?? $_.value
+                $MemberID = $_.value
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $GroupId; Member = $Member ; BypassSecurityGroupManagerCheck = $true }
                     $ExoBulkRequests.Add(@{
@@ -210,8 +220,8 @@ function Invoke-EditGroup {
         if ($AddOwners) {
             if ($GroupType -notin @('Distribution List', 'Mail-Enabled Security')) {
                 $AddOwners | ForEach-Object {
-                    $Owner = $_.value
-                    $ID = $_.addedFields.id
+                    $Owner = $_.addedFields.userPrincipalName ?? $_.value
+                    $ID = $_.value
 
                     $BulkRequests.Add(@{
                             id      = "addOwner-$Owner"
@@ -225,7 +235,7 @@ function Invoke-EditGroup {
                             }
                         })
                     $GraphLogs.Add(@{
-                            message = "Added $Owner to $($GroupName) group"
+                            message = "Added owner $($Owner) to $($GroupName) group"
                             id      = "addOwner-$Owner"
                         })
                 }
@@ -240,14 +250,15 @@ function Invoke-EditGroup {
         if ($RemoveOwners) {
             if ($GroupType -notin @('Distribution List', 'Mail-Enabled Security')) {
                 $RemoveOwners | ForEach-Object {
-                    $ID = $_.addedFields.id
+                    $ID = $_.value
+                    $Owner = $_.addedFields.userPrincipalName ?? $_.value
                     $BulkRequests.Add(@{
                             id     = "removeOwner-$ID"
                             method = 'DELETE'
                             url    = "groups/$($GroupId)/owners/$ID/`$ref"
                         })
                     $GraphLogs.Add(@{
-                            message = "Removed $($_.value) from $($GroupName) group"
+                            message = "Removed owner $($Owner) from $($GroupName) group"
                             id      = "removeOwner-$ID"
                         })
                 }
@@ -262,8 +273,8 @@ function Invoke-EditGroup {
 
         $NewManagedBy = [System.Collections.Generic.List[string]]::new()
         foreach ($CurrentOwner in $CurrentOwners) {
-            if ($RemoveOwners -and $RemoveOwners.addedFields.id -contains $CurrentOwner) {
-                $OwnerToRemove = $RemoveOwners | Where-Object { $_.addedFields.id -eq $CurrentOwner }
+            if ($RemoveOwners -and $RemoveOwners.value -contains $CurrentOwner) {
+                $OwnerToRemove = $RemoveOwners | Where-Object { $_.value -eq $CurrentOwner }
                 $ExoLogs.Add(@{
                         message = "Removed owner $($OwnerToRemove.label) from $($GroupName) group"
                         target  = $GroupId
@@ -274,7 +285,7 @@ function Invoke-EditGroup {
         }
         if ($AddOwners) {
             foreach ($NewOwner in $AddOwners) {
-                $NewManagedBy.Add($NewOwner.addedFields.id)
+                $NewManagedBy.Add($NewOwner.value)
                 $ExoLogs.Add(@{
                         message = "Added owner $($NewOwner.label) to $($GroupName) group"
                         target  = $GroupId
@@ -403,6 +414,28 @@ function Invoke-EditGroup {
             $action = if ($UserObj.sendCopies -eq $true) { 'enable' } else { 'disable' }
             $Results.Add("Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail).")
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to $action Send Copies of team emails and events to team members inboxes for $($UserObj.mail). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        }
+    }
+
+    # Only process hideFromOutlookClients if it was explicitly sent and is a Microsoft 365 group
+    if ($null -ne $UserObj.hideFromOutlookClients -and $GroupType -eq 'Microsoft 365') {
+        try {
+            $Params = @{ Identity = $GroupId; HiddenFromExchangeClientsEnabled = $UserObj.hideFromOutlookClients }
+            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-UnifiedGroup' -cmdParams $Params -useSystemMailbox $true
+
+            if ($UserObj.hideFromOutlookClients -eq $true) {
+                $Results.Add("Successfully hidden group mailbox from Outlook for $($GroupName).")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Successfully hidden group mailbox from Outlook for $($GroupName)." -Sev 'Info'
+            } else {
+                $Results.Add("Successfully made group mailbox visible in Outlook for $($GroupName).")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Successfully made group mailbox visible in Outlook for $($GroupName)." -Sev 'Info'
+            }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Warning "Error in hideFromOutlookClients: $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+            $action = if ($UserObj.hideFromOutlookClients -eq $true) { 'hide' } else { 'show' }
+            $Results.Add("Failed to $action group mailbox in Outlook for $($GroupName).")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "Failed to $action group mailbox in Outlook for $($GroupName). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 

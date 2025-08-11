@@ -30,8 +30,21 @@ function Invoke-CIPPStandardDisableTNEF {
 
     param ($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTNEF'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableTNEF' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RemoteDomain' -cmdParams @{Identity = 'Default' }
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RemoteDomain' -cmdParams @{Identity = 'Default' }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableTNEF state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

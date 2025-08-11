@@ -33,7 +33,14 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableAppConsentRequests'
 
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
+    try {
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableAppConsentRequests state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         try {

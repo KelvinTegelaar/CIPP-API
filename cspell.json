@@ -4,6 +4,7 @@
   "dictionaryDefinitions": [],
   "dictionaries": [],
   "words": [
+    "adminapi",
     "ADMS",
     "AITM",
     "Autotask",
@@ -23,6 +24,7 @@
     "gdap",
     "GDAP",
     "IMAP",
+    "innererror",
     "Intune",
     "locationcipp",
     "MAPI",

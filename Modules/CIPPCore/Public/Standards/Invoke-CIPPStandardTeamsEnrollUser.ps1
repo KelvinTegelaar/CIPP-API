@@ -29,11 +29,25 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEnrollUser' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
 
     # Get EnrollUserOverride value using null-coalescing operator
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $enrollUserOverride = $Settings.EnrollUserOverride.value ?? $Settings.EnrollUserOverride
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -cmdParams @{Identity = 'Global' } | Select-Object EnrollUserOverride
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -cmdParams @{Identity = 'Global' } |
+        Select-Object EnrollUserOverride
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsEnrollUser state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.EnrollUserOverride -eq $enrollUserOverride)
 

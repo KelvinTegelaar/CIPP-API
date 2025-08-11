@@ -36,20 +36,26 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotStatusPage' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     # Get current Autopilot enrollment status page configuration
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     try {
         $CurrentConfig = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'windows10EnrollmentCompletionPageConfiguration' and priority eq 0" -tenantid $Tenant |
         Select-Object -Property id, displayName, priority, showInstallationProgress, blockDeviceSetupRetryByUser, allowDeviceResetOnInstallFailure, allowLogCollectionOnInstallFailure, customErrorMessage, installProgressTimeoutInMinutes, allowDeviceUseOnInstallFailure, trackInstallProgressForAutopilotOnly
 
         $StateIsCorrect = ($CurrentConfig.installProgressTimeoutInMinutes -eq $Settings.TimeOutInMinutes) -and
-            ($CurrentConfig.customErrorMessage -eq $Settings.ErrorMessage) -and
-            ($CurrentConfig.showInstallationProgress -eq $Settings.ShowProgress) -and
-            ($CurrentConfig.allowLogCollectionOnInstallFailure -eq $Settings.EnableLog) -and
-            ($CurrentConfig.trackInstallProgressForAutopilotOnly -eq $Settings.OBEEOnly) -and
-            ($CurrentConfig.blockDeviceSetupRetryByUser -eq !$Settings.BlockDevice) -and
-            ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $Settings.AllowReset) -and
-            ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $Settings.AllowFail)
+        ($CurrentConfig.customErrorMessage -eq $Settings.ErrorMessage) -and
+        ($CurrentConfig.showInstallationProgress -eq $Settings.ShowProgress) -and
+        ($CurrentConfig.allowLogCollectionOnInstallFailure -eq $Settings.EnableLog) -and
+        ($CurrentConfig.trackInstallProgressForAutopilotOnly -eq $Settings.OBEEOnly) -and
+        ($CurrentConfig.blockDeviceSetupRetryByUser -eq !$Settings.BlockDevice) -and
+        ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $Settings.AllowReset) -and
+        ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $Settings.AllowFail)
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $ErrorMessage" -sev Error
@@ -57,7 +63,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
     }
 
     # Remediate if the state is not correct
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             $Parameters = @{
                 TenantFilter     = $Tenant

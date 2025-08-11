@@ -33,12 +33,18 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableExchangeOnlinePowerShell' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableExchangeOnlinePowerShell'
 
     try {
 
         $AdminUsers = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$expand=principal' -tenantid $Tenant).principal.userPrincipalName
-        $UsersWithPowerShell = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-User' -Select 'userPrincipalName, identity, remotePowerShellEnabled' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.userPrincipalName -notin $AdminUsers }
+        $UsersWithPowerShell = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-User' -Select 'userPrincipalName, identity, guid, remotePowerShellEnabled' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.userPrincipalName -notin $AdminUsers }
         $PowerShellEnabledCount = ($UsersWithPowerShell | Measure-Object).Count
         $StateIsCorrect = $PowerShellEnabledCount -eq 0
     } catch {
@@ -55,7 +61,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $_.Identity; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $_.Guid; RemotePowerShellEnabled = $false }
                     }
                 }
             }

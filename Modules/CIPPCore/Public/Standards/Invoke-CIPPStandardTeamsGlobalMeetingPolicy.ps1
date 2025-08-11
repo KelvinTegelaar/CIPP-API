@@ -34,7 +34,22 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsGlobalMeetingPolicy'
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsGlobalMeetingPolicy' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } |
+        Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsGlobalMeetingPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $MeetingChatEnabledType = $Settings.MeetingChatEnabledType.value ?? $Settings.MeetingChatEnabledType
     $DesignatedPresenterRoleMode = $Settings.DesignatedPresenterRoleMode.value ?? $Settings.DesignatedPresenterRoleMode

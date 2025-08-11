@@ -30,22 +30,56 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
+    $Table = Get-CippTable -tablename 'templates'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    if ($TestResult -eq $false) {
+        #writing to each item that the license is not present.
+        $settings.TemplateList | ForEach-Object {
+            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($_.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        }
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
-    If ($Settings.remediate -eq $true) {
+    try {
+        $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ConditionalAccessTemplate state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
+    if ($Settings.remediate -eq $true) {
         foreach ($Setting in $Settings) {
             try {
-
-                $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Setting.TemplateList.value)'"
                 $JSONObj = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
-                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers
+                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers -DisableSD $Setting.DisableSD
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
             }
         }
-
-
+    }
+    if ($Settings.report -eq $true -or $Settings.remediate -eq $true) {
+        $Filter = "PartitionKey eq 'CATemplate'"
+        $Policies = (Get-CippAzDataTableEntity @Table -Filter $Filter | Where-Object RowKey -In $Settings.TemplateList.value).JSON | ConvertFrom-Json -Depth 10
+        #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
+        $MissingPolicies = foreach ($Setting in $Settings.TemplateList) {
+            $policy = $Policies | Where-Object { $_.displayName -eq $Setting.label }
+            $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Setting.label
+            if (!$CheckExististing) {
+                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Setting.label) is missing from this tenant." -Tenant $Tenant
+            } else {
+                $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject (New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing)
+                $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CompareObj
+                if (!$Compare) {
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $true -Tenant $Tenant
+                } else {
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $Compare -Tenant $Tenant
+                }
+            }
+        }
     }
 }

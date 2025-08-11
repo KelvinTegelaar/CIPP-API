@@ -27,9 +27,22 @@ function Invoke-CIPPStandardintuneRequireMFA {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneRequireMFA' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
 
-    $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneRequireMFA state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {

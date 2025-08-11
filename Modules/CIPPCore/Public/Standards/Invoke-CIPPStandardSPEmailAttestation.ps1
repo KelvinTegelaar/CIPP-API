@@ -32,8 +32,22 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPEmailAttestation' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+        Select-Object -Property _ObjectIdentity_, TenantFilter, EmailAttestationReAuthDays, EmailAttestationRequired
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPEmailAttestation state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.EmailAttestationReAuthDays -eq [int]$Settings.Days) -and
     ($CurrentState.EmailAttestationRequired -eq $true)
@@ -48,7 +62,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
             }
 
             try {
-                $Response = Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $Response = $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 if ($Response.ErrorInfo.ErrorMessage) {
                     $ErrorMessage = Get-NormalizedError -Message $Response.ErrorInfo.ErrorMessage
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set re-authentication with verification code restriction. Error: $ErrorMessage" -Sev Error

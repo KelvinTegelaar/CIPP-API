@@ -1,12 +1,18 @@
-function Invoke-CIPPStandardExConnector {
+function Invoke-CIPPStandardExchangeConnectorTemplate {
     <#
     .FUNCTIONALITY
     Internal
     #>
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ExConnector' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExConnector'
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         foreach ($Template in $Settings.TemplateList) {
             try {
@@ -14,7 +20,7 @@ function Invoke-CIPPStandardExConnector {
                 $Filter = "PartitionKey eq 'ExConnectorTemplate' and RowKey eq '$($Template.value)'"
                 $connectorType = (Get-AzDataTableEntity @Table -Filter $Filter).direction
                 $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
-                if($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue "no comment" -NotePropertyName comment -Force }
+                if ($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue 'no comment' -NotePropertyName comment -Force }
                 $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet "Get-$($ConnectorType)connector" | Where-Object -Property Identity -EQ $RequestParams.name
                 if ($Existing) {
                     $RequestParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force

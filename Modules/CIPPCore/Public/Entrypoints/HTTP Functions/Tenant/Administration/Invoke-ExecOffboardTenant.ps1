@@ -62,7 +62,7 @@ Function Invoke-ExecOffboardTenant {
             }
 
             if ($request.body.RemoveCSPnotificationContacts -eq $true) {
-                # Remove all email adresses that match the CSP tenants domains from the contact properties in /organization
+                # Remove all email addresses that match the CSP tenants domains from the contact properties in /organization
                 try {
                     try {
                         $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $env:TenantID -NoAuthCheck:$true).id

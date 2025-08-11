@@ -31,6 +31,12 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
 
     param ($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'RestrictThirdPartyStorageServices'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $AppId = 'c1f33bc0-bdb4-4248-ba9b-096807ddb43e'
     $Uri = "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$AppId'"
@@ -40,7 +46,7 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get current state for Microsoft 365 on the web service principal. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Return
+        return
     }
 
     if ($Settings.remediate -eq $true) {
@@ -59,7 +65,7 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
                 # Normal /servicePrincipal/AppId does not find the service principal, so gotta use the Upsert method. Also handles if the service principal does not exist nicely.
                 # https://learn.microsoft.com/en-us/graph/api/serviceprincipal-upsert?view=graph-rest-beta&tabs=http
                 $UpdateUri = "https://graph.microsoft.com/beta/servicePrincipals(appId='$AppId')"
-                $null = New-GraphPostRequest -Uri $UpdateUri -Body $DisableBody -TenantID $Tenant -Type PATCH -AddedHeaders @{'Prefer' = 'create-if-missing'}
+                $null = New-GraphPostRequest -Uri $UpdateUri -Body $DisableBody -TenantID $Tenant -Type PATCH -AddedHeaders @{'Prefer' = 'create-if-missing' }
 
                 # Refresh the current state after disabling
                 $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant | Select-Object displayName, accountEnabled, appId

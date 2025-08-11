@@ -29,12 +29,25 @@ function Invoke-CIPPStandardBookings {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'Bookings' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Bookings'
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 
-    $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
+    try {
+        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Bookings state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 

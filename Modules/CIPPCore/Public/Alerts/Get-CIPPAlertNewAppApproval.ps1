@@ -15,6 +15,7 @@ function Get-CIPPAlertNewAppApproval {
     try {
         $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
         if ($Approvals.count -gt 0) {
+            $TenantGUID = (Get-Tenants -TenantFilter $TenantFilter -SkipDomains).customerId
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($App in $Approvals) {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
@@ -29,13 +30,17 @@ function Get-CIPPAlertNewAppApproval {
                     }
 
                     $Message = [PSCustomObject]@{
+                        RequestId   = $_.id
                         AppName     = $App.appDisplayName
                         RequestUser = $_.createdBy.user.userPrincipalName
                         Reason      = $_.reason
+                        RequestDate = $_.createdDateTime
+                        Status      = $_.status # Will allways be InProgress as we filter to only get these but this will reduce confusion when an alert is generated
                         AppId       = $App.appId
                         Scopes      = ($App.pendingScopes.displayName -join ', ')
                         ConsentURL  = $consentUrl
                         Tenant      = $TenantFilter
+                        TenantId    = $TenantGUID
                     }
                     $AlertData.Add($Message)
                 }
