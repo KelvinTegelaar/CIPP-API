@@ -12,8 +12,13 @@ function Get-CIPPAlertNoCAConfig {
     )
 
     try {
-        $CAAvailable = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter -ErrorAction Stop).serviceplans
-        if ('AAD_PREMIUM' -in $CAAvailable.servicePlanName) {
+        # Only consider CA available when a SKU that grants it has enabled seats (> 0)
+        $SubscribedSkus = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus?`$select=prepaidUnits,servicePlans" -tenantid $TenantFilter -ErrorAction Stop
+        $CAAvailable = foreach ($sku in $SubscribedSkus) {
+            if ([int]$sku.prepaidUnits.enabled -gt 0) { $sku.servicePlans }
+        }
+
+        if (('AAD_PREMIUM' -in $CAAvailable.servicePlanName) -or ('AAD_PREMIUM_P2' -in $CAAvailable.servicePlanName)) {
             $CAPolicies = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $TenantFilter)
             if (!$CAPolicies.id) {
                 $AlertData = 'Conditional Access is available, but no policies could be found.'
