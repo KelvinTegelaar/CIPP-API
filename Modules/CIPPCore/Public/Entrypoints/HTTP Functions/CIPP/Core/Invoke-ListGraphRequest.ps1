@@ -120,15 +120,13 @@ function Invoke-ListGraphRequest {
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
-        if ($Results | Where-Object { $_.nextLink }) {
-            Write-Host "NextLink: $($Results.nextLink | Where-Object { $_ } | Select-Object -Last 1)"
-            if ($Request.Query.TenantFilter -ne 'AllTenants') {
+        if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
+            if (![string]::IsNullOrEmpty($Results.nextLink) -and $Request.Query.TenantFilter -ne 'AllTenants') {
+                Write-Host "NextLink: $($Results.nextLink | Where-Object { $_ } | Select-Object -Last 1)"
                 $Metadata['nextLink'] = $Results.nextLink | Where-Object { $_ } | Select-Object -Last 1
             }
             # Remove nextLink trailing object only if it’s the last item
-            if ($Results[-1].PSObject.Properties.Name -contains 'nextLink') {
-                $Results = $Results | Select-Object -First ($Results.Count - 1)
-            }
+            $Results = $Results | Where-Object { $_.PSObject.Properties.Name -notcontains 'nextLink' }
         }
         if ($Request.Query.ListProperties) {
             $Columns = ($Results | Select-Object -First 1).PSObject.Properties.Name
