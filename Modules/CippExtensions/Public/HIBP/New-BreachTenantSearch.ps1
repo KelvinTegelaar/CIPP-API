@@ -10,8 +10,8 @@ function New-BreachTenantSearch {
 
     $usersResults = foreach ($domain in $LatestBreach) {
         $ExistingBreaches = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TenantFilter'"
-        if ($null -eq $domain.result) {
-            Write-Host "No breaches found for domain $($domain.domain)"
+        if ($null -eq $domain) {
+            Write-Host "No breaches found for domain $($domain.clientDomain)"
             continue
         }
         $SumOfBreaches = ($LatestBreach | Measure-Object -Sum -Property found).sum
@@ -21,9 +21,9 @@ function New-BreachTenantSearch {
         }
 
         @{
-            RowKey       = $domain.domain
+            RowKey       = $domain.clientDomain
             PartitionKey = $TenantFilter
-            breaches     = "$($LatestBreach.Result | ConvertTo-Json -Depth 10 -Compress)"
+            breaches     = "$($LatestBreach | ConvertTo-Json -Depth 10 -Compress)"
             sum          = $SumOfBreaches
         }
     }
@@ -32,7 +32,7 @@ function New-BreachTenantSearch {
     if ($usersResults) {
         try {
             $null = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
-            return $LatestBreach.Result
+            return $LatestBreach
         } catch {
             Write-Error "Failed to add breaches to table: $($_.Exception.Message)"
             return $null
