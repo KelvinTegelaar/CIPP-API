@@ -164,12 +164,11 @@ function Test-CIPPAuditLogRules {
 
     # partner users
     $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
-
-
-    $Users = $Response | Where-Object { $_.id -eq 'users' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
-    $Groups = $Response | Where-Object { $_.id -eq 'groups' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value ?? @()
-    $Devices = $Response | Where-Object { $_.id -eq 'devices' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value ?? @()
-    $ServicePrincipals = $Response | Where-Object { $_.id -eq 'servicePrincipals' } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty value
+    
+    $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value
+    $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
+    $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
+    $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
 
     Write-Warning '## Audit Log Configuration ##'
     Write-Information ($Configuration | ConvertTo-Json -Depth 10)
