@@ -20,8 +20,8 @@ function Write-AlertTrace {
             $TableRow = @{
                 'PartitionKey' = $PartitionKey
                 'RowKey'       = "$($tenantFilter)-$($cmdletName)"
-                'CmdletName'   = $cmdletName
-                'Tenant'       = $tenantFilter
+                'CmdletName'   = "$cmdletName"
+                'Tenant'       = "$tenantFilter"
                 'LogData'      = [string]$LogData
             }
             $Table.Entity = $TableRow
@@ -33,8 +33,8 @@ function Write-AlertTrace {
         $TableRow = @{
             'PartitionKey' = $PartitionKey
             'RowKey'       = "$($tenantFilter)-$($cmdletName)"
-            'CmdletName'   = $cmdletName
-            'Tenant'       = $tenantFilter
+            'CmdletName'   = "$cmdletName"
+            'Tenant'       = "$tenantFilter"
             'LogData'      = [string]$LogData
         }
         $Table.Entity = $TableRow
