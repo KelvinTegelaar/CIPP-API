@@ -33,6 +33,10 @@ function Invoke-ListGraphRequest {
         $Parameters.'$expand' = $Request.Query.'$expand'
     }
 
+    if ($Request.Query.expand) {
+        $Parameters.'expand' = $Request.Query.expand
+    }
+
     if ($Request.Query.'$top') {
         $Parameters.'$top' = $Request.Query.'$top'
     }
