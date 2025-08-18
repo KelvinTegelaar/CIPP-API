@@ -23,7 +23,7 @@ function Invoke-ExecGitHubAction {
     $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction SilentlyContinue).GitHub
 
     if (!$Configuration.Enabled) {
         $Response = Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Parameters | ConvertTo-Json -Depth 10) -ContentType 'application/json'

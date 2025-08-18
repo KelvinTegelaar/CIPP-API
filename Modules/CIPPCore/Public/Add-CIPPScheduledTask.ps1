@@ -20,6 +20,9 @@ function Add-CIPPScheduledTask {
         [string]$RowKey,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [string]$DesiredStartTime = $null,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
         [Parameter(Mandatory = $false, ParameterSetName = 'RunNow')]
         $Headers
     )
@@ -119,8 +122,24 @@ function Add-CIPPScheduledTask {
                 $task.Recurrence.value
             }
 
-            if ([int64]$task.ScheduledTime -eq 0 -or [string]::IsNullOrEmpty($task.ScheduledTime)) {
-                $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+            if ($DesiredStartTime) {
+                try {
+                    # Parse the epoch time
+                    $epochSeconds = [int64]$DesiredStartTime
+                    # Set ScheduledTime to the desired time
+                    $task.ScheduledTime = $epochSeconds
+                } catch {
+                    Write-Warning "Failed to parse DesiredStartTime: $DesiredStartTime. Using provided ScheduledTime."
+                    # Fall back to default
+                    if ([int64]$task.ScheduledTime -eq 0 -or [string]::IsNullOrEmpty($task.ScheduledTime)) {
+                        $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                    }
+                }
+            } else {
+                # No DesiredStartTime - use current behavior (immediate execution)
+                if ([int64]$task.ScheduledTime -eq 0 -or [string]::IsNullOrEmpty($task.ScheduledTime)) {
+                    $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                }
             }
             $excludedTenants = if ($task.excludedTenants.value) {
                 $task.excludedTenants.value -join ','
@@ -166,6 +185,10 @@ function Add-CIPPScheduledTask {
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'
             }
+            # Always store DesiredStartTime if provided
+            if ($DesiredStartTime) {
+                $entity['DesiredStartTime'] = [string]$DesiredStartTime
+            }
 
             # Store the original tenant filter for group expansion during execution
             if ($originalTenantFilter -is [PSCustomObject] -and $originalTenantFilter.type -eq 'Group') {
@@ -190,6 +213,7 @@ function Add-CIPPScheduledTask {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 return "Could not add task: $ErrorMessage"
             }
+            Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Added task $($entity.Name) with ID $($entity.RowKey)" -Sev 'Info' -Tenant $tenantFilter
             return "Successfully added task: $($entity.Name)"
         }
     } catch {
