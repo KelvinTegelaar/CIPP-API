@@ -30,9 +30,9 @@ function New-CIPPUserTask {
                         value = 'Set-CIPPUserLicense'
                     }
                     Parameters    = [pscustomobject]@{
-                        UserId      = $UserObj.id
+                        UserId      = $CreationResults.Username
                         APIName     = 'Sherweb License Assignment'
-                        AddLicenses = $licenses
+                        AddLicenses = $UserObj.licenses.value
                     }
                     ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.
                     PostExecution = @{
