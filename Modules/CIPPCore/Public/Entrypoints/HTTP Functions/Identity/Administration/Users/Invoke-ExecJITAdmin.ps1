@@ -134,19 +134,21 @@ function Invoke-ExecJITAdmin {
         if ($Request.Body.useraction -eq 'Create') {
             Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.username)"
+            $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
+
             $JITAdmin = @{
                 User         = @{
                     'FirstName'         = $Request.Body.FirstName
                     'LastName'          = $Request.Body.LastName
-                    'UserPrincipalName' = "$($Request.Body.Username)@$($Request.Body.Domain.value)"
+                    'UserPrincipalName' = "$($Request.Body.Username)@$($Domain)"
                 }
                 Expiration   = $Expiration
                 Action       = 'Create'
                 TenantFilter = $TenantFilter
             }
             $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
-            $Username = "$($Request.Body.Username)@$($Request.Body.Domain.value)"
-            $Results.Add("Created User: $($Request.Body.Username)@$($Request.Body.Domain.value)")
+            $Username = "$($Request.Body.Username)@$($Domain)"
+            $Results.Add("Created User: $Username")
             if (!$Request.Body.UseTAP) {
                 $Results.Add("Password: $($CreateResult.password)")
             }

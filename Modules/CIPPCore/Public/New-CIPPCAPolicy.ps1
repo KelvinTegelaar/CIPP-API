@@ -153,7 +153,7 @@ function New-CIPPCAPolicy {
     }
 
     foreach ($location in $JSONObj.conditions.locations.includeLocations) {
-        Write-Information "Replacing $location"
+        Write-Information "Replacing named location - $location"
         $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
         Write-Information "Found $lookup"
         if (!$lookup) { continue }
@@ -198,6 +198,11 @@ function New-CIPPCAPolicy {
                     }
                 }
 
+                if ($JSONObj.conditions.users.includeUsers.Count -eq 0) {
+                    Write-Information 'No users matched in this policy, setting to none'
+                    $JSONObj.conditions.users.includeUsers = 'none'
+                }
+
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONObj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
@@ -229,14 +234,19 @@ function New-CIPPCAPolicy {
     if ($DisableSD -eq $true) {
         #Send request to disable security defaults.
         $body = '{ "isEnabled": false }'
-        $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -ContentType 'application/json'
-        Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
-        Start-Sleep 3
+        try {
+            $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -asApp $true -ContentType 'application/json'
+            Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
+            Start-Sleep 3
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Failed to disable security defaults for tenant $($TenantFilter): $($ErrorMessage.NormalizedError)"
+        }
     }
     $RawJSON = ConvertTo-Json -InputObject $JSONObj -Depth 10 -Compress
     Write-Information $RawJSON
     try {
-        Write-Information 'Checking'
+        Write-Information 'Checking for existing policies'
         $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -asApp $true | Where-Object -Property displayName -EQ $displayname
         if ($CheckExististing) {
             if ($Overwrite -ne $true) {
@@ -249,7 +259,7 @@ function New-CIPPCAPolicy {
                 return "Updated policy $displayname for $tenantfilter"
             }
         } else {
-            Write-Information 'Creating'
+            Write-Information 'Creating new policy'
             if ($JSONobj.GrantControls.authenticationStrength.policyType -or $JSONObj.$jsonobj.LocationInfo) {
                 Start-Sleep 3
             }
@@ -260,6 +270,10 @@ function New-CIPPCAPolicy {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName): $($ErrorMessage.NormalizedError) " -sev 'Error' -LogData $ErrorMessage
+
+        Write-Warning "Failed to create or update conditional access rule $($JSONObj.displayName): $($ErrorMessage.NormalizedError)"
+        Write-Information $_.InvocationInfo.PositionMessage
+        Write-Information ($JSONObj | ConvertTo-Json -Depth 10)
         throw "Failed to create or update conditional access rule $($JSONObj.displayName): $($ErrorMessage.NormalizedError)"
     }
 }
