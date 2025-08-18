@@ -31,7 +31,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AtpPolicyForO365' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AtpPolicyForO365' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AtpPolicyForO365'
 
     if ($TestResult -eq $false) {
@@ -40,7 +40,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     } #we're done.
     try {
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+            Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
     } catch {
         $CurrentState = @{
             License = 'This tenant might not be licensed for this feature'

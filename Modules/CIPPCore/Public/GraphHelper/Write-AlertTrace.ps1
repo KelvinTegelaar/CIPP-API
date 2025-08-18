@@ -3,7 +3,7 @@ function Write-AlertTrace {
     .FUNCTIONALITY
     Internal function. Pleases most of Write-AlertTrace for alerting purposes
     #>
-    Param(
+    param(
         $cmdletName,
         $data,
         $tenantFilter
@@ -20,6 +20,8 @@ function Write-AlertTrace {
             $TableRow = @{
                 'PartitionKey' = $PartitionKey
                 'RowKey'       = "$($tenantFilter)-$($cmdletName)"
+                'CmdletName'   = "$cmdletName"
+                'Tenant'       = "$tenantFilter"
                 'LogData'      = [string]$LogData
             }
             $Table.Entity = $TableRow
@@ -31,6 +33,8 @@ function Write-AlertTrace {
         $TableRow = @{
             'PartitionKey' = $PartitionKey
             'RowKey'       = "$($tenantFilter)-$($cmdletName)"
+            'CmdletName'   = "$cmdletName"
+            'Tenant'       = "$tenantFilter"
             'LogData'      = [string]$LogData
         }
         $Table.Entity = $TableRow

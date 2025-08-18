@@ -30,7 +30,7 @@ function Test-CIPPGDAPRelationships {
                             Issue        = 'The relationship has global administrator access. Auto-Extend is not available.'
                             Tenant       = [string]$Group.customer.displayName
                             Relationship = [string]$Group.displayName
-                            Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#autoextend'
+                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
                         }) | Out-Null
                 }
