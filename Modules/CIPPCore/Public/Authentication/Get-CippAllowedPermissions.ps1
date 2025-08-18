@@ -70,7 +70,6 @@ function Get-CippAllowedPermissions {
 
     # For admin and superadmin: Compute permissions from base role include/exclude rules
     if ($PrimaryRole -in @('admin', 'superadmin')) {
-        Write-Information "Computing permissions for $PrimaryRole using base role rules"
 
         if ($BaseRole) {
             # Start with all permissions and apply include/exclude rules
@@ -143,7 +142,19 @@ function Get-CippAllowedPermissions {
                 }
 
                 # Restrict base permissions to only those allowed by custom roles
-                $RestrictedPermissions = $BasePermissions | Where-Object { $CustomRolePermissions -contains $_ }
+                # Include Read permissions when ReadWrite permissions are present
+                $RestrictedPermissions = $BasePermissions | Where-Object {
+                    $Permission = $_
+                    if ($CustomRolePermissions -contains $Permission) {
+                        $true
+                    } elseif ($Permission -match 'Read$') {
+                        # Check if there's a corresponding ReadWrite permission
+                        $ReadWritePermission = $Permission -replace 'Read', 'ReadWrite'
+                        $CustomRolePermissions -contains $ReadWritePermission
+                    } else {
+                        $false
+                    }
+                }
                 foreach ($Permission in $RestrictedPermissions) {
                     if ($null -ne $Permission -and $Permission -is [string]) {
                         $AllowedPermissions.Add($Permission)
@@ -161,8 +172,6 @@ function Get-CippAllowedPermissions {
     }
     # Handle users with only custom roles (no base role)
     elseif ($CustomRoles.Count -gt 0) {
-        Write-Information 'Computing permissions for custom roles only'
-
         foreach ($CustomRole in $CustomRoles) {
             try {
                 $RolePermissions = Get-CIPPRolePermissions -RoleName $CustomRole

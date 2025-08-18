@@ -47,7 +47,17 @@ function Invoke-CIPPStandardsRun {
         return
     } else {
         Write-Information 'Classic Standards Run'
-        $AllTasks = Get-CIPPStandards
+
+        $GetStandardParams = @{
+            TenantFilter = $TenantFilter
+            runManually  = $runManually
+        }
+
+        if ($TemplateID) {
+            $GetStandardParams['TemplateId'] = $TemplateID
+        }
+
+        $AllTasks = Get-CIPPStandards @GetStandardParams
 
         if ($Force.IsPresent) {
             Write-Information 'Clearing Rerun Cache'
