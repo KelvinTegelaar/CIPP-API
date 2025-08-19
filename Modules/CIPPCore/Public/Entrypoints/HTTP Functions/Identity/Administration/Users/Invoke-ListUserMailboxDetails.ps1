@@ -270,6 +270,7 @@ function Invoke-ListUserMailboxDetails {
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
+        RetentionPolicy          = $MailboxDetailedRequest.RetentionPolicy
         MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
             @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
