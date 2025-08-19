@@ -3,7 +3,7 @@ using namespace System.Net
 function Invoke-ExecOnboardTenant {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Administration.ReadWrite
     #>
