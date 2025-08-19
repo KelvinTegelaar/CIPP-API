@@ -34,7 +34,7 @@ function Get-CIPPTenantAlignment {
             $JSON = $_.JSON -replace '"Action":', '"action":'
             try {
                 $RowKey = $_.RowKey
-                $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             } catch {
                 Write-Warning "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
                 return
@@ -52,7 +52,7 @@ function Get-CIPPTenantAlignment {
 
         # Get standards comparison data
         $StandardsTable = Get-CIPPTable -TableName 'CippStandardsReports'
-        $AllStandards = Get-CIPPAzDataTableEntity @StandardsTable -Filter "PartitionKey ne 'StandardReport'"
+        $AllStandards = Get-CIPPAzDataTableEntity @StandardsTable -Filter "PartitionKey ne 'StandardReport' and PartitionKey ne ''"
 
         # Filter by tenant if specified
         $Standards = if ($TenantFilter) {
@@ -71,8 +71,16 @@ function Get-CIPPTenantAlignment {
             # Process field value
             if ($FieldValue -is [System.Boolean]) {
                 $FieldValue = [bool]$FieldValue
-            } elseif ($FieldValue -like '*{*') {
-                $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction SilentlyContinue
+            } elseif (Test-Json -Json $FieldValue -ErrorAction SilentlyContinue) {
+                try {
+                    $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction Stop
+                } catch {
+                    Write-Warning "$($FieldName) standard report could not be loaded: $($_.Exception.Message)"
+                    $FieldValue = [PSCustomObject]@{
+                        Error         = "Invalid JSON format: $($_.Exception.Message)"
+                        OriginalValue = $FieldValue
+                    }
+                }
             } else {
                 $FieldValue = [string]$FieldValue
             }
