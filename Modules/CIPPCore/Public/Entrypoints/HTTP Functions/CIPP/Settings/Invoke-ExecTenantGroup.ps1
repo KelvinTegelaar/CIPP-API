@@ -43,7 +43,7 @@ function Invoke-ExecTenantGroup {
                 Add-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
             }
 
-            $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "GroupId eq '$groupId'"
+            $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$groupId'"
 
             $Adds = [System.Collections.Generic.List[string]]::new()
             $Removes = [System.Collections.Generic.List[string]]::new()
