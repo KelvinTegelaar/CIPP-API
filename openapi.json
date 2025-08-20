@@ -9655,6 +9655,578 @@
       }
     }
   },
+  "/ExecManageRetentionPolicies": {
+    "get": {
+      "description": "List retention policies or get a specific retention policy by name",
+      "summary": "Get Retention Policies",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "name": "name",
+          "in": "query",
+          "description": "Name of specific retention policy to retrieve"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Name": {
+                      "type": "string"
+                    },
+                    "RetentionPolicyTagLinks": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully retrieved retention policies"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "post": {
+      "description": "Create, modify, or delete retention policies",
+      "summary": "Manage Retention Policies",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "CreatePolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Name of the retention policy"
+                      },
+                      "RetentionPolicyTagLinks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to link to this policy"
+                      }
+                    },
+                    "required": ["Name"]
+                  },
+                  "description": "Array of retention policies to create"
+                },
+                "ModifyPolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Identity": {
+                        "type": "string",
+                        "description": "Identity of the retention policy to modify"
+                      },
+                      "Name": {
+                        "type": "string",
+                        "description": "New name for the retention policy"
+                      },
+                      "RetentionPolicyTagLinks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to link to this policy"
+                      },
+                      "AddTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to add to the policy"
+                      },
+                      "RemoveTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to remove from the policy"
+                      }
+                    },
+                    "required": ["Identity"]
+                  },
+                  "description": "Array of retention policies to modify"
+                },
+                "DeletePolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of retention policy identities to delete"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Successfully processed retention policy operations"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/ExecManageRetentionTags": {
+    "get": {
+      "description": "List retention tags or get a specific retention tag by name",
+      "summary": "Get Retention Tags",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "name": "name",
+          "in": "query",
+          "description": "Name of specific retention tag to retrieve"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Name": {
+                      "type": "string"
+                    },
+                    "Type": {
+                      "type": "string"
+                    },
+                    "RetentionAction": {
+                      "type": "string"
+                    },
+                    "AgeLimitForRetention": {
+                      "type": "integer"
+                    },
+                    "RetentionEnabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully retrieved retention tags"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "post": {
+      "description": "Create, modify, or delete retention tags",
+      "summary": "Manage Retention Tags",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "CreateTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Name of the retention tag (max 64 characters)"
+                      },
+                      "Type": {
+                        "type": "string",
+                        "enum": ["All", "Inbox", "SentItems", "DeletedItems", "Drafts", "Outbox", "JunkEmail", "Journal", "SyncIssues", "ConversationHistory", "Personal", "RecoverableItems", "NonIpmRoot", "LegacyArchiveJournals", "Clutter", "Calendar", "Notes", "Tasks", "Contacts", "RssSubscriptions", "ManagedCustomFolder"],
+                        "description": "Type of the retention tag"
+                      },
+                      "RetentionAction": {
+                        "type": "string",
+                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "description": "Action to take when retention period expires"
+                      },
+                      "AgeLimitForRetention": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 24855,
+                        "description": "Age limit for retention in days"
+                      },
+                      "RetentionEnabled": {
+                        "type": "boolean",
+                        "description": "Whether retention is enabled for this tag"
+                      },
+                      "Comment": {
+                        "type": "string",
+                        "description": "Administrative comment for the tag"
+                      },
+                      "LocalizedComment": {
+                        "type": "string",
+                        "description": "Localized comment for the tag"
+                      },
+                      "LocalizedRetentionPolicyTagName": {
+                        "type": "string",
+                        "description": "Localized name for the retention policy tag"
+                      }
+                    },
+                    "required": ["Name", "Type"]
+                  },
+                  "description": "Array of retention tags to create"
+                },
+                "ModifyTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Identity": {
+                        "type": "string",
+                        "description": "Identity of the retention tag to modify"
+                      },
+                      "Name": {
+                        "type": "string",
+                        "description": "New name for the retention tag"
+                      },
+                      "RetentionAction": {
+                        "type": "string",
+                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "description": "Action to take when retention period expires"
+                      },
+                      "AgeLimitForRetention": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 24855,
+                        "description": "Age limit for retention in days"
+                      },
+                      "RetentionEnabled": {
+                        "type": "boolean",
+                        "description": "Whether retention is enabled for this tag"
+                      },
+                      "Comment": {
+                        "type": "string",
+                        "description": "Administrative comment for the tag"
+                      },
+                      "LocalizedComment": {
+                        "type": "string",
+                        "description": "Localized comment for the tag"
+                      },
+                      "LocalizedRetentionPolicyTagName": {
+                        "type": "string",
+                        "description": "Localized name for the retention policy tag"
+                      }
+                    },
+                    "required": ["Identity"]
+                  },
+                  "description": "Array of retention tags to modify"
+                },
+                "DeleteTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of retention tag identities to delete"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Successfully processed retention tag operations"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/ExecSetMailboxRetentionPolicies": {
+    "post": {
+      "description": "Apply a retention policy to one or more mailboxes",
+      "summary": "Set Mailbox Retention Policies",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "PolicyName": {
+                  "type": "string",
+                  "description": "Name of the retention policy to apply"
+                },
+                "Mailboxes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of mailbox identities (email addresses or names) to apply the policy to"
+                }
+              },
+              "required": ["PolicyName", "Mailboxes"]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of result messages for each mailbox operation"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully processed mailbox retention policy assignments"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "openapi": "3.1.0",
   "servers": [
     {
