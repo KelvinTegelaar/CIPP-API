@@ -22,8 +22,9 @@ function Send-CIPPAlert {
         Write-Information 'Trying to send email'
         try {
             if ($Config.email -like '*@*' -or $altEmail -like '*@*') {
-                $Recipients = if ($AltEmail) { $AltEmail }
-                else {
+                $Recipients = if ($AltEmail) {
+                    [pscustomobject]@{EmailAddress = @{Address = $AltEmail } }
+                } else {
                     $Config.email.split($(if ($Config.email -like '*,*') { ',' } else { ';' })).trim() | ForEach-Object { if ($_ -like '*@*') { [pscustomobject]@{EmailAddress = @{Address = $_ } } } }
                 }
                 $PowerShellBody = [PSCustomObject]@{

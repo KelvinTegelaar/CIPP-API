@@ -32,7 +32,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
     $Table = Get-CippTable -tablename 'templates'
     $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
-    $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2')
+    $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
         $settings.TemplateList | ForEach-Object {
@@ -59,6 +59,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 if ($Policy.conditions.userRiskLevels.count -gt 0 -or $Policy.conditions.signInRiskLevels.count -gt 0) {
                     if (!$TestP2) {
                         Write-Information "Skipping policy $($Policy.displayName) as it requires AAD Premium P2 license."
+                        Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Policy.displayName) requires AAD Premium P2 license." -Tenant $Tenant
                         continue
                     }
                 }
