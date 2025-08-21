@@ -27,7 +27,7 @@ function Invoke-ListCippQueue {
     $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue -Filter $Filter | Sort-Object -Property Timestamp -Descending
 
     $QueueData = foreach ($Queue in $CippQueueData) {
-        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object @{n = 'Timestamp'; exp = { $_.Timestamp.DateTime.ToUniversalTime() } }, Name, Status
+        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object @{n = 'Timestamp'; exp = { $_.Timestamp } }, Name, Status
         $TaskStatus = @{}
         $Tasks | Group-Object -Property Status | ForEach-Object {
             $TaskStatus.$($_.Name) = $_.Count
@@ -65,7 +65,7 @@ function Invoke-ListCippQueue {
             PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
             Tasks           = @($Tasks)
             Status          = $Queue.Status
-            Timestamp       = $Queue.Timestamp.DateTime.ToUniversalTime()
+            Timestamp       = $Queue.Timestamp
         }
 
     }
