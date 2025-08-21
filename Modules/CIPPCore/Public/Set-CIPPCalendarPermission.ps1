@@ -6,15 +6,15 @@ function Set-CIPPCalendarPermission {
         $RemoveAccess,
         $TenantFilter,
         $UserID,
-        $folderName,
+        $FolderName,
         $UserToGetPermissions,
         $LoggingName,
         $Permissions,
-        [bool]$CanViewPrivateItems
+        [bool]$CanViewPrivateItems,
+        [bool]$SendNotificationToUser = $false
     )
 
     try {
-
         # If a pretty logging name is not provided, use the ID instead
         if ([string]::IsNullOrWhiteSpace($LoggingName) -and $RemoveAccess) {
             $LoggingName = $RemoveAccess
@@ -23,33 +23,37 @@ function Set-CIPPCalendarPermission {
         }
 
         $CalParam = [PSCustomObject]@{
-            Identity     = "$($UserID):\$folderName"
-            AccessRights = @($Permissions)
-            User         = $UserToGetPermissions
+            Identity               = "$($UserID):\$FolderName"
+            AccessRights           = @($Permissions)
+            User                   = $UserToGetPermissions
+            SendNotificationToUser = $SendNotificationToUser
         }
 
         if ($CanViewPrivateItems) {
             $CalParam | Add-Member -NotePropertyName 'SharingPermissionFlags' -NotePropertyValue 'Delegate,CanViewPrivateItems'
         }
-        
+
         if ($RemoveAccess) {
-            if ($PSCmdlet.ShouldProcess("$UserID\$folderName", "Remove permissions for $LoggingName")) {
-                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$folderName"; User = $RemoveAccess }
+            if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Remove permissions for $LoggingName")) {
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$FolderName"; User = $RemoveAccess }
                 $Result = "Successfully removed access for $LoggingName from calendar $($CalParam.Identity)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
             }
         } else {
-            if ($PSCmdlet.ShouldProcess("$UserID\$folderName", "Set permissions for $LoggingName to $Permissions")) {
+            if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Set permissions for $LoggingName to $Permissions")) {
                 try {
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
                 } catch {
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $CalParam -Anchor $UserID
                 }
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully set Calendar permissions $Permissions for $LoggingName on $UserID." -sev Info
                 $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $LoggingName now has $Permissions permissions on this folder."
                 if ($CanViewPrivateItems) {
-                    $Result += " The user can also view private items."
+                    $Result += ' The user can also view private items.'
                 }
+                if ($SendNotificationToUser) {
+                    $Result += ' A notification has been sent to the user.'
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
             }
         }
     } catch {

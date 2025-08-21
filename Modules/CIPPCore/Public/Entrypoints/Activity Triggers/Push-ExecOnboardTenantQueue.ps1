@@ -364,7 +364,7 @@ function Push-ExecOnboardTenantQueue {
                 $Table = Get-CippTable -tablename 'templates'
                 $ExistingTemplates = Get-CippazDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
                 foreach ($AllTenantsTemplate in $ExistingTemplates) {
-                    $object = $AllTenantesTemplate.JSON | ConvertFrom-Json
+                    $object = $AllTenantsTemplate.JSON | ConvertFrom-Json
                     $NewExcludedTenants = [system.collections.generic.list[object]]::new()
                     if (!$object.excludedTenants) {
                         $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force

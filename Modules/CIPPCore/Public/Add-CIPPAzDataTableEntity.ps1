@@ -102,6 +102,7 @@ function Add-CIPPAzDataTableEntity {
 
                             $propertiesToRemove = [System.Collections.Generic.List[object]]::new()
                             foreach ($key in $SingleEnt.Keys) {
+                                if ($key -in @('RowKey', 'PartitionKey')) { continue }
                                 $newEntitySize = [System.Text.Encoding]::UTF8.GetByteCount($($newEntity | ConvertTo-Json -Compress))
                                 if ($newEntitySize -lt $MaxRowSize) {
                                     $propertySize = [System.Text.Encoding]::UTF8.GetByteCount($SingleEnt[$key].ToString())

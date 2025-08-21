@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecModifyCalPerms {
+function Invoke-ExecModifyCalPerms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -64,6 +64,7 @@ Function Invoke-ExecModifyCalPerms {
         $Modification = $Permission.Modification
         $CanViewPrivateItems = $Permission.CanViewPrivateItems ?? $false
         $FolderName = $Permission.FolderName ?? 'Calendar'
+        $SendNotificationToUser = $Permission.SendNotificationToUser ?? $false
 
         Write-LogMessage -headers $Headers -API $APIName -message "Permission Level: $PermissionLevel, Modification: $Modification, CanViewPrivateItems: $CanViewPrivateItems, FolderName: $FolderName" -Sev 'Debug'
 
@@ -76,16 +77,17 @@ Function Invoke-ExecModifyCalPerms {
             try {
                 Write-LogMessage -headers $Headers -API $APIName -message "Processing target user: $TargetUser" -Sev 'Debug'
                 $Params = @{
-                    APIName              = $APIName
-                    Headers              = $Headers
-                    RemoveAccess         = if ($Modification -eq 'Remove') { $TargetUser } else { $null }
-                    TenantFilter         = $TenantFilter
-                    UserID               = $UserId
-                    folderName           = $FolderName
-                    UserToGetPermissions = $TargetUser
-                    LoggingName          = $TargetUser
-                    Permissions          = $PermissionLevel
-                    CanViewPrivateItems  = $CanViewPrivateItems
+                    APIName                = $APIName
+                    Headers                = $Headers
+                    RemoveAccess           = if ($Modification -eq 'Remove') { $TargetUser } else { $null }
+                    TenantFilter           = $TenantFilter
+                    UserID                 = $UserId
+                    folderName             = $FolderName
+                    UserToGetPermissions   = $TargetUser
+                    LoggingName            = $TargetUser
+                    Permissions            = $PermissionLevel
+                    CanViewPrivateItems    = $CanViewPrivateItems
+                    SendNotificationToUser = $SendNotificationToUser
                 }
 
                 # Write-Host "Request params: $($Params | ConvertTo-Json)"
