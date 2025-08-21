@@ -43,11 +43,13 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
+        $LastStartup | Add-Member -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString()
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
             RowKey       = $env:WEBSITE_SITE_NAME
             Version      = $CurrentVersion
+            PSVersion    = $PSVersionTable.PSVersion.ToString()
         }
     }
     Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
