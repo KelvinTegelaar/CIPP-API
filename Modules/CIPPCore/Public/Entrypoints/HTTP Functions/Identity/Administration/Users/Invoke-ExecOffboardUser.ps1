@@ -11,6 +11,7 @@ function Invoke-ExecOffboardUser {
     param($Request, $TriggerMetadata)
     $AllUsers = $Request.Body.user.value
     $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
+    $OffboardingOptions = $Request.Body | Select-Object * -ExcludeProperty user, tenantFilter, Scheduled
     $Results = foreach ($username in $AllUsers) {
         try {
             $APIName = 'ExecOffboardUser'
@@ -27,7 +28,7 @@ function Invoke-ExecOffboardUser {
                     Parameters    = [pscustomobject]@{
                         Username     = $Username
                         APIName      = 'Scheduled Offboarding'
-                        options      = $Request.Body
+                        options      = $OffboardingOptions
                         RunScheduled = $true
                     }
                     ScheduledTime = $Request.Body.Scheduled.date
@@ -39,7 +40,7 @@ function Invoke-ExecOffboardUser {
                 }
                 Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
             } else {
-                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $TenantFilter -Options $Request.Body -APIName $APIName -Headers $Headers
+                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $TenantFilter -Options $OffboardingOptions -APIName $APIName -Headers $Headers
             }
             $StatusCode = [HttpStatusCode]::OK
 
