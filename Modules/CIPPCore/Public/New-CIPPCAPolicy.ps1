@@ -197,12 +197,6 @@ function New-CIPPCAPolicy {
                         $JSONObj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType)
                     }
                 }
-
-                if ($JSONObj.conditions.users.includeUsers.Count -eq 0) {
-                    Write-Information 'No users matched in this policy, setting to none'
-                    $JSONObj.conditions.users.includeUsers = 'none'
-                }
-
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONObj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
