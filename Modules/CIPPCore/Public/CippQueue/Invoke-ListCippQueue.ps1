@@ -12,10 +12,19 @@ function Invoke-ListCippQueue {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     }
 
+    $QueueId = $Request.Query.QueueId
+
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
     $3HoursAgo = (Get-Date).ToUniversalTime().AddHours(-3).ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue -Filter "PartitionKey eq 'CippQueue' and Timestamp ge datetime'$3HoursAgo'" | Sort-Object -Property Timestamp -Descending
+
+    if ($QueueId) {
+        $Filter = "PartitionKey eq 'CippQueue' and RowKey eq '$QueueId'"
+    } else {
+        $Filter = "PartitionKey eq 'CippQueue' and Timestamp ge datetime'$3HoursAgo'"
+    }
+
+    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue -Filter $Filter | Sort-Object -Property Timestamp -Descending
 
     $QueueData = foreach ($Queue in $CippQueueData) {
         $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object @{n = 'Timestamp'; exp = { $_.Timestamp.DateTime.ToUniversalTime() } }, Name, Status
