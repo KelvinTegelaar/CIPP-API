@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMailboxRules {
+function Invoke-ListMailboxRules {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -28,18 +28,15 @@ Function Invoke-ListMailboxRules {
 
     $Metadata = @{}
     # If a queue is running, we will not start a new one
-    if ($RunningQueue) {
+    if ($RunningQueue -and !$Rows) {
         $Metadata = [PSCustomObject]@{
             QueueMessage = "Still loading data for $TenantFilter. Please check back in a few more minutes"
+            QueueId      = $RunningQueue.RowKey
         }
         [PSCustomObject]@{
             Waiting = $true
         }
     } elseif ((!$Rows -and !$RunningQueue) -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
-        # If no rows are found and no queue is running, we will start a new one
-        $Metadata = [PSCustomObject]@{
-            QueueMessage = "Loading data for $TenantFilter. Please check back in 1 minute"
-        }
 
         if ($TenantFilter -eq 'AllTenants') {
             $Tenants = Get-Tenants -IncludeErrors | Select-Object defaultDomainName
@@ -49,6 +46,12 @@ Function Invoke-ListMailboxRules {
             $Type = $TenantFilter
         }
         $Queue = New-CippQueueEntry -Name "Mailbox Rules ($Type)" -Reference $QueueReference -TotalTasks ($Tenants | Measure-Object).Count
+        # If no rows are found and no queue is running, we will start a new one
+        $Metadata = [PSCustomObject]@{
+            QueueMessage = "Loading data for $TenantFilter. Please check back in 1 minute"
+            QueueId      = $Queue.RowKey
+        }
+
         $Batch = $Tenants | Select-Object defaultDomainName, @{Name = 'FunctionName'; Expression = { 'ListMailboxRulesQueue' } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
@@ -65,6 +68,9 @@ Function Invoke-ListMailboxRules {
         if ($TenantFilter -ne 'AllTenants') {
             $Rows = $Rows | Where-Object -Property Tenant -EQ $TenantFilter
             $Rows = $Rows
+        }
+        $Metadata = [PSCustomObject]@{
+            QueueId = $RunningQueue.RowKey ?? $null
         }
         $GraphRequest = $Rows | ForEach-Object {
             $NewObj = $_.Rules | ConvertFrom-Json -ErrorAction SilentlyContinue
