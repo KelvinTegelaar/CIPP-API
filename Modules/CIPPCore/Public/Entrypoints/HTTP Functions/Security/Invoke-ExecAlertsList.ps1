@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAlertsList {
+function Invoke-ExecAlertsList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -68,6 +68,7 @@ Function Invoke-ExecAlertsList {
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                    QueueId      = $RunningQueue.RowKey
                 }
                 [PSCustomObject]@{
                     Waiting = $true
@@ -78,6 +79,7 @@ Function Invoke-ExecAlertsList {
                 $Queue = New-CippQueueEntry -Name 'Alerts List - All Tenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                    QueueId      = $Queue.RowKey
                 }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'AlertsOrchestrator'
@@ -97,6 +99,10 @@ Function Invoke-ExecAlertsList {
                     InstanceId = $InstanceId
                 }
             } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
+
                 $Alerts = $Rows
                 $AlertsObj = foreach ($Alert in $Alerts) {
                     $AlertInfo = $Alert.Alert | ConvertFrom-Json
