@@ -63,7 +63,7 @@ function Invoke-ListCippQueue {
             PercentComplete = [math]::Round(((($TotalCompleted + $TotalFailed) / $Queue.TotalTasks) * 100), 1)
             PercentFailed   = [math]::Round((($TotalFailed / $Queue.TotalTasks) * 100), 1)
             PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
-            Tasks           = @($Tasks)
+            Tasks           = @($Tasks | Sort-Object -Descending Timestamp)
             Status          = $Queue.Status
             Timestamp       = $Queue.Timestamp
         }
