@@ -33,6 +33,9 @@ function Get-GraphRequestList {
     .PARAMETER NoPagination
     Disable pagination
 
+    .PARAMETER ManualPagination
+    Enable manual pagination using nextLink
+
     .PARAMETER CountOnly
     Only return count of results
 
@@ -44,6 +47,12 @@ function Get-GraphRequestList {
 
     .PARAMETER ReverseTenantLookupProperty
     Property to perform reverse tenant lookup
+
+    .PARAMETER AsApp
+    Run the request as an application
+
+    .PARAMETER Caller
+    Name of the calling function
 
     #>
     [CmdletBinding()]
@@ -61,11 +70,13 @@ function Get-GraphRequestList {
         [switch]$SkipCache,
         [switch]$ClearCache,
         [switch]$NoPagination,
+        [switch]$ManualPagination,
         [switch]$CountOnly,
         [switch]$NoAuthCheck,
         [switch]$ReverseTenantLookup,
         [string]$ReverseTenantLookupProperty = 'tenantId',
-        [boolean]$AsApp = $false
+        [boolean]$AsApp = $false,
+        [string]$Caller = 'Get-GraphRequestList'
     )
 
     $SingleTenantThreshold = 8000
@@ -104,8 +115,8 @@ function Get-GraphRequestList {
             tenantid      = $TenantFilter
             ComplexFilter = $true
         }
-        if ($NoPagination.IsPresent) {
-            $GraphRequest.noPagination = $NoPagination.IsPresent
+        if ($NoPagination.IsPresent -or $ManualPagination.IsPresent) {
+            $GraphRequest.noPagination = $true
         }
         if ($CountOnly.IsPresent) {
             $GraphRequest.CountOnly = $CountOnly.IsPresent
@@ -297,9 +308,9 @@ function Get-GraphRequestList {
 
                     if (!$QueueThresholdExceeded) {
                         #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
-                        if ($NoPagination.IsPresent -and $nextLink -match '^https://.+') { $GraphRequest.uri = $nextLink }
+                        if ($ManualPagination.IsPresent -and $nextLink -match '^https://.+') { $GraphRequest.uri = $nextLink }
 
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
                         $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
 
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
