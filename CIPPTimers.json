@@ -21,7 +21,7 @@
     "Id": "168decf3-7ddd-471e-ab46-8b40be0f18ae",
     "Command": "Start-CIPPProcessorQueue",
     "Description": "Timer to handle user initiated tasks",
-    "Cron": "0 */15 * * * *",
+    "Cron": "0 */1 * * * *",
     "Priority": 1,
     "RunOnProcessor": true
   },
