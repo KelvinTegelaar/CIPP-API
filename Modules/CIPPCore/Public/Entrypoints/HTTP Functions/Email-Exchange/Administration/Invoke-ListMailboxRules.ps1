@@ -19,8 +19,12 @@ function Invoke-ListMailboxRules {
 
     $Table = Get-CIPPTable -TableName cachembxrules
     if ($TenantFilter -ne 'AllTenants') {
-        $Table.Filter = "Tenant eq '$TenantFilter'"
+        $Table.Filter = "PartitionKey eq 'MailboxRules' and Tenant eq '$TenantFilter'"
+    } else {
+        $Table.Filter = "PartitionKey eq 'MailboxRules'"
     }
+
+    Write-Information 'Getting cached mailbox rules'
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
     $PartitionKey = 'MailboxRules'
     $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
@@ -29,6 +33,7 @@ function Invoke-ListMailboxRules {
     $Metadata = @{}
     # If a queue is running, we will not start a new one
     if ($RunningQueue -and !$Rows) {
+        Write-Information "Queue is already running for $TenantFilter"
         $Metadata = [PSCustomObject]@{
             QueueMessage = "Still loading data for $TenantFilter. Please check back in a few more minutes"
             QueueId      = $RunningQueue.RowKey
@@ -37,7 +42,7 @@ function Invoke-ListMailboxRules {
             Waiting = $true
         }
     } elseif ((!$Rows -and !$RunningQueue) -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
-
+        Write-Information "No cached mailbox rules found for $TenantFilter, starting new orchestration"
         if ($TenantFilter -eq 'AllTenants') {
             $Tenants = Get-Tenants -IncludeErrors | Select-Object defaultDomainName
             $Type = 'All Tenants'
@@ -65,10 +70,6 @@ function Invoke-ListMailboxRules {
         }
 
     } else {
-        if ($TenantFilter -ne 'AllTenants') {
-            $Rows = $Rows | Where-Object -Property Tenant -EQ $TenantFilter
-            $Rows = $Rows
-        }
         $Metadata = [PSCustomObject]@{
             QueueId = $RunningQueue.RowKey ?? $null
         }
