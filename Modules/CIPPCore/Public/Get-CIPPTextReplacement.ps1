@@ -37,7 +37,9 @@ function Get-CIPPTextReplacement {
         '%programfiles%',
         '%programfiles(x86)%',
         '%programdata%',
-        '%cippuserschema%'
+        '%cippuserschema%',
+        '%cippurl%',
+        '%defaultdomain%'
     )
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
@@ -72,6 +74,7 @@ function Get-CIPPTextReplacement {
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $Text = $Text -replace '%tenantid%', $Tenant.customerId
     $Text = $Text -replace '%tenantfilter%', $Tenant.defaultDomainName
+    $Text = $Text -replace '%defaultdomain%', $Tenant.defaultDomainName
     $Text = $Text -replace '%initialdomain%', $Tenant.initialDomainName
     $Text = $Text -replace '%tenantname%', $Tenant.displayName
 
@@ -82,6 +85,14 @@ function Get-CIPPTextReplacement {
     if ($Text -match '%cippuserschema%') {
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         $Text = $Text -replace '%cippuserschema%', $Schema.id
+    }
+
+    if ($Text -match '%cippurl%') {
+        $ConfigTable = Get-CIPPTable -tablename 'Config'
+        $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+        if ($Config) {
+            $Text = $Text -replace '%cippurl%', $Config.Value
+        }
     }
     return $Text
 }
