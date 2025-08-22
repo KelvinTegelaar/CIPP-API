@@ -28,7 +28,7 @@ function Invoke-ListMailboxRules {
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
     $PartitionKey = 'MailboxRules'
     $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-    $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+    $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
 
     $Metadata = @{}
     # If a queue is running, we will not start a new one

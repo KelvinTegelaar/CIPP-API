@@ -70,7 +70,7 @@ function Invoke-ExecJITAdmin {
 
             $QueueReference = '{0}-{1}' -f $Request.Query.TenantFilter, $PartitionKey # $TenantFilter is 'AllTenants'
             Write-Information "QueueReference: $QueueReference"
-            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
 
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{

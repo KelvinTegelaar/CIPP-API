@@ -5,14 +5,15 @@ function Invoke-ListCippQueue {
     .ROLE
         CIPP.Core.Read
     #>
-    param($Request = $null, $TriggerMetadata = $null)
+    param($Request = $null, $TriggerMetadata = $null, $Reference = $null, $QueueId = $null)
 
     if ($Request) {
         $APIName = $Request.Params.CIPPEndpoint
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     }
 
-    $QueueId = $Request.Query.QueueId
+    $QueueId = $Request.Query.QueueId ?? $QueueId
+    $Reference = $Request.Query.Reference ?? $Reference
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
@@ -20,6 +21,8 @@ function Invoke-ListCippQueue {
 
     if ($QueueId) {
         $Filter = "PartitionKey eq 'CippQueue' and RowKey eq '$QueueId'"
+    } elseif ($Reference) {
+        $Filter = "PartitionKey eq 'CippQueue' and Reference eq '$Reference' and Timestamp ge datetime'$3HoursAgo'"
     } else {
         $Filter = "PartitionKey eq 'CippQueue' and Timestamp ge datetime'$3HoursAgo'"
     }
