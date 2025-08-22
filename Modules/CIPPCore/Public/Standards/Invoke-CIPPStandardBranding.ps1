@@ -43,47 +43,81 @@ function Invoke-CIPPStandardBranding {
     }
     catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Branding state for $Tenant. Error: $ErrorMessage" -Sev Error
-        return
+        if ($ErrorMessage -like "*does not exist or one of its queried reference-property objects are not present*") {
+            # continue out of catch
+            $NewBranding = $true
+        }
+        else {
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Branding state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
     }
 
     # Get layoutTemplateType value using null-coalescing operator
     $layoutTemplateType = $Settings.layoutTemplateType.value ?? $Settings.layoutTemplateType
 
     $StateIsCorrect = ($CurrentState.signInPageText -eq $Settings.signInPageText) -and
-                        ($CurrentState.usernameHintText -eq $Settings.usernameHintText) -and
-                        ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
-                        ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $layoutTemplateType) -and
-                        ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
-                        ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
+    ($CurrentState.usernameHintText -eq $Settings.usernameHintText) -and
+    ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
+    ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $layoutTemplateType) -and
+    ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
+    ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
 
     If ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is already applied correctly.' -Sev Info
-        } else {
+        }
+        else {
             try {
-                $GraphRequest = @{
-                    tenantID    = $Tenant
-                    uri         = "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0"
-                    AsApp       = $true
-                    Type        = 'PATCH'
-                    ContentType = 'application/json; charset=utf-8'
-                    Body        = [pscustomobject]@{
-                        signInPageText                  = $Settings.signInPageText
-                        usernameHintText                = $Settings.usernameHintText
-                        loginPageTextVisibilitySettings = [pscustomobject]@{
-                            hideAccountResetCredentials = $Settings.hideAccountResetCredentials
-                        }
-                        loginPageLayoutConfiguration    = [pscustomobject]@{
-                            layoutTemplateType = $layoutTemplateType
-                            isHeaderShown      = $Settings.isHeaderShown
-                            isFooterShown      = $Settings.isFooterShown
-                        }
-                    } | ConvertTo-Json -Compress
+
+
+                if ($NewBranding) {
+                    $GraphRequest = @{
+                        tenantID    = $Tenant
+                        uri         = "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations"
+                        AsApp       = $true
+                        Type        = 'POST'
+                        ContentType = 'application/json; charset=utf-8'
+                        Body        = [pscustomobject]@{
+                            signInPageText                  = $Settings.signInPageText
+                            usernameHintText                = $Settings.usernameHintText
+                            loginPageTextVisibilitySettings = [pscustomobject]@{
+                                hideAccountResetCredentials = $Settings.hideAccountResetCredentials
+                            }
+                            loginPageLayoutConfiguration    = [pscustomobject]@{
+                                layoutTemplateType = $layoutTemplateType
+                                isHeaderShown      = $Settings.isHeaderShown
+                                isFooterShown      = $Settings.isFooterShown
+                            }
+                        } | ConvertTo-Json -Compress
+                    }
+                    $null = New-GraphPostRequest @GraphRequest
                 }
-                $null = New-GraphPostRequest @GraphRequest
+                else {
+                    $GraphRequest = @{
+                        tenantID    = $Tenant
+                        uri         = "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0"
+                        AsApp       = $true
+                        Type        = 'PATCH'
+                        ContentType = 'application/json; charset=utf-8'
+                        Body        = [pscustomobject]@{
+                            signInPageText                  = $Settings.signInPageText
+                            usernameHintText                = $Settings.usernameHintText
+                            loginPageTextVisibilitySettings = [pscustomobject]@{
+                                hideAccountResetCredentials = $Settings.hideAccountResetCredentials
+                            }
+                            loginPageLayoutConfiguration    = [pscustomobject]@{
+                                layoutTemplateType = $layoutTemplateType
+                                isHeaderShown      = $Settings.isHeaderShown
+                                isFooterShown      = $Settings.isFooterShown
+                            }
+                        } | ConvertTo-Json -Compress
+                    }
+                    $null = New-GraphPostRequest @GraphRequest
+                }
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated branding.' -Sev Info
-            } catch {
+            }
+            catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update branding. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             }
@@ -95,7 +129,8 @@ function Invoke-CIPPStandardBranding {
 
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is correctly set.' -Sev Info
-        } else {
+        }
+        else {
             Write-StandardsAlert -message 'Branding is incorrectly set.' -object ($CurrentState | Select-Object -Property signInPageText, usernameHintText, loginPageTextVisibilitySettings, loginPageLayoutConfiguration) -tenant $Tenant -standardName 'Branding' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is incorrectly set.' -Sev Info
         }
