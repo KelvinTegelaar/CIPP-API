@@ -38,7 +38,8 @@ function Get-CIPPTextReplacement {
         '%programfiles(x86)%',
         '%programdata%',
         '%cippuserschema%',
-        '%cippurl%'
+        '%cippurl%',
+        '%defaultdomain%'
     )
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
@@ -73,6 +74,7 @@ function Get-CIPPTextReplacement {
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $Text = $Text -replace '%tenantid%', $Tenant.customerId
     $Text = $Text -replace '%tenantfilter%', $Tenant.defaultDomainName
+    $Text = $Text -replace '%defaultdomain%', $Tenant.defaultDomainName
     $Text = $Text -replace '%initialdomain%', $Tenant.initialDomainName
     $Text = $Text -replace '%tenantname%', $Tenant.displayName
 
