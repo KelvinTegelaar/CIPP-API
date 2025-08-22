@@ -21,7 +21,7 @@
     "Id": "168decf3-7ddd-471e-ab46-8b40be0f18ae",
     "Command": "Start-CIPPProcessorQueue",
     "Description": "Timer to handle user initiated tasks",
-    "Cron": "0 */1 * * * *",
+    "Cron": "0 */15 * * * *",
     "Priority": 1,
     "RunOnProcessor": true
   },
@@ -75,7 +75,7 @@
     "Id": "9b0c8e50-f798-49db-9a8b-dbcc0fcadeea",
     "Command": "Start-StandardsOrchestrator",
     "Description": "Orchestrator to process standards",
-    "Cron": "0 0 */1 * * *",
+    "Cron": "0 0 */4 * * *",
     "Priority": 4,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"
