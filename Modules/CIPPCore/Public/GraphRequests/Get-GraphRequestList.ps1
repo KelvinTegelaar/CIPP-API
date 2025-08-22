@@ -100,6 +100,14 @@ function Get-GraphRequestList {
             $Item.Value = $Item.Value.ToString().ToLower()
         }
         if ($Item.Value) {
+            if ($Item.Key -eq '$select' -or $Item.Key -eq 'select') {
+                $Columns = $Item.Value -split ','
+                $ActualCols = foreach ($Col in $Columns) {
+                    $Col -split '\.' | Select-Object -First 1
+                }
+                $Item.Value = ($ActualCols | Sort-Object -Unique) -join ','
+            }
+
             $ParamCollection.Add($Item.Key, $Item.Value)
         }
     }
