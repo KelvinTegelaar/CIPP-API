@@ -37,7 +37,8 @@ function Get-CIPPTextReplacement {
         '%programfiles%',
         '%programfiles(x86)%',
         '%programdata%',
-        '%cippuserschema%'
+        '%cippuserschema%',
+        '%cippurl%'
     )
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
@@ -82,6 +83,14 @@ function Get-CIPPTextReplacement {
     if ($Text -match '%cippuserschema%') {
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         $Text = $Text -replace '%cippuserschema%', $Schema.id
+    }
+
+    if ($Text -match '%cippurl%') {
+        $ConfigTable = Get-CIPPTable -tablename 'Config'
+        $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+        if ($Config) {
+            $Text = $Text -replace '%cippurl%', $Config.Value
+        }
     }
     return $Text
 }
