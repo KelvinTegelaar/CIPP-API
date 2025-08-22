@@ -105,10 +105,11 @@ function Get-GraphRequestList {
                 $ActualCols = foreach ($Col in $Columns) {
                     $Col -split '\.' | Select-Object -First 1
                 }
-                $Item.Value = ($ActualCols | Sort-Object -Unique) -join ','
+                $Value = ($ActualCols | Sort-Object -Unique) -join ','
+            } else {
+                $Value = $Item.Value
             }
-
-            $ParamCollection.Add($Item.Key, $Item.Value)
+            $ParamCollection.Add($Item.Key, $Value)
         }
     }
     $GraphQuery.Query = $ParamCollection.ToString()
@@ -142,7 +143,16 @@ function Get-GraphRequestList {
             $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
             $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
             foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
-                $Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Item.Value
+                if ($Item.Key -eq '$select' -or $Item.Key -eq 'select') {
+                    $Columns = $Item.Value -split ','
+                    $ActualCols = foreach ($Col in $Columns) {
+                        $Col -split '\.' | Select-Object -First 1
+                    }
+                    $Value = ($ActualCols | Sort-Object -Unique) -join ','
+                } else {
+                    $Value = $Item.Value
+                }
+                $Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Value
                 $ParamCollection.Add($Item.Key, $Value)
             }
             $GraphQuery.Query = $ParamCollection.ToString()

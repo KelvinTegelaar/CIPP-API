@@ -36,7 +36,8 @@ function Get-CIPPTextReplacement {
         '%windir%',
         '%programfiles%',
         '%programfiles(x86)%',
-        '%programdata%'
+        '%programdata%',
+        '%cippuserschema%'
     )
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
@@ -77,5 +78,10 @@ function Get-CIPPTextReplacement {
     # Partner specific replacements
     $Text = $Text -replace '%partnertenantid%', $env:TenantID
     $Text = $Text -replace '%samappid%', $env:ApplicationID
+
+    if ($Text -match '%cippuserschema%') {
+        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
+        $Text = $Text -replace '%cippuserschema%', $Schema.id
+    }
     return $Text
 }
