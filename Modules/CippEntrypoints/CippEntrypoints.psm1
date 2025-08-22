@@ -40,7 +40,7 @@ function Receive-CippHttpTrigger {
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Information "Function: $($Request.Params.CIPPEndpoint)"
+    Write-Information "API: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
@@ -61,7 +61,7 @@ function Receive-CippHttpTrigger {
                 })
             return
         }
-        
+
         try {
             Write-Information "Access: $Access"
             if ($Access) {
