@@ -105,7 +105,9 @@ function Invoke-ListTenants {
                 @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
                 @{Name = 'portal_compliance'; Expression = { "https://purview.microsoft.com/?tid=$($_.customerId)" } },
-                @{Name = 'portal_sharepoint'; Expression = { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" } }
+                @{Name = 'portal_sharepoint'; Expression = { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" } },
+                @{Name = 'portal_platform'; Expression = { "https://admin.powerplatform.microsoft.com/account/login/$($_.customerId)" } },
+                @{Name = 'portal_bi'; Expression = { "https://app.powerbi.com/admin-portal?ctid=$($_.customerId)" } }
             }
 
         } else {
