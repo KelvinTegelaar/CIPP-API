@@ -29,6 +29,10 @@ function Get-CIPPAlertNewAppApproval {
                         "https://login.microsoftonline.com/$($TenantFilter)/adminConsent?client_id=$($App.appId)&bf_id=$($App.id)&redirect_uri=https://entra.microsoft.com/TokenAuthorize"
                     }
 
+                    if($_.status -ne 'InProgress') {
+                        continue
+                    }
+
                     $Message = [PSCustomObject]@{
                         RequestId   = $_.id
                         AppName     = $App.appDisplayName
