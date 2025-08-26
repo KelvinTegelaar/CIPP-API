@@ -44,8 +44,8 @@ function Invoke-CIPPStandardGroupTemplate {
                 # Normalize group type to lowercase for consistent checks
                 $groupType = $groupobj.groupType.ToLower()
 
-                # Only run license check if group type is not 'security'
-                if ($groupType -ne 'security') {
+                # Only run license check if group type is not 'generic'
+                if ($groupType -ne 'generic') {
                     $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE')
                     if ($TestResult -eq $false) {
                         Write-Host "We're exiting as the correct license is not present for this standard."
