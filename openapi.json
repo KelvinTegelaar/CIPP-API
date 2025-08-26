@@ -2850,7 +2850,7 @@
             "schema": {
               "type": "string"
             },
-            "name": "keepCopy",
+            "name": "KeepCopy",
             "in": "body"
           }
         ],
@@ -3557,6 +3557,89 @@
         }
       }
     },
+    "/ListContactTemplates": {
+      "get": {
+        "description": "List Contact Templates",
+        "summary": "List Contact Templates",
+        "tags": ["GET"],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  }
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RemoveContactTemplates": {
+      "get": {
+        "description": "Remove Contact Template",
+        "summary": "Remove Contact Template",
+        "tags": ["GET"],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddContactTemplates": {
+      "post": {
+        "description": "Add Contact Template",
+        "summary": "Add Contact Template",
+        "tags": ["POST"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
     "/ListMailboxRules": {
       "get": {
         "description": "ListMailboxRules",
@@ -3746,7 +3829,7 @@
             "schema": {
               "type": "string"
             },
-            "name": "keepCopy",
+            "name": "KeepCopy",
             "in": "body"
           },
           {
@@ -8537,6 +8620,270 @@
         }
       }
     },
+    "/ListQuarantinePolicy": {
+      "get": {
+        "description": "ListQuarantinePolicy",
+        "summary": "ListQuarantinePolicy",
+        "tags": [
+          "GET"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddQuarantinePolicy": {
+      "post": {
+        "description": "AddQuarantinePolicy",
+        "summary": "AddQuarantinePolicy",
+        "tags": [
+          "POST"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Name",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "BlockSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Delete",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Preview",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "ReleaseActionPreference",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "AllowSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "QuarantineNotification",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "IncludeMessagesFromBlockedSenderAddress",
+            "in": "body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/EditQuarantinePolicy": {
+      "post": {
+        "description": "EditQuarantinePolicy",
+        "summary": "EditQuarantinePolicy",
+        "tags": [
+          "POST"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Type",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Identity",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "EndUserSpamNotificationFrequency",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "EndUserSpamNotificationCustomFromAddress",
+            "in": "body"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "OrganizationBrandingEnabled",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "BlockSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Delete",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Preview",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "ReleaseActionPreference",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "AllowSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "QuarantineNotification",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "IncludeMessagesFromBlockedSenderAddress",
+            "in": "body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
     "/RemoveExConnector": {
       "get": {
         "description": "RemoveExConnector",
@@ -8581,6 +8928,1300 @@
               }
             },
             "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RemoveQuarantinePolicy": {
+      "get": {
+        "description": "RemoveQuarantinePolicy",
+        "summary": "RemoveQuarantinePolicy",
+        "tags": [
+          "GET"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Identity",
+            "in": "body"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Name",
+            "in": "body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    }
+  },
+  "/ExecDeleteSafeLinksPolicy": {
+    "get": {
+      "description": "ExecDeleteSafeLinksPolicy",
+      "summary": "ExecDeleteSafeLinksPolicy",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "RuleName",
+          "in": "query"
+        },
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "PolicyName",
+          "in": "query"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/EditSafeLinksPolicy": {
+    "post": {
+      "description": "EditSafeLinksPolicy",
+      "summary": "EditSafeLinksPolicy",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "PolicyName",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "EnableSafeLinksForEmail": {
+                  "type": "boolean"
+                },
+                "EnableSafeLinksForTeams": {
+                  "type": "boolean"
+                },
+                "EnableSafeLinksForOffice": {
+                  "type": "boolean"
+                },
+                "TrackClicks": {
+                  "type": "boolean"
+                },
+                "AllowClickThrough": {
+                  "type": "boolean"
+                },
+                "ScanUrls": {
+                  "type": "boolean"
+                },
+                "EnableForInternalSenders": {
+                  "type": "boolean"
+                },
+                "DeliverMessageAfterScan": {
+                  "type": "boolean"
+                },
+                "DisableUrlRewrite": {
+                  "type": "boolean"
+                },
+                "DoNotRewriteUrls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "AdminDisplayName": {
+                  "type": "string"
+                },
+                "CustomNotificationText": {
+                  "type": "string"
+                },
+                "EnableOrganizationBranding": {
+                  "type": "boolean"
+                },
+                "Priority": {
+                  "type": "integer"
+                },
+                "Comments": {
+                  "type": "string"
+                },
+                "Enabled": {
+                  "type": "boolean"
+                },
+                "SentTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "ExceptIfSentTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "SentToMemberOf": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "ExceptIfSentToMemberOf": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "RecipientDomainIs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "ExceptIfRecipientDomainIs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/ListSafeLinksPolicyDetails": {
+    "get": {
+      "description": "ListSafeLinksPolicyDetails",
+      "summary": "ListSafeLinksPolicyDetails",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "PolicyName",
+          "in": "query"
+        },
+        {
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "name": "RuleName",
+          "in": "query"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "object",
+                    "properties": {
+                      "Policy": {
+                        "type": "object",
+                        "properties": {
+                          "Name": {
+                            "type": "string"
+                          },
+                          "EnableSafeLinksForEmail": {
+                            "type": "boolean"
+                          },
+                          "EnableSafeLinksForTeams": {
+                            "type": "boolean"
+                          },
+                          "EnableSafeLinksForOffice": {
+                            "type": "boolean"
+                          },
+                          "TrackClicks": {
+                            "type": "boolean"
+                          },
+                          "AllowClickThrough": {
+                            "type": "boolean"
+                          },
+                          "ScanUrls": {
+                            "type": "boolean"
+                          },
+                          "EnableForInternalSenders": {
+                            "type": "boolean"
+                          },
+                          "DeliverMessageAfterScan": {
+                            "type": "boolean"
+                          },
+                          "DisableUrlRewrite": {
+                            "type": "boolean"
+                          },
+                          "DoNotRewriteUrls": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "AdminDisplayName": {
+                            "type": "string"
+                          },
+                          "CustomNotificationText": {
+                            "type": "string"
+                          },
+                          "EnableOrganizationBranding": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "Rule": {
+                        "type": "object",
+                        "properties": {
+                          "Name": {
+                            "type": "string"
+                          },
+                          "Priority": {
+                            "type": "integer"
+                          },
+                          "Comments": {
+                            "type": "string"
+                          },
+                          "State": {
+                            "type": "string"
+                          },
+                          "SentTo": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "ExceptIfSentTo": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "SentToMemberOf": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "ExceptIfSentToMemberOf": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "RecipientDomainIs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "ExceptIfRecipientDomainIs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "Message": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/ExecNewSafeLinksPolicy": {
+    "post": {
+      "description": "Create a new SafeLinks policy and associated rule",
+      "summary": "Create SafeLinks Policy and Rule Configuration",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "Name",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "EnableSafeLinksForEmail": {
+                  "type": "boolean",
+                  "description": "Enable Safe Links protection for email messages"
+                },
+                "EnableSafeLinksForTeams": {
+                  "type": "boolean",
+                  "description": "Enable Safe Links protection for Teams messages"
+                },
+                "EnableSafeLinksForOffice": {
+                  "type": "boolean",
+                  "description": "Enable Safe Links protection for Office applications"
+                },
+                "TrackClicks": {
+                  "type": "boolean",
+                  "description": "Track user clicks related to Safe Links protection"
+                },
+                "AllowClickThrough": {
+                  "type": "boolean",
+                  "description": "Allow users to click through to the original URL"
+                },
+                "ScanUrls": {
+                  "type": "boolean",
+                  "description": "Enable real-time scanning of URLs"
+                },
+                "EnableForInternalSenders": {
+                  "type": "boolean",
+                  "description": "Enable Safe Links for messages sent between internal senders"
+                },
+                "DeliverMessageAfterScan": {
+                  "type": "boolean",
+                  "description": "Wait until URL scanning is complete before delivering the message"
+                },
+                "DisableUrlRewrite": {
+                  "type": "boolean",
+                  "description": "Disable the rewriting of URLs in messages"
+                },
+                "DoNotRewriteUrls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "List of URLs that will not be rewritten by Safe Links"
+                },
+                "AdminDisplayName": {
+                  "type": "string",
+                  "description": "Display name for the policy in the admin interface"
+                },
+                "CustomNotificationText": {
+                  "type": "string",
+                  "description": "Custom text for the notification when a link is blocked"
+                },
+                "EnableOrganizationBranding": {
+                  "type": "boolean",
+                  "description": "Enable organization branding on warning pages"
+                },
+                "Priority": {
+                  "type": "integer",
+                  "description": "Priority of the rule (lower numbers = higher priority)"
+                },
+                "Comments": {
+                  "type": "string",
+                  "description": "Administrative comments for the rule"
+                },
+                "Enabled": {
+                  "type": "boolean",
+                  "description": "Whether the rule is enabled or disabled"
+                },
+                "SentTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Apply the rule if the recipient is any of these email addresses"
+                },
+                "SentToMemberOf": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Apply the rule if the recipient is a member of any of these groups"
+                },
+                "RecipientDomainIs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Apply the rule if the recipient's domain matches any of these domains"
+                },
+                "ExceptIfSentTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Do not apply the rule if the recipient is any of these email addresses"
+                },
+                "ExceptIfSentToMemberOf": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Do not apply the rule if the recipient is a member of any of these groups"
+                },
+                "ExceptIfRecipientDomainIs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Do not apply the rule if the recipient's domain matches any of these domains"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Result message from the operation"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully created SafeLinks policy and rule"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/ListSafeLinksPolicyTemplates": {
+    "get": {
+      "description": "List SafeLinks Policy Templates",
+      "summary": "List SafeLinks Policy Templates",
+      "tags": [
+        "GET"
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/RemoveSafeLinksPolicyTemplate": {
+    "get": {
+      "description": "Remove SafeLinks Policy Template",
+      "summary": "Remove SafeLinks Policy Template",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "id",
+          "in": "query"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/AddSafeLinksPolicyTemplate": {
+    "post": {
+      "description": "Add SafeLinks Policy Template",
+      "summary": "Add SafeLinks Policy Template",
+      "tags": [
+        "POST"
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/AddSafeLinksPolicyFromTemplate": {
+    "post": {
+      "description": "Deploy SafeLinks Policy From Template",
+      "summary": "Deploy SafeLinks Policy From Template",
+      "tags": [
+        "POST"
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Successful operation"
+        }
+      }
+    }
+  },
+  "/ExecManageRetentionPolicies": {
+    "get": {
+      "description": "List retention policies or get a specific retention policy by name",
+      "summary": "Get Retention Policies",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "name": "name",
+          "in": "query",
+          "description": "Name of specific retention policy to retrieve"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Name": {
+                      "type": "string"
+                    },
+                    "RetentionPolicyTagLinks": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully retrieved retention policies"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "post": {
+      "description": "Create, modify, or delete retention policies",
+      "summary": "Manage Retention Policies",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "CreatePolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Name of the retention policy"
+                      },
+                      "RetentionPolicyTagLinks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to link to this policy"
+                      }
+                    },
+                    "required": ["Name"]
+                  },
+                  "description": "Array of retention policies to create"
+                },
+                "ModifyPolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Identity": {
+                        "type": "string",
+                        "description": "Identity of the retention policy to modify"
+                      },
+                      "Name": {
+                        "type": "string",
+                        "description": "New name for the retention policy"
+                      },
+                      "RetentionPolicyTagLinks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to link to this policy"
+                      },
+                      "AddTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to add to the policy"
+                      },
+                      "RemoveTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Array of retention tag names to remove from the policy"
+                      }
+                    },
+                    "required": ["Identity"]
+                  },
+                  "description": "Array of retention policies to modify"
+                },
+                "DeletePolicies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of retention policy identities to delete"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Successfully processed retention policy operations"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/ExecManageRetentionTags": {
+    "get": {
+      "description": "List retention tags or get a specific retention tag by name",
+      "summary": "Get Retention Tags",
+      "tags": [
+        "GET"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        },
+        {
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "name": "name",
+          "in": "query",
+          "description": "Name of specific retention tag to retrieve"
+        }
+      ],
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Name": {
+                      "type": "string"
+                    },
+                    "Type": {
+                      "type": "string"
+                    },
+                    "RetentionAction": {
+                      "type": "string"
+                    },
+                    "AgeLimitForRetention": {
+                      "type": "integer"
+                    },
+                    "RetentionEnabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully retrieved retention tags"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "string",
+                    "description": "Error message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "post": {
+      "description": "Create, modify, or delete retention tags",
+      "summary": "Manage Retention Tags",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "CreateTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Name of the retention tag (max 64 characters)"
+                      },
+                      "Type": {
+                        "type": "string",
+                        "enum": ["All", "Inbox", "SentItems", "DeletedItems", "Drafts", "Outbox", "JunkEmail", "Journal", "SyncIssues", "ConversationHistory", "Personal", "RecoverableItems", "NonIpmRoot", "LegacyArchiveJournals", "Clutter", "Calendar", "Notes", "Tasks", "Contacts", "RssSubscriptions", "ManagedCustomFolder"],
+                        "description": "Type of the retention tag"
+                      },
+                      "RetentionAction": {
+                        "type": "string",
+                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "description": "Action to take when retention period expires"
+                      },
+                      "AgeLimitForRetention": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 24855,
+                        "description": "Age limit for retention in days"
+                      },
+                      "RetentionEnabled": {
+                        "type": "boolean",
+                        "description": "Whether retention is enabled for this tag"
+                      },
+                      "Comment": {
+                        "type": "string",
+                        "description": "Administrative comment for the tag"
+                      },
+                      "LocalizedComment": {
+                        "type": "string",
+                        "description": "Localized comment for the tag"
+                      },
+                      "LocalizedRetentionPolicyTagName": {
+                        "type": "string",
+                        "description": "Localized name for the retention policy tag"
+                      }
+                    },
+                    "required": ["Name", "Type"]
+                  },
+                  "description": "Array of retention tags to create"
+                },
+                "ModifyTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Identity": {
+                        "type": "string",
+                        "description": "Identity of the retention tag to modify"
+                      },
+                      "Name": {
+                        "type": "string",
+                        "description": "New name for the retention tag"
+                      },
+                      "RetentionAction": {
+                        "type": "string",
+                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "description": "Action to take when retention period expires"
+                      },
+                      "AgeLimitForRetention": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 24855,
+                        "description": "Age limit for retention in days"
+                      },
+                      "RetentionEnabled": {
+                        "type": "boolean",
+                        "description": "Whether retention is enabled for this tag"
+                      },
+                      "Comment": {
+                        "type": "string",
+                        "description": "Administrative comment for the tag"
+                      },
+                      "LocalizedComment": {
+                        "type": "string",
+                        "description": "Localized comment for the tag"
+                      },
+                      "LocalizedRetentionPolicyTagName": {
+                        "type": "string",
+                        "description": "Localized name for the retention policy tag"
+                      }
+                    },
+                    "required": ["Identity"]
+                  },
+                  "description": "Array of retention tags to modify"
+                },
+                "DeleteTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of retention tag identities to delete"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Successfully processed retention tag operations"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "/ExecSetMailboxRetentionPolicies": {
+    "post": {
+      "description": "Apply a retention policy to one or more mailboxes",
+      "summary": "Set Mailbox Retention Policies",
+      "tags": [
+        "POST"
+      ],
+      "parameters": [
+        {
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "name": "tenantFilter",
+          "in": "query"
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "PolicyName": {
+                  "type": "string",
+                  "description": "Name of the retention policy to apply"
+                },
+                "Mailboxes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Array of mailbox identities (email addresses or names) to apply the policy to"
+                }
+              },
+              "required": ["PolicyName", "Mailboxes"]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of result messages for each mailbox operation"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Successfully processed mailbox retention policy assignments"
+        },
+        "400": {
+          "description": "Bad request - missing required parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Results": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

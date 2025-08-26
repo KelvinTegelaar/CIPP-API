@@ -32,10 +32,16 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SafeLinksPolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $ServicePlans = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus?$select=servicePlans' -tenantid $Tenant
     $ServicePlans = $ServicePlans.servicePlans.servicePlanName
@@ -57,9 +63,16 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             $RuleName = $ExistingRule.Name
         }
 
-        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
+        try {
+            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
             Where-Object -Property Name -EQ $PolicyName |
             Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
+        }
+        catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.EnableSafeLinksForEmail -eq $true) -and

@@ -1,11 +1,11 @@
 using namespace System.Net
 
-Function Invoke-ExecCSPLicense {
+function Invoke-ExecCSPLicense {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Directory.Read
+        Tenant.Directory.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,22 +17,22 @@ Function Invoke-ExecCSPLicense {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
     $Action = $Request.Body.Action
-    $SKU = $Request.Body.SKU
+    $SKU = $Request.Body.SKU.value ?? $Request.Body.SKU
 
     try {
         if ($Action -eq 'Add') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
         }
 
         if ($Action -eq 'Remove') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
         }
 
         if ($Action -eq 'NewSub') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
         }
         if ($Action -eq 'Cancel') {
-            $null = Remove-SherwebSubscription -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
+            $null = Remove-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
         }
         $Result = 'License change executed successfully.'
         $StatusCode = [HttpStatusCode]::OK

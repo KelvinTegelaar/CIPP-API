@@ -22,18 +22,16 @@ Function Invoke-ExecDisableUser {
 
     try {
         $Result = Set-CIPPSignInState -UserID $ID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -AccountEnabled $Enable
-        if ($Result -like 'Could not disable*' -or $Result -like 'WARNING: User is AD Sync enabled*') { throw $Result }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Results = [pscustomobject]@{'Results' = "$Result" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{ 'Results' = "$Result" }
         })
 
 }

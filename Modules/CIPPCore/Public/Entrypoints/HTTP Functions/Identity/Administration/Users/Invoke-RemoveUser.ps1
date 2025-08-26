@@ -17,18 +17,15 @@ Function Invoke-RemoveUser {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $UserID = $Request.Query.ID ?? $Request.Body.ID
+    $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName
 
     if (!$UserID) { exit }
     try {
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserID)" -type DELETE -tenant $TenantFilter
-        $Result = "Successfully deleted $UserID."
-        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        $Result = Remove-CIPPUser -UserID $UserID -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Could not delete user $($UserID). $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

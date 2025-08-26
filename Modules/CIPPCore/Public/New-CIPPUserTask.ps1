@@ -20,8 +20,32 @@ function New-CIPPUserTask {
 
     try {
         if ($UserObj.licenses.value) {
-            $LicenseResults = Set-CIPPUserLicense -UserId $CreationResults.Username -TenantFilter $UserObj.tenantFilter -AddLicenses $UserObj.licenses.value -Headers $Headers
-            $Results.Add($LicenseResults)
+            if ($UserObj.sherwebLicense.value) {
+                $License = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $null = $results.Add('Added Sherweb License, scheduling assignment')
+                $taskObject = [PSCustomObject]@{
+                    TenantFilter  = $UserObj.tenantFilter
+                    Name          = "Assign License: $UserPrincipalName"
+                    Command       = @{
+                        value = 'Set-CIPPUserLicense'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        UserId      = $CreationResults.Username
+                        APIName     = 'Sherweb License Assignment'
+                        AddLicenses = $UserObj.licenses.value
+                    }
+                    ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.
+                    PostExecution = @{
+                        Webhook = [bool]$Request.Body.PostExecution.webhook
+                        Email   = [bool]$Request.Body.PostExecution.email
+                        PSA     = [bool]$Request.Body.PostExecution.psa
+                    }
+                }
+                Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
+            } else {
+                $LicenseResults = Set-CIPPUserLicense -UserId $CreationResults.Username -TenantFilter $UserObj.tenantFilter -AddLicenses $UserObj.licenses.value -Headers $Headers
+                $Results.Add($LicenseResults)
+            }
         }
     } catch {
         Write-LogMessage -headers $Headers -API $APIName -tenant $($UserObj.tenantFilter) -message "Failed to assign the license. Error:$($_.Exception.Message)" -Sev 'Error'
@@ -30,7 +54,7 @@ function New-CIPPUserTask {
 
     try {
         if ($UserObj.AddedAliases) {
-            $AliasResults = Add-CIPPAlias -user $CreationResults.Username -Aliases ($UserObj.AddedAliases -split '\s') -UserprincipalName $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName -Headers $Headers
+            $AliasResults = Add-CIPPAlias -User $CreationResults.Username -Aliases ($UserObj.AddedAliases -split '\s') -UserPrincipalName $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName -Headers $Headers
             $Results.Add($AliasResults)
         }
     } catch {
@@ -45,12 +69,12 @@ function New-CIPPUserTask {
     }
 
     if ($UserObj.setManager) {
-        $ManagerResult = Set-CIPPManager -user $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -APIName 'Set Manager' -Headers $Headers
+        $ManagerResult = Set-CIPPManager -User $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResult)
     }
 
     if ($UserObj.setSponsor) {
-        $SponsorResult = Set-CIPPManager -user $CreationResults.Username -Manager $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -APIName 'Set Sponsor' -Headers $Headers
+        $SponsorResult = Set-CIPPSponsor -User $CreationResults.Username -Sponsor $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($SponsorResult)
     }
 

@@ -17,6 +17,7 @@ function Invoke-CIPPStandardPhishingSimulations {
             {"type":"autoComplete","multiple":true,"creatable":true,"required":true,"label":"Phishing Simulation Domains","name":"standards.PhishingSimulations.Domains"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":true,"label":"Phishing Simulation Sender IP Ranges","name":"standards.PhishingSimulations.SenderIpRanges"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Phishing Simulation Urls","name":"standards.PhishingSimulations.PhishingSimUrls"}
+            {"type":"switch","label":"Remove extra urls","name":"standards.PhishingSimulations.RemoveExtraUrls","defaultValue":false,"required":false}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -27,16 +28,29 @@ function Invoke-CIPPStandardPhishingSimulations {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#medium-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishingSimulations' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     $PolicyName = 'CIPPPhishSim'
 
     # Fetch current Phishing Simulations Policy settings and ensure it is correctly configured
-    $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
-    Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
-    Select-Object -Property Identity,Name,Mode,Enabled
+    try {
+        $PolicyState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-PhishSimOverridePolicy' |
+        Where-Object -Property Name -EQ 'PhishSimOverridePolicy' |
+        Select-Object -Property Identity, Name, Mode, Enabled
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishingSimulations state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $PolicyIsCorrect = ($PolicyState.Name -eq 'PhishSimOverridePolicy') -and ($PolicyState.Enabled -eq $true)
 
@@ -45,10 +59,18 @@ function Invoke-CIPPStandardPhishingSimulations {
     Select-Object -Property Identity,Name,SenderIpRanges,Domains,SenderDomainIs
 
     [String[]]$AddSenderIpRanges = $Settings.SenderIpRanges.value | Where-Object { $_ -notin $RuleState.SenderIpRanges }
-    [String[]]$RemoveSenderIpRanges = $RuleState.SenderIpRanges | Where-Object { $_ -notin $Settings.SenderIpRanges.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveSenderIpRanges = $RuleState.SenderIpRanges | Where-Object { $_ -notin $Settings.SenderIpRanges.value }
+    } else {
+        $RemoveSenderIpRanges = @()
+    }
 
     [String[]]$AddDomains = $Settings.Domains.value | Where-Object { $_ -notin $RuleState.Domains }
-    [String[]]$RemoveDomains = $RuleState.Domains | Where-Object { $_ -notin $Settings.Domains.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveDomains = $RuleState.Domains | Where-Object { $_ -notin $Settings.Domains.value }
+    } else {
+        $RemoveDomains = @()
+    }
 
     $RuleIsCorrect = ($RuleState.Name -like "*PhishSimOverr*") -and
     ($AddSenderIpRanges.Count -eq 0 -and $RemoveSenderIpRanges.Count -eq 0) -and
@@ -59,7 +81,11 @@ function Invoke-CIPPStandardPhishingSimulations {
     Select-Object -Property Value
 
     [String[]]$AddEntries = $Settings.PhishingSimUrls.value | Where-Object { $_ -notin $SimUrlState.value }
-    [String[]]$RemoveEntries = $SimUrlState.value | Where-Object { $_ -notin $Settings.PhishingSimUrls.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveEntries = $SimUrlState.value | Where-Object { $_ -notin $Settings.PhishingSimUrls.value }
+    } else {
+        $RemoveEntries = @()
+    }
 
     $PhishingSimUrlsIsCorrect = ($AddEntries.Count -eq 0 -and $RemoveEntries.Count -eq 0)
 
@@ -133,14 +159,16 @@ function Invoke-CIPPStandardPhishingSimulations {
                     ListType = 'Url'
                     ListSubType = 'AdvancedDelivery'
                 }
-                # Remove entries that are not in the settings
-                If ($RemoveEntries.Count -gt 0) {
-                    $cmdParams.Entries = $RemoveEntries
-                    Try {
-                        $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Remove-TenantAllowBlockListItems' -cmdParams $cmdParams
-                        Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Removed Phishing Simulation URLs from Allowlist." -sev Info
-                    } Catch {
-                        Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to remove Phishing Simulation URLs from Allowlist." -sev Error -LogData $_
+                if ($Settings.RemoveExtraUrls -eq $true) {
+                    # Remove entries that are not in the settings
+                    If ($RemoveEntries.Count -gt 0) {
+                        $cmdParams.Entries = $RemoveEntries
+                        Try {
+                            $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Remove-TenantAllowBlockListItems' -cmdParams $cmdParams
+                            Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Removed Phishing Simulation URLs from Allowlist." -sev Info
+                        } Catch {
+                            Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to remove Phishing Simulation URLs from Allowlist." -sev Error -LogData $_
+                        }
                     }
                 }
                 # Add entries that are in the settings

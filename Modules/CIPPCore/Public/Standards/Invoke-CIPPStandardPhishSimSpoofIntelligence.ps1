@@ -14,6 +14,7 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
             Defender Standards
         TAG
         ADDEDCOMPONENT
+            {"type":"switch","label":"Remove extra domains from the allow list","name":"standards.PhishSimSpoofIntelligence.RemoveExtraDomains","defaultValue":false,"required":false}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Allowed Domains","name":"standards.PhishSimSpoofIntelligence.AllowedDomains"}
         IMPACT
             Medium Impact
@@ -25,18 +26,35 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#medium-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishSimSpoofIntelligence' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     # Fetch current Phishing Simulations Spoof Intelligence domains and ensure it is correctly configured
-    $DomainState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
-    Select-Object -Property Identity,SendingInfrastructure
+    try {
+        $DomainState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
+        Select-Object -Property Identity, SendingInfrastructure
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishSimSpoofIntelligence state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     [String[]]$AddDomain = $Settings.AllowedDomains.value | Where-Object { $_ -notin $DomainState.SendingInfrastructure }
 
-    $RemoveDomain = $DomainState | Where-Object { $_.SendingInfrastructure -notin $Settings.AllowedDomains.value } |
-    Select-Object -Property Identity,SendingInfrastructure
+    if ($Settings.RemoveExtraDomains -eq $true) {
+        $RemoveDomain = $DomainState | Where-Object { $_.SendingInfrastructure -notin $Settings.AllowedDomains.value } |
+            Select-Object -Property Identity,SendingInfrastructure
+    } else {
+        $RemoveDomain = @()
+    }
 
     $StateIsCorrect = ($AddDomain.Count -eq 0 -and $RemoveDomain.Count -eq 0)
 
@@ -51,15 +69,17 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
         } Else {
             $BulkRequests = New-Object System.Collections.Generic.List[Hashtable]
 
-            # Prepare removal requests
-            If ($RemoveDomain.Count -gt 0) {
-                Write-Host "Removing $($RemoveDomain.Count) domains from Spoof Intelligence"
-                $BulkRequests.Add(@{
-                    CmdletInput = @{
-                        CmdletName = 'Remove-TenantAllowBlockListSpoofItems'
-                        Parameters = @{ Identity = 'default'; Ids = $RemoveDomain.Identity }
-                    }
-                })
+            if ($Settings.RemoveExtraDomains -eq $true) {
+                # Prepare removal requests
+                If ($RemoveDomain.Count -gt 0) {
+                    Write-Host "Removing $($RemoveDomain.Count) domains from Spoof Intelligence"
+                    $BulkRequests.Add(@{
+                            CmdletInput = @{
+                                CmdletName = 'Remove-TenantAllowBlockListSpoofItems'
+                                Parameters = @{ Identity = 'default'; Ids = $RemoveDomain.Identity }
+                            }
+                        })
+                }
             }
 
             # Prepare addition requests

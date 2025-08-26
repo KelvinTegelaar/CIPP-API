@@ -81,12 +81,13 @@
     "PreferredProcessor": "standards"
   },
   {
-    "Id": "5113c66d-c040-42df-9565-39dff90ddd55",
-    "Command": "Start-CIPPGraphSubscriptionCleanupTimer",
-    "Description": "Orchestrator to cleanup old Graph subscriptions",
-    "Cron": "0 0 0 * * *",
+    "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
+    "Command": "Start-DriftStandardsOrchestrator",
+    "Description": "Orchestrator to process drift standards",
+    "Cron": "0 0 */1 * * *",
     "Priority": 5,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
   },
   {
     "Id": "97145a1d-28f0-4bb2-b929-5a43517d23cc",

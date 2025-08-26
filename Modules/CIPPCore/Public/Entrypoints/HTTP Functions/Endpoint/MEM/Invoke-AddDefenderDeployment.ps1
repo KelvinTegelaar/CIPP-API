@@ -14,40 +14,52 @@ Function Invoke-AddDefenderDeployment {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenants = ($Request.body.selectedTenants).value
+    $Tenants = ($Request.Body.selectedTenants).value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
-    $Compliance = $request.body.Compliance
-    $PolicySettings = $request.body.Policy
-    $ASR = $request.body.ASR
-    $EDR = $request.body.EDR
-    $results = foreach ($Tenant in $tenants) {
+    $Compliance = $Request.Body.Compliance
+    $PolicySettings = $Request.Body.Policy
+    $DefenderExclusions = $Request.Body.Exclusion
+    $ASR = $Request.Body.ASR
+    $EDR = $Request.Body.EDR
+    $Results = foreach ($tenant in $Tenants) {
         try {
-            $SettingsObj = @{
-                id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
-                androidEnabled                                      = [bool]$Compliance.ConnectAndroid
-                iosEnabled                                          = [bool]$Compliance.ConnectIos
-                windowsEnabled                                      = [bool]$Compliance.Connectwindows
-                macEnabled                                          = [bool]$Compliance.ConnectMac
-                partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
-                partnerUnresponsivenessThresholdInDays              = 7
-                allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
-                allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
-                androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
-                iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
-                microsoftDefenderForEndpointAttachEnabled           = [bool]$true
-            } | ConvertTo-Json -Compress
-            try {
-                $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
-            } catch {
-                $ExistingSettings = $false
+            if ($Compliance) {
+                $SettingsObject = @{
+                    id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
+                    androidEnabled                                      = [bool]$Compliance.ConnectAndroid
+                    iosEnabled                                          = [bool]$Compliance.ConnectIos
+                    windowsEnabled                                      = [bool]$Compliance.Connectwindows
+                    macEnabled                                          = [bool]$Compliance.ConnectMac
+                    partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
+                    partnerUnresponsivenessThresholdInDays              = 7
+                    allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
+                    allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
+                    androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
+                    iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
+                    microsoftDefenderForEndpointAttachEnabled           = [bool]$true
+                }
+                $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
+                try {
+                    $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
+
+                    # Check if any setting doesn't match
+                    foreach ($key in $SettingsObject.Keys) {
+                        if ($ExistingSettings.$key -ne $SettingsObject[$key]) {
+                            $ExistingSettings = $false
+                            break
+                        }
+                    }
+                } catch {
+                    $ExistingSettings = $false
+                }
+                if ($ExistingSettings) {
+                    "Defender Intune Configuration already correct and active for $($tenant). Skipping"
+                } else {
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
+                    "$($tenant): Successfully set Defender Compliance and Reporting settings. Please remember to enable the Intune Connector in the Defender portal."
+                }
             }
 
-            if ($ExistingSettings) {
-                "Defender Intune Configuration already active for $($Tenant). Skipping"
-            } else {
-                $SettingsRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
-                "$($Tenant): Successfully set Defender Compliance and Reporting settings"
-            }
 
             if ($PolicySettings) {
                 $Settings = switch ($PolicySettings) {
@@ -75,7 +87,7 @@ Function Invoke-AddDefenderDeployment {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowscriptscanning'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_allowscriptscanning_1'; settingValueTemplateReference = @{settingValueTemplateId = 'ab9e4320-c953-4067-ac9a-be2becd06b4a' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = '000cf176-949c-4c08-a5d4-90ed43718db7' } } }
                     } { $_.AllowUI } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowuseruiaccess' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_allowuseruiaccess_1' ; settingValueTemplateReference = @{settingValueTemplateId = '4b6c9739-4449-4006-8e5f-3049136470ea' } }; settingInstanceTemplateReference = @{settingInstanceTemplateId = '0170a900-b0bc-4ccc-b7ce-dda9be49189b' } } }
-                    } { $_.CheckSig } {
+                    } { $_.CheckSigs } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_checkforsignaturesbeforerunningscan' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_checkforsignaturesbeforerunningscan_1' ; settingValueTemplateReference = @{settingValueTemplateId = '010779d1-edd4-441d-8034-89ad57a863fe' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = '4fea56e3-7bb6-4ad3-88c6-e364dd2f97b9' } } }
                     } { $_.DisableCatchupFullScan } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_disablecatchupfullscan'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_disablecatchupfullscan_1' ; settingValueTemplateReference = @{settingValueTemplateId = '1b26092f-48c4-447b-99d4-e9c501542f1c' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'f881b08c-f047-40d2-b7d9-3dde7ce9ef64' } } }
@@ -90,7 +102,7 @@ Function Invoke-AddDefenderDeployment {
                 $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
                 Write-Host ($CheckExisting | ConvertTo-Json)
                 if ('Default AV Policy' -in $CheckExisting.Name) {
-                    "$($Tenant): AV Policy already exists. Skipping"
+                    "$($tenant): AV Policy already exists. Skipping"
                 } else {
                     $PolBody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
                         name              = 'Default AV Policy'
@@ -107,29 +119,35 @@ Function Invoke-AddDefenderDeployment {
                     $PolicyRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $PolBody
                     if ($PolicySettings.AssignTo -ne 'None') {
                         $AssignBody = if ($PolicySettings.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($PolicySettings.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-                        $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($PolicySettings.AssignTo)" -Sev 'Info'
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($PolicySettings.AssignTo)" -Sev 'Info'
                     }
-                    "$($Tenant): Successfully set Default AV Policy settings"
+                    "$($tenant): Successfully set Default AV Policy settings"
                 }
             }
             if ($ASR) {
+                # Fallback to block mode
+                $Mode = $ASR.Mode ?? 'block'
                 $ASRSettings = switch ($ASR) {
-                    { $_.BlockAdobeChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses_block' } } }
-                    { $_.BlockWin32Macro } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses_block' } } }
-                    { $_.BlockCredentialStealing } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem_block' } } }
-                    { $_.BlockPSExec } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands_block' } } }
-                    { $_.WMIPersistence } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription_block' } } }
-                    { $_.BlockOfficeExes } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent_block' } } }
-                    { $_.BlockOfficeApps } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses_block' } } }
-                    { $_.BlockYoungExe } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion_block' } } }
-                    { $_.blockJSVB } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent_block' } } }
-                    { $_.blockOfficeComChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses_block' } } }
-                    { $_.blockOfficeChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses_block' } } }
-                    { $_.BlockUntrustedUSB } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb_block' } } }
-                    { $_.EnableRansomwareVac } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware_block' } } }
-                    { $_.BlockExesMail } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail_block' } } }
-                    { $_.BlockUnsignedDrivers } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers_block' } } }
+                    { $_.BlockObfuscatedScripts } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutionofpotentiallyobfuscatedscripts' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutionofpotentiallyobfuscatedscripts_$Mode" } } }
+                    { $_.BlockAdobeChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses_$Mode" } } }
+                    { $_.BlockWin32Macro } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros_$Mode" } } }
+                    { $_.BlockCredentialStealing } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem_$Mode" } } }
+                    { $_.BlockPSExec } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands_$Mode" } } }
+                    { $_.WMIPersistence } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription_$Mode" } } }
+                    { $_.BlockOfficeExes } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent_$Mode" } } }
+                    { $_.BlockOfficeApps } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses_$Mode" } } }
+                    { $_.BlockYoungExe } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion_$Mode" } } }
+                    { $_.blockJSVB } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent_$Mode" } } }
+                    { $_.BlockWebshellForServers } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwebshellcreationforservers' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwebshellcreationforservers_$Mode" } } }
+                    { $_.blockOfficeComChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses_$Mode" } } }
+                    { $_.BlockSystemTools } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuseofcopiedorimpersonatedsystemtools' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuseofcopiedorimpersonatedsystemtools_$Mode" } } }
+                    { $_.blockOfficeChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses_$Mode" } } }
+                    { $_.BlockUntrustedUSB } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb_$Mode" } } }
+                    { $_.EnableRansomwareVac } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware'; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware_$Mode" } } }
+                    { $_.BlockExesMail } { @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue' ; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail_$Mode" } } }
+                    { $_.BlockUnsignedDrivers } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers_$Mode" } } }
+                    { $_.BlockSafeMode } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockrebootingmachineinsafemode'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockrebootingmachineinsafemode_$Mode" } } }
 
                 }
                 $ASRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
@@ -144,14 +162,14 @@ Function Invoke-AddDefenderDeployment {
                             settingInstance = @{
                                 '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance'
                                 settingDefinitionId              = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules'
-                                groupSettingCollectionValue      = @(@{children = $asrSettings })
+                                groupSettingCollectionValue      = @(@{children = $ASRSettings })
                                 settingInstanceTemplateReference = @{settingInstanceTemplateId = '19600663-e264-4c02-8f55-f2983216d6d7' }
                             }
                         })
                 }
                 $CheckExististingASR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
                 if ('ASR Default rules' -in $CheckExististingASR.Name) {
-                    "$($Tenant): ASR Policy already exists. Skipping"
+                    "$($tenant): ASR Policy already exists. Skipping"
                 } else {
                     Write-Host $ASRbody
                     if (($ASRSettings | Measure-Object).Count -gt 0) {
@@ -159,10 +177,10 @@ Function Invoke-AddDefenderDeployment {
                         Write-Host ($ASRRequest.id)
                         if ($ASR.AssignTo -and $ASR.AssignTo -ne 'none') {
                             $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-                            $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
                         }
-                        "$($Tenant): Successfully added ASR Settings"
+                        "$($tenant): Successfully added ASR Settings"
                     }
                 }
             }
@@ -231,32 +249,111 @@ Function Invoke-AddDefenderDeployment {
                     Write-Host ( $EDRbody)
                     $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant | Where-Object -Property Name -EQ 'EDR Configuration'
                     if ('EDR Configuration' -in $CheckExististingEDR.Name) {
-                        "$($Tenant): EDR Policy already exists. Skipping"
+                        "$($tenant): EDR Policy already exists. Skipping"
                     } else {
                         $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
                         if ($ASR -and $ASR.AssignTo -ne 'none') {
                             $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-                            $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned EDR policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned EDR policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
                         }
-                        "$($Tenant): Successfully added EDR Settings"
+                        "$($tenant): Successfully added EDR Settings"
+                    }
+                }
+            }
+            # Exclusion Policy Section
+            if ($DefenderExclusions) {
+                $ExclusionAssignTo = $DefenderExclusions.AssignTo
+                if ($DefenderExclusions.excludedExtensions) {
+                    $ExcludedExtensions = $DefenderExclusions.excludedExtensions | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
+                    }
+                }
+                if ($DefenderExclusions.excludedPaths) {
+                    $ExcludedPaths = $DefenderExclusions.excludedPaths | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
+                    }
+                }
+                if ($DefenderExclusions.excludedProcesses) {
+                    $ExcludedProcesses = $DefenderExclusions.excludedProcesses | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationStringSettingValue'; value = $_ }
+                    }
+                }
+                $ExclusionSettings = [System.Collections.Generic.List[System.Object]]::new()
+                if ($ExcludedExtensions.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
+                            id              = '2'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedextensions'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'c203725b-17dc-427b-9470-673a2ce9cd5e' }
+                                simpleSettingCollectionValue     = @($ExcludedExtensions)
+                            }
+                        })
+                }
+                if ($ExcludedPaths.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
+                            id              = '1'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedpaths'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = 'aaf04adc-c639-464f-b4a7-152e784092e8' }
+                                simpleSettingCollectionValue     = @($ExcludedPaths)
+                            }
+                        })
+                }
+                if ($ExcludedProcesses.Count -gt 0) {
+                    $ExclusionSettings.Add(@{
+                            id              = '0'
+                            settingInstance = @{
+                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance'
+                                settingDefinitionId              = 'device_vendor_msft_policy_config_defender_excludedprocesses'
+                                settingInstanceTemplateReference = @{ settingInstanceTemplateId = '96b046ed-f138-4250-9ae0-b0772a93d16f' }
+                                simpleSettingCollectionValue     = @($ExcludedProcesses)
+                            }
+                        })
+                }
+                if ($ExclusionSettings.Count -gt 0) {
+                    $ExclusionBody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+                        name              = 'Default AV Exclusion Policy'
+                        displayName       = 'Default AV Exclusion Policy'
+                        settings          = @($ExclusionSettings)
+                        platforms         = 'windows10'
+                        technologies      = 'mdm,microsoftSense'
+                        templateReference = @{
+                            templateId             = '45fea5e9-280d-4da1-9792-fb5736da0ca9_1'
+                            templateFamily         = 'endpointSecurityAntivirus'
+                            templateDisplayName    = 'Microsoft Defender Antivirus exclusions'
+                            templateDisplayVersion = 'Version 1'
+                        }
+                    }
+                    $CheckExistingExclusion = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
+                    if ('Default AV Exclusion Policy' -in $CheckExistingExclusion.Name) {
+                        "$($tenant): Exclusion Policy already exists. Skipping"
+                    } else {
+                        $ExclusionRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $ExclusionBody
+                        if ($ExclusionAssignTo -and $ExclusionAssignTo -ne 'none') {
+                            $AssignBody = if ($ExclusionAssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($ExclusionAssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExclusionRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Assigned Exclusion policy to $($ExclusionAssignTo)" -Sev 'Info'
+                        }
+                        "$($tenant): Successfully set Default AV Exclusion Policy settings"
                     }
                 }
             }
         } catch {
-            "Failed to add policy for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            "Failed to add policy for $($tenant): $($_.Exception.Message)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 
     }
 
-    $body = [pscustomobject]@{'Results' = @($results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = @($Results) }
         })
 
 }

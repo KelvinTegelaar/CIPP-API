@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListStandardsCompare {
+function Invoke-ListStandardsCompare {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,11 +10,17 @@ Function Invoke-ListStandardsCompare {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+
     $Table = Get-CIPPTable -TableName 'CippStandardsReports'
-    $Results = Get-CIPPAzDataTableEntity @Table
+    $TenantFilter = $Request.Query.tenantFilter
+    if ($TenantFilter) {
+        $Table.Filter = "PartitionKey eq '{0}'" -f $TenantFilter
+    }
+
+    $Standards = Get-CIPPAzDataTableEntity @Table
 
     #in the results we have objects starting with "standards." All these have to be converted from JSON. Do not do this is its a boolean
-    $Results | ForEach-Object {
+    <#$Results | ForEach-Object {
         $Object = $_
         $Object.PSObject.Properties | ForEach-Object {
             if ($_.Name -like 'standards_*') {
@@ -34,8 +40,55 @@ Function Invoke-ListStandardsCompare {
                 $object.PSObject.Properties.Remove($_.Name)
             }
         }
+    }#>
+
+    $TenantStandards = @{}
+    $Results = [System.Collections.Generic.List[object]]::new()
+
+    foreach ($Standard in $Standards) {
+        # each standard is on their own row now, the field name is the RowKey and the value is in the Value field
+        $FieldName = $Standard.RowKey
+        $FieldValue = $Standard.Value
+        $Tenant = $Standard.PartitionKey
+
+        # decode field names that are hex encoded (e.g. QuarantineTemplates)
+        if ($FieldName -match '^(standards\.QuarantineTemplate\.)(.+)$') {
+            $Prefix = $Matches[1]
+            $HexEncodedName = $Matches[2]
+            $Chars = [System.Collections.Generic.List[char]]::new()
+            for ($i = 0; $i -lt $HexEncodedName.Length; $i += 2) {
+                $Chars.Add([char][Convert]::ToInt32($HexEncodedName.Substring($i,2),16))
+            }
+            $FieldName = "$Prefix$(-join $Chars)"
+        }
+
+        if ($FieldValue -is [System.Boolean]) {
+            $FieldValue = [bool]$FieldValue
+        } elseif ($FieldValue -like '*{*') {
+            $FieldValue = ConvertFrom-Json -InputObject $FieldValue -ErrorAction SilentlyContinue
+        } else {
+            $FieldValue = [string]$FieldValue
+        }
+
+        if (-not $TenantStandards.ContainsKey($Tenant)) {
+            $TenantStandards[$Tenant] = @{}
+        }
+        $TenantStandards[$Tenant][$FieldName] = @{
+            Value       = $FieldValue
+            LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
     }
 
+    foreach ($Tenant in $TenantStandards.Keys) {
+        $TenantStandard = [PSCustomObject]@{
+            tenantFilter = $Tenant
+        }
+        foreach ($Field in $TenantStandards[$Tenant].Keys) {
+            $Value = $TenantStandards[$Tenant][$Field]
+            $TenantStandard | Add-Member -MemberType NoteProperty -Name $Field -Value $Value -Force
+        }
+        $Results.Add($TenantStandard)
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

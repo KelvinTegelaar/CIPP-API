@@ -19,9 +19,9 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             "mdo_safeattachmentpolicy"
         ADDEDCOMPONENT
             {"type":"select","multiple":false,"label":"Safe Attachment Action","name":"standards.SafeAttachmentPolicy.SafeAttachmentAction","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
-            {"type":"select","multiple":false,"label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"select","multiple":false,"creatable":true,"label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"switch","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
-            {"type":"textField","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address","required":false}
+            {"type":"textField","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address","required":false,"condition":{"field":"standards.SafeAttachmentPolicy.Redirect","compareType":"is","compareValue":true}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -33,10 +33,16 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SafeAttachmentPolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $ServicePlans = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus?$select=servicePlans' -tenantid $Tenant
     $ServicePlans = $ServicePlans.servicePlans.servicePlanName
@@ -58,9 +64,16 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             $RuleName = $ExistingRule.Name
         }
 
-        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+        try {
+            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+        }
+        catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.Enable -eq $true) -and

@@ -11,8 +11,10 @@ function Invoke-ListTenants {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    # Interact with query parameters or the body of the request.
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
     Write-Host "Tenant Access: $TenantAccess"
 
@@ -67,7 +69,7 @@ function Invoke-ListTenants {
         }
     }
     try {
-        $tenantfilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.tenantFilter
         $Tenants = Get-Tenants -IncludeErrors -SkipDomains
         if ($TenantAccess -notcontains 'AllTenants') {
             $Tenants = $Tenants | Where-Object -Property customerId -In $TenantAccess
@@ -96,9 +98,9 @@ function Invoke-ListTenants {
             if ($Request.Query.Mode -eq 'TenantList') {
                 # add portal link properties
                 $Body = $Body | Select-Object *, @{Name = 'portal_m365'; Expression = { "https://admin.cloud.microsoft/?delegatedOrg=$($_.initialDomainName)" } },
-                @{Name = 'portal_exchange'; Expression = { "https://admin.cloud.microsoft/exchange/?delegatedOrg=$($_.initialDomainName)" } },
+                @{Name = 'portal_exchange'; Expression = { "https://admin.cloud.microsoft/exchange?delegatedOrg=$($_.initialDomainName)" } },
                 @{Name = 'portal_entra'; Expression = { "https://entra.microsoft.com/$($_.defaultDomainName)" } },
-                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com/?delegatedOrg=$($_.initialDomainName)" } },
+                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com?delegatedOrg=$($_.initialDomainName)" } },
                 @{Name = 'portal_azure'; Expression = { "https://portal.azure.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
@@ -107,12 +109,12 @@ function Invoke-ListTenants {
             }
 
         } else {
-            $body = $Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
+            $body = $Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter
         }
 
-        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
+        Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message 'Listed Tenant Details' -Sev 'Debug'
     } catch {
-        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{
             'Results'         = "Failed to retrieve tenants: $($_.Exception.Message)"
             defaultDomainName = ''

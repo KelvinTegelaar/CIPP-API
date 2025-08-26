@@ -24,10 +24,16 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/exchange-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableOnlineArchiving' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableOnlineArchiving'
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
@@ -70,7 +76,8 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     if ($Settings.alert -eq $true) {
 
         if ($MailboxesNoArchive) {
-            Write-StandardsAlert -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -object $MailboxesNoArchive -tenant $Tenant -standardName 'EnableOnlineArchiving' -standardId $Settings.standardId
+            $Object = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, ArchiveGuid
+            Write-StandardsAlert -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -object $Object -tenant $Tenant -standardName 'EnableOnlineArchiving' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes have Online Archiving enabled' -sev Info

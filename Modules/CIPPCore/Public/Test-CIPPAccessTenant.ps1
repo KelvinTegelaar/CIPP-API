@@ -48,14 +48,16 @@ function Test-CIPPAccessTenant {
         $ExchangeStatus = $false
 
         $Results = [PSCustomObject]@{
-            TenantName     = $Tenant.defaultDomainName
-            GraphStatus    = $false
-            GraphTest      = ''
-            ExchangeStatus = $false
-            ExchangeTest   = ''
-            GDAPRoles      = ''
-            MissingRoles   = ''
-            LastRun        = (Get-Date).ToUniversalTime()
+            TenantName                = $Tenant.defaultDomainName
+            GraphStatus               = $false
+            GraphTest                 = ''
+            ExchangeStatus            = $false
+            ExchangeTest              = ''
+            GDAPRoles                 = ''
+            MissingRoles              = ''
+            OrgManagementRoles        = @()
+            OrgManagementRolesMissing = @()
+            LastRun                   = (Get-Date).ToUniversalTime()
         }
 
         $AddedText = ''
@@ -103,8 +105,32 @@ function Test-CIPPAccessTenant {
 
         try {
             $null = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
-            $ExchangeStatus = $true
-            $ExchangeTest = 'Successfully connected to Exchange'
+
+            $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ Delegating = $false } | Where-Object { $_.RoleAssigneeName -eq 'Organization Management' } | Select-Object -Property Role, Guid
+            Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
+            $Results.OrgManagementRoles = $OrgManagementRoles
+
+            $RoleDefinitions = New-GraphGetRequest -tenantid $Tenant.customerId -uri 'https://graph.microsoft.com/beta/roleManagement/exchange/roleDefinitions'
+            Write-Information "Found $($RoleDefinitions.Count) Exchange role definitions"
+
+            $BasePath = Get-Module -Name 'CIPPCore' | Select-Object -ExpandProperty ModuleBase
+            $AllOrgManagementRoles = Get-Content -Path "$BasePath\Public\OrganizationManagementRoles.json" -ErrorAction Stop | ConvertFrom-Json
+            Write-Information "Loaded all Organization Management roles from $BasePath\Public\OrganizationManagementRoles.json"
+
+            $AvailableRoles = $RoleDefinitions | Where-Object -Property displayName -In $AllOrgManagementRoles | Select-Object -Property displayName, id, description
+            Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
+            $MissingOrgMgmtRoles = $AvailableRoles | Where-Object { $OrgManagementRoles.Role -notcontains $_.displayName }
+            if (($MissingOrgMgmtRoles | Measure-Object).Count -gt 0) {
+                $Results.OrgManagementRolesMissing = $MissingOrgMgmtRoles
+                Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
+                $ExchangeStatus = $false
+                $ExchangeTest = 'Connected to Exchange but missing permissions in Organization Management. This may impact the ability to manage Exchange features'
+                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -Sev 'Warning' -LogData $MissingOrgMgmtRoles
+            } else {
+                Write-Warning 'All available Organization Management roles are present in Exchange'
+                $ExchangeStatus = $true
+                $ExchangeTest = 'Successfully connected to Exchange'
+            }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
@@ -113,6 +139,7 @@ function Test-CIPPAccessTenant {
 
             $ExchangeTest = "Failed to connect to Exchange: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+            Write-Warning "Failed to connect to Exchange: $($_.Exception.Message)"
         }
 
         if ($GraphStatus -and $ExchangeStatus) {
