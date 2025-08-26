@@ -28,14 +28,9 @@ function Invoke-CIPPStandardGroupTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
-    if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
-        return $true
-    } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
     $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
+
     if ($Settings.remediate -eq $true) {
         #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
         $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
@@ -45,6 +40,19 @@ function Invoke-CIPPStandardGroupTemplate {
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$($Template.value)'"
                 $groupobj = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+
+                # Normalize group type to lowercase for consistent checks
+                $groupType = $groupobj.groupType.ToLower()
+
+                # Only run license check if group type is not 'security'
+                if ($groupType -ne 'security') {
+                    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE')
+                    if ($TestResult -eq $false) {
+                        Write-Host "We're exiting as the correct license is not present for this standard."
+                        return $true
+                    }
+                }
+
                 $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($Tenant)" }
                 $CheckExististing = $existingGroups | Where-Object -Property displayName -EQ $groupobj.displayname
                 $BodyToship = [pscustomobject] @{
@@ -54,7 +62,7 @@ function Invoke-CIPPStandardGroupTemplate {
                     mailEnabled     = [bool]$false
                     securityEnabled = [bool]$true
                 }
-                if ($groupobj.groupType -eq 'AzureRole') {
+                if ($groupType -eq 'azurerole') {
                     $BodyToship | Add-Member -NotePropertyName 'isAssignableToRole' -NotePropertyValue $true
                 }
                 if ($groupobj.membershipRules) {
@@ -64,10 +72,10 @@ function Invoke-CIPPStandardGroupTemplate {
                 }
                 if (!$CheckExististing) {
                     $ActionType = 'create'
-                    if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic', 'Security') {
+                    if ($groupType -in 'generic', 'azurerole', 'dynamic', 'security') {
                         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
-                        if ($groupobj.groupType -eq 'dynamicdistribution') {
+                        if ($groupType -eq 'dynamicdistribution') {
                             $Params = @{
                                 Name               = $groupobj.Displayname
                                 RecipientFilter    = $groupobj.membershipRules
@@ -89,10 +97,10 @@ function Invoke-CIPPStandardGroupTemplate {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
                 } else {
                     $ActionType = 'update'
-                    if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {
+                    if ($groupType -in 'generic', 'azurerole', 'dynamic') {
                         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($CheckExististing.id)" -tenantid $tenant -type PATCH -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
-                        if ($groupobj.groupType -eq 'dynamicdistribution') {
+                        if ($groupType -eq 'dynamicdistribution') {
                             $Params = @{
                                 Name               = $groupobj.Displayname
                                 RecipientFilter    = $groupobj.membershipRules
@@ -112,7 +120,6 @@ function Invoke-CIPPStandardGroupTemplate {
                         }
                     }
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Group exists $($groupobj.displayname). Updated to latest settings." -Sev 'Info'
-
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
