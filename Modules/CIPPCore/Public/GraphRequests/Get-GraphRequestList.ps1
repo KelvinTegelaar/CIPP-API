@@ -54,6 +54,9 @@ function Get-GraphRequestList {
     .PARAMETER Caller
     Name of the calling function
 
+    .PARAMETER UseBatchExpand
+    Perform a batch lookup using the $expand query parameter to avoid 20 item max
+
     #>
     [CmdletBinding()]
     param(
@@ -76,7 +79,8 @@ function Get-GraphRequestList {
         [switch]$ReverseTenantLookup,
         [string]$ReverseTenantLookupProperty = 'tenantId',
         [boolean]$AsApp = $false,
-        [string]$Caller = 'Get-GraphRequestList'
+        [string]$Caller = 'Get-GraphRequestList',
+        [switch]$UseBatchExpand
     )
 
     $SingleTenantThreshold = 8000
@@ -109,7 +113,12 @@ function Get-GraphRequestList {
             } else {
                 $Value = $Item.Value
             }
-            $ParamCollection.Add($Item.Key, $Value)
+
+            if ($UseBatchExpand.IsPresent -and ($Item.Key -eq '$expand' -or $Item.Key -eq 'expand')) {
+                $BatchExpandQuery = $Item.Value
+            } else {
+                $ParamCollection.Add($Item.Key, $Value)
+            }
         }
     }
     $GraphQuery.Query = $ParamCollection.ToString()
@@ -330,6 +339,34 @@ function Get-GraphRequestList {
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
                         $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+
+                        if ($UseBatchExpand.IsPresent -and ![string]::IsNullOrEmpty($BatchExpandQuery)) {
+                            if ($BatchExpandQuery -match '' -and ![string]::IsNullOrEmpty($GraphRequestResults.id)) {
+                                # Convert $expand format to actual batch query e.g. members($select=id,displayName) to members?$select=id,displayName
+                                $BatchExpandQuery = $BatchExpandQuery -replace '\(\$?([^=]+)=([^)]+)\)', '?$$$1=$2' -replace ';', '&'
+
+                                # Extract property name from expand
+                                $Property = $BatchExpandQuery -replace '\?.*$', '' -replace '^.*\/', ''
+                                Write-Information "Performing batch expansion for property '$Property'..."
+
+                                $Uri = "$Endpoint/{0}/$BatchExpandQuery"
+
+                                $Requests = foreach ($Result in $GraphRequestResults) {
+                                    @{
+                                        id     = $Result.id
+                                        url    = $Uri -f $Result.id
+                                        method = 'GET'
+                                    }
+                                }
+                                $BatchResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoAuthCheck $NoAuthCheck.IsPresent -asapp $AsApp
+
+                                $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
+                                    $PropValue = $BatchResults | Where-Object { $_.id -eq $Result.id } | Select-Object -ExpandProperty body
+                                    $Result | Add-Member -MemberType NoteProperty -Name $Property -Value ($PropValue.value ?? $PropValue)
+                                    $Result
+                                }
+                            }
+                        }
 
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
