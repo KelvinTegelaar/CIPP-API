@@ -28,12 +28,8 @@ function Invoke-CIPPStandardGroupTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') -SkipLog
 
-    if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
-        return $true
-    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
     $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
     if ($Settings.remediate -eq $true) {
@@ -67,6 +63,11 @@ function Invoke-CIPPStandardGroupTemplate {
                     if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic', 'Security') {
                         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
+                        if (!$TestResult) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot create group $($groupobj.displayname) as the tenant is not licensed for Exchange." -Sev 'Error'
+                            continue
+                        }
+
                         if ($groupobj.groupType -eq 'dynamicdistribution') {
                             $Params = @{
                                 Name               = $groupobj.Displayname
@@ -92,6 +93,10 @@ function Invoke-CIPPStandardGroupTemplate {
                     if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {
                         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($CheckExististing.id)" -tenantid $tenant -type PATCH -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
+                        if (!$TestResult) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot update group $($groupobj.displayname) as the tenant is not licensed for Exchange." -Sev 'Error'
+                            continue
+                        }
                         if ($groupobj.groupType -eq 'dynamicdistribution') {
                             $Params = @{
                                 Name               = $groupobj.Displayname
