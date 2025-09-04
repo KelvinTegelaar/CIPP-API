@@ -291,7 +291,7 @@ function Receive-CIPPTimerTrigger {
 
             $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-                $FunctionStatus.OrchestratorId = $Results
+                $FunctionStatus.OrchestratorId = $Results -join ','
                 $Status = 'Started'
             } else {
                 $Status = 'Completed'
