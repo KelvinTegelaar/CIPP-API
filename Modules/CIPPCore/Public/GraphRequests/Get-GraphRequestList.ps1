@@ -349,21 +349,37 @@ function Get-GraphRequestList {
                                 $Property = $BatchExpandQuery -replace '\?.*$', '' -replace '^.*\/', ''
                                 Write-Information "Performing batch expansion for property '$Property'..."
 
-                                $Uri = "$Endpoint/{0}/$BatchExpandQuery"
-
-                                $Requests = foreach ($Result in $GraphRequestResults) {
-                                    @{
-                                        id     = $Result.id
-                                        url    = $Uri -f $Result.id
-                                        method = 'GET'
+                                if ($Property -eq 'assignedLicenses') {
+                                    $LicenseDetails = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
+                                    $GraphRequestResults = foreach ($GraphRequestResult in $GraphRequestResults) {
+                                        $NewLicenses = [system.collections.generic.list[string]]::new()
+                                        foreach ($License in $GraphRequestResult.assignedLicenses) {
+                                            $LicenseInfo = $LicenseDetails | Where-Object { $_.skuId -eq $License.skuId } | Select-Object -First 1
+                                            if ($LicenseInfo) {
+                                                $NewLicenses.Add($LicenseInfo.License)
+                                            }
+                                        }
+                                        $GraphRequestResult | Add-Member -MemberType NoteProperty -Name $Property -Value @($NewLicenses) -Force
+                                        $GraphRequestResult
                                     }
-                                }
-                                $BatchResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoAuthCheck $NoAuthCheck.IsPresent -asapp $AsApp
+                                } else {
 
-                                $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
-                                    $PropValue = $BatchResults | Where-Object { $_.id -eq $Result.id } | Select-Object -ExpandProperty body
-                                    $Result | Add-Member -MemberType NoteProperty -Name $Property -Value ($PropValue.value ?? $PropValue)
-                                    $Result
+                                    $Uri = "$Endpoint/{0}/$BatchExpandQuery"
+
+                                    $Requests = foreach ($Result in $GraphRequestResults) {
+                                        @{
+                                            id     = $Result.id
+                                            url    = $Uri -f $Result.id
+                                            method = 'GET'
+                                        }
+                                    }
+                                    $BatchResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoAuthCheck $NoAuthCheck.IsPresent -asapp $AsApp
+
+                                    $GraphRequestResults = foreach ($Result in $GraphRequestResults) {
+                                        $PropValue = $BatchResults | Where-Object { $_.id -eq $Result.id } | Select-Object -ExpandProperty body
+                                        $Result | Add-Member -MemberType NoteProperty -Name $Property -Value ($PropValue.value ?? $PropValue)
+                                        $Result
+                                    }
                                 }
                             }
                         }
