@@ -75,6 +75,15 @@ function Invoke-CIPPStandardGroupTemplate {
                                 PrimarySmtpAddress = $email
                             }
                             $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $params
+
+                            if (!$groupobj.AllowExternal) {
+                                $SetParams = @{
+                                    RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+                                    Name                               = $groupobj.Displayname
+                                    PrimarySmtpAddress                 = $email
+                                }
+                                $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'Set-DynamicDistributionGroup' -cmdParams $SetParams
+                            }
                         } else {
                             $Params = @{
                                 Name                               = $groupobj.Displayname

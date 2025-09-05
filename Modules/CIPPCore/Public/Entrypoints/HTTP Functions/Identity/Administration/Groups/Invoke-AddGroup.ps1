@@ -62,6 +62,15 @@ function Invoke-AddGroup {
                         PrimarySmtpAddress = $Email
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $ExoParams
+
+                    if (!$GroupObject.allowExternal) {
+                        $SetParams = @{
+                            RequireSenderAuthenticationEnabled = [bool]!$GroupObject.allowExternal
+                            Name                               = $GroupObject.displayName
+                            PrimarySmtpAddress                 = $Email
+                        }
+                        $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'Set-DynamicDistributionGroup' -cmdParams $SetParams
+                    }
                 } else {
                     $ExoParams = @{
                         Name                               = $GroupObject.displayName
