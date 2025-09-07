@@ -28,7 +28,6 @@ function Invoke-CIPPStandardGroupTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') -SkipLog
 
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
     $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
