@@ -59,7 +59,7 @@ function New-GraphGetRequest {
             $RetryCount = 0
             $MaxRetries = 3
             $RequestSuccessful = $false
-
+            Write-Host "This is attempt $($RetryCount + 1) of $MaxRetries"
             do {
                 try {
                     $GraphRequest = @{
@@ -89,7 +89,7 @@ function New-GraphGetRequest {
                             $Content = $Data.Content
                         }
 
-                        $Data | Select-Object -Property StatusCode, StatusDescription, @{Name = 'Content'; Expression = { $Content }}
+                        $Data | Select-Object -Property StatusCode, StatusDescription, @{Name = 'Content'; Expression = { $Content } }
                         $nextURL = $null
                     } elseif ($CountOnly) {
                         $Data.'@odata.count'
@@ -133,7 +133,7 @@ function New-GraphGetRequest {
                         }
                     }
                     # Check for "Resource temporarily unavailable"
-                    elseif ($Message -like "*Resource temporarily unavailable*") {
+                    elseif ($Message -like '*Resource temporarily unavailable*') {
                         if ($RetryCount -lt $MaxRetries) {
                             $WaitTime = Get-Random -Minimum 1 -Maximum 10  # Random sleep between 1-10 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
