@@ -74,7 +74,7 @@ function Invoke-CIPPStandardGroupTemplate {
                     $Result = New-CIPPGroup -GroupObject $groupobj -TenantFilter $tenant -APIName 'Standards' -ExecutingUser 'CIPP-Standards'
 
                     if (!$Result.Success) {
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create group $($groupobj.displayname): $($Result.Message)" -Sev 'Error'
+                        Write-Information "Failed to create group $($groupobj.displayname): $($Result.Message)"
                         continue
                     }
                 } else {
