@@ -8,13 +8,12 @@ function Set-CIPPDefaultAPEnrollment {
         $EnableLog,
         $ErrorMessage,
         $TimeOutInMinutes,
+        $InstallWindowsUpdates,
         $AllowFail,
         $OBEEOnly,
         $Headers,
         $APIName = 'Add Default Enrollment Status Page'
     )
-
-    $User = $Request.Headers
 
     try {
         $ObjBody = [pscustomobject]@{
@@ -28,6 +27,7 @@ function Set-CIPPDefaultAPEnrollment {
             'allowLogCollectionOnInstallFailure'      = [bool]$EnableLog
             'customErrorMessage'                      = "$ErrorMessage"
             'installProgressTimeoutInMinutes'         = $TimeOutInMinutes
+            'installQualityUpdates'                   = [bool]$InstallWindowsUpdates
             'allowDeviceUseOnInstallFailure'          = [bool]$AllowFail
             'selectedMobileAppIds'                    = @()
             'trackInstallProgressForAutopilotOnly'    = [bool]$OBEEOnly
@@ -40,11 +40,11 @@ function Set-CIPPDefaultAPEnrollment {
         if ($PSCmdlet.ShouldProcess($ExistingStatusPage.ID, 'Set Default Enrollment Status Page')) {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($ExistingStatusPage.ID)" -body $Body -Type PATCH -tenantid $TenantFilter
             "Successfully changed default enrollment status page for $TenantFilter"
-            Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Added Autopilot Enrollment Status Page $($ExistingStatusPage.displayName)" -Sev 'Info'
+            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Added Autopilot Enrollment Status Page $($ExistingStatusPage.displayName)" -Sev 'Info'
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Failed adding Autopilot Enrollment Status Page $($ExistingStatusPage.displayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed adding Autopilot Enrollment Status Page $($ExistingStatusPage.displayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to change default enrollment status page for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }
