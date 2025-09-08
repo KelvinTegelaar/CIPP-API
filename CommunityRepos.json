@@ -70,5 +70,23 @@
       "triage": false,
       "pull": true
     }
+  },
+  {
+    "Id": "863076113",
+    "Name": "IntuneBaseLines",
+    "Description": "In this repo, you will find Intune profiles in JSON format, which can be used in setting up your Modern Workplace. All policies were created in Microsoft Intune and exported to share with the community.",
+    "URL": "https://github.com/IntuneAdmin/IntuneBaselines",
+    "FullName": "IntuneAdmin/IntuneBaselines",
+    "Owner": "IntuneAdmin",
+    "Visibility": "public",
+    "WriteAccess": false,
+    "DefaultBranch": "main",
+    "RepoPermissions": {
+      "admin": false,
+      "maintain": false,
+      "push": false,
+      "triage": false,
+      "pull": true
+    }
   }
 ]
