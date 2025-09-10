@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListIntuneTemplates {
+function Invoke-ListIntuneTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -45,6 +45,7 @@ Function Invoke-ListIntuneTemplates {
                 $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
                 $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
                 $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
                 $data
             } catch {
 
