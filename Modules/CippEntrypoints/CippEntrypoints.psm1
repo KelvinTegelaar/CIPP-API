@@ -133,9 +133,9 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
-            $Batch = @(Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
         } else {
-            $Batch = @($OrchestratorInput.Batch)
+            $Batch = $OrchestratorInput.Batch
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
