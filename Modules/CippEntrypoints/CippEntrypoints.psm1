@@ -133,9 +133,9 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
-            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+            $Batch = @(Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
         } else {
-            $Batch = $OrchestratorInput.Batch
+            $Batch = @($OrchestratorInput.Batch)
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
@@ -179,6 +179,7 @@ function Receive-CippActivityTrigger {
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Start = Get-Date
+        $Output = $null
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
         if ($Item.QueueId) {
@@ -202,7 +203,7 @@ function Receive-CippActivityTrigger {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
                 Write-Warning "Activity starting Function: $FunctionName."
-                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
+                $Output = Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
                 Write-Warning "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
@@ -244,7 +245,13 @@ function Receive-CippActivityTrigger {
             $null = Set-CippQueueTask @QueueTask
         }
     }
-    return $true
+
+    # Return the captured output if it exists and is not null, otherwise return $true
+    if ($null -ne $Output -and $Output -ne '') {
+        return $Output
+    } else {
+        return $true
+    }
 }
 
 function Receive-CIPPTimerTrigger {
