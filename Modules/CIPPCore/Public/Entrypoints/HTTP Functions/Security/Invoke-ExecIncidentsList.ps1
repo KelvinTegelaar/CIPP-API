@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecIncidentsList {
+function Invoke-ExecIncidentsList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -47,11 +47,12 @@ Function Invoke-ExecIncidentsList {
             $Filter = "PartitionKey eq '$PartitionKey'"
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             # If a queue is running, we will not start a new one
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                    QueueId      = $RunningQueue.RowKey
                 }
             } elseif (!$Rows -and !$RunningQueue) {
                 # If no rows are found and no queue is running, we will start a new one
@@ -59,6 +60,7 @@ Function Invoke-ExecIncidentsList {
                 $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                    QueueId      = $Queue.RowKey
                 }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'IncidentOrchestrator'
@@ -74,6 +76,9 @@ Function Invoke-ExecIncidentsList {
                 }
                 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
             } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
                 $Incidents = $Rows
                 foreach ($incident in $Incidents) {
                     $IncidentObj = $incident.Incident | ConvertFrom-Json
