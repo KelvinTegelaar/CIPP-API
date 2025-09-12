@@ -58,7 +58,8 @@ function Get-CIPPTenantAlignment {
         $Standards = if ($TenantFilter) {
             $AllStandards | Where-Object { $_.PartitionKey -eq $TenantFilter }
         } else {
-            $AllStandards
+            $Tenants = Get-Tenants -IncludeErrors
+            $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
         }
 
         # Build tenant standards data structure
@@ -157,6 +158,22 @@ function Get-CIPPTenantAlignment {
                                 ReportingEnabled = $IntuneReportingEnabled
                             }
                         }
+                        if ($IntuneTemplate.'TemplateList-Tags') {
+                            foreach ($Tag in $IntuneTemplate.'TemplateList-Tags') {
+                                Write-Host "Processing Intune Tag: $($Tag.value)"
+                                $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
+                                $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+                                $TemplatesList = Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter | Where-Object -Property package -EQ $Tag.value
+                                $TemplatesList | ForEach-Object {
+                                    $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
+                                    [PSCustomObject]@{
+                                        StandardId       = $TagStandardId
+                                        ReportingEnabled = $IntuneReportingEnabled
+                                    }
+                                }
+
+                            }
+                        }
                     }
                 }
                 # Handle Conditional Access templates specially
@@ -223,7 +240,7 @@ function Get-CIPPTenantAlignment {
                         [PSCustomObject]@{
                             StandardName      = $StandardKey
                             Compliant         = $IsCompliant
-                            StandardValue     = ($Value | ConvertTo-Json -Compress)
+                            StandardValue     = ($Value | ConvertTo-Json -Depth 100 -Compress)
                             ComplianceStatus  = $ComplianceStatus
                             ReportingDisabled = $IsReportingDisabled
                         }
