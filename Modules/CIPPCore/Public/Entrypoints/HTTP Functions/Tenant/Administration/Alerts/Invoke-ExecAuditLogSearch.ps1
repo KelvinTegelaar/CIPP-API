@@ -16,6 +16,8 @@ function Invoke-ExecAuditLogSearch {
 
     switch ($Action) {
         'ProcessLogs' {
+            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+
             $SearchId = $Request.Query.SearchId ?? $Request.Body.SearchId
             $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
             if (!$SearchId) {
@@ -26,20 +28,25 @@ function Invoke-ExecAuditLogSearch {
                 return
             }
 
-            $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
-            Write-Information ($Search | ConvertTo-Json -Depth 10)
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Search' and RowKey eq '$SearchId' and Tenant eq '$TenantFilter'"
+            if (!$Existing) {
+                $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
+                Write-Information ($Search | ConvertTo-Json -Depth 10)
 
-            $Entity = [PSCustomObject]@{
-                PartitionKey = [string]'Search'
-                RowKey       = [string]$SearchId
-                Tenant       = [string]$TenantFilter
-                DisplayName  = [string]$Search.displayName
-                StartTime    = [datetime]$Search.filterStartDateTime
-                EndTime      = [datetime]$Search.filterEndDateTime
-                Query        = [string]($Search | ConvertTo-Json -Compress)
-                CippStatus   = [string]'Pending'
+                $Entity = [PSCustomObject]@{
+                    PartitionKey = [string]'Search'
+                    RowKey       = [string]$SearchId
+                    Tenant       = [string]$TenantFilter
+                    DisplayName  = [string]$Search.displayName
+                    StartTime    = [datetime]$Search.filterStartDateTime
+                    EndTime      = [datetime]$Search.filterEndDateTime
+                    Query        = [string]($Search | ConvertTo-Json -Compress)
+                    CippStatus   = [string]'Pending'
+                }
+            } else {
+                $Existing.CippStatus = 'Pending'
             }
-            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 
             Write-LogMessage -headers $Headers -API $APIName -message "Queued search for processing: $($Search.displayName)" -Sev 'Info' -tenant $TenantFilter
