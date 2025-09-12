@@ -85,6 +85,7 @@ function Invoke-ExecCombinedSetup {
                 if ($Request.Body.tenantId) { $Secret.TenantId = $Request.Body.tenantid }
                 if ($Request.Body.applicationId) { $Secret.ApplicationId = $Request.Body.applicationId }
                 if ($Request.Body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.Body.ApplicationSecret }
+                if ($Request.Body.RefreshToken) { $Secret.RefreshToken = $Request.Body.RefreshToken }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                 $Results.add('Manual credentials have been set in the DevSecrets table.')
             } else {
@@ -99,6 +100,10 @@ function Invoke-ExecCombinedSetup {
                 if ($Request.Body.applicationSecret) {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationSecret -AsPlainText -Force)
                     $Results.add('Set application secret in Key Vault.')
+                }
+                if ($Request.Body.RefreshToken) {
+                    Set-AzKeyVaultSecret -VaultName $kv -Name 'refreshtoken' -SecretValue (ConvertTo-SecureString -String $Request.Body.RefreshToken -AsPlainText -Force)
+                    $Results.add('Set refresh token in Key Vault.')
                 }
             }
 

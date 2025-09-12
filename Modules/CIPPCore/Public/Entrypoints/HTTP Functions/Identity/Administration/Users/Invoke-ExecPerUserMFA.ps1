@@ -6,17 +6,21 @@ function Invoke-ExecPerUserMFA {
     .ROLE
     Identity.User.ReadWrite
     #>
-    Param($Request, $TriggerMetadata)
+    param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    # Guest user handling
+    $UserId = $Request.Body.userPrincipalName -match '#EXT#' ? $Request.Body.userId : $Request.Body.userPrincipalName
+    $TenantFilter = $Request.Body.tenantFilter
+    $State = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
 
     $Request = @{
-        userId       = $Request.Body.userId
-        TenantFilter = $Request.Body.tenantFilter
-        State        = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
+        userId       = $UserId
+        TenantFilter = $TenantFilter
+        State        = $State
         Headers      = $Headers
         APIName      = $APIName
     }

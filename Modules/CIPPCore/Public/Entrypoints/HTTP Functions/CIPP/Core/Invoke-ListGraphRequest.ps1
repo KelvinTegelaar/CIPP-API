@@ -81,7 +81,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.manualPagination) {
-        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.manualPagination
+        $GraphRequestParams.ManualPagination = [System.Boolean]$Request.Query.manualPagination
     }
 
     if ($Request.Query.nextLink) {
@@ -139,7 +139,7 @@ function Invoke-ListGraphRequest {
             if ($Results.Queued -eq $true) {
                 $Metadata.Queued = $Results.Queued
                 $Metadata.QueueMessage = $Results.QueueMessage
-                $Metadata.QueuedId = $Results.QueueId
+                $Metadata.QueueId = $Results.QueueId
                 $Results = @()
             }
         }

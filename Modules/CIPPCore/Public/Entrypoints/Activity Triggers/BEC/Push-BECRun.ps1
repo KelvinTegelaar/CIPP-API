@@ -50,7 +50,7 @@ function Push-BECRun {
             $ExtractResult = 'Successfully extracted logs from auditlog'
         }
         Write-Information 'Getting last sign-in'
-        Try {
+        try {
             $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc"
             $LastSignIn = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
             id,
@@ -69,7 +69,7 @@ function Push-BECRun {
         #List all users devices
         $Bytes = [System.Text.Encoding]::UTF8.GetBytes($SuspectUser)
         $base64IdentityParam = [Convert]::ToBase64String($Bytes)
-        Try {
+        try {
             $Devices = New-GraphGetRequest -uri "https://outlook.office365.com:443/adminapi/beta/$($TenantFilter)/mailbox('$($base64IdentityParam)')/MobileDevice/Exchange.GetMobileDeviceStatistics()/?IsEncoded=True" -Tenantid $TenantFilter -scope ExchangeOnline
         } catch {
             $Devices = $null
@@ -143,10 +143,10 @@ function Push-BECRun {
         Write-Information 'Getting bulk requests'
         $GraphResults = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true
 
-        $PasswordChanges = ($GraphResults | Where-Object { $_.id -eq 'Users' }).body.value | Where-Object { $_.lastPasswordChangeDateTime -ge $startDate }
-        $NewUsers = ($GraphResults | Where-Object { $_.id -eq 'Users' }).body.value | Where-Object { $_.createdDateTime -ge $startDate }
-        $MFADevices = ($GraphResults | Where-Object { $_.id -eq 'MFADevices' }).body.value
-        $NewSPs = ($GraphResults | Where-Object { $_.id -eq 'NewSPs' }).body.value
+        $PasswordChanges = ($GraphResults | Where-Object { $_.id -eq 'Users' }).body.value | Where-Object { $_.lastPasswordChangeDateTime -ge $startDate } ?? @()
+        $NewUsers = ($GraphResults | Where-Object { $_.id -eq 'Users' }).body.value | Where-Object { $_.createdDateTime -ge $startDate } ?? @()
+        $MFADevices = ($GraphResults | Where-Object { $_.id -eq 'MFADevices' }).body.value ?? @()
+        $NewSPs = ($GraphResults | Where-Object { $_.id -eq 'NewSPs' }).body.value ?? @()
 
 
         $Results = [PSCustomObject]@{

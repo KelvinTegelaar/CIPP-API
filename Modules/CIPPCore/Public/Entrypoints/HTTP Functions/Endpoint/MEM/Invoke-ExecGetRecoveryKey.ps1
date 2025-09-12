@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGetRecoveryKey {
+function Invoke-ExecGetRecoveryKey {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,7 +19,7 @@ Function Invoke-ExecGetRecoveryKey {
     $GUID = $Request.Query.GUID ?? $Request.Body.GUID
 
     try {
-        $Result = Get-CIPPBitLockerKey -device $GUID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        $Result = Get-CIPPBitLockerKey -Device $GUID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message

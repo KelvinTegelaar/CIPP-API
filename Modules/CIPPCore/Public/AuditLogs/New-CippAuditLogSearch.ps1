@@ -157,20 +157,26 @@ function New-CippAuditLogSearch {
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
         $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
 
+
         if ($ProcessLogs.IsPresent -and $Query.id) {
-            $Entity = [PSCustomObject]@{
-                PartitionKey = [string]'Search'
-                RowKey       = [string]$Query.id
-                Tenant       = [string]$TenantFilter
-                DisplayName  = [string]$DisplayName
-                StartTime    = [datetime]$StartTime.ToUniversalTime()
-                EndTime      = [datetime]$EndTime.ToUniversalTime()
-                Query        = [string]($Query | ConvertTo-Json -Compress)
-                CippStatus   = [string]'Pending'
-            }
-            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
-            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+            $CippStatus = 'Pending'
+        } else {
+            $CippStatus = 'N/A'
         }
+
+        $Entity = [PSCustomObject]@{
+            PartitionKey = [string]'Search'
+            RowKey       = [string]$Query.id
+            Tenant       = [string]$TenantFilter
+            DisplayName  = [string]$DisplayName
+            StartTime    = [datetime]$StartTime.ToUniversalTime()
+            EndTime      = [datetime]$EndTime.ToUniversalTime()
+            Query        = [string]($Query | ConvertTo-Json -Compress)
+            CippStatus   = [string]$CippStatus
+        }
+        $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+
         return $Query
     }
 }

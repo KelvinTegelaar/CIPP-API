@@ -36,6 +36,15 @@ function Invoke-ListUserSettings {
                 }
             }
         }
+
+        try {
+            $UserSpecificSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
+            $UserSpecificSettings = $UserSpecificSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+        }
+        catch {
+            Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
+        }
+
         #Get branding settings
         if ($UserSettings) {
             $brandingTable = Get-CippTable -tablename 'Config'
@@ -44,6 +53,11 @@ function Invoke-ListUserSettings {
                 $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $BrandingSettings -Force | Out-Null
             }
         }
+
+        if ($UserSpecificSettings) {
+            $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null
+        }
+
         $StatusCode = [HttpStatusCode]::OK
         $Results = $UserSettings
     } catch {

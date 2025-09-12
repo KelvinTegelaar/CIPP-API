@@ -372,22 +372,26 @@ function Test-CIPPAuditLogRules {
 
             $MatchedRules = [System.Collections.Generic.List[string]]::new()
             $DataToProcess = foreach ($clause in $Where) {
-                $ClauseStartTime = Get-Date
-                Write-Warning "Webhook: Processing clause: $($clause.clause)"
-                $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
-                if ($ReturnedData) {
-                    Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
-                    $ReturnedData = foreach ($item in $ReturnedData) {
-                        $item.CIPPAction = $clause.expectedAction
-                        $item.CIPPClause = $clause.CIPPClause -join ' and '
-                        $MatchedRules.Add($clause.CIPPClause -join ' and ')
-                        $item
+                try {
+                    $ClauseStartTime = Get-Date
+                    Write-Warning "Webhook: Processing clause: $($clause.clause)"
+                    $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
+                    if ($ReturnedData) {
+                        Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
+                        $ReturnedData = foreach ($item in $ReturnedData) {
+                            $item.CIPPAction = $clause.expectedAction
+                            $item.CIPPClause = $clause.CIPPClause -join ' and '
+                            $MatchedRules.Add($clause.CIPPClause -join ' and ')
+                            $item
+                        }
                     }
+                    $ClauseEndTime = Get-Date
+                    $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
+                    Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
+                    $ReturnedData
+                } catch {
+                    Write-Warning "Error processing clause: $($clause.clause): $($_.Exception.Message)"
                 }
-                $ClauseEndTime = Get-Date
-                $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
-                Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
-                $ReturnedData
             }
             $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)
             $Results.MatchedLogs = ($DataToProcess | Measure-Object).Count

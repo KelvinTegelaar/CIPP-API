@@ -3640,6 +3640,259 @@
         }
       }
     },
+    "/ListContactPermissions": {
+      "get": {
+        "description": "ListContactPermissions - Retrieves contact folder permissions for a specified user",
+        "summary": "ListContactPermissions",
+        "tags": [
+          "GET"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "UserID",
+            "in": "query",
+            "description": "The user ID to retrieve contact permissions for"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant filter to specify which tenant"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Identity": {
+                        "type": "string",
+                        "description": "The identity of the contact folder"
+                      },
+                      "User": {
+                        "type": "string",
+                        "description": "The user who has permissions"
+                      },
+                      "AccessRights": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "The access rights granted to the user"
+                      },
+                      "FolderName": {
+                        "type": "string",
+                        "description": "The name of the contact folder"
+                      },
+                      "MailboxInfo": {
+                        "type": "object",
+                        "description": "Information about the mailbox"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Successfully retrieved contact permissions"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Forbidden - insufficient permissions"
+          }
+        }
+      }
+    },
+    "/ExecModifyContactPerms": {
+      "post": {
+        "description": "ExecModifyContactPerms - Modifies contact folder permissions for a specified user",
+        "summary": "ExecModifyContactPerms",
+        "tags": [
+          "POST"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userID",
+                  "tenantFilter",
+                  "permissions"
+                ],
+                "properties": {
+                  "userID": {
+                    "type": "string",
+                    "description": "The user ID whose contact permissions will be modified"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "The tenant filter to specify which tenant"
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "description": "Array of permission objects to apply",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "PermissionLevel": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "description": "Permission level (e.g., Owner, PublishingEditor, Editor, PublishingAuthor, Author, NonEditingAuthor, Reviewer, Contributor, AvailabilityOnly, LimitedDetails)"
+                            }
+                          }
+                        },
+                        "Modification": {
+                          "type": "string",
+                          "description": "Type of modification (Add, Remove)",
+                          "enum": ["Add", "Remove"]
+                        },
+                        "UserID": {
+                          "type": "array",
+                          "description": "Array of target users to grant/remove permissions",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "description": "User ID or email address"
+                              }
+                            }
+                          }
+                        },
+                        "CanViewPrivateItems": {
+                          "type": "boolean",
+                          "description": "Whether the user can view private items",
+                          "default": false
+                        },
+                        "FolderName": {
+                          "type": "string",
+                          "description": "Name of the contact folder",
+                          "default": "Contact"
+                        },
+                        "SendNotificationToUser": {
+                          "type": "boolean",
+                          "description": "Whether to send notification to the user",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "PermissionLevel",
+                        "Modification",
+                        "UserID"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Array of result messages for each permission operation"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Successfully processed contact permission modifications"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Error messages"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Bad Request - Missing required parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Error messages"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Not Found - User ID not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Error messages"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Internal Server Error - Operation failed"
+          }
+        }
+      }
+    },
     "/ListMailboxRules": {
       "get": {
         "description": "ListMailboxRules",

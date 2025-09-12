@@ -1565,6 +1565,16 @@ function Invoke-NinjaOneTenantSync {
                     Name = 'Azure Portal'
                     Link = "https://portal.azure.com/$($customer.defaultDomainName)"
                     Icon = 'fas fa-server'
+                },
+                @{
+                    Name = 'Power Platform Portal'
+                    Link = "https://admin.powerplatform.microsoft.com/account/login/$($Customer.customerId)"
+                    Icon = 'fa-solid fa-robot'
+                },
+                @{
+                    Name = 'Power BI Portal'
+                    Link = "https://app.powerbi.com/admin-portal?ctid=$($Customer.customerId)"
+                    Icon = 'fas fa-bar-chart'
                 }
 
             )

@@ -37,17 +37,19 @@ try {
 Set-Location -Path $PSScriptRoot
 $CurrentVersion = (Get-Content .\version_latest.txt).trim()
 $Table = Get-CippTable -tablename 'Version'
-Write-Information "Function: $($env:WEBSITE_SITE_NAME) Version: $CurrentVersion"
+Write-Information "Function App: $($env:WEBSITE_SITE_NAME) Version: $CurrentVersion"
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
+        $LastStartup | Add-Member -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString()
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
             RowKey       = $env:WEBSITE_SITE_NAME
             Version      = $CurrentVersion
+            PSVersion    = $PSVersionTable.PSVersion.ToString()
         }
     }
     Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
