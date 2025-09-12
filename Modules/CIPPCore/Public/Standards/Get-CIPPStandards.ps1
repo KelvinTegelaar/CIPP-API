@@ -31,6 +31,72 @@ function Get-CIPPStandards {
         $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
     }
 
+    # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
+    $ExpandedTemplates = foreach ($Template in $Templates) {
+        $NewTemplate = $Template.PSObject.Copy()
+        $ExpandedStandards = [ordered]@{}
+        $HasExpansions = $false
+
+        foreach ($StandardName in $Template.standards.PSObject.Properties.Name) {
+            $StandardValue = $Template.standards.$StandardName
+            $IsArray = $StandardValue -is [System.Collections.IEnumerable] -and -not ($StandardValue -is [string])
+
+            if ($IsArray) {
+                $NewArray = @()
+                foreach ($Item in $StandardValue) {
+                    if ($Item.'TemplateList-Tags'.value) {
+                        $HasExpansions = $true
+                        $Table = Get-CippTable -tablename 'templates'
+                        $Filter = "PartitionKey eq 'IntuneTemplate'"
+                        $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $Item.'TemplateList-Tags'.value
+
+                        foreach ($TemplateItem in $TemplatesList) {
+                            $NewItem = $Item.PSObject.Copy()
+                            $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
+                            $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
+                                label = "$($TemplateItem.RowKey)"
+                                value = "$($TemplateItem.RowKey)"
+                            }) -Force
+                            $NewArray = $NewArray + $NewItem
+                        }
+                    } else {
+                        $NewArray = $NewArray + $Item
+                    }
+                }
+                $ExpandedStandards[$StandardName] = $NewArray
+            } else {
+                if ($StandardValue.'TemplateList-Tags'.value) {
+                    $HasExpansions = $true
+                    $Table = Get-CippTable -tablename 'templates'
+                    $Filter = "PartitionKey eq 'IntuneTemplate'"
+                    $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $StandardValue.'TemplateList-Tags'.value
+
+                    $NewArray = @()
+                    foreach ($TemplateItem in $TemplatesList) {
+                        $NewItem = $StandardValue.PSObject.Copy()
+                        $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
+                        $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
+                            label = "$($TemplateItem.RowKey)"
+                            value = "$($TemplateItem.RowKey)"
+                        }) -Force
+                        $NewArray = $NewArray + $NewItem
+                    }
+                    $ExpandedStandards[$StandardName] = $NewArray
+                } else {
+                    $ExpandedStandards[$StandardName] = $StandardValue
+                }
+            }
+        }
+
+        if ($HasExpansions) {
+            $NewTemplate.standards = [pscustomobject]$ExpandedStandards
+        }
+
+        $NewTemplate
+    }
+
+    $Templates = $ExpandedTemplates
+
     # 2. Get tenant list, filter if needed
     $AllTenantsList = Get-Tenants
     if ($TenantFilter -ne 'allTenants') {
