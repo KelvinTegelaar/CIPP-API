@@ -199,6 +199,7 @@ function Test-CIPPAccess {
                     continue
                 }
             }
+
             if ($PermissionsFound) {
                 if ($TenantList.IsPresent) {
                     $LimitedTenantList = foreach ($Permission in $PermissionSet) {
@@ -248,6 +249,9 @@ function Test-CIPPAccess {
                 foreach ($Role in $PermissionSet) {
                     foreach ($Perm in $Role.Permissions) {
                         if ($Perm -match $APIRole) {
+                            if ($Role.BlockedEndpoints -contains $Request.Params.CIPPEndpoint) {
+                                throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
+                            }
                             $APIAllowed = $true
                             break
                         }

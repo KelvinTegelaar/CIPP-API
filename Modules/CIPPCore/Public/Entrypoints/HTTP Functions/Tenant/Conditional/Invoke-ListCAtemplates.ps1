@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListCAtemplates {
+function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -39,9 +39,14 @@ Function Invoke-ListCAtemplates {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'CATemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -Depth 100
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-        $data
+        try {
+            $row = $_
+            $data = $row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $row.GUID -Force
+            $data
+        } catch {
+            Write-Warning "Failed to process CA template: $($row.RowKey) - $($_.Exception.Message)"
+        }
     } | Sort-Object -Property displayName
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }

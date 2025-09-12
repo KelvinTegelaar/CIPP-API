@@ -1,0 +1,10 @@
+[
+  {
+    "Command": "Sync-CIPPExtensionData",
+    "MaxRequests": 50
+  },
+  {
+    "Command": "Push-CIPPExtensionData",
+    "MaxRequests": 30
+  }
+]

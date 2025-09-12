@@ -29,6 +29,7 @@ function Invoke-ListMailQuarantine {
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                    QueueId      = $RunningQueue.RowKey
                 }
                 [PSCustomObject]@{
                     Waiting = $true
@@ -39,6 +40,7 @@ function Invoke-ListMailQuarantine {
                 $Queue = New-CippQueueEntry -Name 'Mail Quarantine - All Tenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                    QueueId      = $Queue.RowKey
                 }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'MailQuarantineOrchestrator'
@@ -57,6 +59,9 @@ function Invoke-ListMailQuarantine {
                     Waiting = $true
                 }
             } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
                 $messages = $Rows
                 foreach ($message in $messages) {
                     $messageObj = $message.QuarantineMessage | ConvertFrom-Json
