@@ -18,8 +18,9 @@ function Set-CIPPOutOfOffice {
     try {
 
         $CmdParams = @{
-            Identity       = $UserID
-            AutoReplyState = $State
+            Identity         = $UserID
+            AutoReplyState   = $State
+            ExternalAudience = 'None'
         }
 
         if ($PSBoundParameters.ContainsKey('InternalMessage')) {
@@ -28,6 +29,7 @@ function Set-CIPPOutOfOffice {
 
         if ($PSBoundParameters.ContainsKey('ExternalMessage')) {
             $CmdParams.ExternalMessage = $ExternalMessage
+            $CmdParams.ExternalAudience = 'All'
         }
 
         if ($State -eq 'Scheduled') {
