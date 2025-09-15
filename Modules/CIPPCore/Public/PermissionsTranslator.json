@@ -5353,5 +5353,23 @@
     "userConsentDescription": "Access Microsoft Teams and Skype for Business data as the signed in user",
     "userConsentDisplayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
     "value": "OnPremDirectorySynchronization.ReadWrite.All"
+  },
+  {
+    "description": "Read and Modify Tenant-Acquired Telephone Number Details",
+    "displayName": "Read and Modify Tenant-Acquired Telephone Number Details",
+    "id": "424b07a8-1209-4d17-9fe4-9018a93a1024",
+    "Origin": "Delegated",
+    "userConsentDescription": "Allows the app to read and modify your tenant's acquired telephone number details on behalf of the signed-in admin user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc.",
+    "userConsentDisplayName": "Allows the app to read and modify your tenant's acquired telephone number details on behalf of the signed-in admin user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc.",
+    "value": "TeamsTelephoneNumber.ReadWrite.All"
+  },
+  {
+    "description": "Read and Modify Tenant-Acquired Telephone Number Details",
+    "displayName": "Read and Modify Tenant-Acquired Telephone Number Details",
+    "id": "0a42382f-155c-4eb1-9bdc-21548ccaa387",
+    "Origin": "Application",
+    "userConsentDescription": "Allows the app to read your tenant's acquired telephone number details, without a signed-in user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc.",
+    "userConsentDisplayName": "Allows the app to read your tenant's acquired telephone number details, without a signed-in user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc.",
+    "value": "TeamsTelephoneNumber.ReadWrite.All"
   }
 ]
