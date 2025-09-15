@@ -39,37 +39,44 @@ function Remove-CIPPUserTeamsPhoneDIDs {
 
         if (-not $UserDIDs -or $UserDIDs.Count -eq 0) {
             $Result = "No Teams Phone DIDs found assigned to user: '$Username' - '$UserID'"
-            Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
             $Results.Add($Result)
             return $Results.ToArray()
         }
 
-        Write-LogMessage -headers $Headers -API $APIName -message "Found $($UserDIDs.Count) DIDs assigned to user: '$Username'" -Sev 'Info' -tenant $TenantFilter
+        # Prepare bulk requests for all DIDs
+        $RemoveRequests = foreach ($DID in $UserDIDs) {
+            @{
+                id     = $DID.telephoneNumber
+                method = 'POST'
+                url    = "admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber"
+                body   = @{
+                    telephoneNumber = $DID.telephoneNumber
+                    numberType      = $DID.numberType
+                }
+            }
+        }
 
-        # Process each DID assigned to the user
-        foreach ($DID in $UserDIDs) {
-            try {
-                $PhoneNumber = $DID.telephoneNumber
-                $NumberType = $DID.numberType
+        # Execute bulk request
+        $RemoveResults = New-GraphBulkRequest -tenantid $TenantFilter -requests @($RemoveRequests)
 
-                # Prepare the request body for unassigning the number
-                $RequestBody = @{
-                    telephoneNumber = $PhoneNumber
-                    numberType = $NumberType
-                } | ConvertTo-Json -Depth 3
+        # Process results
+        $RemoveResults | ForEach-Object {
+            $PhoneNumber = $_.id
 
-                # Make the API call to unassign the number
-                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber" -type POST -body $RequestBody -contentType 'application/json' -tenant $TenantFilter
-
+            if ($_.status -eq 204) {
                 $SuccessResult = "Successfully removed Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'"
                 Write-LogMessage -headers $Headers -API $APIName -message $SuccessResult -Sev 'Info' -tenant $TenantFilter
                 $Results.Add($SuccessResult)
                 $SuccessCount++
+            } else {
+                $ErrorMessage = if ($_.body.error.message) {
+                    $_.body.error.message
+                } else {
+                    "HTTP Status: $($_.status)"
+                }
 
-            } catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                $ErrorResult = "Failed to remove Teams Phone DID: '$($DID.telephoneNumber)' from: '$Username' - '$UserID'. Error: $($ErrorMessage.NormalizedError)"
-                Write-LogMessage -headers $Headers -API $APIName -message $ErrorResult -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+                $ErrorResult = "Failed to remove Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'. Error: $ErrorMessage"
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorResult -Sev 'Error' -tenant $TenantFilter
                 $Results.Add($ErrorResult)
                 $ErrorCount++
             }
