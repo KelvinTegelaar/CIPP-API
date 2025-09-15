@@ -174,7 +174,7 @@ function Get-GraphRequestList {
             Write-Information "Total results (`$count): $Count"
         }
     }
-    Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
+    #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     try {
         if ($QueueId) {
