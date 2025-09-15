@@ -59,7 +59,7 @@ function New-GraphGetRequest {
             $RetryCount = 0
             $MaxRetries = 3
             $RequestSuccessful = $false
-            Write-Information "GET [$nextURL] | tenant: $tenantid | attempt: $($RetryCount + 1) of $MaxRetries"
+            Write-Information "GET [ $nextURL ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $MaxRetries"
             do {
                 try {
                     $GraphRequest = @{
