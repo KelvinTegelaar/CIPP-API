@@ -59,7 +59,7 @@ function New-GraphGetRequest {
             $RetryCount = 0
             $MaxRetries = 3
             $RequestSuccessful = $false
-            Write-Host "This is attempt $($RetryCount + 1) of $MaxRetries"
+            Write-Information "GET [ $nextURL ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $MaxRetries"
             do {
                 try {
                     $GraphRequest = @{
@@ -117,11 +117,24 @@ function New-GraphGetRequest {
                 } catch {
                     $ShouldRetry = $false
                     $WaitTime = 0
-
                     try {
-                        $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                        $MessageObj = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($MessageObj.error) {
+                            $MessageObj | Add-Member -NotePropertyName 'url' -NotePropertyValue $nextURL -Force
+                            $Message = $MessageObj.error.message -ne '' ? $MessageObj.error.message : $MessageObj.error.code
+                        }
                     } catch { $Message = $null }
-                    if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+
+                    if ([string]::IsNullOrEmpty($Message)) {
+                        $Message = $($_.Exception.Message)
+                        $MessageObj = @{
+                            error = @{
+                                code    = $_.Exception.GetType().FullName
+                                message = $Message
+                                url     = $nextURL
+                            }
+                        }
+                    }
 
                     # Check for 429 Too Many Requests
                     if ($_.Exception.Response.StatusCode -eq 429) {
@@ -147,7 +160,7 @@ function New-GraphGetRequest {
                     } else {
                         # Final failure - update tenant error tracking and throw
                         if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
-                            $Tenant.LastGraphError = $Message
+                            $Tenant.LastGraphError = [string]($MessageObj | ConvertTo-Json -Compress)
                             if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
                                 $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
                             }
