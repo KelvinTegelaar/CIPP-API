@@ -86,7 +86,6 @@ function Get-GraphRequestList {
     $SingleTenantThreshold = 8000
     Write-Information "Tenant: $TenantFilter"
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
-    Write-Information "Table: $TableName"
     $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
@@ -123,7 +122,6 @@ function Get-GraphRequestList {
     }
     $GraphQuery.Query = $ParamCollection.ToString()
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString(), 'v2') -join '-')
-    Write-Information "PK: $PartitionKey"
 
     # Perform $count check before caching
     $Count = 0
@@ -174,7 +172,7 @@ function Get-GraphRequestList {
             Write-Information "Total results (`$count): $Count"
         }
     }
-    Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
+    #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     try {
         if ($QueueId) {
@@ -196,7 +194,7 @@ function Get-GraphRequestList {
                 }
                 $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 $Type = 'Cache'
-                Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
+                Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
                 $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             }

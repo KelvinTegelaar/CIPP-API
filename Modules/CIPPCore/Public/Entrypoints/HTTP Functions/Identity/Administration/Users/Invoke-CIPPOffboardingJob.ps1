@@ -111,6 +111,13 @@ function Invoke-CIPPOffboardingJob {
                 $_.Exception.Message
             }
         }
+        { $_.RemoveTeamsPhoneDID } {
+            try {
+                Remove-CIPPUserTeamsPhoneDIDs -userid $userid -username $username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
+        }
         { $_.RemoveLicenses -eq $true } {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Schedule
         }
