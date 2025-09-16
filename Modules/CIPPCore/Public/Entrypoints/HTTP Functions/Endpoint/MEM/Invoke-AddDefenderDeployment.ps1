@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddDefenderDeployment {
+function Invoke-AddDefenderDeployment {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -97,7 +97,22 @@ Function Invoke-AddDefenderDeployment {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_enablenetworkprotection' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_enablenetworkprotection_1' ; settingValueTemplateReference = @{settingValueTemplateId = 'ee58fb51-9ae5-408b-9406-b92b643f388a' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'f53ab20e-8af6-48f5-9fa1-46863e1e517e' } } }
                     } { $_.LowCPU } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_enablelowcpupriority' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_enablelowcpupriority_1' ; settingValueTemplateReference = @{settingValueTemplateId = '045a4a13-deee-4e24-9fe4-985c9357680d' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'cdeb96cf-18f5-4477-a710-0ea9ecc618af' } } }
+                    } { $_.CloudBlockLevel } {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_cloudblocklevel'; settingInstanceTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingInstanceTemplateReference'; settingInstanceTemplateId = 'c7a37009-c16e-4145-84c8-89a8c121fb15' }; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = "device_vendor_msft_policy_config_defender_cloudblocklevel_$($_.CloudBlockLevel.value)"; settingValueTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingValueTemplateReference'; settingValueTemplateId = '517b4e84-e933-42b9-b92f-00e640b1a82d' }; children = @() } } }
+                    } { $_.AvgCPULoadFactor } {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_avgcpuloadfactor' ; settingInstanceTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingInstanceTemplateReference' ; settingInstanceTemplateId = '816cc03e-8f96-4cba-b14f-2658d031a79a' } ; simpleSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationIntegerSettingValue'; value = ($_.AvgCPULoadFactor ?? 50); settingValueTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingValueTemplateReference'; settingValueTemplateId = '37195fb1-3743-4c8e-a0ce-b6fae6fa3acd' } } } }
                     }
+
+                    # TODO: Add more settings
+                    # Cloud Extended Timeout
+                    # Signature Update Interval
+                    # Metered Connection Updates
+                    # Allow On Access Protection
+                    # Disable Local Admin Merge
+                    # Submit Samples Consent
+                    # Remediation actions
+
+
                 }
                 $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
                 Write-Host ($CheckExisting | ConvertTo-Json)
