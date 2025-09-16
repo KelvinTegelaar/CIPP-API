@@ -101,16 +101,18 @@ function Invoke-AddDefenderDeployment {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_cloudblocklevel'; settingInstanceTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingInstanceTemplateReference'; settingInstanceTemplateId = 'c7a37009-c16e-4145-84c8-89a8c121fb15' }; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = "device_vendor_msft_policy_config_defender_cloudblocklevel_$($_.CloudBlockLevel.value)"; settingValueTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingValueTemplateReference'; settingValueTemplateId = '517b4e84-e933-42b9-b92f-00e640b1a82d' }; children = @() } } }
                     } { $_.AvgCPULoadFactor } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_avgcpuloadfactor' ; settingInstanceTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingInstanceTemplateReference' ; settingInstanceTemplateId = '816cc03e-8f96-4cba-b14f-2658d031a79a' } ; simpleSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationIntegerSettingValue'; value = ($_.AvgCPULoadFactor ?? 50); settingValueTemplateReference = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingValueTemplateReference'; settingValueTemplateId = '37195fb1-3743-4c8e-a0ce-b6fae6fa3acd' } } } }
+                    } { $_.CloudExtendedTimeout } {
+                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_cloudextendedtimeout'; settingInstanceTemplateReference = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingInstanceTemplateReference'; settingInstanceTemplateId = 'f61c2788-14e4-4e80-a5a7-bf2ff5052f63' }; simpleSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationIntegerSettingValue'; value = ($_.CloudExtendedTimeout ?? 50); settingValueTemplateReference = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSettingValueTemplateReference'; settingValueTemplateId = '608f1561-b603-46bd-bf5f-0b9872002f75' } } } }
                     }
 
                     # TODO: Add more settings
-                    # Cloud Extended Timeout
                     # Signature Update Interval
                     # Metered Connection Updates
                     # Allow On Access Protection
                     # Disable Local Admin Merge
                     # Submit Samples Consent
                     # Remediation actions
+                    # Hover over each setting in the UI to see descriptions mby?
 
 
                 }
