@@ -1,0 +1,13 @@
+name: Keep Azure Function Warm
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl KeepAlive Endpoint
+        run: |
+          curl -X GET "https://witty-meadow-04907af03.1.azurestaticapps.net/api/PublicPing"
