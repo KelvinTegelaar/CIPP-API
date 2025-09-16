@@ -75,8 +75,6 @@ function Invoke-AddDefenderDeployment {
                         @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowfullscanonmappednetworkdrives' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_allowfullscanonmappednetworkdrives_1' ; settingValueTemplateReference = @{settingValueTemplateId = '3e920b10-3773-4ac5-957e-e5573aec6d04' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'dac47505-f072-48d6-9f23-8d93262d58ed' } } }
                     } { $_.AllowFullScanRemovable } {
                         @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowfullscanremovabledrivescanning' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_allowfullscanremovabledrivescanning_1' ; settingValueTemplateReference = @{settingValueTemplateId = '366c5727-629b-4a81-b50b-52f90282fa2c' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'fb36e70b-5bc9-488a-a949-8ea3ac1634d5' } } }
-                    } { $_.AllowIPS } {
-                        @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowintrusionpreventionsystem' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_allowintrusionpreventionsystem_1'; settingValueTemplateReference = @{settingValueTemplateId = '03738a99-7065-44cb-ba1e-93530ed906a7' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'd47f06e2-5378-43f2-adbc-e924538f1512' } } }
                     } { $_.AllowDownloadable } {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowioavprotection' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue' ; value = 'device_vendor_msft_policy_config_defender_allowioavprotection_1'; settingValueTemplateReference = @{settingValueTemplateId = 'df4e6cbd-f7ff-41c8-88cd-fa25264a237e' } }; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'fa06231d-aed4-4601-b631-3a37e85b62a0' } } }
                     } { $_.AllowRealTime } {
@@ -128,10 +126,6 @@ function Invoke-AddDefenderDeployment {
                             }
                         }
                     }
-
-                    # TODO: Add more settings
-                    # Hover over each setting in the UI to see descriptions mby?
-
 
                 }
                 $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
