@@ -1843,67 +1843,74 @@ function Invoke-NinjaOneTenantSync {
                 $StandardTemplates = Get-CIPPAzDataTableEntity @Templates | Where-Object { $_.PartitionKey -eq 'StandardsTemplateV2' }
 
                 $ParsedStandards = foreach ($Standard in $AppliedStandards) {
-                    try {
-                        $Template = ($StandardTemplates | Where-Object { $_.RowKey -eq $Standard.TemplateId }).JSON | ConvertFrom-Json
-                        $StandardInfo = $StandardsDefinitions | Where-Object { ($_.name -replace 'standards.', '') -eq $Standard.Standard }
-                        $StandardLabel = $StandardInfo.label
-                        $ParsedActions = foreach ($Action in $Standard.Settings.PSObject.Properties) {
-                            if ($Action.Value -eq $true -and $Action.Name -in @('remediate', 'report', 'alert')) {
-                                (Get-Culture).TextInfo.ToTitleCase($Action.Name)
+                    Write-Information "Processing Standard: $($Standard | ConvertTo-Json -Depth 10)"
+                    if ($Standard.TemplateId.Count -gt 1) {
+                        $TemplateListTemplates = foreach ($TemplateId in $Standard.TemplateId) {
+                            if ($TemplateId) {
+                                ($StandardTemplates | Where-Object { $_.RowKey -eq $TemplateId }).JSON | ConvertFrom-Json
                             }
                         }
+                    } else {
+                        $Template = ($StandardTemplates | Where-Object { $_.RowKey -eq $Standard.TemplateId }).JSON | ConvertFrom-Json
+                    }
+                    $StandardInfo = $StandardsDefinitions | Where-Object { ($_.name -replace 'standards.', '') -eq $Standard.Standard }
+                    $StandardLabel = $StandardInfo.label
+                    $ParsedActions = foreach ($Action in $Standard.Settings.PSObject.Properties) {
+                        if ($Action.Value -eq $true -and $Action.Name -in @('remediate', 'report', 'alert')) {
+                            (Get-Culture).TextInfo.ToTitleCase($Action.Name)
+                        }
+                    }
 
-                        # Handle template-based standards that have lists of templates
-                        if ($Standard.Standard -in @('IntuneTemplate', 'ConditionalAccessTemplate', 'GroupTemplate')) {
-                            # For template standards, create separate entries for each template
-                            foreach ($Property in $Standard.Settings.PSObject.Properties) {
-                                if ($Property.Value -is [Array]) {
-                                    foreach ($TemplateItem in $Property.Value) {
-                                        $TemplateName = $null
-                                        $TemplateActions = @()
+                    # Handle template-based standards that have lists of templates
+                    if ($Standard.Standard -in @('IntuneTemplate', 'ConditionalAccessTemplate', 'GroupTemplate')) {
+                        # For template standards, create separate entries for each template
+                        foreach ($Property in $Standard.Settings.PSObject.Properties) {
+                            if ($Property.Value -is [Array]) {
+                                $x = 0
+                                foreach ($TemplateItem in $Property.Value) {
+                                    $TemplateName = $null
+                                    $TemplateActions = @()
 
-                                        Write-Information "Processing Template Item: $($TemplateItem | ConvertTo-Json -Depth 10)"
-                                        # Get template name
-                                        if ($TemplateItem.TemplateList.label) {
-                                            $TemplateName = $TemplateItem.TemplateList.label
-                                        } elseif ($TemplateItem.'TemplateList-Tags'.label) {
-                                            $TemplateName = $TemplateItem.'TemplateList-Tags'.label
-                                        } else {
-                                            $TemplateName = $TemplateItem.TemplateList.displayName
-                                        }
+                                    Write-Information "Processing Template Item: $($TemplateItem | ConvertTo-Json -Depth 10)"
+                                    # Get template name
+                                    if ($TemplateItem.TemplateList.label) {
+                                        $TemplateName = $TemplateItem.TemplateList.label
+                                    } elseif ($TemplateItem.'TemplateList-Tags'.label) {
+                                        $TemplateName = $TemplateItem.'TemplateList-Tags'.label
+                                    } else {
+                                        $TemplateName = $TemplateItem.TemplateList.displayName
+                                    }
 
-                                        # Get template-specific actions
-                                        $TemplateActions = foreach ($ItemAction in $TemplateItem.PSObject.Properties) {
-                                            if ($ItemAction.Value -eq $true -and $ItemAction.Name -in @('remediate', 'report', 'alert')) {
-                                                (Get-Culture).TextInfo.ToTitleCase($ItemAction.Name)
-                                            }
-                                        }
-
-                                        # If no template-specific actions, use standard-level actions
-                                        if ($TemplateActions.Count -eq 0) {
-                                            $TemplateActions = $ParsedActions
-                                        }
-
-                                        if ($TemplateName) {
-                                            [PSCustomObject]@{
-                                                Standard = "$StandardLabel - $TemplateName"
-                                                Template = $Template.templateName
-                                                Actions  = $TemplateActions -join ', '
-                                            }
+                                    # Get template-specific actions
+                                    foreach ($ItemAction in $TemplateItem.PSObject.Properties) {
+                                        if ($ItemAction.Value -eq $true -and $ItemAction.Name -in @('remediate', 'report', 'alert')) {
+                                            $TemplateActions += (Get-Culture).TextInfo.ToTitleCase($ItemAction.Name)
                                         }
                                     }
+
+                                    # If no template-specific actions, use standard-level actions
+                                    if ($TemplateActions.Count -eq 0) {
+                                        $TemplateActions = $ParsedActions
+                                    }
+
+                                    if ($TemplateName) {
+                                        [PSCustomObject]@{
+                                            Standard = "$StandardLabel - $TemplateName"
+                                            Template = $TemplateListTemplates[$x].templateName
+                                            Actions  = $TemplateActions -join ', '
+                                        }
+                                    }
+                                    $x++
                                 }
                             }
-                        } else {
-                            # For non-template standards, use the original logic
-                            [PSCustomObject]@{
-                                Standard = $StandardLabel
-                                Template = $Template.templateName
-                                Actions  = $ParsedActions -join ', '
-                            }
                         }
-                    } catch {
-                        Write-Information "Error processing standard $($Standard ): $_"
+                    } else {
+                        # For non-template standards, use the original logic
+                        [PSCustomObject]@{
+                            Standard = $StandardLabel
+                            Template = $Template.templateName
+                            Actions  = $ParsedActions -join ', '
+                        }
                     }
                 }
                 $ParsedStandardsHTML = $ParsedStandards | ConvertTo-Html -As Table -Fragment
