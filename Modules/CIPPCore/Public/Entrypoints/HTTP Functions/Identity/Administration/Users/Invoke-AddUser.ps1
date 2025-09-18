@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddUser {
+function Invoke-AddUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -52,6 +52,7 @@ Function Invoke-AddUser {
                 'Success' = $CreationResults.CopyFrom.Success
                 'Error'   = $CreationResults.CopyFrom.Error
             }
+            'User'     = $CreationResults.User
         }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
