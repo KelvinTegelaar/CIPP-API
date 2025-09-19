@@ -26,11 +26,12 @@ function Invoke-ExecCustomRole {
                 Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
                 if ($Request.Body.RoleName -notin $DefaultRoles) {
                     $Role = @{
-                        'PartitionKey'   = 'CustomRoles'
-                        'RowKey'         = "$($Request.Body.RoleName.ToLower())"
-                        'Permissions'    = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
-                        'AllowedTenants' = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
-                        'BlockedTenants' = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
+                        'PartitionKey'     = 'CustomRoles'
+                        'RowKey'           = "$($Request.Body.RoleName.ToLower())"
+                        'Permissions'      = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
+                        'AllowedTenants'   = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
+                        'BlockedTenants'   = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
+                        'BlockedEndpoints' = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
                     $Results.Add("Custom role $($Request.Body.RoleName) saved")
@@ -110,6 +111,15 @@ function Invoke-ExecCustomRole {
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force
                     }
+                    if ($Role.BlockedEndpoints) {
+                        try {
+                            $Role.BlockedEndpoints = @($Role.BlockedEndpoints | ConvertFrom-Json)
+                        } catch {
+                            $Role.BlockedEndpoints = ''
+                        }
+                    } else {
+                        $Role | Add-Member -NotePropertyName BlockedEndpoints -NotePropertyValue @() -Force
+                    }
                     $EntraRoleGroup = $EntraRoleGroups | Where-Object -Property RowKey -EQ $Role.RowKey
                     if ($EntraRoleGroup) {
                         $EntraGroup = $EntraRoleGroups | Where-Object -Property RowKey -EQ $Role.RowKey | Select-Object @{Name = 'label'; Expression = { $_.GroupName } }, @{Name = 'value'; Expression = { $_.GroupId } }
@@ -120,10 +130,11 @@ function Invoke-ExecCustomRole {
                 }
                 $DefaultRoles = foreach ($DefaultRole in $DefaultRoles) {
                     $Role = @{
-                        RowKey         = $DefaultRole
-                        Permissions    = ''
-                        AllowedTenants = @('AllTenants')
-                        BlockedTenants = @('')
+                        RowKey           = $DefaultRole
+                        Permissions      = ''
+                        AllowedTenants   = @('AllTenants')
+                        BlockedTenants   = @('')
+                        BlockedEndpoints = @('')
                     }
                     $EntraRoleGroup = $EntraRoleGroups | Where-Object -Property RowKey -EQ $Role.RowKey
                     if ($EntraRoleGroup) {
