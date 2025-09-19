@@ -19,6 +19,7 @@ function Invoke-PublicPhishingCheck {
     } elseif ($Request.Body.source -and $Tenant) {
         $Message = "Alert received from $($Request.Body.source) for $($Request.body.TenantId)"
         Write-Information ($Request.Body | ConvertTo-Json)
+        Write-AlertTrace -cmdletName 'CheckExtentionAlert' -tenantFilter $Tenant -data $Request.body
         Write-AlertMessage -message $Message -sev 'Alert' -tenant $Tenant.customerId -LogData $Request.body
     }
 
