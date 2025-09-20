@@ -32,7 +32,7 @@ function Invoke-ListGDAPAccessAssignments {
             'method' = 'GET'
         }
     }
-    $Members = New-GraphBulkRequest -Requests $ContainerMembers -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
+    $Members = New-GraphBulkRequest -Requests @($ContainerMembers) -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
 
     $Results = foreach ($AccessAssignment in $AccessAssignments) {
         [PSCustomObject]@{

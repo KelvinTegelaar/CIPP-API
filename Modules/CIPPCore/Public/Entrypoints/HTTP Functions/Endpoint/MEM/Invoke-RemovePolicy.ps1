@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemovePolicy {
+function Invoke-RemovePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -18,13 +18,13 @@ Function Invoke-RemovePolicy {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $PolicyId = $Request.Query.ID ?? $Request.body.ID
     $UrlName = $Request.Query.URLName ?? $Request.body.URLName
-
+    $BaseEndpoint = $UrlName -eq 'managedAppPolicies' ? 'deviceAppManagement' : 'deviceManagement'
     if (!$PolicyId) { exit }
-    try {
 
-        # $unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
-        $Results = "Successfully deleted the policy with ID: $($PolicyId)"
+    try {
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($BaseEndpoint)/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
+
+        $Results = "Successfully deleted the $UrlName policy with ID: $($PolicyId)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Info -tenant $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
 

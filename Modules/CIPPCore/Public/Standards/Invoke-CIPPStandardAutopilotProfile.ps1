@@ -18,7 +18,7 @@ function Invoke-CIPPStandardAutopilotProfile {
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.AutopilotProfile.DisplayName","label":"Profile Display Name"}
             {"type":"textField","name":"standards.AutopilotProfile.Description","label":"Profile Description"}
-            {"type":"textField","name":"standards.AutopilotProfile.DeviceNameTemplate","label":"Unique Device Name Template"}
+            {"type":"textField","name":"standards.AutopilotProfile.DeviceNameTemplate","label":"Unique Device Name Template","required":false}
             {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AutopilotProfile.Languages","label":"Languages","api":{"url":"/languageList.json","labelField":"language","valueField":"tag"}}
             {"type":"switch","name":"standards.AutopilotProfile.CollectHash","label":"Convert all targeted devices to Autopilot","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.AssignToAllDevices","label":"Assign to all devices","defaultValue":true}
@@ -40,45 +40,53 @@ function Invoke-CIPPStandardAutopilotProfile {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotProfile' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     # Get the current configuration
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     try {
+        # Replace variables in displayname to prevent duplicates
+        $DisplayName = Get-CIPPTextReplacement -Text $Settings.DisplayName -TenantFilter $Tenant
+
         $CurrentConfig = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $Tenant |
-        Where-Object { $_.displayName -eq $Settings.DisplayName } |
+        Where-Object { $_.displayName -eq $DisplayName } |
         Select-Object -Property displayName, description, deviceNameTemplate, language, enableWhiteGlove, extractHardwareHash, outOfBoxExperienceSetting, preprovisioningAllowed
 
         if ($Settings.NotLocalAdmin -eq $true) { $userType = 'Standard' } else { $userType = 'Administrator' }
         if ($Settings.SelfDeployingMode -eq $true) { $DeploymentMode = 'shared' } else { $DeploymentMode = 'singleUser' }
-        if ($Settings.AllowWhiteGlove -eq $true) {$Settings.HideChangeAccount = $true}
+        if ($Settings.AllowWhiteGlove -eq $true) { $Settings.HideChangeAccount = $true }
 
-        $StateIsCorrect = ($CurrentConfig.displayName -eq $Settings.DisplayName) -and
-            ($CurrentConfig.description -eq $Settings.Description) -and
-            ($CurrentConfig.deviceNameTemplate -eq $Settings.DeviceNameTemplate) -and
-            ([string]::IsNullOrWhiteSpace($CurrentConfig.language) -and [string]::IsNullOrWhiteSpace($Settings.Languages.value) -or $CurrentConfig.language -eq $Settings.Languages.value) -and
-            ($CurrentConfig.enableWhiteGlove -eq $Settings.AllowWhiteGlove) -and
-            ($CurrentConfig.extractHardwareHash -eq $Settings.CollectHash) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.deviceUsageType -eq $DeploymentMode) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.escapeLinkHidden -eq $Settings.HideChangeAccount) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.privacySettingsHidden -eq $Settings.HidePrivacy) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.eulaHidden -eq $Settings.HideTerms) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
-            ($CurrentConfig.outOfBoxExperienceSetting.keyboardSelectionPageSkipped -eq $Settings.AutoKeyboard)
-    }
-    catch {
+        $StateIsCorrect = ($CurrentConfig.displayName -eq $DisplayName) -and
+        ($CurrentConfig.description -eq $Settings.Description) -and
+        ($CurrentConfig.deviceNameTemplate -eq $Settings.DeviceNameTemplate) -and
+        ([string]::IsNullOrWhiteSpace($CurrentConfig.language) -and [string]::IsNullOrWhiteSpace($Settings.Languages.value) -or $CurrentConfig.language -eq $Settings.Languages.value) -and
+        ($CurrentConfig.enableWhiteGlove -eq $Settings.AllowWhiteGlove) -and
+        ($CurrentConfig.extractHardwareHash -eq $Settings.CollectHash) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.deviceUsageType -eq $DeploymentMode) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.escapeLinkHidden -eq $Settings.HideChangeAccount) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.privacySettingsHidden -eq $Settings.HidePrivacy) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.eulaHidden -eq $Settings.HideTerms) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
+        ($CurrentConfig.outOfBoxExperienceSetting.keyboardSelectionPageSkipped -eq $Settings.AutoKeyboard)
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot profile: $ErrorMessage" -sev Error
         $StateIsCorrect = $false
     }
 
     # Remediate if the state is not correct
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($Settings.DisplayName)' already exists" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($DisplayName)' already exists" -sev Info
         } else {
             try {
                 $Parameters = @{
                     tenantFilter       = $Tenant
-                    displayName        = $Settings.DisplayName
+                    displayName        = $DisplayName
                     description        = $Settings.Description
                     userType           = $userType
                     DeploymentMode     = $DeploymentMode
@@ -95,9 +103,9 @@ function Invoke-CIPPStandardAutopilotProfile {
 
                 Set-CIPPDefaultAPDeploymentProfile @Parameters
                 if ($null -eq $CurrentConfig) {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Autopilot profile '$($Settings.DisplayName)'" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Autopilot profile '$($DisplayName)'" -sev Info
                 } else {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Autopilot profile '$($Settings.DisplayName)'" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Autopilot profile '$($DisplayName)'" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -108,19 +116,19 @@ function Invoke-CIPPStandardAutopilotProfile {
     }
 
     # Report
-    If ($Settings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         $FieldValue = $StateIsCorrect -eq $true ? $true : $CurrentConfig
         Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -FieldValue $FieldValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
     # Alert
-    If ($Settings.alert -eq $true) {
-        If ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($Settings.DisplayName)' exists" -sev Info
+    if ($Settings.alert -eq $true) {
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($DisplayName)' exists" -sev Info
         } else {
-            Write-StandardsAlert -message "Autopilot profile '$($Settings.DisplayName)' do not match expected configuration" -object $CurrentConfig -tenant $Tenant -standardName 'AutopilotProfile' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($Settings.DisplayName)' do not match expected configuration" -sev Info
+            Write-StandardsAlert -message "Autopilot profile '$($DisplayName)' do not match expected configuration" -object $CurrentConfig -tenant $Tenant -standardName 'AutopilotProfile' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Autopilot profile '$($DisplayName)' do not match expected configuration" -sev Info
         }
     }
 }

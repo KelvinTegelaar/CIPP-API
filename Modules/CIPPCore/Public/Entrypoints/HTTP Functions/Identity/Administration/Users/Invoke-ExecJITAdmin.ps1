@@ -70,11 +70,12 @@ function Invoke-ExecJITAdmin {
 
             $QueueReference = '{0}-{1}' -f $Request.Query.TenantFilter, $PartitionKey # $TenantFilter is 'AllTenants'
             Write-Information "QueueReference: $QueueReference"
-            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
 
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading JIT Admin data for all tenants. Please check back in a few more minutes.'
+                    QueueId      = $RunningQueue.RowKey
                 }
             } elseif (!$Rows -and !$RunningQueue) {
                 $TenantList = Get-Tenants -IncludeErrors
@@ -82,6 +83,7 @@ function Invoke-ExecJITAdmin {
 
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading JIT Admin data for all tenants. Please check back in a few minutes.'
+                    QueueId      = $Queue.RowKey
                 }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'JITAdminOrchestrator'
@@ -97,6 +99,9 @@ function Invoke-ExecJITAdmin {
                 }
                 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
             } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
                 # There is data in the cache, so we will use that
                 Write-Information "Found $($Rows.Count) rows in the cache"
                 foreach ($row in $Rows) {
@@ -125,28 +130,30 @@ function Invoke-ExecJITAdmin {
         if ($Request.Body.existingUser.value -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
         }
-        Write-LogMessage -Headers $User -API $APINAME -message "Executing JIT Admin for $Username" -tenant $TenantFilter -Sev 'Info'
+        Write-LogMessage -Headers $User -API $APIName -message "Executing JIT Admin for $Username" -tenant $TenantFilter -Sev 'Info'
 
         $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
         $Results = [System.Collections.Generic.List[string]]::new()
 
         if ($Request.Body.useraction -eq 'Create') {
-            Write-LogMessage -Headers $User -API $APINAME -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
+            Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.username)"
+            $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
+
             $JITAdmin = @{
                 User         = @{
                     'FirstName'         = $Request.Body.FirstName
                     'LastName'          = $Request.Body.LastName
-                    'UserPrincipalName' = "$($Request.Body.Username)@$($Request.Body.Domain.value)"
+                    'UserPrincipalName' = "$($Request.Body.Username)@$($Domain)"
                 }
                 Expiration   = $Expiration
                 Action       = 'Create'
                 TenantFilter = $TenantFilter
             }
             $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
-            $Username = "$($Request.Body.Username)@$($Request.Body.Domain.value)"
-            $Results.Add("Created User: $($Request.Body.Username)@$($Request.Body.Domain.value)")
+            $Username = "$($Request.Body.Username)@$($Domain)"
+            $Results.Add("Created User: $Username")
             if (!$Request.Body.UseTAP) {
                 $Results.Add("Password: $($CreateResult.password)")
             }
@@ -262,6 +269,8 @@ function Invoke-ExecJITAdmin {
         }
     }
 
+    # TODO - We should find a way to have this return a HTTP status code based on the success or failure of the operation. This also doesn't return the results of the operation in a Results hash table, like most of the rest of the API.
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

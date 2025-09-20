@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRestoreBackup {
+function Invoke-ExecRestoreBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,7 +17,7 @@ Function Invoke-ExecRestoreBackup {
 
         if ($Request.Body.BackupName -like 'CippBackup_*') {
             $Table = Get-CippTable -tablename 'CIPPBackup'
-            $Backup = Get-CippAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.BackupName)'"
+            $Backup = Get-CippAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.BackupName)' or OriginalEntityId eq '$($Request.Body.BackupName)'"
             if ($Backup) {
                 $BackupData = $Backup.Backup | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty ETag, Timestamp
                 $BackupData | ForEach-Object {
@@ -27,7 +27,7 @@ Function Invoke-ExecRestoreBackup {
                     $Table.Entity = $ht2
                     Add-CIPPAzDataTableEntity @Table -Force
                 }
-                Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
+                Write-LogMessage -headers $Request.Headers -API $APINAME -message "Restored backup $($Request.Body.BackupName)" -Sev 'Info'
                 $body = [pscustomobject]@{
                     'Results' = 'Successfully restored backup.'
                 }
@@ -44,7 +44,7 @@ Function Invoke-ExecRestoreBackup {
                 $Table.Entity = $ht2
                 Add-AzDataTableEntity @Table -Force
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Restored backup $($Request.Body.BackupName)" -Sev 'Info'
 
             $body = [pscustomobject]@{
                 'Results' = 'Successfully restored backup.'

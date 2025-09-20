@@ -29,13 +29,19 @@ function Invoke-CIPPStandardAntiSpamSafeList {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AntiSpamSafeList' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AntiSpamSafeList'
 
     try {
         $State = [System.Convert]::ToBoolean($Settings.EnableSafeList)
     } catch {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'AntiSpamSafeList: Failed to convert the EnableSafeList parameter to a boolean' -sev Error
-        Return
+        return
     }
 
     try {
@@ -43,7 +49,7 @@ function Invoke-CIPPStandardAntiSpamSafeList {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to get the Anti-Spam Connection Filter Safe List. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Return
+        return
     }
     $WantedState = $State -eq $true ? $true : $false
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }

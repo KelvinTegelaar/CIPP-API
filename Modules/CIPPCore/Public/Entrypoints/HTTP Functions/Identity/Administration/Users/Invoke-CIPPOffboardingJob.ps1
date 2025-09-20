@@ -11,65 +11,144 @@ function Invoke-CIPPOffboardingJob {
     if ($Options -is [string]) {
         $Options = $Options | ConvertFrom-Json
     }
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)?`$select=id" -tenantid $TenantFilter).id
-    Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
+    $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName" -tenantid $TenantFilter
+    $UserID = $User.id
+    $DisplayName = $User.displayName
+    Write-Host "Running offboarding job for $Username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
         { $_.ConvertToShared -eq $true } {
-            Set-CIPPMailboxType -Headers $Headers -tenantFilter $TenantFilter -userid $username -username $username -MailboxType 'Shared' -APIName $APIName
+            try {
+                Set-CIPPMailboxType -Headers $Headers -tenantFilter $TenantFilter -userid $UserID -username $Username -MailboxType 'Shared' -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RevokeSessions -eq $true } {
-            Revoke-CIPPSessions -tenantFilter $TenantFilter -username $username -userid $userid -Headers $Headers -APIName $APIName
+            try {
+                Revoke-CIPPSessions -tenantFilter $TenantFilter -username $Username -userid $UserID -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.ResetPass -eq $true } {
-            Set-CIPPResetPassword -tenantFilter $TenantFilter -UserID $username -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPResetPassword -tenantFilter $TenantFilter -DisplayName $DisplayName -UserID $username -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveGroups -eq $true } {
-            Remove-CIPPGroups -userid $userid -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username "$Username"
+            Remove-CIPPGroups -userid $UserID -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Username $Username
         }
         { $_.HideFromGAL -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -hidefromgal $true -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $username -HideFromGAL $true -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.DisableSignIn -eq $true } {
-            Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPSignInState -TenantFilter $TenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.OnedriveAccess } {
-            $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointPerms -tenantFilter $TenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName }
+            $Options.OnedriveAccess | ForEach-Object {
+                try {
+                    Set-CIPPSharePointPerms -tenantFilter $TenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.AccessNoAutomap } {
-            $Options.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
+            $Options.AccessNoAutomap | ForEach-Object {
+                try {
+                    Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.AccessAutomap } {
-            $Options.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
+            $Options.AccessAutomap | ForEach-Object {
+                try {
+                    Set-CIPPMailboxAccess -tenantFilter $TenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            }
         }
         { $_.OOO } {
-            Set-CIPPOutOfOffice -tenantFilter $TenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -Headers $Headers -APIName $APIName -state 'Enabled'
+            try {
+                Set-CIPPOutOfOffice -tenantFilter $TenantFilter -UserID $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -Headers $Headers -APIName $APIName -state 'Enabled'
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.forward } {
-            if (!$Options.keepCopy) {
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -Headers $Headers -APIName $APIName
+            if (!$Options.KeepCopy) {
+                try {
+                    Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
             } else {
-                $KeepCopy = [boolean]$Options.keepCopy
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -KeepCopy $KeepCopy -Headers $Headers -APIName $APIName
+                $KeepCopy = [boolean]$Options.KeepCopy
+                try {
+                    Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -KeepCopy $KeepCopy -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
             }
         }
         { $_.disableForwarding } {
-            Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Disable $true -Headers $Headers -APIName $APIName
+            try {
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Disable $true -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
+        }
+        { $_.RemoveTeamsPhoneDID } {
+            try {
+                Remove-CIPPUserTeamsPhoneDIDs -userid $userid -username $username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveLicenses -eq $true } {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Schedule
         }
         { $_.DeleteUser -eq $true } {
-            Remove-CIPPUser -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPUser -UserID $userid -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveRules -eq $true } {
             Write-Host "Removing rules for $username"
-            Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -RemoveAllRules
+            try {
+                Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -RemoveAllRules
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.RemoveMobile -eq $true } {
-            Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.removeCalendarInvites -eq $true } {
-            Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            try {
+                Remove-CIPPCalendarInvites -UserID $userid -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
         { $_.removePermissions } {
             if ($RunScheduled) {
@@ -95,11 +174,19 @@ function Invoke-CIPPOffboardingJob {
                 "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
             }
         }
-        { $_.'RemoveMFADevices' } {
-            Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
+        { $_.RemoveMFADevices -eq $true } {
+            try {
+                Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
+            } catch {
+                $_.Exception.Message
+            }
         }
-        { $_.'ClearImmutableId' -eq $true } {
-            Clear-CIPPImmutableId -userid $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+        { $_.ClearImmutableId -eq $true } {
+            try {
+                Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+            } catch {
+                $_.Exception.Message
+            }
         }
     }
     return $Return

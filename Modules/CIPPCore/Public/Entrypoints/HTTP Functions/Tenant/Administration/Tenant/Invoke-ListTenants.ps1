@@ -11,8 +11,10 @@ function Invoke-ListTenants {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    # Interact with query parameters or the body of the request.
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
     Write-Host "Tenant Access: $TenantAccess"
 
@@ -21,6 +23,8 @@ function Invoke-ListTenants {
     } else {
         $AllTenantSelector = $Request.Query.AllTenantSelector
     }
+
+    $IncludeOffboardingDefaults = $Request.Query.IncludeOffboardingDefaults
 
     # Clear Cache
     if ($Request.Body.ClearCache -eq $true) {
@@ -67,22 +71,52 @@ function Invoke-ListTenants {
         }
     }
     try {
-        $tenantfilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.tenantFilter
         $Tenants = Get-Tenants -IncludeErrors -SkipDomains
         if ($TenantAccess -notcontains 'AllTenants') {
             $Tenants = $Tenants | Where-Object -Property customerId -In $TenantAccess
         }
 
+        # If offboarding defaults are requested, fetch them
+        if ($IncludeOffboardingDefaults -eq 'true' -and $Tenants) {
+            $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
+
+            # Get all offboarding defaults for all tenants in one query for performance
+            $AllOffboardingDefaults = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "RowKey eq 'OffboardingDefaults'"
+
+            # Add offboarding defaults to each tenant
+            foreach ($Tenant in $Tenants) {
+                $TenantDefaults = $AllOffboardingDefaults | Where-Object { $_.PartitionKey -eq $Tenant.customerId }
+                if ($TenantDefaults) {
+                    try {
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value ($TenantDefaults.Value | ConvertFrom-Json) -Force
+                    } catch {
+                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse offboarding defaults for tenant $($Tenant.customerId): $($_.Exception.Message)" -Sev 'Warning'
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $null -Force
+                    }
+                } else {
+                    $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $null -Force
+                }
+            }
+        }
+
         if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
             $TenantList = [system.collections.generic.list[object]]::new()
             if ($AllTenantSelector -eq $true) {
-                $TenantList.Add(@{
-                        customerId        = 'AllTenants'
-                        defaultDomainName = 'AllTenants'
-                        displayName       = '*All Tenants'
-                        domains           = 'AllTenants'
-                        GraphErrorCount   = 0
-                    }) | Out-Null
+                $AllTenantsObject = @{
+                    customerId        = 'AllTenants'
+                    defaultDomainName = 'AllTenants'
+                    displayName       = '*All Tenants'
+                    domains           = 'AllTenants'
+                    GraphErrorCount   = 0
+                }
+
+                # Add offboarding defaults to AllTenants object if requested
+                if ($IncludeOffboardingDefaults -eq 'true') {
+                    $AllTenantsObject.offboardingDefaults = $null
+                }
+
+                $TenantList.Add($AllTenantsObject) | Out-Null
 
                 if (($Tenants).length -gt 1) {
                     $TenantList.AddRange($Tenants) | Out-Null
@@ -103,16 +137,18 @@ function Invoke-ListTenants {
                 @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
                 @{Name = 'portal_compliance'; Expression = { "https://purview.microsoft.com/?tid=$($_.customerId)" } },
-                @{Name = 'portal_sharepoint'; Expression = { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" } }
+                @{Name = 'portal_sharepoint'; Expression = { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" } },
+                @{Name = 'portal_platform'; Expression = { "https://admin.powerplatform.microsoft.com/account/login/$($_.customerId)" } },
+                @{Name = 'portal_bi'; Expression = { "https://app.powerbi.com/admin-portal?ctid=$($_.customerId)" } }
             }
 
         } else {
-            $body = $Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
+            $body = $Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter
         }
 
-        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
+        Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message 'Listed Tenant Details' -Sev 'Debug'
     } catch {
-        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{
             'Results'         = "Failed to retrieve tenants: $($_.Exception.Message)"
             defaultDomainName = ''

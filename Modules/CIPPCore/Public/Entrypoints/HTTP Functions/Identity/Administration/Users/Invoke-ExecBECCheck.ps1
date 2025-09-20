@@ -19,7 +19,7 @@ Function Invoke-ExecBECCheck {
         $Batch = @{
             'FunctionName' = 'BECRun'
             'UserID'       = $Request.Query.userid
-            'TenantFilter' = $Request.Query.tenantfilter
+            'TenantFilter' = $Request.Query.tenantFilter
             'userName'     = $Request.Query.userName
         }
 
@@ -40,7 +40,7 @@ Function Invoke-ExecBECCheck {
             SkipLog          = $true
         }
         #Write-Host ($InputObject | ConvertTo-Json)
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ( ConvertTo-Json -InputObject $InputObject -Depth 5 -Compress )
 
         @{ GUID = $Request.Query.userid }
     } else {

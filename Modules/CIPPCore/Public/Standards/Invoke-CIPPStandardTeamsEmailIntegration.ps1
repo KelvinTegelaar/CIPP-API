@@ -30,13 +30,27 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEmailIntegration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsEmailIntegration'
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object AllowEmailIntoChannel
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
-    if ($null -eq $Settings.AllowEmailIntoChannel) { $Settings.AllowEmailIntoChannel = $false }
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } |
+        Select-Object AllowEmailIntoChannel
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsEmailIntegration state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
-    $StateIsCorrect = ($CurrentState.AllowEmailIntoChannel -eq $Settings.AllowEmailIntoChannel)
+    $AllowEmailIntoChannel = $Settings.AllowEmailIntoChannel ?? $false
+
+    $StateIsCorrect = ($CurrentState.AllowEmailIntoChannel -eq $AllowEmailIntoChannel)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -44,7 +58,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         } else {
             $cmdParams = @{
                 Identity              = 'Global'
-                AllowEmailIntoChannel = $Settings.AllowEmailIntoChannel
+                AllowEmailIntoChannel = $AllowEmailIntoChannel
             }
 
             try {

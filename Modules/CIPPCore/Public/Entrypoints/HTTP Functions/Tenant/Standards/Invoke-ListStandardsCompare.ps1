@@ -17,7 +17,8 @@ function Invoke-ListStandardsCompare {
         $Table.Filter = "PartitionKey eq '{0}'" -f $TenantFilter
     }
 
-    $Standards = Get-CIPPAzDataTableEntity @Table
+    $Tenants = Get-Tenants -IncludeErrors
+    $Standards = Get-CIPPAzDataTableEntity @Table | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
 
     #in the results we have objects starting with "standards." All these have to be converted from JSON. Do not do this is its a boolean
     <#$Results | ForEach-Object {
@@ -50,6 +51,18 @@ function Invoke-ListStandardsCompare {
         $FieldName = $Standard.RowKey
         $FieldValue = $Standard.Value
         $Tenant = $Standard.PartitionKey
+
+        # decode field names that are hex encoded (e.g. QuarantineTemplates)
+        if ($FieldName -match '^(standards\.QuarantineTemplate\.)(.+)$') {
+            $Prefix = $Matches[1]
+            $HexEncodedName = $Matches[2]
+            $Chars = [System.Collections.Generic.List[char]]::new()
+            for ($i = 0; $i -lt $HexEncodedName.Length; $i += 2) {
+                $Chars.Add([char][Convert]::ToInt32($HexEncodedName.Substring($i, 2), 16))
+            }
+            $FieldName = "$Prefix$(-join $Chars)"
+        }
+
         if ($FieldValue -is [System.Boolean]) {
             $FieldValue = [bool]$FieldValue
         } elseif ($FieldValue -like '*{*') {

@@ -42,8 +42,8 @@ function Get-Tenants {
             $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$TenantFilter'")
             $RelationshipFilter = " and customer/tenantId eq '$TenantFilter'"
         } else {
-            $Filter = "{0} and defaultDomainName eq '{1}'" -f $Filter, $TenantFilter
-            $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$TenantFilter'")
+            $Filter = "{0} and defaultDomainName eq '{1}' or initialDomainName eq '{1}'" -f $Filter, $TenantFilter
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$TenantFilter' -or `$_.initialDomainName -eq '$TenantFilter'")
             $RelationshipFilter = ''
         }
     } else {
@@ -67,7 +67,7 @@ function Get-Tenants {
                 relationshipEnd = $Relationship.endDateTime
             }
         }
-        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
+        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false and delegatedPrivilegeStatus ne 'directTenant'"
         $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId -and $_.customerId -ne $env:TenantID } | ForEach-Object {
             Remove-AzDataTableEntity -Force @TenantsTable -Entity $_
         }

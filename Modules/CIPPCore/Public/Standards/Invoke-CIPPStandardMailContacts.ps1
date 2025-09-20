@@ -34,16 +34,23 @@ function Invoke-CIPPStandardMailContacts {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MailContacts'
 
-    $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
-    $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant
+    try {
+        $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
+        $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MailContacts state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $contacts = $settings
     $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
 
+    $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
+    ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
+        $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
+        $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact
+
     if ($Settings.remediate -eq $true) {
-        $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
-        ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
-            $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
-            $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact
         if ($state) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails are already set.' -sev Info
         } else {
