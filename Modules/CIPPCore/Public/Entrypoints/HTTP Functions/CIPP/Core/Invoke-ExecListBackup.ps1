@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecListBackup {
+function Invoke-ExecListBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -20,29 +20,25 @@ Function Invoke-ExecListBackup {
     $BackupName = $Request.Query.BackupName
 
     $CippBackupParams = @{}
-    if ($Type) {
-        $CippBackupParams.Type = $Type
-    }
-    if ($TenantFilter) {
-        $CippBackupParams.TenantFilter = $TenantFilter
-    }
-    if ($NameOnly) {
-        $CippBackupParams.NameOnly = $true
-    }
-    if ($BackupName) {
-        $CippBackupParams.Name = $BackupName
-    }
+    if ($Type) { $CippBackupParams.Type = $Type }
+    if ($TenantFilter) { $CippBackupParams.TenantFilter = $TenantFilter }
+    if ($BackupName) { $CippBackupParams.Name = $BackupName }
 
     $Result = Get-CIPPBackup @CippBackupParams
 
     if ($NameOnly) {
-        $Result = $Result | Select-Object @{Name = 'BackupName'; exp = { $_.RowKey } }, Timestamp | Sort-Object Timestamp -Descending
+        $Processed = foreach ($item in $Result) {
+            $properties = $item.PSObject.Properties | Where-Object { $_.Name -notin @('TenantFilter', 'ETag', 'PartitionKey', 'RowKey', 'Timestamp') -and $_.Value }
+            [PSCustomObject]@{
+                BackupName = $item.RowKey
+                Timestamp  = $item.Timestamp
+                Items      = $properties.Name
+            }
+        }
+        $Result = $Processed | Sort-Object Timestamp -Descending
     }
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Result)
         })
-
 }
