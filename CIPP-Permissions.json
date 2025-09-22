@@ -426,6 +426,11 @@
         "Description": "Allows the app to read and write your authentication methods, including phone numbers and Authenticator app settings.This does not allow the app to see secret information like your passwords, or to sign-in or otherwise use your authentication methods."
       },
       {
+        "Id": "424b07a8-1209-4d17-9fe4-9018a93a1024",
+        "Name": "TeamsTelephoneNumber.ReadWrite.All",
+        "Description": "Allows the app to read and modify your tenant's acquired telephone number details on behalf of the signed-in admin user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc."
+      },
+      {
         "Id": "b7887744-6746-4312-813d-72daeaee7e2d",
         "Name": "UserAuthenticationMethod.ReadWrite.All",
         "Description": "Allows the app to read and write authentication methods of all users you have access to in your organization.                       Authentication methods include things like a user’s phone numbers and Authenticator app settings. This does not allow                      the app to see secret information like passwords, or to sign-in or otherwise use the authentication methods."
@@ -696,6 +701,11 @@
         "Id": "741f803b-c850-494e-b5df-cde7c675a1ca",
         "Name": "User.ReadWrite.All",
         "Description": "Allows the app to read and update user profiles without a signed in user."
+      },
+      {
+        "Id": "0a42382f-155c-4eb1-9bdc-21548ccaa387",
+        "Name": "TeamsTelephoneNumber.ReadWrite.All",
+        "Description": "Allows the app to read your tenant's acquired telephone number details, without a signed-in user. Acquired telephone numbers may include attributes related to assigned object, emergency location, network site, etc."
       },
       {
         "Id": "50483e42-d915-4231-9639-7fdb7fd190e5",
