@@ -23,6 +23,7 @@ function Invoke-PublicPhishingCheck {
         $TableBody = @{
             RowKey                   = "$ID"
             PartitionKey             = [string]$Tenant.defaultDomainName
+            tenantFilter             = [string]$Tenant.defaultDomainName
             message                  = [string]$Message
             type                     = [string]$request.body.type
             url                      = [string]$request.body.url
