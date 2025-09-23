@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListMailboxes {
+function Invoke-ListMailboxes {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -73,7 +73,7 @@ Function Invoke-ListMailboxes {
         LitigationHoldEnabled,
         LitigationHoldDate,
         LitigationHoldDuration,
-        @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+        @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE') } },
         ComplianceTagHoldApplied,
         RetentionHoldEnabled,
         InPlaceHolds,
