@@ -70,6 +70,16 @@ function Invoke-ExecCustomRole {
                 if (!$ExistingRole) {
                     throw "Role $($Request.Body.RoleName) not found"
                 }
+
+                if ($ExistingRole.RowKey -eq $Request.Body.NewRoleName.ToLower()) {
+                    throw "New role name cannot be the same as the existing role name"
+                }
+
+                $NewRoleTest = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.NewRoleName.ToLower())'"
+                if ($NewRoleTest) {
+                    throw "Role name $($Request.Body.NewRoleName) already exists"
+                }
+
                 $NewRole = @{
                     'PartitionKey'     = 'CustomRoles'
                     'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
