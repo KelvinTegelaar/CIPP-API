@@ -61,6 +61,32 @@ function Invoke-ExecCustomRole {
                 $Body = @{Results = "Failed to save custom role $($Request.Body.RoleName)" }
             }
         }
+        'Clone' {
+            try {
+                if ($Request.Body.NewRoleName -in $DefaultRoles) {
+                    throw "Role name $($Request.Body.NewRoleName) cannot be used"
+                }
+                $ExistingRole = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
+                if (!$ExistingRole) {
+                    throw "Role $($Request.Body.RoleName) not found"
+                }
+                $NewRole = @{
+                    'PartitionKey'     = 'CustomRoles'
+                    'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
+                    'Permissions'      = $ExistingRole.Permissions
+                    'AllowedTenants'   = $ExistingRole.AllowedTenants
+                    'BlockedTenants'   = $ExistingRole.BlockedTenants
+                    'BlockedEndpoints' = $ExistingRole.BlockedEndpoints
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $NewRole -Force | Out-Null
+                $Body = @{Results = "Custom role '$($Request.Body.NewRoleName)' cloned from '$($Request.Body.RoleName)'" }
+                Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Cloned custom role $($Request.Body.RoleName) to $($Request.Body.NewRoleName)" -Sev 'Info'
+            } catch {
+                Write-Warning "Failed to clone custom role $($Request.Body.RoleName): $($_.Exception.Message)"
+                Write-Warning $_.InvocationInfo.PositionMessage
+                $Body = @{Results = "Failed to clone custom role $($Request.Body.RoleName)" }
+            }
+        }
         'Delete' {
             Write-Information "Deleting custom role $($Request.Body.RoleName)"
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
