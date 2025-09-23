@@ -73,9 +73,9 @@ function Invoke-EditIntuneScript {
         }
         'PATCH' {
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = "Method $($Request.Method) is not supported."
-            })
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = "Method $($Request.Method) is not supported."
+                })
         }
         'POST' {
             # Parse the script data to determine type
