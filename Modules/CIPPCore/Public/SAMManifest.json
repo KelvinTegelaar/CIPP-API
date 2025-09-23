@@ -92,6 +92,10 @@
           "type": "Role"
         },
         {
+          "id": "8b9d79d0-ad75-4566-8619-f7500ecfcebe",
+          "type": "Scope"
+        },
+        {
           "id": "06a5fe6d-c49d-46a7-b082-56b1b14103c7",
           "type": "Role"
         },
