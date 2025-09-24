@@ -40,14 +40,21 @@ function Get-CIPPIntunePolicy {
                 } else {
                     $policiesAndroid = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURLAndroid" -tenantid $tenantFilter
                     $policiesIOS = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURLIOS" -tenantid $tenantFilter
-
-                    $policies = @($policiesAndroid, $policiesIOS) | Where-Object { $_ }
                     
-                    foreach ($policy in $policies) {
-                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
+                    foreach ($policy in $policiesAndroid) {
+                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURLAndroid('$($policy.id)')" -tenantid $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
+
+                    foreach ($policy in $policiesIOS) {
+                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURLIOS('$($policy.id)')" -tenantid $tenantFilter
+                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    }
+
+                    $policies = @($policiesAndroid, $policiesIOS) | Where-Object { $_ }
+                    
                     return $policies
                 }
             }
