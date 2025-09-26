@@ -80,9 +80,9 @@ function Get-CIPPIntunePolicy {
                     }
 
                     # Combine and return all policies
-                    $allPolicies = @()
-                    if ($androidPolicies) { $allPolicies += $androidPolicies }
-                    if ($iOSPolicies) { $allPolicies += $iOSPolicies }
+                    $allPolicies = [System.Collections.Generic.List[object]]::new()
+                    if ($androidPolicies) { $allPolicies.AddRange($androidPolicies) }
+                    if ($iOSPolicies) { $allPolicies.AddRange($iOSPolicies) }
                     return $allPolicies
                 }
             }
