@@ -14,7 +14,7 @@ function Set-ExtensionAPIKey {
 
     if ($PSCmdlet.ShouldProcess('API Key', "Set API Key for $Extension")) {
         $Var = "Ext_$Extension"
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = [PSCustomObject]@{
                 'PartitionKey' = $Extension

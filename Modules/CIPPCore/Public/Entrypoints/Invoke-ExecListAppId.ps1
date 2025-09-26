@@ -15,7 +15,7 @@ Function Invoke-ExecListAppId {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     $ResponseURL = "$(($Request.headers.'x-ms-original-url').replace('/api/ExecListAppId','/api/ExecSAMSetup'))"
     #make sure we get the very latest version of the appid from kv:
-    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
         $env:ApplicationID = $Secret.ApplicationID
