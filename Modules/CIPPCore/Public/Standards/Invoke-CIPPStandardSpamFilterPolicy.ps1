@@ -124,10 +124,10 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         ($CurrentState.PhishZapEnabled -eq $true) -and
         ($CurrentState.SpamZapEnabled -eq $true) -and
         ($CurrentState.EnableLanguageBlockList -eq $Settings.EnableLanguageBlockList) -and
-        ((-not $CurrentState.LanguageBlockList -and -not $Settings.LanguageBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
+        (($null -eq $CurrentState.LanguageBlockList -and $null -eq $Settings.LanguageBlockList.value) -or ($null -ne $CurrentState.LanguageBlockList -and $null -ne $Settings.LanguageBlockList.value -and !(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
         ($CurrentState.EnableRegionBlockList -eq $Settings.EnableRegionBlockList) -and
-        ((-not $CurrentState.RegionBlockList -and -not $Settings.RegionBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
-        (!(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains)))
+        (($null -eq $CurrentState.RegionBlockList -and $null -eq $Settings.RegionBlockList.value) -or ($null -ne $CurrentState.RegionBlockList -and $null -ne $Settings.RegionBlockList.value -and !(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
+        (($null -eq $CurrentState.AllowedSenderDomains -and $null -eq ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains)) -or ($null -ne $CurrentState.AllowedSenderDomains -and $null -ne ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains) -and !(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains))))
     }
     catch {
         $StateIsCorrect = $false
