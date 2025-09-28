@@ -3,7 +3,7 @@ function Invoke-EditAntiPhishingFilter {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.SpamFilter.Read
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -33,7 +33,7 @@ function Invoke-EditAntiPhishingFilter {
             'Disable' {
                 $ExoRequestParam.Add('cmdlet', 'Disable-AntiPhishRule')
             }
-            Default {
+            default {
                 throw 'Invalid state'
             }
         }

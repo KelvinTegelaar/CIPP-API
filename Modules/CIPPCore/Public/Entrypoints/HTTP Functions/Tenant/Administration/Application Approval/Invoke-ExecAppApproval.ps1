@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAppApproval {
+function Invoke-ExecAppApproval {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,8 +15,7 @@ Function Invoke-ExecAppApproval {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    Write-Host "$($Request.query.ID)"
-    # Interact with query parameters or the body of the request.
+    # Seems to be an unused endpoint? -Bobby
 
     $ApplicationId = if ($Request.Query.ApplicationId) { $Request.Query.ApplicationId } else { $env:ApplicationID }
     $Results = Get-Tenants | ForEach-Object {
