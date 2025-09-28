@@ -6,6 +6,9 @@ function Invoke-ExecJITAdmin {
         Entrypoint
     .ROLE
         Identity.Role.ReadWrite
+
+    .DESCRIPTION
+        Just-in-time admin management API endpoint. This function can list JIT admins, create users, add roles, remove roles, delete, or disable a user.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,6 +19,7 @@ function Invoke-ExecJITAdmin {
     Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.Action -eq 'List') {
+        # TODO: The list functionality should be moved to a separate function. ListJITAdmin or similar.
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         if ($Request.Query.TenantFilter -ne 'AllTenants') {
             # Single tenant logic
@@ -48,6 +52,7 @@ function Invoke-ExecJITAdmin {
                     accountEnabled     = $_.accountEnabled
                     jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
                     jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
+                    jitAdminReason     = $_.($Schema.id).jitAdminReason
                     memberOf           = $MemberOf
                 }
             }
@@ -115,6 +120,7 @@ function Invoke-ExecJITAdmin {
                             accountEnabled     = $UserObject.accountEnabled
                             jitAdminEnabled    = $UserObject.jitAdminEnabled
                             jitAdminExpiration = $UserObject.jitAdminExpiration
+                            jitAdminReason     = $UserObject.jitAdminReason
                             memberOf           = $UserObject.memberOf
                         }
                     )
@@ -130,29 +136,29 @@ function Invoke-ExecJITAdmin {
         if ($Request.Body.existingUser.value -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
         }
-        Write-LogMessage -Headers $User -API $APIName -message "Executing JIT Admin for $Username" -tenant $TenantFilter -Sev 'Info'
 
         $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
         $Results = [System.Collections.Generic.List[string]]::new()
 
-        if ($Request.Body.useraction -eq 'Create') {
-            Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Creating JIT Admin user $($Request.Body.Username)" -Sev 'Info'
-            Write-Information "Creating JIT Admin user $($Request.Body.username)"
+        if ($Request.Body.userAction -eq 'create') {
             $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
+            $Username = "$($Request.Body.Username)@$($Domain)"
+            Write-Information "Creating JIT Admin user: $($Request.Body.username)"
 
             $JITAdmin = @{
                 User         = @{
                     'FirstName'         = $Request.Body.FirstName
                     'LastName'          = $Request.Body.LastName
-                    'UserPrincipalName' = "$($Request.Body.Username)@$($Domain)"
+                    'UserPrincipalName' = $Username
                 }
                 Expiration   = $Expiration
+                Reason       = $Request.Body.reason
                 Action       = 'Create'
                 TenantFilter = $TenantFilter
             }
             $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
-            $Username = "$($Request.Body.Username)@$($Domain)"
+            Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Created JIT Admin user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ')" -Sev 'Info' -LogData $JITAdmin
             $Results.Add("Created User: $Username")
             if (!$Request.Body.UseTAP) {
                 $Results.Add("Password: $($CreateResult.password)")
@@ -212,6 +218,7 @@ function Invoke-ExecJITAdmin {
             }
             Roles        = $Request.Body.AdminRoles.value
             Action       = 'AddRoles'
+            Reason       = $Request.Body.Reason
             Expiration   = $Expiration
         }
         if ($Start -gt (Get-Date)) {
@@ -231,13 +238,15 @@ function Invoke-ExecJITAdmin {
                 }
             }
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
-            if ($Request.Body.useraction -ne 'Create') {
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration
+            if ($Request.Body.userAction -ne 'create') {
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -Reason $Request.Body.Reason
             }
             $Results.Add("Scheduling JIT Admin enable task for $Username")
+            Write-LogMessage -Headers $User -API $APIName -message "Scheduling JIT Admin for existing user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ') " -tenant $TenantFilter -Sev 'Info'
         } else {
             $Results.Add("Executing JIT Admin enable task for $Username")
             Set-CIPPUserJITAdmin @Parameters
+            Write-LogMessage -Headers $User -API $APIName -message "Executing JIT Admin for existing user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ') " -tenant $TenantFilter -Sev 'Info'
         }
 
         $DisableTaskBody = [pscustomobject]@{
@@ -253,6 +262,7 @@ function Invoke-ExecJITAdmin {
                     'UserPrincipalName' = $Username
                 }
                 Roles        = $Request.Body.AdminRoles.value
+                Reason       = $Request.Body.Reason
                 Action       = $Request.Body.ExpireAction.value
             }
             PostExecution = @{
