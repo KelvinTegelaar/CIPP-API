@@ -244,6 +244,9 @@ function Compare-CIPPIntuneObject {
                                             $child.choiceSettingValue.value
                                         }
                                     }
+                                    if (!$childValue -and $null -ne $child.simpleSettingValue -and $null -ne $child.simpleSettingValue.value) {
+                                        $childValue = $child.simpleSettingValue.value
+                                    }
 
                                     # Add object to our temporary list
                                     [PSCustomObject]@{
@@ -337,9 +340,9 @@ function Compare-CIPPIntuneObject {
                                         } else {
                                             $child.choiceSettingValue.value
                                         }
-                                        if (!$childValue -and $child.simpleSettingValue.value) {
-                                            $childValue = $child.simpleSettingValue.value
-                                        }
+                                    }
+                                    if (!$childValue -and $null -ne $child.simpleSettingValue -and $null -ne $child.simpleSettingValue.value) {
+                                        $childValue = $child.simpleSettingValue.value
                                     }
 
                                     # Add object to our temporary list
