@@ -3,7 +3,7 @@ function Invoke-EditSafeAttachmentsFilter {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.SpamFilter.Read
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -33,7 +33,7 @@ function Invoke-EditSafeAttachmentsFilter {
             'Disable' {
                 $ExoRequestParam.Add('cmdlet', 'Disable-SafeAttachmentRule')
             }
-            Default {
+            default {
                 throw 'Invalid state'
             }
         }

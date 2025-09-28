@@ -3,7 +3,7 @@ function Invoke-ListMailQuarantine {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.SpamFilter.ReadWrite
+        Exchange.SpamFilter.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,7 @@ function Invoke-ExecDomainAnalyser {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Tenant.DomainAnalyser.Read
+        Tenant.DomainAnalyser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

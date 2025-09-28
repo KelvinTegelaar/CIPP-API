@@ -1,11 +1,11 @@
 using namespace System.Net
 
-Function Invoke-ExecSetCIPPAutoBackup {
+function Invoke-ExecSetCIPPAutoBackup {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Backup.Read
+        CIPP.Backup.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

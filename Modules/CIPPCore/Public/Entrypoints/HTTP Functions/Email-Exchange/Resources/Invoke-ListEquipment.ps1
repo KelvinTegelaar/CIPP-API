@@ -1,11 +1,11 @@
 using namespace System.Net
 
-Function Invoke-ListEquipment {
+function Invoke-ListEquipment {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.Equipment.ReadWrite
+        Exchange.Equipment.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
