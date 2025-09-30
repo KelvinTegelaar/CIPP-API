@@ -12,7 +12,6 @@
     )
 
     try {
-        # Get blocked sender addresses using Exchange Online cmdlet
         $BlockedUsers = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-BlockedSenderAddress'
 
         if ($BlockedUsers) {
