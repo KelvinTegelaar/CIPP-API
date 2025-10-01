@@ -12,12 +12,12 @@ function Invoke-EditUser {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $UserObj = $Request.Body
     if ([string]::IsNullOrWhiteSpace($UserObj.id)) {
         $body = @{'Results' = @('Failed to edit user. No user ID provided') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
             })
@@ -235,7 +235,7 @@ function Invoke-EditUser {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = @($Results) }
         })

@@ -9,7 +9,7 @@ function Invoke-ExecPartnerWebhook {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     switch ($Request.Query.Action) {
         'ListEventTypes' {
@@ -77,7 +77,7 @@ function Invoke-ExecPartnerWebhook {
         }
     }
 
-    Push-OutputBinding -Name Response -Value @{
+    return @{
         StatusCode = [System.Net.HttpStatusCode]::OK
         Body       = $Body
     }

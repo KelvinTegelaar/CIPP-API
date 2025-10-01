@@ -30,7 +30,7 @@ function Invoke-RemoveScheduledItem {
 
     Write-LogMessage -Headers $User -API $APINAME -message "Task removed: $($task.RowKey)" -Sev 'Info'
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ Results = 'Task removed successfully.' }
         })

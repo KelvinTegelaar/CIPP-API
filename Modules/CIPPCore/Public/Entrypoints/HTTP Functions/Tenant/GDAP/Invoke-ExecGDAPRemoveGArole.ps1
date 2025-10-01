@@ -45,7 +45,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     $body = @{
         Message = $Message
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

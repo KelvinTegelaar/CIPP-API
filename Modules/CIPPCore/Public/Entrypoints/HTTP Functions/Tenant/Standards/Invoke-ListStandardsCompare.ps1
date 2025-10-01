@@ -91,7 +91,7 @@ function Invoke-ListStandardsCompare {
         $Results.Add($TenantStandard)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Results)
         })

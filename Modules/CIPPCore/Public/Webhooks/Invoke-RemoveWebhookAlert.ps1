@@ -12,7 +12,7 @@ Function Invoke-RemoveWebhookAlert {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     try {
         $WebhookTable = Get-CIPPTable -TableName 'SchedulerConfig'
@@ -54,8 +54,8 @@ Function Invoke-RemoveWebhookAlert {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
-        })
+        }
 }

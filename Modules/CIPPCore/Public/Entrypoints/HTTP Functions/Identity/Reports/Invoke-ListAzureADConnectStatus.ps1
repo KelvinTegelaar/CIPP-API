@@ -12,7 +12,7 @@ Function Invoke-ListAzureADConnectStatus {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Query.TenantFilter
     $DataToReturn = $Request.Query.DataToReturn
@@ -61,17 +61,17 @@ Function Invoke-ListAzureADConnectStatus {
         }
     }
     if ($DataToReturn -eq 'AzureADConnectSettings') {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $AzureADConnectSettings
             })
     } elseif ($DataToReturn -eq 'AzureADObjectsInError') {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($ObjectsInError)
             })
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($FinalObject)
             })

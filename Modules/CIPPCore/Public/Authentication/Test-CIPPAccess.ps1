@@ -79,7 +79,7 @@ function Test-CIPPAccess {
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
                         @{
@@ -90,7 +90,6 @@ function Test-CIPPAccess {
                             'permissions'     = $Permissions
                         } | ConvertTo-Json -Depth 5)
                 })
-            return
         }
 
     } else {
@@ -107,7 +106,7 @@ function Test-CIPPAccess {
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 
             if (!$User.userRoles) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = (
                             @{
@@ -118,7 +117,7 @@ function Test-CIPPAccess {
             }
 
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
                         @{
@@ -126,7 +125,6 @@ function Test-CIPPAccess {
                             'permissions'     = $Permissions
                         } | ConvertTo-Json -Depth 5)
                 })
-            return
         }
 
         if ($User.userRoles -contains 'admin' -or $User.userRoles -contains 'superadmin') {

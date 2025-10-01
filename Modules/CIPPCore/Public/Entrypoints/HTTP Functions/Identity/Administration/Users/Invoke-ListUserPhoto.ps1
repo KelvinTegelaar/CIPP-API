@@ -12,7 +12,7 @@ Function Invoke-ListUserPhoto {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $tenantFilter = $Request.Query.tenantFilter
@@ -33,7 +33,7 @@ Function Invoke-ListUserPhoto {
     $Body = [Convert]::FromBase64String($ImageData.body)
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode  = [HttpStatusCode]::OK
             ContentType = $ImageData.headers.'Content-Type'
             Body        = $Body

@@ -10,7 +10,7 @@ function Invoke-ListAuditLogSearches {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with the query parameters
     $TenantFilter = $Request.Query.tenantFilter
@@ -79,12 +79,12 @@ function Invoke-ListAuditLogSearches {
             }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $Body
             })
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })

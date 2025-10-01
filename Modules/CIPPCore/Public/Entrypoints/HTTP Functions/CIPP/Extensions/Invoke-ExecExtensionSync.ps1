@@ -12,7 +12,7 @@ Function Invoke-ExecExtensionSync {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     switch ($Request.Query.Extension) {
         'Gradient' {
@@ -100,7 +100,7 @@ Function Invoke-ExecExtensionSync {
     }
 
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

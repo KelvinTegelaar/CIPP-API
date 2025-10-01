@@ -59,7 +59,7 @@ function Invoke-ExecSetCalendarProcessing {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Results }
         })

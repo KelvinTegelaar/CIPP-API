@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListExchangeConnectors {
+function Invoke-ListExchangeConnectors {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +12,7 @@ Function Invoke-ListExchangeConnectors {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $request.Query.tenantFilter
 
     $Results = try {
@@ -26,7 +26,7 @@ Function Invoke-ListExchangeConnectors {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results)
         })

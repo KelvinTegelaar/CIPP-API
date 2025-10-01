@@ -164,7 +164,7 @@ function Invoke-ListGraphRequest {
     }
     $Outputdata = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Outputdata
         })

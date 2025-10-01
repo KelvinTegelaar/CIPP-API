@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecExtensionNinjaOneQueue {
+function Invoke-ExecExtensionNinjaOneQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,10 +11,10 @@ Function Invoke-ExecExtensionNinjaOneQueue {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    Switch ($QueueItem.NinjaAction) {
+
+    switch ($QueueItem.NinjaAction) {
         'StartAutoMapping' { Invoke-NinjaOneOrgMapping }
         'AutoMapTenant' { Invoke-NinjaOneOrgMappingTenant -QueueItem $QueueItem }
         'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $QueueItem }
@@ -25,8 +25,8 @@ Function Invoke-ExecExtensionNinjaOneQueue {
         Body       = 'Success'
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = $Body
-    })
+    }
 }

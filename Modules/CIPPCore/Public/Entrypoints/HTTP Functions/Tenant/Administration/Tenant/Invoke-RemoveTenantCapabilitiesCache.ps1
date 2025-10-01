@@ -12,14 +12,14 @@ function Invoke-RemoveTenantCapabilitiesCache {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Get the tenant identifier from query parameters
     $DefaultDomainName = $Request.Query.defaultDomainName
     if (-not $DefaultDomainName) {
         $body = [pscustomobject]@{'Results' = 'Missing required parameter: defaultDomainName' }
         $StatusCode = [HttpStatusCode]::BadRequest
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = $StatusCode
                 Body       = $body
             })
@@ -53,7 +53,7 @@ function Invoke-RemoveTenantCapabilitiesCache {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $body
         })

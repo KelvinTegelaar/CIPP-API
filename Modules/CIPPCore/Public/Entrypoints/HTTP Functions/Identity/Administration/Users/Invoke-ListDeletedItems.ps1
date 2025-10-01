@@ -13,7 +13,7 @@ Function Invoke-ListDeletedItems {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $Types = 'Application', 'User', 'Group'
@@ -24,7 +24,7 @@ Function Invoke-ListDeletedItems {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)
         })

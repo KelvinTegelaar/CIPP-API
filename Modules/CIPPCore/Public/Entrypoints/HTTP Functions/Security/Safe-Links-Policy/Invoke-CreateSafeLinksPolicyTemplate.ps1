@@ -70,7 +70,7 @@ Function Invoke-CreateSafeLinksPolicyTemplate {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $body
         })

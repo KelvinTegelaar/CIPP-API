@@ -12,7 +12,7 @@ Function Invoke-ExecExcludeTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # $username = $Request.Headers.'x-ms-client-principal-name'
     $Username = $Headers.'x-ms-client-principal-name' ?? ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
@@ -66,7 +66,7 @@ Function Invoke-ExecExcludeTenant {
     if (!$body) { $body = @() }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditExConnector {
+function Invoke-EditExConnector {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +12,7 @@ Function Invoke-EditExConnector {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     try {
         $ConnectorState = $Request.Query.State ?? $Request.Body.State
@@ -35,7 +35,7 @@ Function Invoke-EditExConnector {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

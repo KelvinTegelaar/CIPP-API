@@ -12,7 +12,7 @@ Function Invoke-RemoveConnectionfilterTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $ID = $Request.body.ID
     try {
@@ -32,7 +32,7 @@ Function Invoke-RemoveConnectionfilterTemplate {
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = $Result }
         })

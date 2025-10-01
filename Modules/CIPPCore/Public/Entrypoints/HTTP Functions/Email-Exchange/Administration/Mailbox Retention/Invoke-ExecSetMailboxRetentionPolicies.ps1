@@ -12,7 +12,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
@@ -21,7 +21,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
     $GuidToMetadataMap = @{}
 
     if ([string]::IsNullOrEmpty($TenantFilter)) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
             Body       = "Tenant filter is required"
         })
@@ -34,7 +34,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
 
         # Validate required parameters
         if ([string]::IsNullOrEmpty($PolicyName)) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "PolicyName is required"
             })
@@ -42,7 +42,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
         }
 
         if (-not $Mailboxes -or $Mailboxes.Count -eq 0) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Mailboxes array is required"
             })
@@ -144,7 +144,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = @{ Results = @($Results) }
     })

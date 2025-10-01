@@ -18,7 +18,7 @@ function Invoke-ExecAddTrustedIP {
             state        = $Request.Body.State
         } -Force
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ results = "Added $($Request.Body.IP) to database with state $($Request.Body.State) for $($Request.Body.tenantfilter)" }
         })

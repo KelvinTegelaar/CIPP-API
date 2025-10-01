@@ -12,7 +12,7 @@ Function Invoke-ExecCAServiceExclusion {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with the request
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
@@ -28,7 +28,7 @@ Function Invoke-ExecCAServiceExclusion {
         Write-LogMessage -headers $Headers -API 'Set-CIPPCAPolicyServiceException' -message "Failed to update policy $($PolicyId) with service provider exception for tenant $($CSPtenantId): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = $Body
     })

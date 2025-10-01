@@ -12,7 +12,7 @@ function Invoke-ListIntuneTemplates {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Table = Get-CippTable -tablename 'templates'
     $Imported = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings'"
@@ -90,7 +90,7 @@ function Invoke-ListIntuneTemplates {
     $Templates = $Templates | Sort-Object -Property displayName
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Templates | ConvertTo-Json -Depth 100)
         })

@@ -11,7 +11,7 @@ function Invoke-ExecUserSettings {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     try {
         $object = $Request.Body.currentSettings | Select-Object * -ExcludeProperty CurrentTenant, pageSizes, sidebarShow, sidebarUnfoldable, _persist | ConvertTo-Json -Compress -Depth 10
@@ -31,9 +31,9 @@ function Invoke-ExecUserSettings {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results)
-        })
+        }
 
 }

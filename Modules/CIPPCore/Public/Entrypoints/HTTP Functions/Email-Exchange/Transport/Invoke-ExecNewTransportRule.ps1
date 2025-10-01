@@ -14,13 +14,13 @@ function Invoke-ExecNewTransportRule {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
     if (!$TenantFilter) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })
@@ -135,23 +135,18 @@ function Invoke-ExecNewTransportRule {
             foreach ($item in $Field) {
                 if ($item -is [string]) {
                     $result.Add($item) | Out-Null
-                }
-                elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
+                } elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
                     # Extract value from object
                     if ($null -ne $item.value) {
                         $result.Add($item.value) | Out-Null
-                    }
-                    elseif ($null -ne $item.userPrincipalName) {
+                    } elseif ($null -ne $item.userPrincipalName) {
                         $result.Add($item.userPrincipalName) | Out-Null
-                    }
-                    elseif ($null -ne $item.id) {
+                    } elseif ($null -ne $item.id) {
                         $result.Add($item.id) | Out-Null
-                    }
-                    else {
+                    } else {
                         $result.Add($item.ToString()) | Out-Null
                     }
-                }
-                else {
+                } else {
                     $result.Add($item.ToString()) | Out-Null
                 }
             }
@@ -240,7 +235,7 @@ function Invoke-ExecNewTransportRule {
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Transport rule '$Name' already exists" -Sev 'Warning'
             $Result = "Transport rule '$Name' already exists in tenant $TenantFilter"
             $StatusCode = [HttpStatusCode]::Conflict
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = $StatusCode
                     Body       = @{Results = $Result }
                 })
@@ -443,8 +438,7 @@ function Invoke-ExecNewTransportRule {
         $Result = "Successfully created transport rule '$Name'"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create transport rule '$Name'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
@@ -452,7 +446,7 @@ function Invoke-ExecNewTransportRule {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

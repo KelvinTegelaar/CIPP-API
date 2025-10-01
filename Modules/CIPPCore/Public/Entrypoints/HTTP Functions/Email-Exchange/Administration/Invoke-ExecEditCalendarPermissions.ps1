@@ -12,7 +12,7 @@ function Invoke-ExecEditCalendarPermissions {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Extract parameters from query or body
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
@@ -38,7 +38,7 @@ function Invoke-ExecEditCalendarPermissions {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

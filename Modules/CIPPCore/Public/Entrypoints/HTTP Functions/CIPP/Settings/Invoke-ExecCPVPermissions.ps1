@@ -12,7 +12,7 @@ function Invoke-ExecCPVPermissions {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Body.tenantFilter
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors
@@ -55,7 +55,7 @@ function Invoke-ExecCPVPermissions {
         $Success = $false
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{
                 Results  = $GraphRequest

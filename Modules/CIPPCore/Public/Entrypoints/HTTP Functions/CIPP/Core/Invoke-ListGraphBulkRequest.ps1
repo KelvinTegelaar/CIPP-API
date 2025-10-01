@@ -10,7 +10,7 @@ function Invoke-ListGraphBulkRequest {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
@@ -58,5 +58,5 @@ function Invoke-ListGraphBulkRequest {
         }
     }
 
-    Push-OutputBinding -Name Response -Value $Results
+    return $Results
 }

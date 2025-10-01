@@ -1,4 +1,4 @@
-﻿using namespace System.Net
+using namespace System.Net
 
 Function Invoke-ExecSetMailboxRule {
     <#
@@ -50,7 +50,7 @@ Function Invoke-ExecSetMailboxRule {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Results }
         })

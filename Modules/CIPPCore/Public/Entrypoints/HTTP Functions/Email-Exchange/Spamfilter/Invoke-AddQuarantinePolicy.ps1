@@ -12,7 +12,7 @@ Function Invoke-AddQuarantinePolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Tenants = ($Request.body.selectedTenants).value
 
@@ -59,7 +59,7 @@ Function Invoke-AddQuarantinePolicy {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{Results = @($Result) }
         })

@@ -12,7 +12,7 @@ Function Invoke-ListTransportRulesTemplates {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.TransportRuleTemplate.json' | ForEach-Object {
@@ -41,7 +41,7 @@ Function Invoke-ListTransportRulesTemplates {
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)
         })

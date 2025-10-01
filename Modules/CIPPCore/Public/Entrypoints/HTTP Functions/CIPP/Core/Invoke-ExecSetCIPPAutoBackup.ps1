@@ -12,7 +12,7 @@ function Invoke-ExecSetCIPPAutoBackup {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($Request.Body.Enabled -eq $true) {
@@ -40,7 +40,7 @@ function Invoke-ExecSetCIPPAutoBackup {
     }
     Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Scheduled automatic CIPP backups' -Sev 'Info'
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Result
         })

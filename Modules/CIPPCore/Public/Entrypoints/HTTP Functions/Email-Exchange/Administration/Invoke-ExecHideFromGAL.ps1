@@ -12,7 +12,7 @@ Function Invoke-ExecHideFromGAL {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Support if the request is a POST or a GET. So to support legacy(GET) and new(POST) requests
@@ -30,7 +30,7 @@ Function Invoke-ExecHideFromGAL {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Result }
         })

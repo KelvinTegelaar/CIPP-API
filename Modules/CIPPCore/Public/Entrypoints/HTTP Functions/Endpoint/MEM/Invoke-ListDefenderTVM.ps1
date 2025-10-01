@@ -13,7 +13,7 @@ Function Invoke-ListDefenderTVM {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Interact with query parameters or the body of the request.
@@ -52,7 +52,7 @@ Function Invoke-ListDefenderTVM {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GroupObj)
         })

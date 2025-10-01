@@ -18,7 +18,7 @@ Function Invoke-ListContacts {
 
     # Early validation and exit
     if (-not $TenantFilter) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
             Body       = 'tenantFilter is required'
         })
@@ -128,7 +128,7 @@ Function Invoke-ListContacts {
         Write-Host "Error in ListContacts: $ErrorMessage"
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $ContactResponse
     })

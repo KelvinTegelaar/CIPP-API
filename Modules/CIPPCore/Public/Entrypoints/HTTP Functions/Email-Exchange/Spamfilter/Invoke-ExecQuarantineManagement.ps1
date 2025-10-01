@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecQuarantineManagement {
+function Invoke-ExecQuarantineManagement {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,14 +12,14 @@ Function Invoke-ExecQuarantineManagement {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
 
 
 
     # Interact with query parameters or the body of the request.
-    Try {
+    try {
         $TenantFilter = $Request.Body.tenantFilter | Select-Object -First 1
         $params = @{
             AllowSender  = [boolean]$Request.Body.AllowSender
@@ -39,7 +39,7 @@ Function Invoke-ExecQuarantineManagement {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

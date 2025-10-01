@@ -1,4 +1,4 @@
-﻿using namespace System.Net
+using namespace System.Net
 
 Function Invoke-ExecStartManagedFolderAssistant {
     <#
@@ -12,7 +12,7 @@ Function Invoke-ExecStartManagedFolderAssistant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $Tenant = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
@@ -43,7 +43,7 @@ Function Invoke-ExecStartManagedFolderAssistant {
 
     $Body = [pscustomobject] @{ 'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

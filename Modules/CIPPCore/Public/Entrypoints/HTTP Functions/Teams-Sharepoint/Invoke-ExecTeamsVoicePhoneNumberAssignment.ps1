@@ -12,7 +12,7 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
     $Identity = $Request.Body.input.value
 
     $tenantFilter = $Request.Body.TenantFilter
@@ -33,7 +33,7 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results
         })

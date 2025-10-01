@@ -12,7 +12,7 @@ function Invoke-ExecAddAlert {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Severity = 'Alert'
 
@@ -70,7 +70,7 @@ function Invoke-ExecAddAlert {
         Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
         'Successfully generated alert.'
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Result
         })

@@ -12,7 +12,7 @@ function Invoke-ExecAlertsList {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     function New-FlatArray ([Array]$arr) {
@@ -143,7 +143,7 @@ function Invoke-ExecAlertsList {
             Metadata = $Metadata
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

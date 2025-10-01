@@ -12,7 +12,7 @@ function Invoke-ExecModifyCalPerms {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Username = $Request.Body.userID
     $TenantFilter = $Request.Body.tenantFilter
@@ -23,7 +23,7 @@ function Invoke-ExecModifyCalPerms {
     if ($null -eq $Username) {
         Write-LogMessage -headers $Headers -API $APIName -message 'Username is null' -Sev 'Error'
         $body = [pscustomobject]@{'Results' = @('Username is required') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
             })
@@ -36,7 +36,7 @@ function Invoke-ExecModifyCalPerms {
     } catch {
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to get user ID: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = @("Failed to get user ID: $($_.Exception.Message)") }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = $Body
             })
@@ -110,7 +110,7 @@ function Invoke-ExecModifyCalPerms {
     $Body = [pscustomobject]@{'Results' = @($Results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
             Body       = $Body
         })

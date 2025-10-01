@@ -13,7 +13,7 @@ Function Invoke-RemoveExConnector {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $TenantFilter = $request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     try {
         $Type = $Request.Query.Type ?? $Request.Body.Type
@@ -31,7 +31,7 @@ Function Invoke-RemoveExConnector {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

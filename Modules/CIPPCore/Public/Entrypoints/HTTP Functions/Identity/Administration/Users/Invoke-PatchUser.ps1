@@ -10,7 +10,7 @@ function Invoke-PatchUser {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $HttpResponse = [HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
@@ -99,5 +99,5 @@ function Invoke-PatchUser {
         $HttpResponse.Body = @{'Results' = @("Failed to patch user(s). Error: $($_.Exception.Message)") }
     }
 
-    Push-OutputBinding -Name Response -Value $HttpResponse
+    return $HttpResponse
 }

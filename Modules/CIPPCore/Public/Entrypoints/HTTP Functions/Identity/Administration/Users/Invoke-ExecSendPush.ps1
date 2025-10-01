@@ -12,7 +12,7 @@ function Invoke-ExecSendPush {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.body.TenantFilter
     $UserEmail = $Request.body.UserEmail
@@ -117,7 +117,7 @@ function Invoke-ExecSendPush {
     $Results = [pscustomobject]@{'Results' = @{ resultText = $Body; state = $State } }
     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

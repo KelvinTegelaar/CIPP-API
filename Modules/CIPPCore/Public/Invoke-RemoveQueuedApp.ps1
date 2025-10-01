@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveQueuedApp {
+function Invoke-RemoveQueuedApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +12,7 @@ Function Invoke-RemoveQueuedApp {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $ID = $request.body.ID
     try {
@@ -32,10 +32,10 @@ Function Invoke-RemoveQueuedApp {
 
     $body = [pscustomobject]@{'Results' = $Message }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $body
-        })
+    return [HttpResponseContext]@{
+        StatusCode = $StatusCode
+        Body       = $body
+    }
 
 
 }

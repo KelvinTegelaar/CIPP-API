@@ -37,7 +37,7 @@ Function Invoke-ExecModifyMBPerms {
     if (-not $MailboxRequests -or $MailboxRequests.Count -eq 0) {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No mailbox requests provided' -Sev 'Error'
         $body = [pscustomobject]@{'Results' = @("No mailbox requests provided") }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
             Body       = $Body
         })
@@ -297,7 +297,7 @@ Function Invoke-ExecModifyMBPerms {
     if ($CmdletArray.Count -eq 0) {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No valid cmdlets to process' -Sev 'Warning' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = @("No valid permission changes to process") }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })
@@ -385,7 +385,7 @@ Function Invoke-ExecModifyMBPerms {
     }
 
     $body = [pscustomobject]@{'Results' = @($Results) }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = $Body
     })

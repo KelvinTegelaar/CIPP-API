@@ -78,7 +78,7 @@ Function Invoke-ExecBulkLicense {
     }
 
     # Return response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

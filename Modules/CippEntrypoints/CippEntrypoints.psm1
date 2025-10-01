@@ -51,6 +51,7 @@ function Receive-CippHttpTrigger {
         try {
             $Access = Test-CIPPAccess -Request $Request
             if ($FunctionName -eq 'Invoke-Me') {
+                Push-OutputBinding -Name Response -Value $Access
                 return
             }
         } catch {
@@ -64,8 +65,12 @@ function Receive-CippHttpTrigger {
 
         try {
             Write-Information "Access: $Access"
+            Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
             if ($Access) {
-                & $FunctionName @HttpTrigger
+                $Response = & $FunctionName @HttpTrigger
+                if ($Response.StatusCode) {
+                    Push-OutputBinding -Name Response -Value ([HttpResponseContext]$Response)
+                }
             }
         } catch {
             Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"

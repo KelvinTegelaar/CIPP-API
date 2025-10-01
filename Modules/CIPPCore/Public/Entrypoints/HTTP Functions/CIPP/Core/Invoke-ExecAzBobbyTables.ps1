@@ -15,7 +15,7 @@ function Invoke-ExecAzBobbyTables {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $AllowList = @(
         'Add-AzDataTableEntity'
@@ -57,7 +57,7 @@ function Invoke-ExecAzBobbyTables {
         $StatusCode = [HttpStatusCode]::NotFound
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results)
         })

@@ -16,7 +16,7 @@ function Invoke-ExecSAMSetup {
 
     if ($Request.Query.error) {
         Add-Type -AssemblyName System.Web
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 ContentType = 'text/html'
                 StatusCode  = [HttpStatusCode]::Forbidden
                 Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
@@ -26,7 +26,7 @@ function Invoke-ExecSAMSetup {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
@@ -240,7 +240,7 @@ function Invoke-ExecSAMSetup {
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

@@ -60,19 +60,19 @@ function Invoke-EditIntuneScript {
             }
 
             if ($scriptTypeFound) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = $intuneScript
                     })
             } else {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::NotFound
                         Body       = "Script with ID $scriptId was not found in any endpoint."
                     })
             }
         }
         'PATCH' {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::BadRequest
                     Body       = "Method $($Request.Method) is not supported."
                 })
@@ -110,13 +110,13 @@ function Invoke-EditIntuneScript {
             try {
                 $patchResult = New-GraphPOSTRequest @parms -type 'PATCH'
                 $body = [pscustomobject]@{'Results' = $patchResult }
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = $body
                     })
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = "Failed to update script: $($ErrorMessage.NormalizedError)"
                     })

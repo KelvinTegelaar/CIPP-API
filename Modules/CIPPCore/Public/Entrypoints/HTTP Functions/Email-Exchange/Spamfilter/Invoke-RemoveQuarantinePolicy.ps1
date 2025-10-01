@@ -12,7 +12,7 @@ Function Invoke-RemoveQuarantinePolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Query.TenantFilter ?? $Request.Body.TenantFilter
     $PolicyName = $Request.Query.Name ?? $Request.Body.Name
     $Identity = $Request.Query.Identity ?? $Request.Body.Identity
@@ -37,7 +37,7 @@ Function Invoke-RemoveQuarantinePolicy {
     $StatusCode = [HttpStatusCode]::OK
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListBreachesTenant {
+function Invoke-ListBreachesTenant {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +12,7 @@ Function Invoke-ListBreachesTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Query.tenantFilter
 
@@ -31,9 +31,9 @@ Function Invoke-ListBreachesTenant {
         $usersResults = @()
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($usersResults)
-        })
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($usersResults)
+    }
 
 }

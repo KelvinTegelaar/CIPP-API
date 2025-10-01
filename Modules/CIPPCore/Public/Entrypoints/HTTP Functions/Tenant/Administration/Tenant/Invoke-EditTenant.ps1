@@ -12,7 +12,7 @@ function Invoke-EditTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
@@ -72,7 +72,7 @@ function Invoke-EditTenant {
             state      = 'success'
             resultText = 'Tenant details updated successfully'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $response
             })
@@ -82,7 +82,7 @@ function Invoke-EditTenant {
             state      = 'error'
             resultText = $_.Exception.Message
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = $response
             })

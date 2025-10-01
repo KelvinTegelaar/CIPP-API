@@ -12,7 +12,7 @@ function Invoke-AddNamedLocation {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Input bindings are passed in via param block.
@@ -54,7 +54,7 @@ function Invoke-AddNamedLocation {
     $body = [pscustomobject]@{'Results' = @($results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

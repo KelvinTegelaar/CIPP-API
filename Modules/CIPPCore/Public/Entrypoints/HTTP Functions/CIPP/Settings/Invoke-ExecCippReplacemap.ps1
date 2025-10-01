@@ -13,7 +13,7 @@ function Invoke-ExecCippReplacemap {
     $customerId = $Request.Query.tenantId ?? $Request.Body.tenantId
 
     if (!$customerId) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'customerId is required'
             })
@@ -57,7 +57,7 @@ function Invoke-ExecCippReplacemap {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

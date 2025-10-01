@@ -12,7 +12,7 @@ function Invoke-ListUserMailboxDetails {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Interact with query parameters or the body of the request.
@@ -294,7 +294,7 @@ function Invoke-ListUserMailboxDetails {
             InPlaceHolds)
     } # Select statement taken from ListMailboxes to save a EXO request. If updated here, update in ListMailboxes as well.
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)
         })

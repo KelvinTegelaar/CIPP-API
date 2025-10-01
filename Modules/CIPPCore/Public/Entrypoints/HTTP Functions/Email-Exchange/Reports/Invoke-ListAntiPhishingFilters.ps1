@@ -10,7 +10,7 @@ function Invoke-ListAntiPhishingFilters {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Interact with query parameters or the body of the request.
@@ -25,7 +25,7 @@ function Invoke-ListAntiPhishingFilters {
     @{ Name = 'State'; Expression = { foreach ($item in $Rules) { if ($item.AntiPhishPolicy -eq $_.Name) { $item.State } } } }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Output
         })

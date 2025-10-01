@@ -12,7 +12,7 @@ Function Invoke-AddAPDevice {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
 
@@ -68,7 +68,7 @@ Function Invoke-AddAPDevice {
     $body = [pscustomobject]@{'Results' = $Result }
     Write-Host $body
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
 

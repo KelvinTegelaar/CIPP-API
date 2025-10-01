@@ -10,7 +10,7 @@ function Invoke-ExecDurableFunctions {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Collect info
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
@@ -170,7 +170,7 @@ function Invoke-ExecDurableFunctions {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

@@ -12,7 +12,7 @@ Function Invoke-ExecManageRetentionTags {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
@@ -21,7 +21,7 @@ Function Invoke-ExecManageRetentionTags {
     $GuidToMetadataMap = @{}
 
     if ([string]::IsNullOrEmpty($TenantFilter)) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
             Body       = "Tenant filter is required"
         })
@@ -351,7 +351,7 @@ Function Invoke-ExecManageRetentionTags {
     $GraphRequest = $GraphRequest ?? @()
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $GraphRequest
     })

@@ -18,7 +18,7 @@ function Invoke-ExecDriftClone {
                 'Results' = 'Template ID is required'
                 'Success' = $false
             }
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::BadRequest
                     Body       = $Results
                 })
@@ -30,7 +30,7 @@ function Invoke-ExecDriftClone {
             'Success' = $true
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $Results
             })
@@ -39,7 +39,7 @@ function Invoke-ExecDriftClone {
             'Results' = "Failed to create drift clone: $($_.Exception.Message)"
             'Success' = $false
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = $Results
             })
