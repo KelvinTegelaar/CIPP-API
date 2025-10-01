@@ -64,6 +64,10 @@ function Get-CIPPTextReplacement {
     }
     # Tenant Specific Variables
     $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
+    # If no results found by customerId, try by defaultDomainName
+    if (!$ReplaceMap) {
+        $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$($Tenant.defaultDomainName)'"
+    }
     if ($ReplaceMap) {
         foreach ($Var in $ReplaceMap) {
             if ($EscapeForJson.IsPresent) {
