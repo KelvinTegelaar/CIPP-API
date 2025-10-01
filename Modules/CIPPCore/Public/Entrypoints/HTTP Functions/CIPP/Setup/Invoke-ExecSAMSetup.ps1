@@ -28,7 +28,7 @@ function Invoke-ExecSAMSetup {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
         if (!$Secret) {
@@ -63,7 +63,7 @@ function Invoke-ExecSAMSetup {
         if ($Request.Query.count -lt 1 ) { $Results = 'No authentication code found. Please go back to the wizard.' }
 
         if ($Request.Body.setkeys) {
-            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                 if ($Request.Body.TenantId) { $Secret.TenantId = $Request.Body.tenantid }
                 if ($Request.Body.RefreshToken) { $Secret.RefreshToken = $Request.Body.RefreshToken }
                 if ($Request.Body.applicationid) { $Secret.ApplicationId = $Request.Body.ApplicationId }
@@ -86,7 +86,7 @@ function Invoke-ExecSAMSetup {
                 $AppID = $Rows.appid
                 if (!$AppID -or $AppID -eq 'NotStarted') { $appid = $env:ApplicationID }
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
-                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                     $clientsecret = $Secret.ApplicationSecret
                 } else {
                     $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'ApplicationSecret' -AsPlainText
@@ -95,7 +95,7 @@ function Invoke-ExecSAMSetup {
                 Write-Information "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" #-Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                 $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -ContentType 'application/x-www-form-urlencoded'
 
-                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                     $Secret.RefreshToken = $RefreshToken.refresh_token
                     Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                 } else {
@@ -192,7 +192,7 @@ function Invoke-ExecSAMSetup {
                     } until ($attempt -gt 5)
                 }
                 $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
-                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                     $Secret.TenantId = $TenantId
                     $Secret.ApplicationId = $AppId.appId
                     $Secret.ApplicationSecret = $AppPassword

@@ -7,7 +7,7 @@ function Get-CIPPAuthentication {
     $Variables = @('ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken')
 
     try {
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $Table = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-AzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if (!$Secret) {

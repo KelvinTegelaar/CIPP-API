@@ -14,7 +14,7 @@ function Invoke-ExecCombinedSetup {
     $Results = [System.Collections.ArrayList]::new()
     try {
         # Set up Azure context if needed for Key Vault access
-        if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:MSI_SECRET) {
+        if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:MSI_SECRET -or $env:NonLocalHostAzurite -ne 'true') {
             Disable-AzContextAutosave -Scope Process | Out-Null
             $null = Connect-AzAccount -Identity
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
@@ -67,7 +67,7 @@ function Invoke-ExecCombinedSetup {
         if ($Request.Body.selectedOption -eq 'Manual') {
             $KV = $env:WEBSITE_DEPLOYMENT_ID
 
-            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                 $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                 $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
                 if (!$Secret) {
