@@ -65,7 +65,7 @@ function Receive-CippHttpTrigger {
 
         try {
             Write-Information "Access: $Access"
-            Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
             if ($Access) {
                 $Response = & $FunctionName @HttpTrigger
                 if ($Response.StatusCode) {
