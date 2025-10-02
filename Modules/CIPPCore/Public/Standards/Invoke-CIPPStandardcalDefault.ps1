@@ -13,6 +13,8 @@ function Invoke-CIPPStandardcalDefault {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Configures how much calendar information employees share by default with colleagues, balancing collaboration needs with privacy. This setting determines whether others can see meeting details, free/busy times, or just availability, helping optimize scheduling while protecting sensitive meeting information.
         DISABLEDFEATURES
             {"report":true,"warn":true,"remediate":false}
         ADDEDCOMPONENT

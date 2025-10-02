@@ -1,11 +1,11 @@
-﻿function Invoke-CIPPStandardTeamsChatProtection {
+function Invoke-CIPPStandardTeamsChatProtection {
     <#
     .FUNCTIONALITY
         Internal
     .COMPONENT
         (APIName) TeamsChatProtection
     .SYNOPSIS
-        (Label) Teams Chat Protection Settings
+        (Label) Set Teams Chat Protection Settings
     .DESCRIPTION
         (Helptext) Configures Teams chat protection settings including weaponizable file protection and malicious URL protection.
         (DocsDescription) Configures Teams messaging safety features to protect users from weaponizable files and malicious URLs in chats and channels. Weaponizable File Protection automatically blocks messages containing potentially dangerous file types (like .exe, .dll, .bat, etc.). Malicious URL Protection scans URLs in messages and displays warnings when potentially harmful links are detected. These protections work across internal and external collaboration scenarios.
@@ -13,7 +13,8 @@
         CAT
             Teams Standards
         TAG
-
+        EXECUTIVETEXT
+            Enables automated security protections in Microsoft Teams to block dangerous files and warn users about malicious links in chat messages. This helps protect employees from file-based attacks and phishing attempts. These safeguards work seamlessly in the background, providing essential protection without disrupting normal business communication.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsChatProtection.FileTypeCheck","label":"Enable Weaponizable File Protection","defaultValue":true}
             {"type":"switch","name":"standards.TeamsChatProtection.UrlReputationCheck","label":"Enable Malicious URL Protection","defaultValue":true}
@@ -22,9 +23,9 @@
         ADDEDDATE
             2025-10-02
         POWERSHELLEQUIVALENT
-            Set-CsTeamsMessagingConfiguration
+            Set-CsTeamsMessagingConfiguration -FileTypeCheck 'Enabled' -UrlReputationCheck 'Enabled' -ReportIncorrectSecurityDetections 'Enabled'
         RECOMMENDEDBY
-            CIS
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

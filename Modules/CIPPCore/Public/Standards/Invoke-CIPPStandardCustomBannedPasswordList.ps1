@@ -5,17 +5,17 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     .COMPONENT
         (APIName) CustomBannedPasswordList
     .SYNOPSIS
-        (Label) Update Entra ID Custom Banned Password List
+        (Label) Set Entra ID Custom Banned Password List
     .DESCRIPTION
-        (Helptext) Updates the Entra ID custom banned password list with organization-specific terms. Requires Entra ID P1 or P2 licenses. Enter words separated by commas or new lines. Each word must be 4-16 characters long. Maximum 1,000 words allowed.
-        (DocsDescription) Updates the Entra ID custom banned password list with organization-specific terms that should be blocked from user passwords. This supplements the global banned password list maintained by Microsoft. The custom list is limited to 1,000 key base terms of 4-16 characters each. Entra ID will block variations and combinations of these terms in user passwords.
+        (Helptext) **Requires Entra ID P1.** Updates and enables the Entra ID custom banned password list with the supplied words. Enter words separated by commas or semicolons. Each word must be 4-16 characters long. Maximum 1,000 words allowed.
+        (DocsDescription) Updates and enables the Entra ID custom banned password list with the supplied words. This supplements the global banned password list maintained by Microsoft. The custom list is limited to 1,000 key base terms of 4-16 characters each. Entra ID will [block variations and common substitutions](https://learn.microsoft.com/en-us/entra/identity/authentication/tutorial-configure-custom-password-protection#configure-custom-banned-passwords) of these words in user passwords. [How are passwords evaluated?](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-password-ban-bad#score-calculation)
     .NOTES
         CAT
-            Global Standards
+            Entra (AAD) Standards
         TAG
             "CIS M365 5.0 (5.2.3.2)"
         ADDEDCOMPONENT
-            {"type":"textArea","name":"standards.CustomBannedPasswordList.BannedWords","label":"Banned Words List","placeholder":"Enter banned words separated by commas or new lines (4-16 characters each, max 1000 words)","required":true,"rows":10}
+            {"type":"textField","name":"standards.CustomBannedPasswordList.BannedWords","label":"Banned Words","placeholder":"Banned words separated by commas or semicolons","required":true}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
         POWERSHELLEQUIVALENT
             Get-MgBetaDirectorySetting, New-MgBetaDirectorySetting, Update-MgBetaDirectorySetting
         RECOMMENDEDBY
-            "CIS", "CIPP"
+            "CIS"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

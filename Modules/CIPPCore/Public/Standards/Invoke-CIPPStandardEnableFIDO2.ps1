@@ -13,6 +13,15 @@ function Invoke-CIPPStandardEnableFIDO2 {
         CAT
             Entra (AAD) Standards
         TAG
+            "EIDSCA.AF01"
+            "EIDSCA.AF02"
+            "EIDSCA.AF03"
+            "EIDSCA.AF04"
+            "EIDSCA.AF05"
+            "EIDSCA.AF06"
+            "NIST CSF 2.0 (PR.AA-03)"
+        EXECUTIVETEXT
+            Enables support for hardware security keys (like YubiKey) that provide the highest level of authentication security. These physical devices prevent phishing attacks and credential theft, offering superior protection for high-value accounts and sensitive business operations.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

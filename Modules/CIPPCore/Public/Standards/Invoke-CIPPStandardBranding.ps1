@@ -13,6 +13,8 @@ function Invoke-CIPPStandardBranding {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Customizes Microsoft 365 login pages and portals with company branding, including logos, colors, and messaging. This creates a consistent corporate identity experience for employees and reinforces brand recognition while maintaining professional appearance across all Microsoft services.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.Branding.signInPageText","label":"Sign-in page text","required":false}
             {"type":"textField","name":"standards.Branding.usernameHintText","label":"Username hint Text","required":false}

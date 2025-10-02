@@ -13,7 +13,10 @@ function Invoke-CIPPStandardDisableTenantCreation {
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.2.3)"
+            "CISA (MS.AAD.6.1v1)"
+        EXECUTIVETEXT
+            Prevents regular employees from creating new Microsoft 365 organizations, ensuring all new tenants are properly managed and controlled by IT administrators. This prevents unauthorized shadow IT environments and maintains centralized governance over Microsoft 365 resources.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
