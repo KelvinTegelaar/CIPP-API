@@ -51,7 +51,6 @@ function Set-CIPPAssignedPolicy {
                 )
             }
             default {
-                Write-Host "We're supposed to assign a custom group. The group is $GroupName"
                 $GroupNames = $GroupName.Split(',').Trim()
                 $GroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
                     ForEach-Object {
@@ -61,6 +60,13 @@ function Set-CIPPAssignedPolicy {
                             }
                         }
                     }
+                
+                if (-not $GroupIds -or $GroupIds.Count -eq 0) {
+                    $ErrorMessage = "No groups found matching the specified name(s): $GroupName. Policy not assigned."
+                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Warning' -tenant $TenantFilter
+                    return $ErrorMessage
+                }
+                
                 foreach ($gid in $GroupIds) {
                     $assignmentsList.Add(
                         @{
@@ -102,19 +108,21 @@ function Set-CIPPAssignedPolicy {
         }
 
         $AssignJSON = $assignmentsObject | ConvertTo-Json -Depth 10 -Compress
-        Write-Host "AssignJSON: $AssignJSON"
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
             $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
             $null = New-GraphPOSTRequest -uri $uri -tenantid $TenantFilter -type POST -body $AssignJSON
             if ($ExcludeGroup) {
                 Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$GroupName' and excluded group '$ExcludeGroup' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
+                return "Successfully assigned group '$GroupName' and excluded group '$ExcludeGroup' on Policy $PolicyId"
             } else {
                 Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$GroupName' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
+                return "Successfully assigned group '$GroupName' on Policy $PolicyId"
             }
         }
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$ErrorMessage" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Failed to assign $GroupName to Policy $PolicyId. Error: $ErrorMessage"
     }
 }
