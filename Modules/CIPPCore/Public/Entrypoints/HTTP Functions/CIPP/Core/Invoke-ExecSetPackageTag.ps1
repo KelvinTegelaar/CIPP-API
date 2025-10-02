@@ -17,7 +17,20 @@ function Invoke-ExecSetPackageTag {
 
     try {
         $GUIDS = $Request.body.GUID
-        $PackageName = $Request.body.Package | Select-Object -First 1
+        $Remove = $Request.body.Remove
+
+        if ($Remove -eq $true) {
+            # Remove package tag by setting it to null/empty
+            $PackageValue = $null
+            $LogMessage = "Successfully removed package tag from template with GUID"
+            $SuccessMessage = "Successfully removed package tag from template(s)"
+        } else {
+            # Add package tag (existing logic)
+            $PackageValue = $Request.body.Package | Select-Object -First 1
+            $LogMessage = "Successfully updated template with GUID"
+            $SuccessMessage = "Successfully updated template(s) with package tag: $PackageValue"
+        }
+
         foreach ($GUID in $GUIDS) {
             $Filter = "RowKey eq '$GUID'"
             $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -26,18 +39,27 @@ function Invoke-ExecSetPackageTag {
                 RowKey       = "$GUID"
                 PartitionKey = $Template.PartitionKey
                 GUID         = "$GUID"
-                Package      = "$PackageName"
+                Package      = $PackageValue
             } -Force
 
-            Write-LogMessage -headers $Headers -API $APIName -message "Successfully updated template with GUID $GUID with package tag: $PackageName" -Sev 'Info'
+            if ($Remove -eq $true) {
+                Write-LogMessage -headers $Headers -API $APIName -message "$LogMessage $GUID" -Sev 'Info'
+            } else {
+                Write-LogMessage -headers $Headers -API $APIName -message "$LogMessage $GUID with package tag: $PackageValue" -Sev 'Info'
+            }
         }
 
-        $body = [pscustomobject]@{ 'Results' = "Successfully updated template(s) with package tag: $PackageName" }
+        $body = [pscustomobject]@{ 'Results' = $SuccessMessage }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to set package tag: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $body = [pscustomobject]@{'Results' = "Failed to set package tag: $($ErrorMessage.NormalizedError)" }
+        if ($Remove -eq $true) {
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove package tag: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            $body = [pscustomobject]@{'Results' = "Failed to remove package tag: $($ErrorMessage.NormalizedError)" }
+        } else {
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to set package tag: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            $body = [pscustomobject]@{'Results' = "Failed to set package tag: $($ErrorMessage.NormalizedError)" }
+        }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
