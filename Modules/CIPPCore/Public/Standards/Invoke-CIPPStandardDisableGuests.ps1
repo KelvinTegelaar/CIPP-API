@@ -34,14 +34,14 @@ function Invoke-CIPPStandardDisableGuests {
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
-    $checkDays = if ($Settings.days) { $Settings.days } else { 90 }
+    $checkDays = if ($Settings.days) { $Settings.days } else { 90 } # Default to 90 days if not set. Pre v8.5.0 compatibility
     $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
     $Lookup = $Days.ToString('o')
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-        Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
+            Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -49,7 +49,7 @@ function Invoke-CIPPStandardDisableGuests {
     }
 
     $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-        ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
+            ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
 
     $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
 
@@ -65,7 +65,7 @@ function Invoke-CIPPStandardDisableGuests {
                 }
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $($Settings.days) days ago." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
         }
 
     }
@@ -74,9 +74,9 @@ function Invoke-CIPPStandardDisableGuests {
         if ($GraphRequest.Count -gt 0) {
             $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled, externalUserState
             Write-StandardsAlert -message "Guests accounts with a login longer than 90 days ago: $($GraphRequest.count)" -object $Filtered -tenant $tenant -standardName 'DisableGuests' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Guests accounts with a login longer than $($Settings.days) days ago: $($GraphRequest.count)" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Guests accounts with a login longer than $checkDays days ago: $($GraphRequest.count)" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $($Settings.days) days ago." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
         }
     }
     if ($Settings.report -eq $true) {
