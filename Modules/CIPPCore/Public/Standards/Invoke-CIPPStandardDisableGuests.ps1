@@ -34,27 +34,26 @@ function Invoke-CIPPStandardDisableGuests {
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
-
-    $Days = (Get-Date).AddDays(-$Settings.days).ToUniversalTime()
+    $checkDays = if ($Settings.days) { $Settings.days } else { 90 }
+    $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
     $Lookup = $Days.ToString('o')
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
         Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
     $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-            ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
+        ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
 
     $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($GraphRequest.Count -gt 0) {
             foreach ($guest in $GraphRequest) {
                 try {
