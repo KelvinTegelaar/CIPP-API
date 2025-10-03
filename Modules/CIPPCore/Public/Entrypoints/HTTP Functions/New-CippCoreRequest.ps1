@@ -38,8 +38,17 @@ function New-CippCoreRequest {
                 Write-LogMessage -headers $Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
                 if ($Access) {
                     $Response = & $FunctionName @HttpTrigger
-                    if ($Response.StatusCode) {
-                        return ([HttpResponseContext]$Response)
+                    # Filter to only return HttpResponseContext objects
+                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -contains 'HttpResponseContext' -or ($_.StatusCode -and $_.Body) }
+                    if ($HttpResponse) {
+                        # Return the first valid HttpResponseContext found
+                        return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
+                    } else {
+                        # If no valid response context found, create a default success response
+                        return ([HttpResponseContext]@{
+                                StatusCode = [HttpStatusCode]::OK
+                                Body       = $Response
+                            })
                     }
                 }
             } catch {
