@@ -14,6 +14,8 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             Entra (AAD) Standards
         TAG
             "IntegratedApps"
+        EXECUTIVETEXT
+            Allows employees to approve low-risk applications without administrative intervention, balancing security with productivity. This provides a middle ground between complete restriction and open access, enabling business agility while maintaining protection against high-risk applications.
         IMPACT
             Medium Impact
         ADDEDDATE

@@ -5,30 +5,30 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
     .COMPONENT
         (APIName) TeamsMeetingVerification
     .SYNOPSIS
-        (Label) Meeting Verification (ReCaptcha) for Teams
+        (Label) Teams Meeting Verification (CAPTCHA)
     .DESCRIPTION
-        (Helptext) Configures the CAPTCHA verification for external users joining Teams meetings. This helps prevent unauthorized AI notetakers and bots from joining meetings.
-        (DocsDescription) Configures the CAPTCHA verification for external users joining Teams meetings. This helps prevent unauthorized AI notetakers and bots from joining meetings. When enabled, external users from untrusted organizations or anonymous users will need to complete a CAPTCHA verification before joining meetings.
+        (Helptext) Configures CAPTCHA verification for external users joining Teams meetings. This helps prevent unauthorized AI notetakers and bots from joining meetings.
+        (DocsDescription) Configures CAPTCHA verification for external users joining Teams meetings. This security feature requires external participants to complete a CAPTCHA challenge before joining, which helps prevent unauthorized AI notetakers, bots, and other automated systems from accessing meetings.
     .NOTES
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Requires external meeting participants to complete verification challenges before joining Teams meetings, preventing automated bots and unauthorized AI systems from accessing confidential discussions. This security measure protects against meeting infiltration while maintaining legitimate external collaboration.
         ADDEDCOMPONENT
-            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsMeetingVerification.CaptchaVerificationForMeetingJoin","label":"CAPTCHA verification for meeting join","options":[{"label":"Not Required","value":"NotRequired"},{"label":"Anonymous Users and Untrusted Organizations","value":"AnonymousUsersAndUntrustedOrganizations"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"CAPTCHA Verification Setting","name":"standards.TeamsMeetingVerification.CaptchaVerificationForMeetingJoin","options":[{"label":"Not Required","value":"NotRequired"},{"label":"Anonymous Users and Untrusted Organizations","value":"AnonymousUsersAndUntrustedOrganizations"}]}
         IMPACT
             Low Impact
         ADDEDDATE
             2025-06-14
         POWERSHELLEQUIVALENT
-            Set-CsTeamsMeetingPolicy -Identity Global -CaptchaVerificationForMeetingJoin AnonymousUsersAndUntrustedOrganizations
+            Set-CsTeamsMeetingPolicy -CaptchaVerificationForMeetingJoin
         RECOMMENDEDBY
-            "Microsoft"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
-    .LINK
-        https://learn.microsoft.com/en-us/microsoftteams/join-verification-check
     #>
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingVerification'
 

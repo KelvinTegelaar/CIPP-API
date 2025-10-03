@@ -13,6 +13,9 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         CAT
             Intune Standards
         TAG
+            "CISA (MS.AAD.19.1v1)"
+        EXECUTIVETEXT
+            Controls which types of devices (iOS, Android, Windows, macOS) and ownership models (corporate vs. personal) can be enrolled in the company's device management system. This helps maintain security standards while supporting necessary business device types and usage scenarios.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.platformAndroidForWorkBlocked","label":"Block platform Android Enterprise (work profile)","default":false}
             {"type":"switch","name":"standards.DefaultPlatformRestrictions.personalAndroidForWorkBlocked","label":"Block personally owned Android Enterprise (work profile)","default":false}

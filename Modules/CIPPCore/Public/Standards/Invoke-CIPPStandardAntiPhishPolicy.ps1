@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         CAT
             Defender Standards
         TAG
-            "CIS"
             "mdo_safeattachments"
             "mdo_highconfidencespamaction"
             "mdo_highconfidencephishaction"
@@ -21,6 +20,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_spam_notifications_only_for_admins"
             "mdo_antiphishingpolicies"
             "mdo_phishthresholdlevel"
+            "CIS M365 5.0 (2.1.7)"
+            "NIST CSF 2.0 (DE.CM-09)"
         ADDEDCOMPONENT
             {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1}
             {"type":"switch","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","defaultValue":true}

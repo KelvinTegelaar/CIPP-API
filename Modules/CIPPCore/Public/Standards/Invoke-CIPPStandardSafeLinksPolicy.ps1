@@ -13,9 +13,10 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         CAT
             Defender Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.1)"
             "mdo_safelinksforemail"
             "mdo_safelinksforOfficeApps"
+            "NIST CSF 2.0 (DE.CM-09)"
         ADDEDCOMPONENT
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
             {"type":"switch","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}

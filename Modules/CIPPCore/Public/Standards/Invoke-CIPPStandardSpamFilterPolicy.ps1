@@ -8,7 +8,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         (Label) Default Spam Filter Policy
     .DESCRIPTION
         (Helptext) This standard creates a Spam filter policy similar to the default strict policy.
-        (DocsDescription) This standard creates a Spam filter policy similar to the default strict policy.
+        (DocsDescription) This standard creates a Spam filter policy similar to the default strict policy, the following settings are configured to on by default: IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, MarkAsSpamEmptyMessages, MarkAsSpamJavaScriptInHtml, MarkAsSpamSpfRecordHardFail, MarkAsSpamFromAddressAuthFail, MarkAsSpamNdrBackscatter, MarkAsSpamBulkMail, InlineSafetyTipsEnabled, PhishZapEnabled, SpamZapEnabled
     .NOTES
         CAT
             Defender Standards

@@ -13,7 +13,10 @@ function Invoke-CIPPStandardSPEmailAttestation {
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (7.2.10)"
+            "CISA (MS.SPO.1.6v1)"
+        EXECUTIVETEXT
+            Requires external users to periodically re-verify their identity through email verification codes when accessing SharePoint resources, adding an extra security layer for external collaboration. This helps ensure continued legitimacy of external access over time.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPEmailAttestation.Days","label":"Require re-authentication every X Days (Default 15)"}
         IMPACT

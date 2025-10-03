@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Establishes standard email attachment size limits for all new employees, balancing functionality with system performance and security. This prevents email system overload from large attachments while ensuring employees can share necessary files through appropriate channels.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","defaultValue":35}
             {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","defaultValue":36}
