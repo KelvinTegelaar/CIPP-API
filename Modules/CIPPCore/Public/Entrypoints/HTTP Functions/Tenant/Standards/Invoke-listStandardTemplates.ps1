@@ -44,7 +44,6 @@ function Invoke-listStandardTemplates {
     } | Sort-Object -Property templateName
 
     if ($ID) { $Templates = $Templates | Where-Object GUID -EQ $ID }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)

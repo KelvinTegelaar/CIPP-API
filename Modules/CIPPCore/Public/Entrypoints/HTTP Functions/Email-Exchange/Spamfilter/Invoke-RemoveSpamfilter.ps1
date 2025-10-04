@@ -34,7 +34,6 @@ Function Invoke-RemoveSpamfilter {
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }

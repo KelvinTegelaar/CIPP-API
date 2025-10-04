@@ -44,7 +44,6 @@ Function Invoke-ExecBackendURLs {
 
     $body = @{Results = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [httpstatusCode]::OK
             Body       = $body

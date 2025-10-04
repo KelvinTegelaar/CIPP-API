@@ -26,7 +26,6 @@ Function Invoke-ExecNotificationConfig {
     $Results = Set-cippNotificationConfig @Config
     $body = [pscustomobject]@{'Results' = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

@@ -72,7 +72,6 @@ Function Invoke-ExecMaintenanceScripts {
         $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

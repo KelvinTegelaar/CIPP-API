@@ -24,7 +24,6 @@ Function Invoke-ListTeamsLisLocation {
         $StatusCode = [HttpStatusCode]::Forbidden
         $EmergencyLocations = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($EmergencyLocations)

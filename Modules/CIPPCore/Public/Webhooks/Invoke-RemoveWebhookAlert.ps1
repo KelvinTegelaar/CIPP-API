@@ -53,7 +53,6 @@ Function Invoke-RemoveWebhookAlert {
         $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

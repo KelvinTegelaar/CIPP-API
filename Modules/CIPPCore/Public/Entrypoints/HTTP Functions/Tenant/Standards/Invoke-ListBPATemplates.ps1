@@ -47,7 +47,6 @@ Function Invoke-ListBPATemplates {
             }
         } | Sort-Object Name
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Templates | ConvertTo-Json -Depth 10)

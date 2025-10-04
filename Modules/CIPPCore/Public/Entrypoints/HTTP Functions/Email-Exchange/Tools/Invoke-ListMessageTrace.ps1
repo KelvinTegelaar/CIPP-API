@@ -78,7 +78,6 @@ function Invoke-ListMessageTrace {
         $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($trace)

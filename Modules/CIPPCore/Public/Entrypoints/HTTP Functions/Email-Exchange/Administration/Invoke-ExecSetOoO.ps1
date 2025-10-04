@@ -65,7 +65,6 @@ Function Invoke-ExecSetOoO {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = $($Results) }

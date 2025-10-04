@@ -58,7 +58,6 @@ Function Invoke-ListMFAUsers {
             $GraphRequest = $Rows
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)

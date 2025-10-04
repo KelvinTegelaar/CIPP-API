@@ -22,7 +22,6 @@ Function Invoke-ListKnownIPDb {
     $Filter = "Tenant eq '$($TenantFilter)'"
     $KnownIPDb = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($KnownIPDb)

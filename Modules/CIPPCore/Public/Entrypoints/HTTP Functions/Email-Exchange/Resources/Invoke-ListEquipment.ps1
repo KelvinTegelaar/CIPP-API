@@ -91,7 +91,6 @@ function Invoke-ListEquipment {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results | Sort-Object displayName)

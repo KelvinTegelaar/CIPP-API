@@ -23,7 +23,6 @@ function Invoke-ListSafeAttachmentsFilters {
     @{ Name = 'RecipientDomainIs'; Expression = { foreach ($item in $Rules) { if ($item.SafeAttachmentPolicy -eq $_.Name) { $item.RecipientDomainIs } } } },
     @{ Name = 'State'; Expression = { foreach ($item in $Rules) { if ($item.SafeAttachmentPolicy -eq $_.Name) { $item.State } } } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Output

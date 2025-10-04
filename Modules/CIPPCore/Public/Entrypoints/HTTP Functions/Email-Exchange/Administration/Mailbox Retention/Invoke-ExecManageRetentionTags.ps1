@@ -350,7 +350,6 @@ Function Invoke-ExecManageRetentionTags {
     # If no results are found, we will return an empty message to prevent null reference errors in the frontend
     $GraphRequest = $GraphRequest ?? @()
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $GraphRequest

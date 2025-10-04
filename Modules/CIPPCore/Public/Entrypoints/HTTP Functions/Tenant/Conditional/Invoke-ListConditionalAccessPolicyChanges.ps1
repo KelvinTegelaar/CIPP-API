@@ -38,7 +38,6 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         $Changes = "Failed to request audit logs for policy $($PolicyDisplayName): $($_.Exception.message)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Changes)

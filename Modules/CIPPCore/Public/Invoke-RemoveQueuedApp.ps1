@@ -31,7 +31,6 @@ function Invoke-RemoveQueuedApp {
     }
 
     $body = [pscustomobject]@{'Results' = $Message }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $body

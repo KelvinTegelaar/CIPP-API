@@ -31,7 +31,6 @@ Function Invoke-ListInactiveAccounts {
         $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)

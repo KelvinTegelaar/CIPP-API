@@ -23,7 +23,6 @@ Function Invoke-ListBreachesAccount {
         $Results = Get-BreachInfo -Domain $Account
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($results)

@@ -24,7 +24,6 @@ Function Invoke-ListTeamsActivity {
     @{ Name = 'CallCount'; Expression = { $_.'Call Count' } },
     @{ Name = 'MeetingCount'; Expression = { $_.'Meeting Count' } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)

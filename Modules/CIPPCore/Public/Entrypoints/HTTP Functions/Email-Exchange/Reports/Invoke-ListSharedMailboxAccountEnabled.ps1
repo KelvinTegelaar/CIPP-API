@@ -45,7 +45,6 @@ function Invoke-ListSharedMailboxAccountEnabled {
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Shared Mailbox List on $($TenantFilter). Error: $($_.exception.message)" -sev 'Error'
     }
     $GraphRequest = $SharedMailboxDetails
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)

@@ -29,7 +29,6 @@ function Invoke-ListCheckExtAlerts {
         $Alerts = @()
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Alerts | Sort-Object -Property Timestamp -Descending)

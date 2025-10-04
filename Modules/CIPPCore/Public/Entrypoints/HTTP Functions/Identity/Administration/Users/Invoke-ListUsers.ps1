@@ -78,7 +78,6 @@ Function Invoke-ListUsers {
         @{ Name = 'LastSigninResult'; Expression = { $LastSignIn.status } },
         @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Id -eq 0) { 'Successfully signed in' } else { $LastSignIn.Id } } }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)

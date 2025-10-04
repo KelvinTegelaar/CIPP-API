@@ -17,7 +17,6 @@ Function Invoke-ExecAutoExtendGDAP {
     $Id = $Request.query.ID ?? $Request.Body.ID
     $Results = Set-CIPPGDAPAutoExtend -RelationShipid $Id
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ Results = $Results }

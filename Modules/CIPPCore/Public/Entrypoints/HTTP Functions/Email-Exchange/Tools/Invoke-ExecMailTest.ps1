@@ -82,7 +82,6 @@ Function Invoke-ExecMailTest {
             Results = @($ErrorMessage)
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body

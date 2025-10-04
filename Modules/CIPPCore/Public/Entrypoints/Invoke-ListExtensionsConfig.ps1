@@ -34,7 +34,6 @@ Function Invoke-ListExtensionsConfig {
         Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
         $Body = @{}
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

@@ -39,7 +39,6 @@ function Invoke-ListGraphExplorerPresets {
         Write-Information $_.InvocationInfo.PositionMessage
         $Results = @()
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{

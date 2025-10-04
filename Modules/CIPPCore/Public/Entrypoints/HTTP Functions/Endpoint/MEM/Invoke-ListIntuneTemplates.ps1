@@ -89,7 +89,6 @@ function Invoke-ListIntuneTemplates {
     # Sort all output regardless of view condition
     $Templates = $Templates | Sort-Object -Property displayName
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Templates | ConvertTo-Json -Depth 100)

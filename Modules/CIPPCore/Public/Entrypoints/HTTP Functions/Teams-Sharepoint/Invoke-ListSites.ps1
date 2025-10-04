@@ -116,7 +116,6 @@ Function Invoke-ListSites {
         $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest | Sort-Object -Property displayName)

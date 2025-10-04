@@ -24,7 +24,6 @@ Function Invoke-ListConnectionFilter {
         $Policies = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Policies)

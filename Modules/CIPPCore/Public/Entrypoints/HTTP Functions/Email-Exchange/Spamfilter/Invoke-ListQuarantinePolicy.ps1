@@ -35,7 +35,6 @@ function Invoke-ListQuarantinePolicy {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Policies)

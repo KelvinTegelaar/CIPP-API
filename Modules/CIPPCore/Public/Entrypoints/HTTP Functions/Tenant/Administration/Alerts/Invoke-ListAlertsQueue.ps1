@@ -158,7 +158,6 @@ function Invoke-ListAlertsQueue {
     }
 
     $finalList = ConvertTo-Json -InputObject @($AllTasksArrayList) -Depth 10
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $finalList

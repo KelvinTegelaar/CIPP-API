@@ -33,7 +33,6 @@ Function Invoke-AddAlert {
     Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force
     $Results = "Added Audit Log Alert for $($Tenants.count) tenants. It may take up to four hours before Microsoft starts delivering these alerts."
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ 'Results' = @($Results) }

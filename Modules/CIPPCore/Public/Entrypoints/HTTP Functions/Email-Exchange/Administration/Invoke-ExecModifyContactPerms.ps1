@@ -108,7 +108,6 @@ function Invoke-ExecModifyContactPerms {
 
     $Body = [pscustomobject]@{'Results' = @($Results) }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
             Body       = $Body

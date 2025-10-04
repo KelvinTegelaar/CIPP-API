@@ -28,7 +28,6 @@ Function Invoke-ExecEnableArchive {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
     $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results

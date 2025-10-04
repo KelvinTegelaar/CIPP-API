@@ -31,14 +31,12 @@ Function Invoke-ListBasicAuth {
             $response = $GraphRequest
             Write-LogMessage -headers $Headers -API $APIName -message 'Retrieved basic authentication report' -Sev 'Debug' -tenant $TenantFilter
 
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($response)
                 })
         } catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
             return ([HttpResponseContext]@{
                     StatusCode = '500'
                     Body       = $(Get-NormalizedError -message $_.Exception.message)

@@ -16,7 +16,6 @@ Function invoke-ListEmptyResults {
     $Headers = $Request.Headers
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @()

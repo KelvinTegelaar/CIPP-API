@@ -18,7 +18,6 @@ Function Invoke-GetVersion {
 
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Version

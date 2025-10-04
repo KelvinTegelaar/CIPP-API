@@ -27,7 +27,6 @@ Function Invoke-BestPracticeAnalyser_List {
         }
     }
     Write-Host ($Tenants | ConvertTo-Json)
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @(($Results | Where-Object -Property RowKey -In $Tenants.customerId))

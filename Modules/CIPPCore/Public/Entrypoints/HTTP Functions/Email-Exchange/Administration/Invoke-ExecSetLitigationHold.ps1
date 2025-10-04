@@ -50,7 +50,6 @@ function Invoke-ExecSetLitigationHold {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Results }

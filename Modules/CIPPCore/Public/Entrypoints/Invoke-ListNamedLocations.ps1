@@ -32,7 +32,6 @@ Function Invoke-ListNamedLocations {
         $GraphRequest = $ErrorMessage
 
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)

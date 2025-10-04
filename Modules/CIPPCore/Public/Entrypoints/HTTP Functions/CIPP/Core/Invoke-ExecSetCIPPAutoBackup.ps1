@@ -39,7 +39,6 @@ function Invoke-ExecSetCIPPAutoBackup {
         $Result = @{ 'Results' = 'Scheduled Task Successfully created' }
     }
     Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Scheduled automatic CIPP backups' -Sev 'Info'
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Result

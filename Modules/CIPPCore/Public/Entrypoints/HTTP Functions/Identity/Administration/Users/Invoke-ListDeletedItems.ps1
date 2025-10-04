@@ -23,7 +23,6 @@ Function Invoke-ListDeletedItems {
             Select-Object *, @{ Name = 'TargetType'; Expression = { $Type } }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)

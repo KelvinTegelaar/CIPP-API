@@ -23,7 +23,6 @@ Function Invoke-ExecMailboxMobileDevices {
         $Results = [pscustomobject]@{'Results' = "Failed  $($request.query.Userid): $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results

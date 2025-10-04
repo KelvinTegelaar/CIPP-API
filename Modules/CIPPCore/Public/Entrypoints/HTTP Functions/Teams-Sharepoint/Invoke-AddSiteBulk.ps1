@@ -25,7 +25,6 @@ Function Invoke-AddSiteBulk {
             $Results.Add("Failed to create $($sharePointObj.siteName) Error message: $($_.Exception.Message)")
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = $Results }

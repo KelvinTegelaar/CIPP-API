@@ -64,7 +64,6 @@ function Invoke-ListUserSettings {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results

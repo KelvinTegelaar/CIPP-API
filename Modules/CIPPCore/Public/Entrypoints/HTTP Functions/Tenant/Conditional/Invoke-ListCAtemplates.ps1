@@ -52,7 +52,6 @@ function Invoke-ListCAtemplates {
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Templates

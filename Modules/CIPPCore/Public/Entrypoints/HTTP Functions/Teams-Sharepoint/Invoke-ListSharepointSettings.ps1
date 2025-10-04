@@ -21,7 +21,6 @@ Function Invoke-ListSharepointSettings {
     $Tenant = $Request.Query.tenantFilter
     $Request = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Request)
