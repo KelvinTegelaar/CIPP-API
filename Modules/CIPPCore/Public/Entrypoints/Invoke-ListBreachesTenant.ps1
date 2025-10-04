@@ -9,11 +9,6 @@ function Invoke-ListBreachesTenant {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Query.tenantFilter
 
     $Table = Get-CIPPTable -TableName UserBreaches

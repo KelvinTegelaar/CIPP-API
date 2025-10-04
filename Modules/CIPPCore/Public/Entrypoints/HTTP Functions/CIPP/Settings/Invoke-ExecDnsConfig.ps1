@@ -11,9 +11,6 @@ Function Invoke-ExecDnsConfig {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # List of supported resolvers
     $ValidResolvers = @(
         'Google'

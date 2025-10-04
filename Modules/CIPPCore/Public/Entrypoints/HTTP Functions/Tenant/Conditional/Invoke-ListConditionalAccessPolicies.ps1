@@ -9,12 +9,6 @@ function Invoke-ListConditionalAccessPolicies {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     function Get-LocationNameFromId {
         [CmdletBinding()]
         param (

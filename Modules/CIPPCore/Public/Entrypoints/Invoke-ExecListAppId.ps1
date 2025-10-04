@@ -10,9 +10,6 @@ Function Invoke-ExecListAppId {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     Get-CIPPAuthentication
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $ResponseURL = "$(($Request.headers.'x-ms-original-url').replace('/api/ExecListAppId','/api/ExecSAMSetup'))"
     #make sure we get the very latest version of the appid from kv:
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {

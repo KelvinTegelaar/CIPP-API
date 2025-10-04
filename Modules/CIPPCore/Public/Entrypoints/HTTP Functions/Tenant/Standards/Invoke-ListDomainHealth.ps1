@@ -11,9 +11,6 @@ function Invoke-ListDomainHealth {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     Import-Module DNSHealth
 
     try {
@@ -42,9 +39,6 @@ function Invoke-ListDomainHealth {
     $UserRoles = Get-CIPPAccessRole -Request $Request
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
 
 
     $StatusCode = [HttpStatusCode]::OK

@@ -9,9 +9,6 @@ function Invoke-ExecSetSharePointMember {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 

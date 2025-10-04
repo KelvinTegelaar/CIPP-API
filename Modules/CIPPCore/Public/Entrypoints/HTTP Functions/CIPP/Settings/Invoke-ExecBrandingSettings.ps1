@@ -11,9 +11,6 @@ Function Invoke-ExecBrandingSettings {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $StatusCode = [HttpStatusCode]::OK
     @{}
 

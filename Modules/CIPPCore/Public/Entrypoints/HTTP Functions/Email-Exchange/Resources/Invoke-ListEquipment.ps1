@@ -9,11 +9,6 @@ function Invoke-ListEquipment {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $EquipmentId = $Request.Query.EquipmentId
     $Tenant = $Request.Query.TenantFilter
 

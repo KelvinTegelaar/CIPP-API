@@ -11,10 +11,6 @@ function Invoke-AddNamedLocation {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     # Input bindings are passed in via param block.
     $Tenants = $request.body.selectedTenants.value
     Write-Host ($Request.body | ConvertTo-Json)

@@ -8,8 +8,6 @@ function Invoke-ListUserSettings {
         Identity.User.Read
     #>
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 

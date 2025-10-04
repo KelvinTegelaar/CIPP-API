@@ -9,12 +9,6 @@ Function Invoke-ListTeamsLisLocation {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     $TenantFilter = $Request.Query.TenantFilter
     try {
         $EmergencyLocations = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Get-CsOnlineLisLocation'

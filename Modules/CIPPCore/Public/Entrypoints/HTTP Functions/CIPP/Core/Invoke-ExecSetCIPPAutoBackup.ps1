@@ -9,11 +9,6 @@ function Invoke-ExecSetCIPPAutoBackup {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($Request.Body.Enabled -eq $true) {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'

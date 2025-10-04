@@ -11,9 +11,6 @@ Function Invoke-AddTenantAllowBlockList {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $BlockListObject = $Request.Body
     if ($Request.Body.tenantId -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = @($Request.body.tenantId) }
     $Results = [System.Collections.Generic.List[string]]::new()

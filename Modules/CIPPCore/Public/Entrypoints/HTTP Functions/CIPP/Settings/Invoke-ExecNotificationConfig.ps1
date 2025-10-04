@@ -9,11 +9,6 @@ Function Invoke-ExecNotificationConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
     $config = @{
         email             = $Request.body.email

@@ -11,10 +11,6 @@ function Invoke-ListSharedMailboxAccountEnabled {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     $TenantFilter = $Request.Query.tenantFilter
 
     # Get Shared Mailbox Stuff

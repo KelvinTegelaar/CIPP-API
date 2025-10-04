@@ -11,9 +11,6 @@ Function Invoke-EditRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenant = $Request.Body.tenantID
 
 

@@ -11,8 +11,6 @@ function Invoke-ExecRestoreBackup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     try {
 
         if ($Request.Body.BackupName -like 'CippBackup_*') {

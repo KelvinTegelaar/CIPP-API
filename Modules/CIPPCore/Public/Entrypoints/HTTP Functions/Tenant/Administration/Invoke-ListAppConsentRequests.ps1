@@ -8,11 +8,6 @@ function Invoke-ListAppConsentRequests {
         Tenant.Administration.Read
     #>
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $RequestStatus = $Request.Query.RequestStatus

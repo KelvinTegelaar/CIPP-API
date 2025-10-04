@@ -9,13 +9,6 @@ Function Invoke-ListGDAPRoles {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
-
     $Table = Get-CIPPTable -TableName 'GDAPRoles'
     $Groups = Get-CIPPAzDataTableEntity @Table
 

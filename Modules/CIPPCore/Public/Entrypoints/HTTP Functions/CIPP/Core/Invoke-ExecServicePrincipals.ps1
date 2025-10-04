@@ -7,11 +7,6 @@ function Invoke-ExecServicePrincipals {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $env:TenantID
 
     $Success = $true

@@ -7,11 +7,6 @@ function Invoke-ListApiTest {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Request | ConvertTo-Json -Depth 5)

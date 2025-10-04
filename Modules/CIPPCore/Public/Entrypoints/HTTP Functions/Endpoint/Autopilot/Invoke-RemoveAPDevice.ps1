@@ -11,9 +11,6 @@ Function Invoke-RemoveAPDevice {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $Deviceid = $Request.Query.ID ?? $Request.body.ID

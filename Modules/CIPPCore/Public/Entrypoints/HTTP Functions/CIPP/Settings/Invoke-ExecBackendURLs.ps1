@@ -9,11 +9,6 @@ Function Invoke-ExecBackendURLs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Subscription = ($env:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1
     $SWAName = $env:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
 

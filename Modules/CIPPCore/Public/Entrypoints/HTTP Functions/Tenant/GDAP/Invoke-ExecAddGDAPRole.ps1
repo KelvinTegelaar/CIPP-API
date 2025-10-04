@@ -9,11 +9,6 @@ function Invoke-ExecAddGDAPRole {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
     $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
 

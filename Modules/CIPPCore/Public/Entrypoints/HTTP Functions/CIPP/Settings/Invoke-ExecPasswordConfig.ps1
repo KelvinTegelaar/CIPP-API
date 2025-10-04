@@ -9,11 +9,6 @@ Function Invoke-ExecPasswordConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable -TableName Settings
     $PasswordType = (Get-CIPPAzDataTableEntity @Table)
 

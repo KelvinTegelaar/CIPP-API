@@ -9,11 +9,6 @@ function Invoke-ExecDeviceCodeLogon {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $clientId = $Request.Query.clientId
         $scope = $Request.Query.scope

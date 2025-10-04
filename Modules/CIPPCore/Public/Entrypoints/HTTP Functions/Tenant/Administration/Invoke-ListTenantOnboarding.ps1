@@ -6,13 +6,6 @@ function Invoke-ListTenantOnboarding {
         Tenant.Administration.Read
     #>
     Param($Request, $TriggerMetadata)
-
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     try {
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
         $TenantOnboardings = Get-CIPPAzDataTableEntity @OnboardTable

@@ -7,11 +7,6 @@ function Invoke-ExecDurableFunctions {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Collect info
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
     $FunctionName = $env:WEBSITE_SITE_NAME

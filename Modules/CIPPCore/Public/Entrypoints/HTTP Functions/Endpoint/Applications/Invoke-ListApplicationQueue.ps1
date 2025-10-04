@@ -9,12 +9,6 @@ Function Invoke-ListApplicationQueue {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     $Table = Get-CippTable -tablename 'apps'
     $QueuedApps = (Get-CIPPAzDataTableEntity @Table)
 

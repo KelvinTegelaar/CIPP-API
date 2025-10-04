@@ -9,12 +9,6 @@ function Invoke-ListAlertsQueue {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
     $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable
 

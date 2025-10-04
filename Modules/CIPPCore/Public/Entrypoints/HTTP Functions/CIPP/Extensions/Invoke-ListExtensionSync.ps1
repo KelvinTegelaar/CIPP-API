@@ -9,11 +9,6 @@ Function Invoke-ListExtensionSync {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $ScheduledTasksTable = Get-CIPPTable -TableName 'ScheduledTasks'
     $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'CippExtension' }
 

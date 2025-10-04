@@ -11,9 +11,6 @@ Function Invoke-AddIntuneTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $GUID = (New-Guid).GUID
     try {
         if ($Request.Body.RawJSON) {

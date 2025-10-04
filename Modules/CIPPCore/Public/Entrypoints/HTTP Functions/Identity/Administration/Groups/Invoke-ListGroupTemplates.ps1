@@ -9,12 +9,6 @@ function Invoke-ListGroupTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     Write-Host $Request.query.id
 
     #List new policies

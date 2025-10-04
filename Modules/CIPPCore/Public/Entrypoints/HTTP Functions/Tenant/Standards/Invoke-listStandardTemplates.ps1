@@ -9,10 +9,6 @@ function Invoke-listStandardTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     # Interact with query parameters or the body of the request.
     $ID = $Request.Query.id
     $Table = Get-CippTable -tablename 'templates'

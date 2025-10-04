@@ -11,9 +11,6 @@ Function Invoke-ListContactPermissions {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $UserID = $Request.Query.UserID
     $TenantFilter = $Request.Query.tenantFilter
 

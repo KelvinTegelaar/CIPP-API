@@ -11,9 +11,6 @@ Function Invoke-AddBPATemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
 
         $Table = Get-CippTable -tablename 'templates'

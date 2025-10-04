@@ -11,11 +11,6 @@ function Invoke-ExecCPVRefresh {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $InstanceId = Start-UpdatePermissionsOrchestrator
 
     return @{

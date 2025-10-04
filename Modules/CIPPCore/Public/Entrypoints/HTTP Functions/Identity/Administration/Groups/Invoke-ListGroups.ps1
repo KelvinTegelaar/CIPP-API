@@ -9,11 +9,6 @@ function Invoke-ListGroups {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Query.tenantFilter
     $GroupID = $Request.Query.groupID
     $GroupType = $Request.Query.groupType

@@ -9,11 +9,6 @@ Function Invoke-ExecAutoExtendGDAP {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Id = $Request.query.ID ?? $Request.Body.ID
     $Results = Set-CIPPGDAPAutoExtend -RelationShipid $Id
 

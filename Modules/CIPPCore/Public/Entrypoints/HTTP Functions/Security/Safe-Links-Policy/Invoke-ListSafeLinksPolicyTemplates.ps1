@@ -8,9 +8,6 @@ Function Invoke-ListSafeLinksPolicyTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $Table = Get-CippTable -tablename 'templates'
     $Templates = Get-ChildItem 'Config\*.SafeLinksTemplate.json' | ForEach-Object {
         $Entity = @{

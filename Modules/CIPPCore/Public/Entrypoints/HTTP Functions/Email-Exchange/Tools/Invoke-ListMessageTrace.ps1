@@ -11,9 +11,6 @@ function Invoke-ListMessageTrace {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $TenantFilter = $Request.Body.tenantFilter
 

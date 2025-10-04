@@ -9,11 +9,6 @@ Function Invoke-ListUserConditionalAccessPolicies {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # XXX - Unused endpoint?
 
     # Interact with query parameters or the body of the request.

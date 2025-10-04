@@ -11,9 +11,6 @@ function Invoke-AddPolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenants = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
     if ('AllTenants' -in $Tenants) { $Tetnants = (Get-Tenants).defaultDomainName }
     $displayname = $Request.Body.displayName

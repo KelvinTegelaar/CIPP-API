@@ -9,10 +9,6 @@ function Invoke-ExecCPVPermissions {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $TenantFilter = $Request.Body.tenantFilter
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors

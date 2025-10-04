@@ -9,11 +9,6 @@ Function Invoke-ListUserSigninLogs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $top = $Request.Query.top ? $Request.Query.top : 50
 
 

@@ -9,10 +9,6 @@ function Invoke-ListExchangeConnectors {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $TenantFilter = $request.Query.tenantFilter
 
     $Results = try {

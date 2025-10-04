@@ -11,9 +11,6 @@ function Invoke-AddUserBulk {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
 

@@ -9,11 +9,6 @@ function Invoke-ExecCaCheck {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenant = $Request.Body.tenantFilter
     $UserID = $Request.Body.userID.value
     if ($Request.Body.IncludeApplications.value) {

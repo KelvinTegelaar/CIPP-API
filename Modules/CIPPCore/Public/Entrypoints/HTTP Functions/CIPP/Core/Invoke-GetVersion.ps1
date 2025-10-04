@@ -9,11 +9,6 @@ Function Invoke-GetVersion {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $CIPPVersion = $request.query.LocalVersion
 
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion

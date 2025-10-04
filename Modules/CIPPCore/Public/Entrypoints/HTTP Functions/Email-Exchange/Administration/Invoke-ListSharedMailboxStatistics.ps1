@@ -9,11 +9,6 @@ Function Invoke-ListSharedMailboxStatistics {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # XXX Seems like an unused endpoint? -Bobby
 
     # Interact with query parameters or the body of the request.

@@ -9,8 +9,6 @@ function Invoke-ListGraphExplorerPresets {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 

@@ -11,9 +11,6 @@ function Invoke-ExecEditTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $Table = Get-CippTable -tablename 'templates'
         $guid = $request.body.id ? $request.body.id : $request.body.GUID

@@ -11,10 +11,6 @@ Function Invoke-AddOfficeApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     # Input bindings are passed in via param block.
     $Tenants = $Request.body.selectedTenants.defaultDomainName
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }

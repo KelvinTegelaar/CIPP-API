@@ -11,11 +11,6 @@ Function invoke-ListEmptyResults {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @()

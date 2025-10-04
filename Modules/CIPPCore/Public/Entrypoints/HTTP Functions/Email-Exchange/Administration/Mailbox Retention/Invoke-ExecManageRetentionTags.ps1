@@ -11,9 +11,6 @@ Function Invoke-ExecManageRetentionTags {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Results = [System.Collections.Generic.List[string]]::new()
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $CmdletArray = [System.Collections.ArrayList]::new()

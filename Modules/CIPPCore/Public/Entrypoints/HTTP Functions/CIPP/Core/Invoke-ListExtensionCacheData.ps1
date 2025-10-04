@@ -11,11 +11,6 @@ function Invoke-ListExtensionCacheData {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $DataTypes = $Request.Query.dataTypes -split ',' ?? $Request.Body.dataTypes ?? 'All'
 

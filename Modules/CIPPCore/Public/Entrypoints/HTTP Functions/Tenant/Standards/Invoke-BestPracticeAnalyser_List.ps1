@@ -9,11 +9,6 @@ Function Invoke-BestPracticeAnalyser_List {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenants = Get-Tenants
     $Table = get-cipptable 'cachebpa'
     $Results = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {

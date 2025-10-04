@@ -9,11 +9,6 @@ function Invoke-ListPendingWebhooks {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $Table = Get-CIPPTable -TableName 'WebhookIncoming'
         $Webhooks = Get-CIPPAzDataTableEntity @Table

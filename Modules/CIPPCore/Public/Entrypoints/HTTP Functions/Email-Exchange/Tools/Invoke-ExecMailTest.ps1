@@ -8,11 +8,6 @@ Function Invoke-ExecMailTest {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         switch ($Request.Query.Action) {
             'CheckConfig' {

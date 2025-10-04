@@ -9,10 +9,6 @@ Function Invoke-ListConnectionFilterTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $Table = Get-CippTable -tablename 'templates'
 
     #List new policies

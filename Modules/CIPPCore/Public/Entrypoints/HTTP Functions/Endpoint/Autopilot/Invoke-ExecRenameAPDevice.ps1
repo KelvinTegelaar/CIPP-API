@@ -10,8 +10,6 @@ Function Invoke-ExecRenameAPDevice {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $TenantFilter = $Request.Body.tenantFilter
 
 

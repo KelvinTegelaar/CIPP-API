@@ -10,9 +10,6 @@ function Invoke-AddGroupTemplate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $GUID = $Request.Body.GUID ?? (New-Guid).GUID
     try {
         if (!$Request.Body.displayName) {

@@ -11,11 +11,6 @@ Function Invoke-ExecExcludeLicenses {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
-
     $Table = Get-CIPPTable -TableName ExcludedLicenses
     try {
 

@@ -11,9 +11,6 @@ function Invoke-RemoveQueuedApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $ID = $request.body.ID
     try {
         $Table = Get-CippTable -tablename 'apps'

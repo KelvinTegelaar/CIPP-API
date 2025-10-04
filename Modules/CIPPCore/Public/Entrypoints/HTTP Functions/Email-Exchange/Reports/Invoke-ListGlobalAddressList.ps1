@@ -9,11 +9,6 @@ Function Invoke-ListGlobalAddressList {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Query.tenantFilter
 
     try {

@@ -9,11 +9,6 @@ Function Invoke-ExecGeoIPLookup {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $IP = $Request.Query.IP ?? $Request.Body.IP
 
     if (-not $IP) {

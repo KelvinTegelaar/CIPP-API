@@ -6,11 +6,6 @@ function Invoke-ExecMailboxRestore {
         Exchange.Mailbox.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         switch ($Request.Query.Action) {
             'Remove' {

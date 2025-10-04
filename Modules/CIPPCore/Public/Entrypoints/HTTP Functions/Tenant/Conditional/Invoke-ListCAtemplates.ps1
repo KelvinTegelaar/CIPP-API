@@ -9,12 +9,6 @@ function Invoke-ListCAtemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     Write-Host $Request.query.id
     #Migrating old policies whenever you do a list
     $Table = Get-CippTable -tablename 'templates'

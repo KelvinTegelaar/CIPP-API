@@ -7,11 +7,6 @@ function Invoke-ListDirectoryObjects {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Body.partnerLookup ? $env:TenantID : $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Ids = $Request.Body.ids

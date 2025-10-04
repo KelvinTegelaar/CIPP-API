@@ -11,8 +11,6 @@ Function Invoke-ExecMaintenanceScripts {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     try {
         $GraphToken = Get-GraphToken -returnRefresh $true
         $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token

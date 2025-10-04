@@ -9,10 +9,6 @@ Function Invoke-ListSpamfilter {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $Tenantfilter = $request.Query.tenantfilter
 
     try {

@@ -9,10 +9,6 @@ Function Invoke-AddAlert {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $Tenants = $Request.Body.tenantFilter
     $Conditions = $Request.Body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String

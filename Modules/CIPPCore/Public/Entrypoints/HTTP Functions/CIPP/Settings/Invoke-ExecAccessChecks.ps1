@@ -11,9 +11,6 @@ function Invoke-ExecAccessChecks {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable -tablename 'AccessChecks'
     $LastRun = (Get-Date).ToUniversalTime()
     $4HoursAgo = (Get-Date).AddHours(-1).ToUniversalTime()

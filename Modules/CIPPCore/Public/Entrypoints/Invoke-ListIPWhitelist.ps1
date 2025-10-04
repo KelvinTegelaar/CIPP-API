@@ -9,11 +9,6 @@ Function Invoke-ListIPWhitelist {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CippTable -tablename 'trustedIps'
     $body = Get-CIPPAzDataTableEntity @Table
 

@@ -13,9 +13,6 @@ Function Invoke-EditPolicy {
     # Note, suspect this is deprecated - rvdwegen
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenant = $request.body.tenantid
     $ID = $request.body.groupid
     $displayname = $request.body.Displayname

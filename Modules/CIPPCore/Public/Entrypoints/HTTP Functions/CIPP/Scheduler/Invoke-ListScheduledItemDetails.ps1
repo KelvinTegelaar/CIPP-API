@@ -11,9 +11,6 @@ function Invoke-ListScheduledItemDetails {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Get parameters from the request
     $RowKey = $Request.Query.RowKey ?? $Request.Body.RowKey
 

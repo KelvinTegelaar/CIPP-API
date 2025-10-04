@@ -9,11 +9,6 @@ Function Invoke-ExecGDAPInviteApproved {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     Set-CIPPGDAPInviteGroups
 
     $body = @{Results = @('Processing recently activated GDAP relationships') }

@@ -7,8 +7,6 @@ function Invoke-ExecAppPermissionTemplate {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 

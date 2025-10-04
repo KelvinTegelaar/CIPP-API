@@ -5,11 +5,6 @@ function Invoke-ListGDAPAccessAssignments {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Id = $Request.Query.Id
     $TenantFilter = $env:TenantID
 
