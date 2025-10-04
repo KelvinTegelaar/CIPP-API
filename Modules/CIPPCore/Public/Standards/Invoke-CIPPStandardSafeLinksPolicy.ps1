@@ -49,18 +49,26 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $MDOLicensed = $ServicePlans -contains 'ATP_ENTERPRISE'
 
     if ($MDOLicensed) {
-        $PolicyList = @('CIPP Default SafeLinks Policy', 'Default SafeLinks Policy')
-        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList
+        # Use custom name if provided, otherwise use default for backward compatibility
+        $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
+        $PolicyList = @($PolicyName, 'CIPP Default SafeLinks Policy', 'Default SafeLinks Policy')
+        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
         if ($null -eq $ExistingPolicy.Name) {
-            $PolicyName = $PolicyList[0]
+            # No existing policy - use the configured/default name
+            $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
         } else {
+            # Use existing policy name if found
             $PolicyName = $ExistingPolicy.Name
         }
-        $RuleList = @( 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
-        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList
+        # Derive rule name from policy name, but check for old names for backward compatibility
+        $DesiredRuleName = "$PolicyName Rule"
+        $RuleList = @($DesiredRuleName, 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
+        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList | Select-Object -First 1
         if ($null -eq $ExistingRule.Name) {
-            $RuleName = $RuleList[0]
+            # No existing rule - use the derived name
+            $RuleName = $DesiredRuleName
         } else {
+            # Use existing rule name if found
             $RuleName = $ExistingRule.Name
         }
 
