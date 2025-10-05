@@ -92,38 +92,42 @@ function Invoke-CIPPStandardIntuneTemplate {
         if ($Compare) {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
             [PSCustomObject]@{
-                MatchFailed      = $true
-                displayname      = $displayname
-                description      = $description
-                compare          = $Compare
-                rawJSON          = $RawJSON
-                body             = $Request.body
-                assignTo         = $Template.AssignTo
-                excludeGroup     = $Template.excludeGroup
-                remediate        = $Template.remediate
-                alert            = $Template.alert
-                report           = $Template.report
-                existingPolicyId = $ExistingPolicy.id
-                templateId       = $Template.TemplateList.value
-                customGroup      = $Template.customGroup
+                MatchFailed            = $true
+                displayname            = $displayname
+                description            = $description
+                compare                = $Compare
+                rawJSON                = $RawJSON
+                body                   = $Request.body
+                assignTo               = $Template.AssignTo
+                excludeGroup           = $Template.excludeGroup
+                remediate              = $Template.remediate
+                alert                  = $Template.alert
+                report                 = $Template.report
+                existingPolicyId       = $ExistingPolicy.id
+                templateId             = $Template.TemplateList.value
+                customGroup            = $Template.customGroup
+                assignmentFilter       = $Template.assignmentFilter
+                assignmentFilterType   = $Template.assignmentFilterType
             }
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No differences found."
             [PSCustomObject]@{
-                MatchFailed      = $false
-                displayname      = $displayname
-                description      = $description
-                compare          = $false
-                rawJSON          = $RawJSON
-                body             = $Request.body
-                assignTo         = $Template.AssignTo
-                excludeGroup     = $Template.excludeGroup
-                remediate        = $Template.remediate
-                alert            = $Template.alert
-                report           = $Template.report
-                existingPolicyId = $ExistingPolicy.id
-                templateId       = $Template.TemplateList.value
-                customGroup      = $Template.customGroup
+                MatchFailed            = $false
+                displayname            = $displayname
+                description            = $description
+                compare                = $false
+                rawJSON                = $RawJSON
+                body                   = $Request.body
+                assignTo               = $Template.AssignTo
+                excludeGroup           = $Template.excludeGroup
+                remediate              = $Template.remediate
+                alert                  = $Template.alert
+                report                 = $Template.report
+                existingPolicyId       = $ExistingPolicy.id
+                templateId             = $Template.TemplateList.value
+                customGroup            = $Template.customGroup
+                assignmentFilter       = $Template.assignmentFilter
+                assignmentFilterType   = $Template.assignmentFilterType
             }
         }
     }
@@ -134,7 +138,24 @@ function Invoke-CIPPStandardIntuneTemplate {
             Write-Host "working on template deploy: $($TemplateFile.displayname)"
             try {
                 $TemplateFile.customGroup ? ($TemplateFile.AssignTo = $TemplateFile.customGroup) : $null
-                Set-CIPPIntunePolicy -TemplateType $TemplateFile.body.Type -Description $TemplateFile.description -DisplayName $TemplateFile.displayname -RawJSON $templateFile.rawJSON -AssignTo $TemplateFile.AssignTo -ExcludeGroup $TemplateFile.excludeGroup -tenantFilter $Tenant
+                
+                $PolicyParams = @{
+                    TemplateType  = $TemplateFile.body.Type
+                    Description   = $TemplateFile.description
+                    DisplayName   = $TemplateFile.displayname
+                    RawJSON       = $templateFile.rawJSON
+                    AssignTo      = $TemplateFile.AssignTo
+                    ExcludeGroup  = $TemplateFile.excludeGroup
+                    tenantFilter  = $Tenant
+                }
+
+                # Add assignment filter if specified
+                if ($TemplateFile.assignmentFilter) {
+                    $PolicyParams.AssignmentFilterName = $TemplateFile.assignmentFilter
+                    $PolicyParams.AssignmentFilterType = $TemplateFile.assignmentFilterType ?? 'include'
+                }
+
+                Set-CIPPIntunePolicy @PolicyParams
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($TemplateFile.displayname), Error: $ErrorMessage" -sev 'Error'
