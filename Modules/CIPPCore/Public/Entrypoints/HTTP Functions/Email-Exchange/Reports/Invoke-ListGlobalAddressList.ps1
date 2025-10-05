@@ -9,11 +9,6 @@ Function Invoke-ListGlobalAddressList {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Query.tenantFilter
 
     try {
@@ -27,7 +22,6 @@ Function Invoke-ListGlobalAddressList {
         $GAL = $ErrorMessage.NormalizedError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GAL)

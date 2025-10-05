@@ -11,9 +11,6 @@ Function Invoke-EditSpamFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $request.Query.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
     $State = $State ?? $Request.Body.state
@@ -33,7 +30,6 @@ Function Invoke-EditSpamFilter {
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }

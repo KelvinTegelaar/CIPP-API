@@ -9,11 +9,6 @@ function Invoke-ExecExtensionNinjaOneQueue {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     switch ($QueueItem.NinjaAction) {
         'StartAutoMapping' { Invoke-NinjaOneOrgMapping }
         'AutoMapTenant' { Invoke-NinjaOneOrgMappingTenant -QueueItem $QueueItem }

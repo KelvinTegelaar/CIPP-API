@@ -11,9 +11,6 @@ function Invoke-AddPolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Tenants = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
     if ('AllTenants' -in $Tenants) { $Tetnants = (Get-Tenants).defaultDomainName }
     $displayname = $Request.Body.displayName
@@ -41,7 +38,6 @@ function Invoke-AddPolicy {
 
     $body = [pscustomobject]@{'Results' = @($results) }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

@@ -61,7 +61,6 @@ Function Invoke-ExecEmailForward {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = @($Results) }

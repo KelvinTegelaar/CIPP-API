@@ -11,9 +11,6 @@ function Invoke-ListMessageTrace {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $TenantFilter = $Request.Body.tenantFilter
 
@@ -78,7 +75,6 @@ function Invoke-ListMessageTrace {
         $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($trace)

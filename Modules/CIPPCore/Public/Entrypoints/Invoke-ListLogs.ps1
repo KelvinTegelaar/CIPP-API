@@ -9,11 +9,6 @@ function Invoke-ListLogs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable
 
     $ReturnedLog = if ($Request.Query.ListLogs) {

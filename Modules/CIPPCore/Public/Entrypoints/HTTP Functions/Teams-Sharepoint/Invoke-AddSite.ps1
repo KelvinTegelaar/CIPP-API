@@ -9,8 +9,6 @@ function Invoke-AddSite {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
@@ -27,7 +25,6 @@ function Invoke-AddSite {
         $Result = $_.Exception.Message
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = $Result }

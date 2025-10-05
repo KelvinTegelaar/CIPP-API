@@ -9,13 +9,7 @@ Function Invoke-ListDefenderTVM {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
-    $Headers = $Request.Headers
-
-
-
     # Interact with query parameters or the body of the request.
     try {
         $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
@@ -51,7 +45,6 @@ Function Invoke-ListDefenderTVM {
         $GroupObj = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GroupObj)

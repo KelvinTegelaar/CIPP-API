@@ -10,8 +10,6 @@ Function Invoke-ExecRenameAPDevice {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $TenantFilter = $Request.Body.tenantFilter
 
 
@@ -52,7 +50,6 @@ Function Invoke-ExecRenameAPDevice {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Result }

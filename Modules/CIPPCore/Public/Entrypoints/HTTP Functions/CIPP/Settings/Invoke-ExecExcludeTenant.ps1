@@ -65,7 +65,6 @@ Function Invoke-ExecExcludeTenant {
     }
     if (!$body) { $body = @() }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

@@ -9,12 +9,7 @@ Function Invoke-ListDeletedItems {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $Types = 'Application', 'User', 'Group'
     $GraphRequest = foreach ($Type in $Types) {
@@ -23,7 +18,6 @@ Function Invoke-ListDeletedItems {
             Select-Object *, @{ Name = 'TargetType'; Expression = { $Type } }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)

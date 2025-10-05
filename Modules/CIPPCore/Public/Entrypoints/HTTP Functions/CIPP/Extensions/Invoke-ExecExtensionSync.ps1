@@ -9,11 +9,6 @@ Function Invoke-ExecExtensionSync {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     switch ($Request.Query.Extension) {
         'Gradient' {
             try {

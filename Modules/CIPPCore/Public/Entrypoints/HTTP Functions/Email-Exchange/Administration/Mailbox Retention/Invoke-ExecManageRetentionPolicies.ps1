@@ -11,9 +11,6 @@ Function Invoke-ExecManageRetentionPolicies {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Results = [System.Collections.Generic.List[string]]::new()
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $CmdletArray = [System.Collections.ArrayList]::new()
@@ -249,7 +246,6 @@ Function Invoke-ExecManageRetentionPolicies {
     # If no results are found, we will return an empty message to prevent null reference errors in the frontend
     $GraphRequest = $GraphRequest ?? @()
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $GraphRequest

@@ -6,11 +6,6 @@ function Invoke-RemoveCippQueue {
         CIPP.Core.ReadWrite
     #>
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     Clear-AzDataTable @CippQueue
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'

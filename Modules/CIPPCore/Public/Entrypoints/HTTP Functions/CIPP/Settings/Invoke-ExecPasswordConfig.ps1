@@ -9,11 +9,6 @@ Function Invoke-ExecPasswordConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable -TableName Settings
     $PasswordType = (Get-CIPPAzDataTableEntity @Table)
 
@@ -39,7 +34,6 @@ Function Invoke-ExecPasswordConfig {
 
     $body = [pscustomobject]@{'Results' = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

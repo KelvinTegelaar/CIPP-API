@@ -9,8 +9,6 @@ Function Invoke-ExecExtensionsConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
@@ -77,7 +75,6 @@ Function Invoke-ExecExtensionsConfig {
 
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = $Results }

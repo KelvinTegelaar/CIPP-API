@@ -6,11 +6,6 @@ function Invoke-ExecPartnerWebhook {
         CIPP.AppSettings.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     switch ($Request.Query.Action) {
         'ListEventTypes' {
             $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/events'

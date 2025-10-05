@@ -11,8 +11,6 @@ Function Invoke-ExecMaintenanceScripts {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     try {
         $GraphToken = Get-GraphToken -returnRefresh $true
         $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
@@ -72,7 +70,6 @@ Function Invoke-ExecMaintenanceScripts {
         $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

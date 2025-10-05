@@ -193,7 +193,6 @@ Function Invoke-ListSafeLinksPolicy {
         $FinalOutput = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $FinalOutput

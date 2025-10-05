@@ -9,11 +9,6 @@ function Invoke-AddEnrollment {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Input bindings are passed in via param block.
     $Tenants = $Request.Body.selectedTenants.value
     $Profbod = $Request.Body
@@ -33,7 +28,6 @@ function Invoke-AddEnrollment {
         Set-CIPPDefaultAPEnrollment @ParamSplat
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = $Results }

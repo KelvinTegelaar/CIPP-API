@@ -9,11 +9,6 @@ Function Invoke-ListAppsRepository {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Search = $Request.Body.Search
     $Repository = $Request.Body.Repository
     $Packages = @()

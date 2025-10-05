@@ -10,9 +10,6 @@ Function Invoke-ExecListAppId {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     Get-CIPPAuthentication
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $ResponseURL = "$(($Request.headers.'x-ms-original-url').replace('/api/ExecListAppId','/api/ExecSAMSetup'))"
     #make sure we get the very latest version of the appid from kv:
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
@@ -54,7 +51,6 @@ Function Invoke-ExecListAppId {
         tenantId      = $env:TenantID
         refreshUrl    = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results

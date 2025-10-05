@@ -58,7 +58,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         return $true
     } #we're done.
 
-    $PolicyName = 'CIPP Default Spam Filter Policy'
+    # Use custom name if provided, otherwise use default for backward compatibility
+    $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Spam Filter Policy' }
 
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |

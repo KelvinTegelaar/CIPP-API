@@ -35,7 +35,6 @@ Function Invoke-ExecRunBackup {
         } | ConvertTo-Json -Depth 5 -Compress
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Failed to create CIPP backup' -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

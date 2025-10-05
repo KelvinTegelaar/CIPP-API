@@ -9,11 +9,6 @@ Function Invoke-ListBPATemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
@@ -47,7 +42,6 @@ Function Invoke-ListBPATemplates {
             }
         } | Sort-Object Name
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Templates | ConvertTo-Json -Depth 10)

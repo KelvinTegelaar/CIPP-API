@@ -8,12 +8,31 @@ function Set-CIPPAssignedPolicy {
         $TenantFilter,
         $PlatformType = 'deviceManagement',
         $APIName = 'Assign Policy',
-        $Headers
+        $Headers,
+        $AssignmentFilterName,
+        $AssignmentFilterType = 'include'
     )
 
     Write-Host "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
 
     try {
+        # Resolve assignment filter name to ID if provided
+        $ResolvedFilterId = $null
+        if ($AssignmentFilterName) {
+            Write-Host "Looking up assignment filter by name: $AssignmentFilterName"
+            $AllFilters = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $TenantFilter
+            $MatchingFilter = $AllFilters | Where-Object { $_.displayName -like $AssignmentFilterName } | Select-Object -First 1
+            
+            if ($MatchingFilter) {
+                $ResolvedFilterId = $MatchingFilter.id
+                Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
+            } else {
+                $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy assigned without filter."
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Warning' -tenant $TenantFilter
+                Write-Host $ErrorMessage
+            }
+        }
+
         $assignmentsList = New-Object System.Collections.Generic.List[System.Object]
         switch ($GroupName) {
             'allLicensedUsers' {
@@ -100,6 +119,18 @@ function Set-CIPPAssignedPolicy {
                         }
                     }
                 )
+            }
+        }
+
+        # Add assignment filter to each assignment if specified
+        if ($ResolvedFilterId) {
+            Write-Host "Adding assignment filter $ResolvedFilterId with type $AssignmentFilterType to assignments"
+            foreach ($assignment in $assignmentsList) {
+                # Don't add filters to exclusion targets
+                if ($assignment.target.'@odata.type' -ne '#microsoft.graph.exclusionGroupAssignmentTarget') {
+                    $assignment.target.deviceAndAppManagementAssignmentFilterId = $ResolvedFilterId
+                    $assignment.target.deviceAndAppManagementAssignmentFilterType = $AssignmentFilterType
+                }
             }
         }
 

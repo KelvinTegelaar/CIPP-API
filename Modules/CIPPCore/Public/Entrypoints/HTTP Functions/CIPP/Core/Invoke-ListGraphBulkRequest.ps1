@@ -7,11 +7,6 @@ function Invoke-ListGraphBulkRequest {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $TenantFilter = $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Requests = $Request.Body.requests

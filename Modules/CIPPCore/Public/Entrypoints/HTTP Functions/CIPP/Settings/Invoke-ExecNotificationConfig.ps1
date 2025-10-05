@@ -9,11 +9,6 @@ Function Invoke-ExecNotificationConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
     $config = @{
         email             = $Request.body.email
@@ -26,7 +21,6 @@ Function Invoke-ExecNotificationConfig {
     $Results = Set-cippNotificationConfig @Config
     $body = [pscustomobject]@{'Results' = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

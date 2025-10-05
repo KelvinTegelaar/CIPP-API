@@ -12,11 +12,6 @@ function Invoke-ExecAzBobbyTables {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $AllowList = @(
         'Add-AzDataTableEntity'
         'Add-CIPPAzDataTableEntity'

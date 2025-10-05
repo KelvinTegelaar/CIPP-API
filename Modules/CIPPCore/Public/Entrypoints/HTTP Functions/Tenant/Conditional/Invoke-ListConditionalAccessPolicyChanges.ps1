@@ -9,11 +9,6 @@ Function Invoke-ListConditionalAccessPolicyChanges {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $PolicyId = $Request.Query.id
@@ -38,7 +33,6 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         $Changes = "Failed to request audit logs for policy $($PolicyDisplayName): $($_.Exception.message)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Changes)
