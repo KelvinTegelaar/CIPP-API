@@ -9,11 +9,6 @@ Function Invoke-ListSharepointSettings {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     #  XXX - Seems to be an unused endpoint? -Bobby
 
 
@@ -21,7 +16,6 @@ Function Invoke-ListSharepointSettings {
     $Tenant = $Request.Query.tenantFilter
     $Request = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Request)

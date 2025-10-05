@@ -88,7 +88,6 @@ Function Invoke-AddSafeLinksPolicyTemplate {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $body

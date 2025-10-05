@@ -9,12 +9,6 @@ function Invoke-ExecAlertsList {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     function New-FlatArray ([Array]$arr) {
         $arr | ForEach-Object {
             if ($_ -is 'Array') {

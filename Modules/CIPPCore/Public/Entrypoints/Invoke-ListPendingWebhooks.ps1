@@ -9,11 +9,6 @@ function Invoke-ListPendingWebhooks {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $Table = Get-CIPPTable -TableName 'WebhookIncoming'
         $Webhooks = Get-CIPPAzDataTableEntity @Table
@@ -29,7 +24,6 @@ function Invoke-ListPendingWebhooks {
     } catch {
         $PendingWebhooks = @()
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{

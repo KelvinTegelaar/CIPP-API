@@ -11,11 +11,6 @@ function Invoke-ExecCippFunction {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $BlockList = @(
         'Get-GraphToken'
         'Get-GraphTokenFromCert'

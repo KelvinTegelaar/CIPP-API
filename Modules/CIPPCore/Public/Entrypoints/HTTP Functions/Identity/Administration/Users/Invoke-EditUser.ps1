@@ -241,7 +241,6 @@ function Invoke-EditUser {
         $Results.Add($SponsorResult)
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = @($Results) }

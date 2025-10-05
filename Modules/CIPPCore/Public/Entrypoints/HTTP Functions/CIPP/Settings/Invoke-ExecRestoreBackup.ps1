@@ -11,8 +11,6 @@ function Invoke-ExecRestoreBackup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     try {
 
         if ($Request.Body.BackupName -like 'CippBackup_*') {
@@ -56,7 +54,6 @@ function Invoke-ExecRestoreBackup {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

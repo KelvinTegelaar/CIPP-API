@@ -9,11 +9,6 @@ Function Invoke-ListExternalTenantInfo {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $HttpResponse = [HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = "Default response, you should never see this"

@@ -11,13 +11,6 @@ function Invoke-ExecQuarantineManagement {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
-
-
-
     # Interact with query parameters or the body of the request.
     try {
         $TenantFilter = $Request.Body.tenantFilter | Select-Object -First 1
@@ -38,7 +31,6 @@ function Invoke-ExecQuarantineManagement {
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results

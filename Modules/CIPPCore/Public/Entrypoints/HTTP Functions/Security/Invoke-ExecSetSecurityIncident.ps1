@@ -78,7 +78,6 @@ Function Invoke-ExecSetSecurityIncident {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $body

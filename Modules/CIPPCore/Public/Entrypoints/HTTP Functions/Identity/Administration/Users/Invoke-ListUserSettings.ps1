@@ -8,8 +8,6 @@ function Invoke-ListUserSettings {
         Identity.User.Read
     #>
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
@@ -64,7 +62,6 @@ function Invoke-ListUserSettings {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results

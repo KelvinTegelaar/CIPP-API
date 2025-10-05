@@ -9,11 +9,6 @@ Function Invoke-ListExtensionsConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Body = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
@@ -34,7 +29,6 @@ Function Invoke-ListExtensionsConfig {
         Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
         $Body = @{}
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

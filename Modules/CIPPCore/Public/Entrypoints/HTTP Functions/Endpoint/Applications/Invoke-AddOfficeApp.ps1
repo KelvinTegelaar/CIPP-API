@@ -11,10 +11,6 @@ Function Invoke-AddOfficeApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     # Input bindings are passed in via param block.
     $Tenants = $Request.body.selectedTenants.defaultDomainName
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
@@ -89,7 +85,6 @@ Function Invoke-AddOfficeApp {
 
     $body = [pscustomobject]@{'Results' = $results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

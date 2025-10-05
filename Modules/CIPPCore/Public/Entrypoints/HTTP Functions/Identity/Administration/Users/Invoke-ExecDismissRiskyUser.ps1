@@ -9,9 +9,6 @@ function Invoke-ExecDismissRiskyUser {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with the query or body of the request
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $SuspectUser = $Request.Query.userId ?? $Request.Body.userId
@@ -39,7 +36,6 @@ function Invoke-ExecDismissRiskyUser {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Result }

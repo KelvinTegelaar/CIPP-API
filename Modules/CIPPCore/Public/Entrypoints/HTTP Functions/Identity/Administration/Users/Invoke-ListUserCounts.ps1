@@ -9,7 +9,7 @@ Function Invoke-ListUserCounts {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
+    
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     if ($Request.Query.TenantFilter -eq 'AllTenants') {

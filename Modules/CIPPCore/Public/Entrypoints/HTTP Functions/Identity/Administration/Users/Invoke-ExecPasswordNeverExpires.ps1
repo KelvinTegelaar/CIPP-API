@@ -33,7 +33,6 @@ function Invoke-ExecPasswordNeverExpires {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = @($Result) }

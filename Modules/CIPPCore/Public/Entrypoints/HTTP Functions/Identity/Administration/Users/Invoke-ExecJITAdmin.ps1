@@ -280,7 +280,6 @@ function Invoke-ExecJITAdmin {
     }
 
     # TODO - We should find a way to have this return a HTTP status code based on the success or failure of the operation. This also doesn't return the results of the operation in a Results hash table, like most of the rest of the API.
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

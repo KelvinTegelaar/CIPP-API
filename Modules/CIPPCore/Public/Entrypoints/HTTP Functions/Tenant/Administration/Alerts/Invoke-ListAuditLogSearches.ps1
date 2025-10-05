@@ -6,12 +6,6 @@ function Invoke-ListAuditLogSearches {
         Tenant.Alert.Read
     #>
     Param($Request, $TriggerMetadata)
-
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with the query parameters
     $TenantFilter = $Request.Query.tenantFilter
     $SearchId = $Request.Query.SearchId

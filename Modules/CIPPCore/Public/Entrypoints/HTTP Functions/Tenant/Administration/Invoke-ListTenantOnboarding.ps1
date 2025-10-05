@@ -6,13 +6,6 @@ function Invoke-ListTenantOnboarding {
         Tenant.Administration.Read
     #>
     Param($Request, $TriggerMetadata)
-
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
     try {
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
         $TenantOnboardings = Get-CIPPAzDataTableEntity @OnboardTable
@@ -33,7 +26,6 @@ function Invoke-ListTenantOnboarding {
         $Results = "Function Error: $($ErrorMessage.LineNumber) - $($ErrorMessage.NormalizedError)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results)

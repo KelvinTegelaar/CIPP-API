@@ -7,11 +7,6 @@ function Invoke-ListQuarantinePolicy {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter ?? $Request.body.TenantFilter
     $QuarantinePolicyType = $Request.Query.Type ?? 'QuarantinePolicy'
@@ -35,7 +30,6 @@ function Invoke-ListQuarantinePolicy {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Policies)

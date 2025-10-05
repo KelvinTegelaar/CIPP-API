@@ -109,7 +109,6 @@ function Invoke-ExecOnboardTenant {
         $StatusCode = [HttpStatusCode]::NotFound
         $Results = 'Relationship not found'
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results

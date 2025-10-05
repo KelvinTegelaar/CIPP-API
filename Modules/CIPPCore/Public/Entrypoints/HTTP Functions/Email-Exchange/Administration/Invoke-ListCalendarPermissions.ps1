@@ -11,9 +11,6 @@ Function Invoke-ListCalendarPermissions {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $UserID = $Request.Query.UserID
     $TenantFilter = $Request.Query.tenantFilter
 
@@ -32,7 +29,6 @@ Function Invoke-ListCalendarPermissions {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)

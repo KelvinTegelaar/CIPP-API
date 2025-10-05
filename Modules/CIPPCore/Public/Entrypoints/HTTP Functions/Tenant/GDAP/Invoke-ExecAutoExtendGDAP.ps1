@@ -9,15 +9,9 @@ Function Invoke-ExecAutoExtendGDAP {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Id = $Request.query.ID ?? $Request.Body.ID
     $Results = Set-CIPPGDAPAutoExtend -RelationShipid $Id
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ Results = $Results }

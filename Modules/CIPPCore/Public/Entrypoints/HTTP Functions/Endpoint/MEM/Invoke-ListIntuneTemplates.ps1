@@ -9,11 +9,6 @@ function Invoke-ListIntuneTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CippTable -tablename 'templates'
     $Imported = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings'"
     if ($Imported.IntuneTemplate -ne $true) {
@@ -89,7 +84,6 @@ function Invoke-ListIntuneTemplates {
     # Sort all output regardless of view condition
     $Templates = $Templates | Sort-Object -Property displayName
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ($Templates | ConvertTo-Json -Depth 100)

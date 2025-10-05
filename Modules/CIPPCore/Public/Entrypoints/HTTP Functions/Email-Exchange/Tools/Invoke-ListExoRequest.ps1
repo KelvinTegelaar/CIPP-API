@@ -1,10 +1,5 @@
 function Invoke-ListExoRequest {
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     try {
         $AllowedVerbs = @(
             'Get'

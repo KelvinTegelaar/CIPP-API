@@ -9,10 +9,6 @@ Function Invoke-ListConnectionFilter {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $Tenantfilter = $request.Query.tenantfilter
 
     try {
@@ -24,7 +20,6 @@ Function Invoke-ListConnectionFilter {
         $Policies = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Policies)

@@ -9,10 +9,6 @@ Function Invoke-ListSpamfilter {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     $Tenantfilter = $request.Query.tenantfilter
 
     try {
@@ -26,7 +22,6 @@ Function Invoke-ListSpamfilter {
         $GraphRequest = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)

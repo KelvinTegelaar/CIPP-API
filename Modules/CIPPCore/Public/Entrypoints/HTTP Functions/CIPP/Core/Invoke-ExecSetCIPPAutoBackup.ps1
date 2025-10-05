@@ -9,11 +9,6 @@ function Invoke-ExecSetCIPPAutoBackup {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($Request.Body.Enabled -eq $true) {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
@@ -39,7 +34,6 @@ function Invoke-ExecSetCIPPAutoBackup {
         $Result = @{ 'Results' = 'Scheduled Task Successfully created' }
     }
     Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Scheduled automatic CIPP backups' -Sev 'Info'
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Result

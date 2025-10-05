@@ -11,11 +11,6 @@ Function Invoke-AddAPDevice {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
-
     $TenantFilter = (Get-Tenants | Where-Object { $_.defaultDomainName -eq $Request.body.TenantFilter.value }).customerId
     $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { (New-Guid).GUID }
     Write-Host $GroupName
@@ -67,7 +62,6 @@ Function Invoke-AddAPDevice {
 
     $body = [pscustomobject]@{'Results' = $Result }
     Write-Host $body
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

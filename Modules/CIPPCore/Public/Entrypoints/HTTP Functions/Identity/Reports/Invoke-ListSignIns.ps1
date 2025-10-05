@@ -46,14 +46,12 @@ Function Invoke-ListSignIns {
             $response = $response | Group-Object -Property userPrincipalName | Where-Object { $_.Count -ge $FailureThreshold } | Select-Object -ExpandProperty Group
         }
 
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($response)
             })
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
         return ([HttpResponseContext]@{
                 StatusCode = '500'
                 Body       = $(Get-NormalizedError -message $_.Exception.message)

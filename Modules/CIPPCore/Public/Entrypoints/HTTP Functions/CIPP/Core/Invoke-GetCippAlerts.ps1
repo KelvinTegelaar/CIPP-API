@@ -9,11 +9,6 @@ function Invoke-GetCippAlerts {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Alerts = [System.Collections.Generic.List[object]]::new()
     $Table = Get-CippTable -tablename CippAlerts
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
@@ -72,7 +67,6 @@ function Invoke-GetCippAlerts {
     if ($Rows) { $Rows | ForEach-Object { $Alerts.Add($_) } }
     $Alerts = @($Alerts)
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Alerts

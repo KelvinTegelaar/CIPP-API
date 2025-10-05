@@ -25,7 +25,6 @@ Function Invoke-ExecDeleteGDAPRelationship {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results

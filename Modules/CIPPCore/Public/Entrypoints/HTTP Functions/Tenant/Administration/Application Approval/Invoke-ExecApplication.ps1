@@ -7,11 +7,6 @@ function Invoke-ExecApplication {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $ValidTypes = @('applications', 'servicePrincipals')
     $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword')
 

@@ -11,9 +11,6 @@ function Invoke-RemoveQueuedApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $ID = $request.body.ID
     try {
         $Table = Get-CippTable -tablename 'apps'
@@ -31,7 +28,6 @@ function Invoke-RemoveQueuedApp {
     }
 
     $body = [pscustomobject]@{'Results' = $Message }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $body

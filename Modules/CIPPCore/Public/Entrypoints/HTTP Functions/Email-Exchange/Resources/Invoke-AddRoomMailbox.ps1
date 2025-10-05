@@ -48,7 +48,6 @@ Function Invoke-AddRoomMailbox {
     }
 
     $Body = [pscustomobject] @{ 'Results' = @($Results) }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body

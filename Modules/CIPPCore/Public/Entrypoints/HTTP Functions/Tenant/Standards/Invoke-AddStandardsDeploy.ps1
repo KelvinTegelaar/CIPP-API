@@ -9,11 +9,6 @@ Function Invoke-AddStandardsDeploy {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $user = $request.headers.'x-ms-client-principal'
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
@@ -58,7 +53,6 @@ Function Invoke-AddStandardsDeploy {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body

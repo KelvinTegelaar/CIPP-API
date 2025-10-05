@@ -9,11 +9,6 @@ Function Invoke-ListNotificationConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
     $Table = Get-CIPPTable -TableName SchedulerConfig
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
     $Config = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -34,7 +29,6 @@ Function Invoke-ListNotificationConfig {
     }
     $body = [PSCustomObject]$Config
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
