@@ -14,7 +14,7 @@ function Invoke-ExecCombinedSetup {
     $Results = [System.Collections.ArrayList]::new()
     try {
         # Set up Azure context if needed for Key Vault access
-        if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:MSI_SECRET -or $env:NonLocalHostAzurite -ne 'true') {
+        if (($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -ne 'true') -and $env:MSI_SECRET) {
             Disable-AzContextAutosave -Scope Process | Out-Null
             $null = Connect-AzAccount -Identity
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
