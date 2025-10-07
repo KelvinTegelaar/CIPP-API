@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-EditAssignmentFilter {
     <#
     .FUNCTIONALITY
@@ -27,15 +25,15 @@ function Invoke-EditAssignmentFilter {
         # Build the update body
         # Note: Platform and assignmentFilterManagementType cannot be changed after creation per Graph API restrictions
         $UpdateBody = @{}
-        
+
         if ($Request.Body.displayName) {
             $UpdateBody.displayName = $Request.Body.displayName
         }
-        
+
         if ($null -ne $Request.Body.description) {
             $UpdateBody.description = $Request.Body.description
         }
-        
+
         if ($Request.Body.rule) {
             $UpdateBody.rule = $Request.Body.rule
         }

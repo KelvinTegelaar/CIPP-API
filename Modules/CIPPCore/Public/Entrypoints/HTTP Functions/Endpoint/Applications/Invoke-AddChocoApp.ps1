@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-AddChocoApp {
     <#
     .FUNCTIONALITY
@@ -40,7 +38,7 @@ Function Invoke-AddChocoApp {
             if ($TenantIntuneBody.installCommandLine -match '%') {
                 $TenantIntuneBody.installCommandLine = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $TenantIntuneBody.installCommandLine
             }
-            
+
             $CompleteObject = [PSCustomObject]@{
                 tenant             = $Tenant
                 ApplicationName    = $ChocoApp.ApplicationName

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecSetCalendarProcessing {
     <#
     .FUNCTIONALITY
@@ -47,7 +45,7 @@ function Invoke-ExecSetCalendarProcessing {
         }
 
         $null = New-ExoRequest -tenantid $Request.Body.tenantFilter -cmdlet 'Set-CalendarProcessing' -cmdParams $cmdParams
-        
+
         $Results = "Calendar processing settings for $($Request.Body.UPN) have been updated successfully"
         Write-LogMessage -API $APIName -tenant $Request.Body.tenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK

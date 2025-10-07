@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListUserMailboxRules {
     <#
     .FUNCTIONALITY

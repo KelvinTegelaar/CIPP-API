@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-RemoveAutopilotConfig {
     <#
     .FUNCTIONALITY

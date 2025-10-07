@@ -1,4 +1,3 @@
-using namespace System.Net
 Function Invoke-ExecGDAPRemoveGArole {
     <#
     .FUNCTIONALITY

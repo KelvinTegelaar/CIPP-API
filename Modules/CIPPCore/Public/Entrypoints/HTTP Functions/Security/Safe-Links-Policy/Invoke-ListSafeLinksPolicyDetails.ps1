@@ -1,4 +1,3 @@
-using namespace System.Net
 function Invoke-ListSafeLinksPolicyDetails {
     <#
     .FUNCTIONALITY
