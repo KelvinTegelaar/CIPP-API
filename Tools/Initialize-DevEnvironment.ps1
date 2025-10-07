@@ -10,7 +10,7 @@ foreach ($Key in $CIPPSettings.PSObject.Properties.Name) {
 }
 
 $PowerShellWorkerRoot = Join-Path $env:ProgramFiles 'Microsoft\Azure Functions Core Tools\workers\powershell\7.4\Microsoft.Azure.Functions.PowerShellWorker.dll'
-if (Test-Path $PowerShellWorkerRoot -and !('Microsoft.Azure.Functions.PowerShellWorker' -as [type])) {
+if ((Test-Path $PowerShellWorkerRoot) -and !('Microsoft.Azure.Functions.PowerShellWorker' -as [type])) {
     Write-Information "Loading PowerShell Worker from $PowerShellWorkerRoot"
     Add-Type -Path $PowerShellWorkerRoot
 }
