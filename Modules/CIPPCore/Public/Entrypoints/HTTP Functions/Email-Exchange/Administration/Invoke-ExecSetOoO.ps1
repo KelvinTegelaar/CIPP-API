@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSetOoO {
+function Invoke-ExecSetOoO {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,8 +17,7 @@ Function Invoke-ExecSetOoO {
 
         $Username = $Request.Body.userId
         $TenantFilter = $Request.Body.tenantFilter
-        $State = $Request.Body.AutoReplyState.value
-
+        $State = $Request.Body.AutoReplyState.value ?? $Request.Body.AutoReplyState
         $SplatParams = @{
             userid       = $Username
             tenantFilter = $TenantFilter
