@@ -1,3 +1,5 @@
+using namespace System.Net
+using namespace Microsoft.Azure.Functions.PowerShellWorker
 function New-CippCoreRequest {
     <#
     .SYNOPSIS
@@ -39,7 +41,8 @@ function New-CippCoreRequest {
                 if ($Access) {
                     $Response = & $FunctionName @HttpTrigger
                     # Filter to only return HttpResponseContext objects
-                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -contains 'HttpResponseContext' -or ($_.StatusCode -and $_.Body) }
+                    Write-Host $Response.PSObject.TypeNames
+                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }
                     if ($HttpResponse) {
                         # Return the first valid HttpResponseContext found
                         return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
