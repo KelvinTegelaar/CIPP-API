@@ -65,12 +65,8 @@ function Invoke-ListStandardsCompare {
 
         if ($FieldValue -is [System.Boolean]) {
             $FieldValue = [bool]$FieldValue
-        } elseif ($FieldValue -like '[{*') {
-            try {
-                $FieldValue = ConvertFrom-Json -InputObject $FieldValue -ErrorAction SilentlyContinue
-            } catch {
-                $FieldValue = [string]$FieldValue
-            }
+        } elseif (Test-Json -Json $FieldValue -ErrorAction SilentlyContinue) {
+            $FieldValue = ConvertFrom-Json -InputObject $FieldValue -ErrorAction SilentlyContinue
         } else {
             $FieldValue = [string]$FieldValue
         }
