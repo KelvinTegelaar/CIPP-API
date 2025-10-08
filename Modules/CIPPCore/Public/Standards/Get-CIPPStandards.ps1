@@ -20,19 +20,20 @@ function Get-CIPPStandards {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
-    ForEach-Object {
-        try {
-            # Fix old "Action" => "action"
-            $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
-            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
-        } catch {}
-    } |
-    Where-Object {
-        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
-    }
+        ForEach-Object {
+            try {
+                # Fix old "Action" => "action"
+                $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+                ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+            } catch {}
+        } |
+        Where-Object {
+            $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
+        }
 
     # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
     $ExpandedTemplates = foreach ($Template in $Templates) {
+        Write-Information "Template $($Template.templateName) ($($Template.GUID)) processing..."
         $NewTemplate = $Template.PSObject.Copy()
         $ExpandedStandards = [ordered]@{}
         $HasExpansions = $false
@@ -42,8 +43,7 @@ function Get-CIPPStandards {
             $IsArray = $StandardValue -is [System.Collections.IEnumerable] -and -not ($StandardValue -is [string])
 
             if ($IsArray) {
-                $NewArray = @()
-                foreach ($Item in $StandardValue) {
+                $NewArray = foreach ($Item in $StandardValue) {
                     if ($Item.'TemplateList-Tags'.value) {
                         $HasExpansions = $true
                         $Table = Get-CippTable -tablename 'templates'
@@ -54,13 +54,15 @@ function Get-CIPPStandards {
                             $NewItem = $Item.PSObject.Copy()
                             $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
                             $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                label = "$($TemplateItem.RowKey)"
-                                value = "$($TemplateItem.RowKey)"
-                            }) -Force
-                            $NewArray = $NewArray + $NewItem
+                                    label = "$($TemplateItem.RowKey)"
+                                    value = "$($TemplateItem.RowKey)"
+                                }) -Force
+                            $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
+                            $NewItem
                         }
                     } else {
-                        $NewArray = $NewArray + $Item
+                        $Item | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
+                        $Item
                     }
                 }
                 $ExpandedStandards[$StandardName] = $NewArray
@@ -71,18 +73,19 @@ function Get-CIPPStandards {
                     $Filter = "PartitionKey eq 'IntuneTemplate'"
                     $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $StandardValue.'TemplateList-Tags'.value
 
-                    $NewArray = @()
-                    foreach ($TemplateItem in $TemplatesList) {
+                    $NewArray = foreach ($TemplateItem in $TemplatesList) {
                         $NewItem = $StandardValue.PSObject.Copy()
                         $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
                         $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                            label = "$($TemplateItem.RowKey)"
-                            value = "$($TemplateItem.RowKey)"
-                        }) -Force
-                        $NewArray = $NewArray + $NewItem
+                                label = "$($TemplateItem.RowKey)"
+                                value = "$($TemplateItem.RowKey)"
+                            }) -Force
+                        $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
+                        $NewItem
                     }
                     $ExpandedStandards[$StandardName] = $NewArray
                 } else {
+                    $StandardValue | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
                     $ExpandedStandards[$StandardName] = $StandardValue
                 }
             }
@@ -191,6 +194,13 @@ function Get-CIPPStandards {
         foreach ($Standard in $ComputedStandards.Keys) {
             $TempCopy = $ComputedStandards[$Standard].PSObject.Copy()
 
+            # Preserve TemplateId(s) before removing them from the Settings
+            $PreservedTemplateIds = if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
+                $TempCopy | ForEach-Object { $_.TemplateId }
+            } else {
+                $TempCopy.TemplateId
+            }
+
             # Remove 'TemplateId' from final output
             if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
                 foreach ($subItem in $TempCopy) {
@@ -206,12 +216,7 @@ function Get-CIPPStandards {
                 Tenant     = 'AllTenants'
                 Standard   = $Standard
                 Settings   = $Normalized
-                TemplateId = if ($ComputedStandards[$Standard] -is [System.Collections.IEnumerable] -and -not ($ComputedStandards[$Standard] -is [string])) {
-                    # If multiple items from multiple templates, you may have multiple TemplateIds
-                    $ComputedStandards[$Standard] | ForEach-Object { $_.TemplateId }
-                } else {
-                    $ComputedStandards[$Standard].TemplateId
-                }
+                TemplateId = $PreservedTemplateIds
             }
         }
     } else {
@@ -416,6 +421,14 @@ function Get-CIPPStandards {
             # 4c. Output each final standard for this tenant
             foreach ($Standard in $ComputedStandards.Keys) {
                 $TempCopy = $ComputedStandards[$Standard].PSObject.Copy()
+
+                # Preserve TemplateId(s) before removing them from the Settings
+                $PreservedTemplateIds = if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
+                    $TempCopy | ForEach-Object { $_.TemplateId }
+                } else {
+                    $TempCopy.TemplateId
+                }
+
                 # Remove local 'TemplateId' from final object(s)
                 if ($TempCopy -is [System.Collections.IEnumerable] -and -not ($TempCopy -is [string])) {
                     foreach ($subItem in $TempCopy) {
@@ -431,7 +444,7 @@ function Get-CIPPStandards {
                     Tenant     = $TenantName
                     Standard   = $Standard
                     Settings   = $Normalized
-                    TemplateId = $ComputedStandards[$Standard].TemplateId
+                    TemplateId = $PreservedTemplateIds
                 }
             }
         }

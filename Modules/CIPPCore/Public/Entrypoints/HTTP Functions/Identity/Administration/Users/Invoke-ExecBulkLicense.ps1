@@ -1,4 +1,4 @@
-Function Invoke-ExecBulkLicense {
+function Invoke-ExecBulkLicense {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,7 +11,8 @@ Function Invoke-ExecBulkLicense {
         $TriggerMetadata
     )
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $Results = [System.Collections.Generic.List[string]]::new()
     $StatusCode = [HttpStatusCode]::OK
 
@@ -48,12 +49,12 @@ Function Invoke-ExecBulkLicense {
                         $RemoveLicenses = $Licenses
                     } elseif ($LicenseOperation -eq 'Replace') {
                         $RemoveReplace = $User.assignedLicenses.skuId
-                        if ($RemoveReplace) { Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -RemoveLicenses $RemoveReplace }
+                        if ($RemoveReplace) { Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -RemoveLicenses $RemoveReplace -APIName $APIName -Headers $Headers }
                     } elseif ($RemoveAllLicenses) {
                         $RemoveLicenses = $User.assignedLicenses.skuId
                     }
                     #todo: Actually build bulk support into set-cippuserlicense.
-                    $TaskResults = Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -AddLicenses $AddLicenses -RemoveLicenses $RemoveLicenses
+                    $TaskResults = Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -AddLicenses $AddLicenses -RemoveLicenses $RemoveLicenses -APIName $APIName -Headers $Headers
 
                     $Results.Add($TaskResults)
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Successfully processed licenses for user $UserPrincipalName" -Sev 'Info'
@@ -78,7 +79,7 @@ Function Invoke-ExecBulkLicense {
     }
 
     # Return response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

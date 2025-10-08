@@ -13,8 +13,15 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.1.1)"
+            "CIS M365 5.0 (6.1.2)"
+            "CIS M365 5.0 (6.1.3)"
             "exo_mailboxaudit"
+            "Essential 8 (1509)"
+            "Essential 8 (1683)"
+            "NIST CSF 2.0 (DE.CM-09)"
+        EXECUTIVETEXT
+            Enables comprehensive logging of all email access and modifications across all employee mailboxes, providing detailed audit trails for security investigations and compliance requirements. This helps detect unauthorized access, data breaches, and supports regulatory compliance efforts.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

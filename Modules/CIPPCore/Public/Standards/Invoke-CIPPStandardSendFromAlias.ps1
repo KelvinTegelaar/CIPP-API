@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSendFromAlias {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Allows employees to send emails from their alternative email addresses (aliases) rather than just their primary address. This is useful for employees who manage multiple roles or departments, enabling them to send emails from the most appropriate address for the context.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

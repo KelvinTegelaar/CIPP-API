@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecDeviceDelete {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ExecDeviceDelete {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
@@ -27,8 +25,7 @@ Function Invoke-ExecDeviceDelete {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Results }
         })
