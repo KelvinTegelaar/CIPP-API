@@ -11,6 +11,46 @@ function New-CIPPRestoreTask {
     $Table = Get-CippTable -tablename 'ScheduledBackup'
     $BackupData = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$backup'"
     $RestoreData = switch ($Task) {
+        'CippCustomVariables' {
+            Write-Host "Restore Custom Variables for $TenantFilter"
+            $ReplaceTable = Get-CIPPTable -TableName 'CippReplacemap'
+            $Backup = $BackupData.CippCustomVariables | ConvertFrom-Json
+
+            $Tenant = Get-Tenants -TenantFilter $TenantFilter
+            $CustomerId = $Tenant.customerId
+
+            try {
+                foreach ($variable in $Backup) {
+                    $entity = @{
+                        PartitionKey = $CustomerId
+                        RowKey       = $variable.RowKey
+                        Value        = $variable.Value
+                        Description  = $variable.Description
+                    }
+
+                    if ($overwrite) {
+                        Add-CIPPAzDataTableEntity @ReplaceTable -Entity $entity -Force
+                        Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'info'
+                        "Restored custom variable $($variable.RowKey) from backup"
+                    } else {
+                        # Check if variable already exists
+                        $existing = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId' and RowKey eq '$($variable.RowKey)'"
+                        if (!$existing) {
+                            Add-CIPPAzDataTableEntity @ReplaceTable -Entity $entity -Force
+                            Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'info'
+                            "Restored custom variable $($variable.RowKey) from backup"
+                        } else {
+                            Write-LogMessage -message "Custom variable $($variable.RowKey) already exists and overwrite is disabled" -Sev 'info'
+                            "Custom variable $($variable.RowKey) already exists and overwrite is disabled"
+                        }
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                "Could not restore Custom Variables: $ErrorMessage"
+                Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Custom Variables: $ErrorMessage" -Sev 'Error'
+            }
+        }
         'users' {
             $currentUsers = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&select=id,userPrincipalName' -tenantid $TenantFilter
             $backupUsers = $BackupData.users | ConvertFrom-Json

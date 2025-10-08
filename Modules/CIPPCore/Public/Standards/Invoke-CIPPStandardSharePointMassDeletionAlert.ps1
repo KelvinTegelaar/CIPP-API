@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         CAT
             Defender Standards
         TAG
+        EXECUTIVETEXT
+            Alerts administrators when employees delete large numbers of SharePoint files in a short time period, helping detect potential data destruction attacks, ransomware, or accidental mass deletions. This early warning system enables rapid response to protect critical business documents and data.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SharePointMassDeletionAlert.Threshold","label":"Max files to delete within the time frame","defaultValue":20}
             {"type":"number","name":"standards.SharePointMassDeletionAlert.TimeWindow","label":"Time frame in minutes","defaultValue":60}

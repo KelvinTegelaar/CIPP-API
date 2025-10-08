@@ -13,6 +13,10 @@ function Invoke-CIPPStandardDisableEmail {
         CAT
             Entra (AAD) Standards
         TAG
+            "CIS M365 5.0 (2.3.5)"
+            "NIST CSF 2.0 (PR.AA-03)"
+        EXECUTIVETEXT
+            Disables email-based authentication codes due to security concerns with email interception and account compromise. This forces users to adopt more secure authentication methods, particularly affecting guest users who must use stronger verification methods.
         ADDEDCOMPONENT
         IMPACT
             High Impact

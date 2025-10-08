@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSPSyncButtonState {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Controls whether employees can synchronize SharePoint files to their local devices, balancing productivity benefits with data security concerns. This setting helps manage data distribution while maintaining access to cloud-based collaboration when sync is disabled.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"SharePoint Sync Button state","name":"standards.SPSyncButtonState.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT

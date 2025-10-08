@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecAddTenant {
     <#
     .FUNCTIONALITY
@@ -73,8 +71,7 @@ function Invoke-ExecAddTenant {
         $Results = @{'message' = "Failed to add tenant: $($_.Exception.Message)"; 'state' = 'error'; 'severity' = 'error' }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

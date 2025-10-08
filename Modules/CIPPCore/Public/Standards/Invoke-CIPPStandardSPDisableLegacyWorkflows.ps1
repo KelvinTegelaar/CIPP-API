@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Disables outdated SharePoint workflow features and classic interface options, encouraging use of modern, more secure and efficient collaboration tools. This helps maintain security standards while guiding users toward current, supported functionality.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

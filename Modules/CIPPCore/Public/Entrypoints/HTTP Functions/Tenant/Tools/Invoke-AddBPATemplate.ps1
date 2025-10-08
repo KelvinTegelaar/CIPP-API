@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-AddBPATemplate {
     <#
     .FUNCTIONALITY
@@ -11,9 +9,6 @@ Function Invoke-AddBPATemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
 
         $Table = Get-CippTable -tablename 'templates'
@@ -33,8 +28,7 @@ Function Invoke-AddBPATemplate {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

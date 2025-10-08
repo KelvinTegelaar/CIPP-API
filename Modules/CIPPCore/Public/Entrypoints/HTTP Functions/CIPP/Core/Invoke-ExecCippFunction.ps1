@@ -11,11 +11,6 @@ function Invoke-ExecCippFunction {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $BlockList = @(
         'Get-GraphToken'
         'Get-GraphTokenFromCert'
@@ -45,7 +40,7 @@ function Invoke-ExecCippFunction {
         $StatusCode = [HttpStatusCode]::NotFound
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results
         })

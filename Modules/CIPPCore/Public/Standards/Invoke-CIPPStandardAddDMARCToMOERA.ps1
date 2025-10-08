@@ -13,9 +13,11 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.10)"
             "Security"
             "PhishingProtection"
+        EXECUTIVETEXT
+            Implements advanced email security for Microsoft's default domain names (onmicrosoft.com) to prevent criminals from impersonating your organization. This blocks fraudulent emails that could damage your company's reputation and protects partners and customers from phishing attacks using your domain names.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":true,"required":false,"placeholder":"v=DMARC1; p=reject; (recommended)","label":"Value","name":"standards.AddDMARCToMOERA.RecordValue","options":[{"label":"v=DMARC1; p=reject; (recommended)","value":"v=DMARC1; p=reject;"}]}
         IMPACT

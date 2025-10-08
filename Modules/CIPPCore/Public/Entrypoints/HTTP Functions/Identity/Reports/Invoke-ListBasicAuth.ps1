@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListBasicAuth {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ListBasicAuth {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # XXX; This function seems to be unused in the frontend. -Bobby
 
@@ -31,15 +29,13 @@ Function Invoke-ListBasicAuth {
             $response = $GraphRequest
             Write-LogMessage -headers $Headers -API $APIName -message 'Retrieved basic authentication report' -Sev 'Debug' -tenant $TenantFilter
 
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($response)
                 })
         } catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-            # Associate values to output bindings by calling 'Push-OutputBinding'.
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = '500'
                     Body       = $(Get-NormalizedError -message $_.Exception.message)
                 })
@@ -68,13 +64,13 @@ Function Invoke-ListBasicAuth {
                 MetaData = 'Loading data for all tenants. Please check back in 10 minutes'
             }
 
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($GraphRequest)
                 })
         } else {
             $GraphRequest = $Rows
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @($GraphRequest)
                 })

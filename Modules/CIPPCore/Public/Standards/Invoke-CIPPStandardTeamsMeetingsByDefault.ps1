@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Automatically adds Microsoft Teams meeting links to calendar invitations by default, streamlining the process of creating virtual meetings. This improves collaboration efficiency and ensures consistent meeting experiences across the organization, though users can override this setting when needed.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.TeamsMeetingsByDefault.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT

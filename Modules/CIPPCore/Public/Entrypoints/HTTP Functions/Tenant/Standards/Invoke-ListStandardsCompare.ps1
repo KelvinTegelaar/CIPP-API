@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListStandardsCompare {
     <#
     .FUNCTIONALITY
@@ -65,7 +63,7 @@ function Invoke-ListStandardsCompare {
 
         if ($FieldValue -is [System.Boolean]) {
             $FieldValue = [bool]$FieldValue
-        } elseif ($FieldValue -like '*{*') {
+        } elseif (Test-Json -Json $FieldValue -ErrorAction SilentlyContinue) {
             $FieldValue = ConvertFrom-Json -InputObject $FieldValue -ErrorAction SilentlyContinue
         } else {
             $FieldValue = [string]$FieldValue
@@ -91,7 +89,7 @@ function Invoke-ListStandardsCompare {
         $Results.Add($TenantStandard)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Results)
         })

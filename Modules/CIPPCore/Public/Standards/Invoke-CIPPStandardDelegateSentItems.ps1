@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDelegateSentItems {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Ensures emails sent from shared mailboxes (like info@company.com) are stored in the shared mailbox rather than the individual sender's mailbox. This maintains complete email threads in one location, improving collaboration and ensuring all team members can see the full conversation history.
         ADDEDCOMPONENT
             {"type":"switch","label":"Include user mailboxes","name":"standards.DelegateSentItems.IncludeUserMailboxes"}
         IMPACT

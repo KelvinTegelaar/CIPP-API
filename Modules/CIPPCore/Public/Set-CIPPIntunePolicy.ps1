@@ -9,7 +9,9 @@ function Set-CIPPIntunePolicy {
         $ExcludeGroup,
         $Headers,
         $APINAME,
-        $tenantFilter
+        $tenantFilter,
+        $AssignmentFilterName,
+        $AssignmentFilterType = 'include'
     )
     $APINAME = 'Set-CIPPIntunePolicy'
 
@@ -244,7 +246,21 @@ function Set-CIPPIntunePolicy {
             Write-Host "Assigning policy to $($AssignTo) with ID $($CreateRequest.id) and type $TemplateTypeURL for tenant $tenantFilter"
             Write-Host "ID is $($CreateRequest.id)"
 
-            Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -PlatformType $PlatformType -Type $TemplateTypeURL -TenantFilter $tenantFilter -ExcludeGroup $ExcludeGroup
+            $AssignParams = @{
+                GroupName     = $AssignTo
+                PolicyId      = $CreateRequest.id
+                PlatformType  = $PlatformType
+                Type          = $TemplateTypeURL
+                TenantFilter  = $tenantFilter
+                ExcludeGroup  = $ExcludeGroup
+            }
+
+            if ($AssignmentFilterName) {
+                $AssignParams.AssignmentFilterName = $AssignmentFilterName
+                $AssignParams.AssignmentFilterType = $AssignmentFilterType
+            }
+
+            Set-CIPPAssignedPolicy @AssignParams
         }
         return "Successfully $($PostType) policy for $($tenantFilter) with display name $($Displayname)"
     } catch {

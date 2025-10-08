@@ -13,6 +13,9 @@ function Invoke-CIPPStandardintuneDeviceReg {
         CAT
             Intune Standards
         TAG
+            "CISA (MS.AAD.17.1v1)"
+        EXECUTIVETEXT
+            Limits how many devices each employee can register for corporate access, preventing excessive device proliferation while accommodating legitimate business needs. This helps maintain security oversight and prevents potential abuse of device registration privileges.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.intuneDeviceReg.max","label":"Maximum devices (Enter 2147483647 for unlimited.)","required":true}
         IMPACT

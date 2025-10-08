@@ -11,7 +11,11 @@
   "extensions": {
     "durableTask": {
       "maxConcurrentActivityFunctions": 5,
-      "maxConcurrentOrchestratorFunctions": 2
+      "maxConcurrentOrchestratorFunctions": 2,
+      "tracing": {
+        "distributedTracingEnabled": true,
+        "version": "V2"
+      }
     }
   }
 }

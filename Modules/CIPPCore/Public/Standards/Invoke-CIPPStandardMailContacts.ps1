@@ -13,6 +13,8 @@ function Invoke-CIPPStandardMailContacts {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Establishes designated contact email addresses for receiving important Microsoft 365 subscription updates and notifications. This ensures proper communication channels are maintained for general, security, marketing, and technical matters, improving organizational responsiveness to critical system updates.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.MailContacts.GeneralContact","label":"General Contact","required":false}
             {"type":"textField","name":"standards.MailContacts.SecurityContact","label":"Security Contact","required":false}

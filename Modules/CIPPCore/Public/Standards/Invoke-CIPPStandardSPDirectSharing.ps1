@@ -7,13 +7,14 @@ function Invoke-CIPPStandardSPDirectSharing {
     .SYNOPSIS
         (Label) Default sharing to Direct users
     .DESCRIPTION
-        (Helptext) Ensure default link sharing is set to Direct in SharePoint and OneDrive
-        (DocsDescription) Ensure default link sharing is set to Direct in SharePoint and OneDrive
+        (Helptext) This standard has been deprecated in favor of the Default Sharing Link standard. 
+        (DocsDescription) This standard has been deprecated in favor of the Default Sharing Link standard. 
     .NOTES
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+        EXECUTIVETEXT
+            Configures SharePoint and OneDrive to share files directly with specific people rather than creating anonymous links, improving security by ensuring only intended recipients can access shared documents. This reduces the risk of accidental data exposure through link sharing.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

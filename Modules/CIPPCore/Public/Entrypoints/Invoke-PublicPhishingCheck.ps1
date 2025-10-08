@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-PublicPhishingCheck {
     <#
     .FUNCTIONALITY
@@ -17,14 +15,31 @@ function Invoke-PublicPhishingCheck {
     if ($Request.body.Cloned -and $Tenant.customerId -eq $Request.body.TenantId) {
         Write-AlertMessage -message $Request.body.AlertMessage -sev 'Alert' -tenant $Request.body.TenantId
     } elseif ($Request.Body.source -and $Tenant) {
+        $table = Get-CIPPTable -tablename CheckExtensionAlerts
         $Message = "Alert received from $($Request.Body.source) for $($Request.body.TenantId)"
-        Write-Information ($Request.Body | ConvertTo-Json)
-        Write-AlertMessage -message $Message -sev 'Alert' -tenant $Tenant.customerId -LogData $Request.body
+        $ID = (New-Guid).GUID
+        $TableBody = @{
+            RowKey                   = "$ID"
+            PartitionKey             = [string]$Tenant.defaultDomainName
+            tenantFilter             = [string]$Tenant.defaultDomainName
+            message                  = [string]$Message
+            type                     = [string]$request.body.type
+            url                      = [string]$request.body.url
+            reason                   = [string]$request.body.reason
+            score                    = [string]$request.body.score
+            threshold                = [string]$request.body.threshold
+            potentialUserName        = [string]$request.body.userEmail
+            potentialUserDisplayName = [string]$request.body.userDisplayName
+            reportedByIP             = [string]$Request.headers.'x-forwarded-for'
+            rawBody                  = "$($Request.body | ConvertTo-Json)"
+        }
+        $null = Add-CIPPAzDataTableEntity @table -Entity $TableBody -Force
+        Write-AlertTrace -cmdletName 'CheckExtentionAlert' -tenantFilter $Tenant.defaultDomainName -data $TableBody
+        #Write-AlertMessage -message $Message -sev 'Alert' -tenant $Tenant.customerId -LogData $Request.body
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = 'OK'
-        })
+        }
 }

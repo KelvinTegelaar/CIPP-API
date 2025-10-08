@@ -13,6 +13,8 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Defines what messaging capabilities employees have in Teams, including the ability to edit or delete messages, create custom emojis, and report inappropriate content. These policies help maintain professional communication standards while enabling necessary collaboration features.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","defaultValue":false}
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","defaultValue":true}
