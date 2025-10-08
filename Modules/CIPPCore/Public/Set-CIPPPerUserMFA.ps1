@@ -53,15 +53,6 @@ function Set-CIPPPerUserMFA {
         $Requests = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
         "Successfully set Per user MFA State for $userId"
 
-        $Users = foreach ($id in $userId) {
-            @{
-                userId     = $id
-                Properties = @{
-                    perUserMfaState = $State
-                }
-            }
-        }
-        Set-CIPPUserSchemaProperties -TenantFilter $TenantFilter -Users $Users
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully set Per user MFA State to $State for $id" -Sev Info -tenant $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

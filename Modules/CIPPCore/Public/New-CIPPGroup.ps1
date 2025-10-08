@@ -85,7 +85,7 @@ function New-CIPPGroup {
                 'displayName'        = $GroupObject.displayName
                 'description'        = $GroupObject.description
                 'mailNickname'       = $GroupObject.username
-                'mailEnabled'        = $false
+                'mailEnabled'        = ($NormalizedGroupType -in @('Security', 'M365'))
                 'securityEnabled'    = $true
                 'isAssignableToRole' = ($NormalizedGroupType -eq 'AzureRole')
             }
