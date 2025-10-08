@@ -53,21 +53,24 @@ function Invoke-CIPPStandardAutopilotProfile {
         $DisplayName = Get-CIPPTextReplacement -Text $Settings.DisplayName -TenantFilter $Tenant
 
         $CurrentConfig = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $Tenant |
-        Where-Object { $_.displayName -eq $DisplayName } |
-        Select-Object -Property displayName, description, deviceNameTemplate, language, enableWhiteGlove, extractHardwareHash, outOfBoxExperienceSetting, preprovisioningAllowed
+            Where-Object { $_.displayName -eq $DisplayName } |
+            Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, outOfBoxExperienceSetting
 
         if ($Settings.NotLocalAdmin -eq $true) { $userType = 'Standard' } else { $userType = 'Administrator' }
-        if ($Settings.SelfDeployingMode -eq $true) { $DeploymentMode = 'shared' } else { $DeploymentMode = 'singleUser' }
-        if ($Settings.AllowWhiteGlove -eq $true) { $Settings.HideChangeAccount = $true }
+        if ($Settings.SelfDeployingMode -eq $true) {
+            $DeploymentMode = 'shared'
+            $Setings.AllowWhiteGlove = $false
+        } else {
+            $DeploymentMode = 'singleUser'
+        }
 
         $StateIsCorrect = ($CurrentConfig.displayName -eq $DisplayName) -and
         ($CurrentConfig.description -eq $Settings.Description) -and
         ($CurrentConfig.deviceNameTemplate -eq $Settings.DeviceNameTemplate) -and
-        ([string]::IsNullOrWhiteSpace($CurrentConfig.language) -and [string]::IsNullOrWhiteSpace($Settings.Languages.value) -or $CurrentConfig.language -eq $Settings.Languages.value) -and
-        ($CurrentConfig.enableWhiteGlove -eq $Settings.AllowWhiteGlove) -and
-        ($CurrentConfig.extractHardwareHash -eq $Settings.CollectHash) -and
+        ([string]::IsNullOrWhiteSpace($CurrentConfig.locale) -and [string]::IsNullOrWhiteSpace($Settings.Languages.value) -or $CurrentConfig.locale -eq $Settings.Languages.value) -and
+        ($CurrentConfig.preprovisioningAllowed -eq $Settings.AllowWhiteGlove) -and
+        ($CurrentConfig.hardwareHashExtractionEnabled -eq $Settings.CollectHash) -and
         ($CurrentConfig.outOfBoxExperienceSetting.deviceUsageType -eq $DeploymentMode) -and
-        ($CurrentConfig.outOfBoxExperienceSetting.escapeLinkHidden -eq $Settings.HideChangeAccount) -and
         ($CurrentConfig.outOfBoxExperienceSetting.privacySettingsHidden -eq $Settings.HidePrivacy) -and
         ($CurrentConfig.outOfBoxExperienceSetting.eulaHidden -eq $Settings.HideTerms) -and
         ($CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
@@ -94,7 +97,7 @@ function Invoke-CIPPStandardAutopilotProfile {
                     devicenameTemplate = $Settings.DeviceNameTemplate
                     allowWhiteGlove    = $Settings.AllowWhiteGlove
                     CollectHash        = $Settings.CollectHash
-                    hideChangeAccount  = $Settings.HideChangeAccount
+                    hideChangeAccount  = $true
                     hidePrivacy        = $Settings.HidePrivacy
                     hideTerms          = $Settings.HideTerms
                     AutoKeyboard       = $Settings.AutoKeyboard

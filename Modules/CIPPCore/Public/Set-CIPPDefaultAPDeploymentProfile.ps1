@@ -9,7 +9,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $CollectHash,
         $UserType,
         $DeploymentMode,
-        $HideChangeAccount,
+        $HideChangeAccount = $true,
         $AssignTo,
         $HidePrivacy,
         $HideTerms,
@@ -34,7 +34,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'roleScopeTagIds'               = @()
             'outOfBoxExperienceSetting'     = @{
                 'deviceUsageType'              = "$DeploymentMode"
-                'escapeLinkHidden'             = $([bool]($HideChangeAccount))
+                'escapeLinkHidden'             = $([bool]($true))
                 'privacySettingsHidden'        = $([bool]($HidePrivacy))
                 'eulaHidden'                   = $([bool]($HideTerms))
                 'userType'                     = "$UserType"
