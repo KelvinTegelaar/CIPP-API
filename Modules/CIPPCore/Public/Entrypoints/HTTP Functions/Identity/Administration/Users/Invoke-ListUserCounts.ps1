@@ -56,12 +56,26 @@ Function Invoke-ListUserCounts {
             # Execute bulk request
             $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
 
+            # Check if any requests failed
+            $FailedRequests = $BulkResults | Where-Object { $_.status -ne 200 }
+            
+            if ($FailedRequests) {
+                # If any requests failed, return an error response
+                $FailedIds = ($FailedRequests | ForEach-Object { $_.id }) -join ', '
+                $ErrorMessage = "Failed to retrieve counts for: $FailedIds"
+                
+                return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{
+                        Error   = $ErrorMessage
+                        Details = $FailedRequests
+                    }
+                })
+            }
+
+            # All requests succeeded, extract the counts
             $BulkResults | ForEach-Object {
-                $Count = if ($_.status -eq 200) {
-                    $_.body.'@odata.count'
-                } else {
-                    'Not available'
-                }
+                $Count = $_.body.'@odata.count'
 
                 switch ($_.id) {
                     'Users' { $Users = $Count }
@@ -72,10 +86,13 @@ Function Invoke-ListUserCounts {
             }
 
         } catch {
-            $Users = 'Not available'
-            $LicUsers = 'Not available'
-            $GAs = 'Not available'
-            $Guests = 'Not available'
+            # Return error status on exception
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = @{
+                    Error = "Failed to retrieve user counts: $($_.Exception.Message)"
+                }
+            })
         }
     }
 
