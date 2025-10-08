@@ -13,6 +13,8 @@ function Invoke-CIPPStandardMDMScope {
         CAT
             Intune Standards
         TAG
+        EXECUTIVETEXT
+            Defines which users can enroll their devices in mobile device management, controlling access to corporate resources and applications. This setting determines the scope of device management coverage and ensures appropriate users have access to necessary business tools.
         ADDEDCOMPONENT
             {"name":"appliesTo","label":"MDM User Scope?","type":"radio","options":[{"label":"All","value":"all"},{"label":"None","value":"none"},{"label":"Custom Group","value":"selected"}]}
             {"type":"textField","name":"standards.MDMScope.customGroup","label":"Custom Group Name","required":false}

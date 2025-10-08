@@ -13,9 +13,11 @@ function Invoke-CIPPStandardFormsPhishingProtection {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.5)"
             "Security"
             "PhishingProtection"
+        EXECUTIVETEXT
+            Automatically scans Microsoft Forms created by employees for malicious content and phishing attempts, preventing the creation and distribution of harmful forms within the organization. This protects against both internal threats and compromised accounts that might be used to distribute malicious content.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

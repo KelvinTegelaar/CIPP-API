@@ -11,11 +11,6 @@ function Invoke-ListExtensionCacheData {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $DataTypes = $Request.Query.dataTypes -split ',' ?? $Request.Body.dataTypes ?? 'All'
 
@@ -35,7 +30,7 @@ function Invoke-ListExtensionCacheData {
 
     $StatusCode = [HttpStatusCode]::OK
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body | ConvertTo-Json -Compress -Depth 100
             Headers    = @{

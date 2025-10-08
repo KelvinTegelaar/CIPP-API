@@ -7,11 +7,6 @@ function Invoke-ListDirectoryObjects {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $Request.Body.partnerLookup ? $env:TenantID : $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Ids = $Request.Body.ids
@@ -37,7 +32,7 @@ function Invoke-ListDirectoryObjects {
         Write-Information $_.InvocationInfo.PositionMessage
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results
         })

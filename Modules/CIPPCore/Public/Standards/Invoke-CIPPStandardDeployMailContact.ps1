@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDeployMailContact {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Automatically creates external email contacts in the organization's address book, enabling seamless communication with external partners and vendors. This standardizes contact management across all company locations and improves collaboration efficiency.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.DeployMailContact.ExternalEmailAddress","label":"External Email Address","required":true}
             {"type":"textField","name":"standards.DeployMailContact.DisplayName","label":"Display Name","required":true}

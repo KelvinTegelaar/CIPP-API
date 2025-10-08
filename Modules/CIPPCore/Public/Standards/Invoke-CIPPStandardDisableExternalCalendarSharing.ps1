@@ -13,8 +13,10 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.3)"
             "exo_individualsharing"
+        EXECUTIVETEXT
+            Prevents employees from sharing their calendars with external parties, protecting sensitive meeting information and internal schedules from unauthorized access. This security measure helps maintain confidentiality of business activities while still allowing internal collaboration.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
