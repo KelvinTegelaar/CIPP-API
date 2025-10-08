@@ -13,8 +13,8 @@ function Invoke-ListGraphBulkRequest {
     $NoPaginateIds = $Request.Body.noPaginateIds
 
     $GraphRequestParams = @{
-        tenantid = $TenantFilter
-        Requests = @()
+        tenantid      = $TenantFilter
+        Requests      = @()
         NoPaginateIds = $NoPaginateIds ?? @()
     }
 
@@ -53,5 +53,5 @@ function Invoke-ListGraphBulkRequest {
         }
     }
 
-    return $Results
+    return [HttpResponseContext]$Results
 }
