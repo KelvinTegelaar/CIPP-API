@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecSyncAPDevices {
     <#
     .FUNCTIONALITY
@@ -28,8 +26,7 @@ Function Invoke-ExecSyncAPDevices {
 
     $Results = [pscustomobject]@{'Results' = "$Results" }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results
         })

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardUserSubmissions {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Enables employees to easily report suspicious emails directly from Outlook, helping improve the organization's spam and phishing detection systems. This crowdsourced approach to security allows users to contribute to threat detection while providing valuable feedback to enhance email security filters.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.UserSubmissions.state","options":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
             {"type":"textField","name":"standards.UserSubmissions.email","required":false,"label":"Destination email address"}

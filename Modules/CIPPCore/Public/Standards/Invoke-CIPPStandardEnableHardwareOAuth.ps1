@@ -13,6 +13,8 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Enables physical hardware tokens that generate secure authentication codes, providing an alternative to smartphone-based authentication. This is particularly valuable for employees who cannot use mobile devices or require the highest security standards for accessing sensitive systems.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

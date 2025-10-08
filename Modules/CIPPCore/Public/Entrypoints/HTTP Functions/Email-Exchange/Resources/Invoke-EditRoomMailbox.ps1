@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-EditRoomMailbox {
     <#
     .FUNCTIONALITY
@@ -11,9 +9,6 @@ Function Invoke-EditRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Tenant = $Request.Body.tenantID
 
 
@@ -117,8 +112,7 @@ Function Invoke-EditRoomMailbox {
 
     $Body = [pscustomobject]@{ 'Results' = @($Results) }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

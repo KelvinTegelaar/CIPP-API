@@ -17,6 +17,7 @@ function New-CIPPBackup {
                     'AppPermissions'
                     'AccessRoleGroups'
                     'ApiClients'
+                    'CippReplacemap'
                     'CustomData'
                     'CustomRoles'
                     'Config'

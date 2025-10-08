@@ -26,14 +26,14 @@ function Invoke-ListSharepointAdminUrl {
         }
 
         if ($Request.Query.ReturnUrl) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
                         AdminUrl = $AdminUrl
                     }
                 })
         } else {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Found
                     Headers    = @{
                         Location = $AdminUrl
@@ -41,7 +41,7 @@ function Invoke-ListSharepointAdminUrl {
                 })
         }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddScheduledItem {
     <#
     .FUNCTIONALITY
@@ -34,7 +32,7 @@ function Invoke-AddScheduledItem {
         $Result = Add-CIPPScheduledTask -Task $Request.Body -Headers $Request.Headers -hidden $hidden -DisallowDuplicateName $Request.Query.DisallowDuplicateName -DesiredStartTime $Request.Body.DesiredStartTime
         Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Info'
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ Results = $Result }
         })
