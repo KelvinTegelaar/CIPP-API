@@ -23,17 +23,16 @@ function Set-CIPPDefaultAPDeploymentProfile {
 
     try {
         $ObjBody = [pscustomobject]@{
-            '@odata.type'                            = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
-            'displayName'                            = "$($DisplayName)"
-            'description'                            = "$($Description)"
-            'deviceNameTemplate'                     = "$($DeviceNameTemplate)"
-            'language'                               = "$($Language)"
-            'enableWhiteGlove'                       = $([bool]($AllowWhiteGlove))
-            'deviceType'                             = 'windowsPc'
-            'extractHardwareHash'                    = $([bool]($CollectHash))
-            'roleScopeTagIds'                        = @()
-            'hybridAzureADJoinSkipConnectivityCheck' = $false
-            'outOfBoxExperienceSetting'              = @{
+            '@odata.type'                   = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
+            'displayName'                   = "$($DisplayName)"
+            'description'                   = "$($Description)"
+            'deviceNameTemplate'            = "$($DeviceNameTemplate)"
+            'locale'                        = "$($Language ?? 'os-default')"
+            'preprovisioningAllowed'        = $([bool]($AllowWhiteGlove))
+            'deviceType'                    = 'windowsPc'
+            'hardwareHashExtractionEnabled' = $([bool]($CollectHash))
+            'roleScopeTagIds'               = @()
+            'outOfBoxExperienceSetting'     = @{
                 'deviceUsageType'              = "$DeploymentMode"
                 'escapeLinkHidden'             = $([bool]($HideChangeAccount))
                 'privacySettingsHidden'        = $([bool]($HidePrivacy))
@@ -42,7 +41,9 @@ function Set-CIPPDefaultAPDeploymentProfile {
                 'keyboardSelectionPageSkipped' = $([bool]($AutoKeyboard))
             }
         }
-        $Body = ConvertTo-Json -InputObject $ObjBody
+        $Body = ConvertTo-Json -InputObject $ObjBody -Depth 10
+
+        Write-Information $Body
 
         $Profiles = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $DisplayName
         if ($Profiles.count -gt 1) {
