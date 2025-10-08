@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTeamsGuestAccess {
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Determines whether external partners, vendors, and collaborators can be invited to participate in Teams conversations and meetings. This fundamental setting enables external collaboration while requiring careful management to balance openness with security and information protection.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsGuestAccess.AllowGuestUser","label":"Allow guest users"}
         IMPACT

@@ -13,6 +13,9 @@ function Invoke-CIPPStandardallowOTPTokens {
         CAT
             Entra (AAD) Standards
         TAG
+            "EIDSCA.AM02"
+        EXECUTIVETEXT
+            Enables one-time password generation through Microsoft Authenticator app, providing an additional secure authentication method for employees. This is particularly useful for secure VPN access and other systems requiring multi-factor authentication.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardAutoExpandArchive {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Enables automatic expansion of email archive storage when users approach their archive limits, ensuring continuous email retention without manual intervention. This prevents email storage issues and maintains compliance with data retention policies without requiring ongoing administrative management.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

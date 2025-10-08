@@ -13,6 +13,8 @@ function Invoke-CIPPStandardBookings {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Controls whether employees can use Microsoft Bookings to create online appointment scheduling pages for internal and external clients. This feature can improve customer service and streamline appointment management, but may need to be controlled for security or business process reasons.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.Bookings.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT

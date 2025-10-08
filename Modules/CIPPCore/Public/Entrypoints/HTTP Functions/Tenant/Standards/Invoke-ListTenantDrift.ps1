@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListTenantDrift {
     <#
     .FUNCTIONALITY
@@ -22,13 +20,13 @@ function Invoke-ListTenantDrift {
             $Results = $Tenants | ForEach-Object { Get-CIPPDrift -AllTenants -TenantFilter $_.defaultDomainName }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($Results)
             })
     } catch {
         Write-LogMessage -API $APIName -message "Failed to get tenant alignment data: $($_.Exception.Message)" -sev Error
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ error = "Failed to get tenant alignment data: $($_.Exception.Message)" }
             })

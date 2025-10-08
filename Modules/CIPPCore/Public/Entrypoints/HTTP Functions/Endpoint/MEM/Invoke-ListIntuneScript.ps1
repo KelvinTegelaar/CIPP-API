@@ -1,5 +1,3 @@
-﻿using namespace System.Net
-
 function Invoke-ListIntuneScript {
     <#
     .FUNCTIONALITY
@@ -48,7 +46,19 @@ function Invoke-ListIntuneScript {
     }
 
     foreach ($scriptId in @('Windows', 'MacOS', 'Remediation', 'Linux')) {
-        $scripts = ($BulkResults | Where-Object { $_.id -eq $scriptId }).body.value
+        $BulkResult = ($BulkResults | Where-Object { $_.id -eq $scriptId })
+        if ($BulkResult.status -ne 200) {
+            $Results.Add(@{
+                    'scriptType'  = $scriptId
+                    'displayName' = if (Test-Json $BulkResult.body.error.message) {
+                        ($BulkResult.body.error.message | ConvertFrom-Json).Message
+                    } else {
+                        $BulkResult.body.error.message
+                    }
+                })
+            continue
+        }
+        $scripts = $BulkResult.body.value
 
         if ($scriptId -eq 'Linux') {
             $scripts = $scripts | Where-Object { $_.platforms -eq 'linux' -and $_.templateReference.templateFamily -eq 'deviceConfigurationScripts' }
@@ -61,8 +71,7 @@ function Invoke-ListIntuneScript {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Results)
         })

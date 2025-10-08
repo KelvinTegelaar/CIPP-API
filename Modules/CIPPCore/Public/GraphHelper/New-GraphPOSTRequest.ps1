@@ -11,16 +11,18 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
                 $headers.Add($header.Key, $header.Value)
             }
         }
-        Write-Verbose "Using $($uri) as url"
+
         if (!$type) {
             $type = 'POST'
         }
+
+        Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid"
 
         if (!$contentType) {
             $contentType = 'application/json; charset=utf-8'
         }
         try {
-            $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body
+            $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
         } catch {
             $Message = if ($_.ErrorDetails.Message) {
@@ -28,6 +30,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             } else {
                 $_.Exception.message
             }
+
             throw $Message
         }
         if ($returnHeaders) {

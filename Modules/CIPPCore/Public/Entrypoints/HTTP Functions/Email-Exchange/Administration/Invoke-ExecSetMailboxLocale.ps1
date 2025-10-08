@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecSetMailboxLocale {
     <#
     .FUNCTIONALITY
@@ -27,8 +25,7 @@ Function Invoke-ExecSetMailboxLocale {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Result }
         })

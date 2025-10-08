@@ -38,7 +38,7 @@ function Invoke-ExecBPA {
         $Results = [pscustomobject]@{'Results' = 'BPA started' }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

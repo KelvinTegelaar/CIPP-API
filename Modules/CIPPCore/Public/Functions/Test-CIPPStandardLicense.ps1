@@ -55,8 +55,10 @@ function Test-CIPPStandardLicense {
         return $true
     } catch {
         if (!$SkipLog.IsPresent) {
-            Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Error checking license capabilities for standard $StandardName`: $($_.Exception.Message)" -sev Error
-            Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: Error checking license capabilities - $($_.Exception.Message)" -Tenant $TenantFilter
+            # Sanitize exception message to prevent JSON parsing issues - remove characters that could interfere with JSON detection
+            $SanitizedMessage = $_.Exception.Message -replace '[{}\[\]]', ''
+            Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Error checking license capabilities for standard $StandardName`: $SanitizedMessage" -sev Error
+            Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: Error checking license capabilities - $SanitizedMessage" -Tenant $TenantFilter
         }
         return $false
     }

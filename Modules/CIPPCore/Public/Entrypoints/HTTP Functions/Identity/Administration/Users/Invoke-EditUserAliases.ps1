@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-EditUserAliases {
     <#
     .FUNCTIONALITY
@@ -12,14 +10,14 @@ Function Invoke-EditUserAliases {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $UserObj = $Request.Body
     $TenantFilter = $UserObj.tenantFilter
 
     if ([string]::IsNullOrWhiteSpace($UserObj.id)) {
         $body = @{'Results' = @('Failed to manage aliases. No user ID provided') }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
             })
@@ -138,7 +136,7 @@ Function Invoke-EditUserAliases {
         $Results.Add("Failed to manage aliases: $($ErrorMessage.NormalizedError)")
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = @($Results) }
         })

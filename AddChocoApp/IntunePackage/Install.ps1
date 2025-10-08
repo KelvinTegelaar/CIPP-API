@@ -13,6 +13,10 @@ param (
     $CustomRepo,
 
     [Parameter()]
+    [string]
+    $CustomArguments,
+
+    [Parameter()]
     [switch]
     $Trace
 )
@@ -36,13 +40,23 @@ try {
     try {
         $localprograms = & "$chocoPath" list --localonly
         $CustomRepoString = if ($CustomRepo) { "--source $customrepo" } else { $null }
+        $CustomArgsArray = if ($CustomArguments) { $CustomArguments -split '\s+' } else { @() }
+        
         if ($localprograms -like "*$Packagename*" ) {
             Write-Host "Upgrading $packagename"
-            & "$chocoPath" upgrade $Packagename $CustomRepoString
+            if ($CustomArgsArray.Count -gt 0) {
+                & "$chocoPath" upgrade $Packagename $CustomRepoString $CustomArgsArray
+            } else {
+                & "$chocoPath" upgrade $Packagename $CustomRepoString
+            }
         }
         else {
             Write-Host "Installing $packagename"
-            & "$chocoPath" install $Packagename -y $CustomRepoString
+            if ($CustomArgsArray.Count -gt 0) {
+                & "$chocoPath" install $Packagename -y $CustomRepoString $CustomArgsArray
+            } else {
+                & "$chocoPath" install $Packagename -y $CustomRepoString
+            }
         }
         Write-Host 'Completed.'
     }

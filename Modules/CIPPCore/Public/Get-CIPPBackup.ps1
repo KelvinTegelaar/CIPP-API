@@ -6,15 +6,13 @@ function Get-CIPPBackup {
         [string]$Name,
         [switch]$NameOnly
     )
+
     Write-Host "Getting backup for $Type with TenantFilter $TenantFilter"
     $Table = Get-CippTable -tablename "$($Type)Backup"
 
     $Conditions = [System.Collections.Generic.List[string]]::new()
     $Conditions.Add("PartitionKey eq '$($Type)Backup'")
 
-    if ($TenantFilter) {
-        $Conditions.Add("TenantFilter eq '$($TenantFilter)'")
-    }
     if ($Name) {
         $Conditions.Add("RowKey eq '$($Name)' or OriginalEntityId eq '$($Name)'")
     }
@@ -25,7 +23,9 @@ function Get-CIPPBackup {
 
     $Filter = $Conditions -join ' and '
     $Table.Filter = $Filter
-
-    $Info = Get-CIPPAzDataTableEntity @Table
-    return $info
+    $Info = Get-CIPPAzDataTableEntity @Table -Debug
+    if ($TenantFilter) {
+        $Info = $Info | Where-Object { $_.TenantFilter -eq $TenantFilter }
+    }
+    return $Info
 }

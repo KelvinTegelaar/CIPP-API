@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListOoO {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ListOoO {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.userid
@@ -24,8 +22,7 @@ Function Invoke-ListOoO {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Results
         })

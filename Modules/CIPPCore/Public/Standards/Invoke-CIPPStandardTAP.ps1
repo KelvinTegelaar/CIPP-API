@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTAP {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Enables temporary access passwords that IT administrators can generate for employees who are locked out or need emergency access to systems. These time-limited passwords provide a secure way to restore access without compromising long-term security policies.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select TAP Lifetime","name":"standards.TAP.config","options":[{"label":"Only Once","value":"true"},{"label":"Multiple Logons","value":"false"}]}
         IMPACT

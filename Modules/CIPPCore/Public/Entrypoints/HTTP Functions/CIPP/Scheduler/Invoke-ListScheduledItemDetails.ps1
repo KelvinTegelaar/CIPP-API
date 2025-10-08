@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListScheduledItemDetails {
     <#
     .FUNCTIONALITY
@@ -11,15 +9,12 @@ function Invoke-ListScheduledItemDetails {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Get parameters from the request
     $RowKey = $Request.Query.RowKey ?? $Request.Body.RowKey
 
     # Validate required parameters
     if (-not $RowKey) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Required parameter 'RowKey' is missing"
             })
@@ -31,7 +26,7 @@ function Invoke-ListScheduledItemDetails {
     $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
 
     if (-not $Task) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = "Task with RowKey '$RowKey' not found"
             })
@@ -193,7 +188,7 @@ function Invoke-ListScheduledItemDetails {
     }
 
     # Return the response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Response
         })

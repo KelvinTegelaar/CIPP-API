@@ -20,6 +20,8 @@ function Invoke-CIPPStandardGroupTemplate {
             Medium Impact
         ADDEDDATE
             2023-12-30
+        EXECUTIVETEXT
+            Creates standardized groups with predefined settings, permissions, and membership rules. These templates ensure consistent group configurations across the organization, streamlining collaboration and access management while maintaining security standards.
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","altLabelField":"displayName","valueField":"GUID","queryKey":"ListGroupTemplates"}}
         UPDATECOMMENTBLOCK

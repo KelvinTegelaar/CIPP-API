@@ -13,6 +13,8 @@ function Invoke-CIPPStandardintuneBrandingProfile {
         CAT
             Intune Standards
         TAG
+        EXECUTIVETEXT
+            Customizes the Intune Company Portal app with company branding, contact information, and support details, providing employees with a consistent corporate experience when managing their devices. This improves user experience and ensures employees know how to get IT support when needed.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.intuneBrandingProfile.displayName","label":"Organization name","required":false}
             {"type":"switch","name":"standards.intuneBrandingProfile.showLogo","label":"Show logo"}
