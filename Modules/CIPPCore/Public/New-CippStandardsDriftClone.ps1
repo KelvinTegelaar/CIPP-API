@@ -24,7 +24,8 @@ function New-CippStandardsDriftClone {
                         if ($actions | Where-Object { $_.value -eq 'remediate' }) {
                             $prop.Value | Add-Member -MemberType NoteProperty -Name 'autoRemediate' -Value $true -Force
                         }
-                        $prop.Value.action = @(@{ 'label' = 'Report'; 'value' = 'Report' })
+                        # Set action to Report using add-member to avoid issues with readonly arrays
+                        $prop.Value | Add-Member -MemberType NoteProperty -Name 'action' -Value @(@{ 'label' = 'Report'; 'value' = 'Report' }) -Force
                     }
                 }
             }

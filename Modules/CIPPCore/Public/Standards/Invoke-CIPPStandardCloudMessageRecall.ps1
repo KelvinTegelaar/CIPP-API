@@ -13,6 +13,8 @@ function Invoke-CIPPStandardCloudMessageRecall {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Enables employees to recall or retract emails they've sent, helping prevent embarrassing mistakes or accidental data sharing. This feature can reduce the impact of human errors in email communication and provides a safety net for sensitive information accidentally sent to wrong recipients.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.CloudMessageRecall.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT

@@ -5,22 +5,24 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
     .COMPONENT
         (APIName) LegacyEmailReportAddins
     .SYNOPSIS
-        (Label) Remove Legacy Email Report Add-ins
+        (Label) Remove legacy Outlook Report add-ins
     .DESCRIPTION
-        (Helptext) This standard removes the legacy "Report Message" and "Report Phishing" add-ins from Outlook. These have been superseded by newer reporting mechanisms.
-        (DocsDescription) This standard removes the legacy "Report Message" and "Report Phishing" add-ins from Outlook. These have been superseded by newer reporting mechanisms.
+        (Helptext) Removes legacy Report Phishing and Report Message Outlook add-ins.
+        (DocsDescription) Removes legacy Report Phishing and Report Message Outlook add-ins.
     .NOTES
         CAT
             Exchange Standards
         TAG
-        ADDEDCOMPONENT
+        EXECUTIVETEXT
+            The legacy Report Phishing and Report Message Outlook add-ins are security issues with the add-in which makes them unsafe for the organization.
         IMPACT
             Low Impact
         ADDEDDATE
             2025-08-26
         POWERSHELLEQUIVALENT
-            Admin Center API
+            None
         RECOMMENDEDBY
+            "Microsoft"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

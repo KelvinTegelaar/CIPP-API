@@ -13,8 +13,10 @@ function Invoke-CIPPStandardEnableMailTips {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.5.2)"
             "exo_mailtipsenabled"
+        EXECUTIVETEXT
+            Enables helpful notifications in Outlook that warn users about potential email issues, such as sending to large groups, external recipients, or invalid addresses. This reduces email mistakes and improves communication efficiency by providing real-time guidance to employees.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.EnableMailTips.MailTipsLargeAudienceThreshold","label":"Number of recipients to trigger the large audience MailTip (Default is 25)","placeholder":"Enter a profile name","defaultValue":25}
         IMPACT

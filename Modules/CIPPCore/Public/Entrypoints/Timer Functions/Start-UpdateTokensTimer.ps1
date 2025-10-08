@@ -13,7 +13,7 @@ function Start-UpdateTokensTimer {
         $currentUTCtime = (Get-Date).ToUniversalTime()
         try {
             $Refreshtoken = (Get-GraphToken -ReturnRefresh $true).Refresh_token
-            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                 $Table = Get-CIPPTable -tablename 'DevSecrets'
                 $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
                 if ($Secret) {
@@ -57,7 +57,7 @@ function Start-UpdateTokensTimer {
             }
 
             if ($AppSecret) {
-                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                     $Table = Get-CIPPTable -tablename 'DevSecrets'
                     $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
                     $Secret.ApplicationSecret = $AppSecret.secretText
@@ -99,7 +99,7 @@ function Start-UpdateTokensTimer {
                 try {
                     Write-Information "Updating refresh token for tenant $($Tenant.displayName) - $($Tenant.customerId)"
                     $Refreshtoken = (Get-GraphToken -ReturnRefresh $true -TenantId $Tenant.customerId).Refresh_token
-                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                         $Table = Get-CIPPTable -tablename 'DevSecrets'
                         $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
                         if ($Secret) {

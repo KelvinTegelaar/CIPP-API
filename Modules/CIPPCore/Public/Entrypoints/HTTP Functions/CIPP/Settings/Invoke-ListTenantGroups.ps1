@@ -14,7 +14,7 @@ function Invoke-ListTenantGroups {
     $TenantGroups = (Get-TenantGroups -GroupId $groupFilter) ?? @()
     $Body = @{ Results = @($TenantGroups) }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

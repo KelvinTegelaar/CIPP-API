@@ -49,6 +49,15 @@ function New-CIPPUser {
                 }
             }
         }
+        if ($UserObj.customData) {
+            $UserObj.customData | Get-Member -MemberType NoteProperty | ForEach-Object {
+                Write-Host "Editing user and adding custom data $($_.Name) with value $($UserObj.customData.$($_.Name))"
+                if (-not [string]::IsNullOrWhiteSpace($UserObj.customData.$($_.Name))) {
+                    Write-Host 'adding custom data to body'
+                    $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.customData.$($_.Name) -Force
+                }
+            }
+        }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         Write-Host "Shipping: $bodyToShip"
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantId $UserObj.tenantFilter -type POST -body $BodyToship -verbose
@@ -66,6 +75,7 @@ function New-CIPPUser {
             Results  = ('Created New User.')
             Username = $UserPrincipalName
             Password = $password
+            User     = $GraphRequest
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

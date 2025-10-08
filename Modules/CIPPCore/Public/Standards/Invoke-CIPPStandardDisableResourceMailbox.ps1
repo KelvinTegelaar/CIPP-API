@@ -13,7 +13,9 @@ function Invoke-CIPPStandardDisableResourceMailbox {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "NIST CSF 2.0 (PR.AA-01)"
+        EXECUTIVETEXT
+            Prevents direct login to resource mailbox accounts (like conference rooms or equipment), ensuring they can only be managed through proper administrative channels. This security measure eliminates potential unauthorized access to resource scheduling systems while maintaining proper booking functionality.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -22,7 +24,7 @@ function Invoke-CIPPStandardDisableResourceMailbox {
         POWERSHELLEQUIVALENT
             Get-Mailbox & Update-MgUser
         RECOMMENDEDBY
-            "CIS"
+            "Microsoft"
             "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

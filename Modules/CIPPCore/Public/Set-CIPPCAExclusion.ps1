@@ -19,7 +19,7 @@ function Set-CIPPCAExclusion {
                     $ExcludeUsers.Add($User)
                 }
                 foreach ($User in $Users.value) {
-                    if ($ExcludeUsers -notcontains $User) {
+                    if ($User -and $User -ne '' -and $ExcludeUsers -notcontains $User) {
                         $ExcludeUsers.Add($User)
                     }
                 }
@@ -42,14 +42,20 @@ function Set-CIPPCAExclusion {
             }
 
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
-            if ($PSCmdlet.ShouldProcess($PolicyId, "Add exclusion for $UserID")) {
+
+            if ($Users) {
+                $UserIdentifier = ($Username -join ', ')
+            } else {
+                $UserIdentifier = $UserID
+            }
+            if ($PSCmdlet.ShouldProcess($PolicyId, "Add exclusion for $UserIdentifier")) {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
 
         if ($ExclusionType -eq 'remove') {
             if ($Users) {
-                $UserID = $Users.value
+                $UserID = $Users.value | Where-Object { $_ -and $_ -ne '' }
                 $Username = $Users.addedFields.userPrincipalName
             } else {
                 if ($UserID -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
@@ -64,7 +70,13 @@ function Set-CIPPCAExclusion {
                 }
             }
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
-            if ($PSCmdlet.ShouldProcess($PolicyId, "Remove exclusion for $UserID")) {
+            
+            if ($Users) {
+                $UserIdentifier = ($Username -join ', ')
+            } else {
+                $UserIdentifier = $UserID
+            }
+            if ($PSCmdlet.ShouldProcess($PolicyId, "Remove exclusion for $UserIdentifier")) {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }

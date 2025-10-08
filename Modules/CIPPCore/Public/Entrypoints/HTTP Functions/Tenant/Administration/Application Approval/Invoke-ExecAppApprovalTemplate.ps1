@@ -10,7 +10,7 @@ function Invoke-ExecAppApprovalTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Table = Get-CIPPTable -TableName 'templates'
     $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
@@ -146,7 +146,7 @@ function Invoke-ExecAppApprovalTemplate {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
         })

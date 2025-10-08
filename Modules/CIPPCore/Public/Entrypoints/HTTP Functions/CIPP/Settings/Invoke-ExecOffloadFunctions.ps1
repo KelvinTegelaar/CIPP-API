@@ -52,7 +52,7 @@ function Invoke-ExecOffloadFunctions {
                 CanEnable        = $CanEnable
             }
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $CurrentState
             })
@@ -68,7 +68,7 @@ function Invoke-ExecOffloadFunctions {
         } else {
             $Results = 'Disabled Offload Functions'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{ results = $Results }
             })

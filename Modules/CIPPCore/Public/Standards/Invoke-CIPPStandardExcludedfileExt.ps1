@@ -13,6 +13,8 @@ function Invoke-CIPPStandardExcludedfileExt {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Blocks specific file types from being uploaded or synchronized to OneDrive, helping prevent security risks from potentially dangerous file formats. This security measure protects against malware distribution while allowing legitimate business file types to be shared safely.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
         IMPACT

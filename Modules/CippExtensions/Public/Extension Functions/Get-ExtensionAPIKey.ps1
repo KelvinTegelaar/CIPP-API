@@ -16,7 +16,7 @@ function Get-ExtensionAPIKey {
         Write-Information "Using cached API Key for $Extension"
     } else {
         Write-Information "Retrieving API Key for $Extension"
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $APIKey = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq '$Extension' and RowKey eq '$Extension'").APIKey
         } else {

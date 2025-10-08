@@ -12,7 +12,16 @@ function Invoke-ExecCustomRole {
     $AccessRoleGroupTable = Get-CippTable -tablename 'AccessRoleGroups'
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
-    $DefaultRoles = @('readonly', 'editor', 'admin', 'superadmin')
+    $CIPPCore = (Get-Module -Name CIPPCore).ModuleBase
+    $CIPPRoot = (Get-Item -Path $CIPPCore).Parent.Parent.FullName
+
+    $CippRolesJson = Join-Path -Path $CIPPRoot -ChildPath 'Config\cipp-roles.json'
+    if (Test-Path $CippRolesJson) {
+        $DefaultRoles = Get-Content -Path $CippRolesJson | ConvertFrom-Json
+    } else {
+        throw "Could not find $CippRolesJson"
+    }
+
     $BlockedRoles = @('anonymous', 'authenticated')
 
     if ($Request.Body.RoleName -in $BlockedRoles) {
@@ -24,7 +33,7 @@ function Invoke-ExecCustomRole {
             try {
                 $Results = [System.Collections.Generic.List[string]]::new()
                 Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
-                if ($Request.Body.RoleName -notin $DefaultRoles) {
+                if ($Request.Body.RoleName -notin $DefaultRoles.PSObject.Properties.Name) {
                     $Role = @{
                         'PartitionKey'     = 'CustomRoles'
                         'RowKey'           = "$($Request.Body.RoleName.ToLower())"
@@ -61,6 +70,42 @@ function Invoke-ExecCustomRole {
                 $Body = @{Results = "Failed to save custom role $($Request.Body.RoleName)" }
             }
         }
+        'Clone' {
+            try {
+                if ($Request.Body.NewRoleName -in $DefaultRoles.PSObject.Properties.Name) {
+                    throw "Role name $($Request.Body.NewRoleName) cannot be used"
+                }
+                $ExistingRole = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
+                if (!$ExistingRole) {
+                    throw "Role $($Request.Body.RoleName) not found"
+                }
+
+                if ($ExistingRole.RowKey -eq $Request.Body.NewRoleName.ToLower()) {
+                    throw 'New role name cannot be the same as the existing role name'
+                }
+
+                $NewRoleTest = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.NewRoleName.ToLower())'"
+                if ($NewRoleTest) {
+                    throw "Role name $($Request.Body.NewRoleName) already exists"
+                }
+
+                $NewRole = @{
+                    'PartitionKey'     = 'CustomRoles'
+                    'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
+                    'Permissions'      = $ExistingRole.Permissions
+                    'AllowedTenants'   = $ExistingRole.AllowedTenants
+                    'BlockedTenants'   = $ExistingRole.BlockedTenants
+                    'BlockedEndpoints' = $ExistingRole.BlockedEndpoints
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $NewRole -Force | Out-Null
+                $Body = @{Results = "Custom role '$($Request.Body.NewRoleName)' cloned from '$($Request.Body.RoleName)'" }
+                Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Cloned custom role $($Request.Body.RoleName) to $($Request.Body.NewRoleName)" -Sev 'Info'
+            } catch {
+                Write-Warning "Failed to clone custom role $($Request.Body.RoleName): $($_.Exception.Message)"
+                Write-Warning $_.InvocationInfo.PositionMessage
+                $Body = @{Results = "Failed to clone custom role $($Request.Body.RoleName)" }
+            }
+        }
         'Delete' {
             Write-Information "Deleting custom role $($Request.Body.RoleName)"
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
@@ -91,13 +136,13 @@ function Invoke-ExecCustomRole {
                     try {
                         $Role.Permissions = $Role.Permissions | ConvertFrom-Json
                     } catch {
-                        $Role.Permissions = ''
+                        $Role.Permissions = @()
                     }
                     if ($Role.AllowedTenants) {
                         try {
                             $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
                         } catch {
-                            $Role.AllowedTenants = ''
+                            $Role.AllowedTenants = @()
                         }
                     } else {
                         $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @() -Force
@@ -106,7 +151,7 @@ function Invoke-ExecCustomRole {
                         try {
                             $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
                         } catch {
-                            $Role.BlockedTenants = ''
+                            $Role.BlockedTenants = @()
                         }
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force
@@ -115,7 +160,7 @@ function Invoke-ExecCustomRole {
                         try {
                             $Role.BlockedEndpoints = @($Role.BlockedEndpoints | ConvertFrom-Json)
                         } catch {
-                            $Role.BlockedEndpoints = ''
+                            $Role.BlockedEndpoints = @()
                         }
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedEndpoints -NotePropertyValue @() -Force
@@ -128,13 +173,13 @@ function Invoke-ExecCustomRole {
                     }
                     $Role
                 }
-                $DefaultRoles = foreach ($DefaultRole in $DefaultRoles) {
+                $DefaultRoles = foreach ($DefaultRole in $DefaultRoles.PSObject.Properties.Name) {
                     $Role = @{
                         RowKey           = $DefaultRole
-                        Permissions      = ''
+                        Permissions      = $DefaultRoles.$DefaultRole
                         AllowedTenants   = @('AllTenants')
-                        BlockedTenants   = @('')
-                        BlockedEndpoints = @('')
+                        BlockedTenants   = @()
+                        BlockedEndpoints = @()
                     }
                     $EntraRoleGroup = $EntraRoleGroups | Where-Object -Property RowKey -EQ $Role.RowKey
                     if ($EntraRoleGroup) {
@@ -147,7 +192,7 @@ function Invoke-ExecCustomRole {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

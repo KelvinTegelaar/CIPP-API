@@ -365,10 +365,10 @@ function Invoke-ExecCustomData {
                     [PSCustomObject]@{
                         id                  = $_.RowKey
                         tenant              = $Mapping.tenantFilter.label
-                        dataset             = $Mapping.extensionSyncDataset.label
+                        dataset             = $Mapping.extensionSyncDataset.label ?? 'N/A'
                         sourceType          = $Mapping.sourceType.label
                         directoryObject     = $Mapping.directoryObjectType.label
-                        syncProperty        = $Mapping.extensionSyncProperty.label ?? @($Mapping.extensionSyncDataset.addedFields.select -split ',')
+                        syncProperty        = $Mapping.extensionSyncProperty.label ?? ($Mapping.extensionSyncDataset ? @($Mapping.extensionSyncDataset.addedFields.select -split ',') : 'N/A')
                         customDataAttribute = $Mapping.customDataAttribute.label
                     }
                 }
@@ -493,7 +493,7 @@ function Invoke-ExecCustomData {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

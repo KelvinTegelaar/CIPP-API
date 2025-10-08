@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListExtensionSync {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ Function Invoke-ListExtensionSync {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $ScheduledTasksTable = Get-CIPPTable -TableName 'ScheduledTasks'
     $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'CippExtension' }
 
@@ -50,7 +43,7 @@ Function Invoke-ListExtensionSync {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = (ConvertTo-Json -Depth 5 -InputObject @($AllTasksArrayList))
         })

@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListFunctionStats {
+function Invoke-ListFunctionStats {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,11 +7,6 @@ Function Invoke-ListFunctionStats {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         $TenantFilter = $Request.Query.tenantFilter
         $PartitionKey = $Request.Query.FunctionType
@@ -89,9 +82,9 @@ Function Invoke-ListFunctionStats {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
-        }) -Clobber
+    return [HttpResponseContext]@{
+        StatusCode = $StatusCode
+        Body       = $Body
+    }
 
 }

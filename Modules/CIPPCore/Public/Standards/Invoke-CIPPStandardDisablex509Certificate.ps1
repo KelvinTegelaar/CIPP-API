@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisablex509Certificate {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Disables certificate-based authentication as a multi-factor authentication method, typically used when organizations want to standardize on other authentication methods or when certificate management becomes too complex for the security benefit provided.
         ADDEDCOMPONENT
         IMPACT
             High Impact

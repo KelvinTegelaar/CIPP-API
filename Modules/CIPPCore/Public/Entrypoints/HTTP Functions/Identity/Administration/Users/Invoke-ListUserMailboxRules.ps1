@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListUserMailboxRules {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ListUserMailboxRules {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
@@ -29,8 +27,7 @@ Function Invoke-ListUserMailboxRules {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Result)
         })

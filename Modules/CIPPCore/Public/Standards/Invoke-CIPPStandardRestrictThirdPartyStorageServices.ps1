@@ -13,7 +13,9 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.7)"
+        EXECUTIVETEXT
+            Prevents employees from using external cloud storage services like Dropbox, Google Drive, and Box within Microsoft 365, reducing data security risks and ensuring all company data remains within controlled corporate systems. This helps maintain data governance and prevents potential data leaks to unauthorized platforms.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

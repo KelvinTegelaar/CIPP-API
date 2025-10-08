@@ -1617,6 +1617,237 @@
           }
         }
       }
+    },
+    "/ExecGDAPRoleTemplate": {
+      "get": {
+        "summary": "List GDAP Role Templates",
+        "description": "Retrieves a list of existing GDAP role templates",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "GDAP role templates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "TemplateId": {
+                            "type": "string",
+                            "description": "Unique identifier for the template"
+                          },
+                          "RoleMappings": {
+                            "type": "array",
+                            "description": "List of role mappings in the template",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "GroupName": {
+                                  "type": "string",
+                                  "description": "Name of the GDAP group"
+                                },
+                                "GroupId": {
+                                  "type": "string",
+                                  "description": "Unique identifier for the GDAP group"
+                                },
+                                "RoleName": {
+                                  "type": "string",
+                                  "description": "Name of the Microsoft role"
+                                },
+                                "roleDefinitionId": {
+                                  "type": "string",
+                                  "description": "Unique identifier for the role definition"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Metadata": {
+                      "type": "object",
+                      "properties": {
+                        "Count": {
+                          "type": "integer",
+                          "description": "Number of templates returned"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListGDAPRoles": {
+      "get": {
+        "summary": "List GDAP Roles",
+        "description": "Retrieves a list of GDAP roles that have been mapped in CIPP",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "responses": {
+          "200": {
+            "description": "GDAP roles retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "GroupName": {
+                        "type": "string",
+                        "description": "Name of the GDAP group"
+                      },
+                      "GroupId": {
+                        "type": "string",
+                        "description": "Unique identifier for the GDAP group"
+                      },
+                      "RoleName": {
+                        "type": "string",
+                        "description": "Name of the Microsoft role"
+                      },
+                      "roleDefinitionId": {
+                        "type": "string",
+                        "description": "Unique identifier for the role definition"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecGDAPInvite": {
+      "post": {
+        "summary": "Create GDAP Invite",
+        "description": "Creates a GDAP invite using the specified role mappings",
+        "tags": [
+          "Tenant Administration"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "roleMappings"
+                ],
+                "properties": {
+                  "roleMappings": {
+                    "type": "array",
+                    "description": "List of role mappings for the GDAP invite",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "GroupName": {
+                          "type": "string",
+                          "description": "Name of the GDAP group"
+                        },
+                        "GroupId": {
+                          "type": "string",
+                          "description": "Unique identifier for the GDAP group"
+                        },
+                        "RoleName": {
+                          "type": "string",
+                          "description": "Name of the Microsoft role"
+                        },
+                        "roleDefinitionId": {
+                          "type": "string",
+                          "description": "Unique identifier for the role definition"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "GDAP invite created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "Invite": {
+                      "type": "object",
+                      "properties": {
+                        "PartitionKey": {
+                          "type": "string",
+                          "description": "Partition key for the invite"
+                        },
+                        "RowKey": {
+                          "type": "string",
+                          "description": "Unique identifier for the invite"
+                        },
+                        "InviteUrl": {
+                          "type": "string",
+                          "description": "URL for accepting the GDAP invite"
+                        },
+                        "OnboardingUrl": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Onboarding URL if available"
+                        },
+                        "RoleMappings": {
+                          "type": "string",
+                          "description": "JSON string of role mappings"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   }
 }

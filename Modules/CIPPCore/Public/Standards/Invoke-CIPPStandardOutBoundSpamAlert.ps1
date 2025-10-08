@@ -13,7 +13,7 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.6)"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.OutBoundSpamAlert.OutboundSpamContact","label":"Outbound spam contact"}
         IMPACT

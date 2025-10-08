@@ -13,7 +13,9 @@ function Invoke-CIPPStandardSPAzureB2B {
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (7.2.2)"
+        EXECUTIVETEXT
+            Enables secure collaboration with external partners through SharePoint and OneDrive by integrating with Azure B2B guest access. This allows controlled sharing with external organizations while maintaining security oversight and proper access management.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

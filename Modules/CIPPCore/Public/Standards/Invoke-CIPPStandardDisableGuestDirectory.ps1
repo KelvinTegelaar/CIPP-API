@@ -13,6 +13,14 @@ function Invoke-CIPPStandardDisableGuestDirectory {
         CAT
             Global Standards
         TAG
+            "CIS M365 5.0 (5.1.6.2)"
+            "CISA (MS.AAD.5.1v1)"
+            "EIDSCA.AP14"
+            "EIDSCA.ST08"
+            "EIDSCA.ST09"
+            "NIST CSF 2.0 (PR.AA-05)"
+        EXECUTIVETEXT
+            Restricts external guest users from viewing the company's employee directory and organizational structure, protecting sensitive information about staff and internal groups. This security measure prevents unauthorized access to corporate contact information while still allowing necessary collaboration.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

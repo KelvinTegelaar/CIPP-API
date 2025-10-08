@@ -110,7 +110,7 @@ function Invoke-ExecGitHubAction {
         $Body.Metadata = $Metadata
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

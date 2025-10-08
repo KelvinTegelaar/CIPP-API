@@ -316,8 +316,8 @@ function Push-ExecOnboardTenantQueue {
                     $LastCPVError = ''
                     do {
                         try {
-                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
-                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $Relationship.customer.tenantId
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -TenantFilter $Relationship.customer.tenantId
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {
@@ -361,16 +361,16 @@ function Push-ExecOnboardTenantQueue {
                         defaultDomainName = $Tenant.defaultDomainName
                     }
                 }
-                $Table = Get-CippTable -tablename 'templates'
-                $ExistingTemplates = Get-CippazDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
+                $Table = Get-CIPPTable -tablename 'templates'
+                $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
                 foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantsTemplate.JSON | ConvertFrom-Json
-                    $NewExcludedTenants = [system.collections.generic.list[object]]::new()
+                    $NewExcludedTenants = [System.Collections.Generic.List[object]]::new()
                     if (!$object.excludedTenants) {
                         $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
                     }
-                    foreach ($Tenant in $object.excludedTenants) {
-                        $NewExcludedTenants.Add($Tenant)
+                    foreach ($ExcludedStandardsTenant in $object.excludedTenants) {
+                        $NewExcludedTenants.Add($ExcludedStandardsTenant)
                     }
                     $NewExcludedTenants.Add($AddExclusionObj)
                     $object.excludedTenants = $NewExcludedTenants

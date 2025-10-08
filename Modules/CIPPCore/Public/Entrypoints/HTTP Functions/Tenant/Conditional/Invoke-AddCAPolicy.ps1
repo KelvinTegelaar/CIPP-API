@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddCAPolicy {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ function Invoke-AddCAPolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Tenants = $Request.body.tenantFilter.value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
@@ -30,8 +28,7 @@ function Invoke-AddCAPolicy {
 
     $body = [pscustomobject]@{'Results' = @($results) }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

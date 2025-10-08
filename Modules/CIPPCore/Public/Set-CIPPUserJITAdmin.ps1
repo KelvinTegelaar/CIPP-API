@@ -21,8 +21,11 @@ function Set-CIPPUserJITAdmin {
     .PARAMETER Expiration
     DateTime for expiration
 
+    .PARAMETER Reason
+    Reason for JIT admin assignment. Defaults to 'No reason provided' as due to backwards compatibility this is not a mandatory field.
+
     .EXAMPLE
-    Set-CIPPUserJITAdmin -TenantFilter 'contoso.onmicrosoft.com' -Headers@{UserPrincipalName = 'jit@contoso.onmicrosoft.com'} -Roles @('62e90394-69f5-4237-9190-012177145e10') -Action 'AddRoles' -Expiration (Get-Date).AddDays(1)
+    Set-CIPPUserJITAdmin -TenantFilter 'contoso.onmicrosoft.com' -Headers@{UserPrincipalName = 'jit@contoso.onmicrosoft.com'} -Roles @('62e90394-69f5-4237-9190-012177145e10') -Action 'AddRoles' -Expiration (Get-Date).AddDays(1) -Reason 'Emergency access'
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
@@ -39,7 +42,9 @@ function Set-CIPPUserJITAdmin {
         [ValidateSet('Create', 'AddRoles', 'RemoveRoles', 'DeleteUser', 'DisableUser')]
         [string]$Action,
 
-        [datetime]$Expiration
+        [datetime]$Expiration,
+
+        [string]$Reason = 'No reason provided'
     )
 
     if ($PSCmdlet.ShouldProcess("User: $($User.UserPrincipalName)", "Action: $Action")) {
@@ -67,6 +72,7 @@ function Set-CIPPUserJITAdmin {
                     $Schema.id        = @{
                         jitAdminEnabled    = $false
                         jitAdminExpiration = $Expiration.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        jitAdminReason     = $Reason
                     }
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
@@ -109,7 +115,7 @@ function Set-CIPPUserJITAdmin {
                     } catch {}
                 }
 
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration | Out-Null
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -Reason $Reason | Out-Null
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
             'RemoveRoles' {

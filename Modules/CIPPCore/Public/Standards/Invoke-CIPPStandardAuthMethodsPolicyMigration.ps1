@@ -13,14 +13,17 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Completes the transition from legacy authentication policies to Microsoft's modern unified authentication methods policy, ensuring the organization benefits from the latest security features and management capabilities. This migration enables enhanced security controls and simplified policy management.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
         ADDEDDATE
-            2025-01-08
+            2025-07-07
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicy
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

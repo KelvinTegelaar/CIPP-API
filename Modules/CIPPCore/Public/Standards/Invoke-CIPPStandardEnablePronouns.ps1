@@ -13,6 +13,8 @@ function Invoke-CIPPStandardEnablePronouns {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Allows employees to display their preferred pronouns in their Microsoft 365 profiles, supporting inclusive workplace practices and helping colleagues communicate respectfully. This feature enhances diversity and inclusion initiatives while fostering a more welcoming work environment.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

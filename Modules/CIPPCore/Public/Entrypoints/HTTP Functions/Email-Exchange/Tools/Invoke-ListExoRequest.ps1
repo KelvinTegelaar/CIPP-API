@@ -1,10 +1,5 @@
 function Invoke-ListExoRequest {
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         $AllowedVerbs = @(
             'Get'
@@ -44,7 +39,7 @@ function Invoke-ListExoRequest {
                     $Body = [pscustomobject]@{
                         Results = "Invalid cmdlet: $Cmdlet"
                     }
-                    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    return ([HttpResponseContext]@{
                             StatusCode = [HttpStatusCode]::BadRequest
                             Body       = $Body
                         })
@@ -96,7 +91,7 @@ function Invoke-ListExoRequest {
     } catch {
         Write-Information "ExoRequest Error: $($_.Exception.Message)"
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ConvertTo-Json -InputObject $Body -Compress
         })

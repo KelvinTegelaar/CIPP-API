@@ -13,6 +13,17 @@ function Invoke-CIPPStandardPerUserMFA {
         CAT
             Entra (AAD) Standards
         TAG
+            "CIS M365 5.0 (1.2.1)"
+            "CIS M365 5.0 (1.1.1)"
+            "CIS M365 5.0 (1.1.2)"
+            "CISA (MS.AAD.1.1v1)"
+            "CISA (MS.AAD.1.2v1)"
+            "Essential 8 (1504)"
+            "Essential 8 (1173)"
+            "Essential 8 (1401)"
+            "NIST CSF 2.0 (PR.AA-03)"
+        EXECUTIVETEXT
+            Requires all employees to use multi-factor authentication for enhanced account security, significantly reducing the risk of unauthorized access from compromised passwords. This fundamental security measure protects against the majority of account-based attacks and is essential for maintaining strong cybersecurity posture.
         ADDEDCOMPONENT
         IMPACT
             High Impact

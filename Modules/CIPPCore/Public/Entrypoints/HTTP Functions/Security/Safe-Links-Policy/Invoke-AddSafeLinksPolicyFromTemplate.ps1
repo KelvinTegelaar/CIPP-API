@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-AddSafeLinksPolicyFromTemplate {
     <#
     .FUNCTIONALITY
@@ -14,7 +12,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     try {
         $RequestBody = $Request.Body
@@ -220,7 +218,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
     }
 
     # Return response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body = @{ Results = $Results }
     })

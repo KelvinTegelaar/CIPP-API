@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Prevents employees from purchasing Microsoft 365 licenses independently, ensuring all software acquisitions go through proper procurement channels. This maintains budget control, prevents unauthorized spending, and ensures compliance with corporate licensing agreements.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.DisableSelfServiceLicenses.Exclusions","label":"License Ids to exclude from this standard","required":false}
         IMPACT

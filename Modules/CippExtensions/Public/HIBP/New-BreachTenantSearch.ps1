@@ -6,7 +6,9 @@ function New-BreachTenantSearch {
     )
 
     $Table = Get-CIPPTable -TableName UserBreaches
-    $LatestBreach = Get-BreachInfo -TenantFilter $TenantFilter | Where-Object { $_.email } | Group-Object -Property clientDomain
+    $LatestBreach = Get-BreachInfo -TenantFilter $TenantFilter | ForEach-Object {
+        $_ | Where-Object { $_ -and $_.email }
+    } | Group-Object -Property clientDomain
 
     $usersResults = foreach ($domain in $LatestBreach) {
         $ExistingBreaches = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($domain.name)'"

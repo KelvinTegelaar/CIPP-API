@@ -32,7 +32,7 @@ function Invoke-ExecSetRetentionHold {
     try {
         $null = New-ExoRequest @ExoRequest
         $Results = "Retention hold for $UserPrincipalName with Id $Identity has been set to $RetentionHoldState"
-        
+
         Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -42,8 +42,7 @@ function Invoke-ExecSetRetentionHold {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Results }
         })

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddUserBulk {
     <#
     .FUNCTIONALITY
@@ -11,9 +9,6 @@ function Invoke-AddUserBulk {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
 
@@ -131,7 +126,7 @@ function Invoke-AddUserBulk {
                     if ($AssignedLicenses) {
                         $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
                         $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
-                        Set-CIPPUserLicense -UserId $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter
+                        Set-CIPPUserLicense -UserId $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
                     }
                     $Results.Add(@{
                             resultText = $Message.resultText
@@ -152,8 +147,7 @@ function Invoke-AddUserBulk {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

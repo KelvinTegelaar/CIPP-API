@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecBECRemediate {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ function Invoke-ExecBECRemediate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Body.tenantFilter
     $SuspectUser = $Request.Body.userid
@@ -206,7 +204,7 @@ function Invoke-ExecBECRemediate {
     $ResponseBody = [pscustomobject]@{'Results' = @($Results) }
 
     # Associate values to output bindings
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $ResponseBody
         })

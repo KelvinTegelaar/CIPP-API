@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddAutopilotConfig {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ function Invoke-AddAutopilotConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Input bindings are passed in via param block.
     $Tenants = $Request.Body.selectedTenants.value
     $Profbod = [pscustomobject]$Request.Body
@@ -39,8 +32,7 @@ function Invoke-AddAutopilotConfig {
         Set-CIPPDefaultAPDeploymentProfile @profileParams
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = $Results }
         })

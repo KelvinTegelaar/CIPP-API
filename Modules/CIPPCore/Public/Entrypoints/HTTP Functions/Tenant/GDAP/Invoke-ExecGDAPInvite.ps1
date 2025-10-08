@@ -1,4 +1,3 @@
-using namespace System.Net
 function Invoke-ExecGDAPInvite {
     <#
     .FUNCTIONALITY
@@ -11,10 +10,30 @@ function Invoke-ExecGDAPInvite {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Create'
+    $InviteId = $Request.Body.InviteId
+    $Reference = $Request.Body.Reference
+    $Table = Get-CIPPTable -TableName 'GDAPInvites'
+
+    # Extract technician from headers (same logic as Write-LogMessage)
+    if ($Headers.'x-ms-client-principal-idp' -eq 'azureStaticWebApps' -or !$Headers.'x-ms-client-principal-idp') {
+        $user = $headers.'x-ms-client-principal'
+        $Technician = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    } elseif ($Headers.'x-ms-client-principal-idp' -eq 'aad') {
+        $Table = Get-CIPPTable -TableName 'ApiClients'
+        $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($headers.'x-ms-client-principal-name')'"
+        $Technician = $Client.AppName ?? 'CIPP-API'
+    } else {
+        try {
+            $user = $headers.'x-ms-client-principal'
+            $Technician = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+        } catch {
+            $Technician = 'System'
+        }
+    }
 
     switch ($Action) {
         'Create' {
@@ -26,7 +45,6 @@ function Invoke-ExecGDAPInvite {
                 $AutoExtendDuration = 'P180D'
             }
 
-            $Table = Get-CIPPTable -TableName 'GDAPInvites'
             try {
                 $Step = 'Creating GDAP relationship'
                 $JSONBody = @{
@@ -75,7 +93,11 @@ function Invoke-ExecGDAPInvite {
                             'InviteUrl'     = $InviteUrl
                             'OnboardingUrl' = $OnboardingUrl
                             'RoleMappings'  = [string](@($RoleMappings) | ConvertTo-Json -Depth 10 -Compress)
+                            'Technician'    = $Technician
                         }
+
+                        if ($Reference) { $InviteEntity['Reference'] = $Reference }
+
                         Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
 
                         $Message = 'GDAP relationship invite created. Log in as a Global Admin in the new tenant to approve the invite.'
@@ -103,9 +125,28 @@ function Invoke-ExecGDAPInvite {
                 Invite  = $InviteEntity
             }
         }
+        'Update'{
+            $Invite = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'invite' and RowKey eq '$InviteId'"
+            if ($Invite) {
+
+                $InviteEntity = [PSCustomObject]@{
+                    'PartitionKey' = 'invite'
+                    'RowKey'       = $InviteId
+                    'Technician'   = $Technician
+                }
+
+                if ($Reference) { $InviteEntity['Reference'] = $Reference }
+
+                Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity -OperationType 'UpsertMerge'
+                $Message = 'Invite updated'
+            } else {
+                $Message = 'Invite not found'
+            }
+            $body = @{
+                Message = $Message
+            }
+        }
         'Delete' {
-            $InviteId = $Request.Body.InviteId
-            $Table = Get-CIPPTable -TableName 'GDAPInvites'
             $Invite = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'invite' and RowKey eq '$InviteId'"
             if ($Invite) {
                 Remove-AzDataTableEntity @Table -Entity $Invite
@@ -119,7 +160,7 @@ function Invoke-ExecGDAPInvite {
         }
 
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

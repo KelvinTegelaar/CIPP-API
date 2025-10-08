@@ -13,7 +13,11 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (7.2.6)"
+            "CISA (MS.AAD.14.3v1)"
+            "CISA (MS.SPO.1.3v1)"
+        EXECUTIVETEXT
+            Controls which external domains employees can share files with, enabling secure collaboration with trusted partners while blocking sharing with unauthorized organizations. This targeted approach maintains necessary business relationships while preventing data exposure to unknown entities.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
             {"type":"textField","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated","required":false}

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Automatically removes old Teams meeting recordings after a specified period to manage storage costs and comply with data retention policies. This helps organizations balance the need to preserve important meeting content with storage efficiency and regulatory compliance requirements.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.TeamsMeetingRecordingExpiration.ExpirationDays","label":"Recording Expiration Days (e.g., 365)","required":true}
         IMPACT

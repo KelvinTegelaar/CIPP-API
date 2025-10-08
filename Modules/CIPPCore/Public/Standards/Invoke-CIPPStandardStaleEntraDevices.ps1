@@ -13,11 +13,15 @@ function Invoke-CIPPStandardStaleEntraDevices {
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS"
+            "Essential 8 (1501)"
+            "NIST CSF 2.0 (ID.AM-08)"
+            "NIST CSF 2.0 (PR.PS-03)"
+        EXECUTIVETEXT
+            Automatically identifies and removes inactive devices that haven't connected to company systems for a specified period, reducing security risks from abandoned or lost devices. This maintains a clean device inventory and prevents potential unauthorized access through dormant device registrations.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Do not set below 30)"}
         DISABLEDFEATURES
-            {"report":false,"warn":false,"remediate":true}
+            {"report":false,"warn":false,"remediate":false}
         IMPACT
             High Impact
         ADDEDDATE

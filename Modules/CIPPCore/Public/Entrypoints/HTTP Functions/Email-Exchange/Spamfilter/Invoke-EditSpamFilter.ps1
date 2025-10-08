@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-EditSpamFilter {
     <#
     .FUNCTIONALITY
@@ -11,9 +9,6 @@ Function Invoke-EditSpamFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $request.Query.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
     $State = $State ?? $Request.Body.state
@@ -33,8 +28,7 @@ Function Invoke-EditSpamFilter {
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

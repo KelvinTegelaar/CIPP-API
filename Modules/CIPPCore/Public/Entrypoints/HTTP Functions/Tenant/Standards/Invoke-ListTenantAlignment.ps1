@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListTenantAlignment {
     <#
     .FUNCTIONALITY
@@ -11,8 +9,6 @@ function Invoke-ListTenantAlignment {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
     try {
         # Use the new Get-CIPPTenantAlignment function to get alignment data
         $AlignmentData = Get-CIPPTenantAlignment
@@ -31,13 +27,13 @@ function Invoke-ListTenantAlignment {
             }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($Results)
             })
     } catch {
         Write-LogMessage -API $APIName -message "Failed to get tenant alignment data: $($_.Exception.Message)" -sev Error
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ error = "Failed to get tenant alignment data: $($_.Exception.Message)" }
             })

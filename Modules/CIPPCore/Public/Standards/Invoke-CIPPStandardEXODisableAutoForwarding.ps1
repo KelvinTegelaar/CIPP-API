@@ -13,9 +13,13 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.2.1)"
             "mdo_autoforwardingmode"
             "mdo_blockmailforward"
+            "CISA (MS.EXO.4.1v1)"
+            "NIST CSF 2.0 (PR.DS-02)"
+        EXECUTIVETEXT
+            Prevents employees from automatically forwarding company emails to external addresses, protecting against data leaks and unauthorized information sharing. This security measure helps maintain control over sensitive business communications while preventing both accidental and intentional data exfiltration.
         ADDEDCOMPONENT
         IMPACT
             High Impact

@@ -13,8 +13,10 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.1)"
             "PWAgePolicyNew"
+        EXECUTIVETEXT
+            Eliminates mandatory password expiration requirements, allowing employees to keep strong passwords indefinitely rather than forcing frequent changes that often lead to weaker passwords. This modern security approach reduces help desk calls and improves overall password security when combined with multi-factor authentication.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

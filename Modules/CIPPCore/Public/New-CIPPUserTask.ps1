@@ -83,5 +83,6 @@ function New-CIPPUserTask {
         Username = $CreationResults.Username
         Password = $CreationResults.Password
         CopyFrom = $CopyFrom
+        User     = $CreationResults.User
     }
 }

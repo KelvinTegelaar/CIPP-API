@@ -1,7 +1,31 @@
 function Invoke-CIPPStandardExchangeConnectorTemplate {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) ExchangeConnectorTemplate
+    .SYNOPSIS
+        (Label) Exchange Connector Template
+    .DESCRIPTION
+        (Helptext) Deploy and manage Exchange connectors.
+        (DocsDescription) Deploy and manage Exchange connectors.
+    .NOTES
+        CAT
+            Templates
+        DISABLEDFEATURES
+            {"report":true,"warn":true,"remediate":false}
+        IMPACT
+            Medium Impact
+        ADDEDDATE
+            2023-12-30
+        EXECUTIVETEXT
+            Configures standardized Exchange connectors that control how email flows between your organization and external systems. These templates ensure secure and reliable email delivery while maintaining proper routing and security policies for business communications.
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"exConnectorTemplate","label":"Select Exchange Connector Template","api":{"url":"/api/ListExConnectorTemplates","labelField":"name","valueField":"GUID","queryKey":"ListExConnectorTemplates"}}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'ExConnector' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access

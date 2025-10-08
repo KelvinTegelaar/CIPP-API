@@ -1,4 +1,3 @@
-using namespace System.Net
 Function Invoke-ListContactTemplates {
     <#
     .FUNCTIONALITY
@@ -10,7 +9,7 @@ Function Invoke-ListContactTemplates {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Table = Get-CippTable -tablename 'templates'
     $Templates = Get-ChildItem 'Config\*.ContactTemplate.json' | ForEach-Object {
@@ -39,7 +38,7 @@ Function Invoke-ListContactTemplates {
 
         if (-not $Templates) {
             Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -Sev 'Warning'
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = @{ Error = "Template with ID $RequestedID not found" }
             })
@@ -58,8 +57,7 @@ Function Invoke-ListContactTemplates {
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)
         })

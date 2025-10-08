@@ -15,6 +15,8 @@ function Invoke-CIPPStandardQuarantineTemplate {
         DISABLEDFEATURES
             {"report":false,"warn":false,"remediate":false}
         TAG
+        EXECUTIVETEXT
+            Creates standardized quarantine policies that define how employees can interact with quarantined emails, including permissions to release, delete, or preview suspicious messages. This ensures consistent security handling across the organization while providing appropriate user access to manage quarantined content.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":true,"name":"displayName","label":"Quarantine Display Name","required":true}
             {"type":"switch","label":"Enable end-user spam notifications","name":"ESNEnabled","defaultValue":true,"required":false}

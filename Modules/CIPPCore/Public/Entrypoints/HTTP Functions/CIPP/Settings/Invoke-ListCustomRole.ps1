@@ -7,11 +7,6 @@ function Invoke-ListCustomRole {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $DefaultRoles = @('readonly', 'editor', 'admin', 'superadmin')
     $Table = Get-CippTable -tablename 'CustomRoles'
     $CustomRoles = Get-CIPPAzDataTableEntity @Table
@@ -129,7 +124,7 @@ function Invoke-ListCustomRole {
     }
     $Body = @($RoleList)
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = ConvertTo-Json -InputObject $Body -Depth 5
         })

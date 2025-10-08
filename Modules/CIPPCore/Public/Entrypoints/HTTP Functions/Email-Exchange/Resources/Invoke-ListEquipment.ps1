@@ -1,19 +1,12 @@
-using namespace System.Net
-
-Function Invoke-ListEquipment {
+function Invoke-ListEquipment {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.Equipment.ReadWrite
+        Exchange.Equipment.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $EquipmentId = $Request.Query.EquipmentId
     $Tenant = $Request.Query.TenantFilter
 
@@ -91,8 +84,7 @@ Function Invoke-ListEquipment {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($Results | Sort-Object displayName)
         })

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Controls whether employees can create shortcuts to SharePoint libraries in their OneDrive, managing how users organize and access shared content. This setting helps maintain organized file structures and can prevent confusion from excessive shortcuts while preserving existing workflows.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Add Shortcuts To OneDrive button state","name":"standards.DisableAddShortcutsToOneDrive.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT

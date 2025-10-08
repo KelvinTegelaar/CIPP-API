@@ -8,21 +8,27 @@ function Invoke-CIPPStandardDefaultSharingLink {
         (Label) Set Default Sharing Link Settings
     .DESCRIPTION
         (Helptext) Configure the SharePoint default sharing link type and permission. This setting controls both the type of sharing link created by default and the permission level assigned to those links.
-        (DocsDescription) Sets the default sharing link type (Direct or Internal) and permission (View) in SharePoint and OneDrive. Direct sharing means links only work for specific people, while Internal sharing means links work for anyone in the organization.
+        (DocsDescription) Sets the default sharing link type (Direct or Internal) and permission (View) in SharePoint and OneDrive. Direct sharing means links only work for specific people, while Internal sharing means links work for anyone in the organization. Setting the view permission as the default ensures that users must deliberately select the edit permission when sharing a link, reducing the risk of unintentionally granting edit privileges.
     .NOTES
         CAT
             SharePoint Standards
         TAG
+            "CIS M365 5.0 (7.2.7)"
+            "CIS M365 5.0 (7.2.11)"
+            "CISA (MS.SPO.1.4v1)"
+        EXECUTIVETEXT
+            Configures SharePoint default sharing links to implement the principle of least privilege for document sharing. This security measure reduces the risk of accidental data modification while maintaining collaboration functionality, requiring users to explicitly select Edit permissions when necessary. The sharing type setting controls whether links are restricted to specific recipients or available to the entire organization. This reduces the risk of accidental data exposure through link sharing.
         ADDEDCOMPONENT
-            [{"type":"autoComplete","multiple":false,"creatable":false,"label":"Default Sharing Link Type","name":"standards.DefaultSharingLink.SharingLinkType","options":[{"label":"Direct - Only specific people","value":"Direct"},{"label":"Internal - Anyone in the organization","value":"Internal"}]}]
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":true,"label":"Default Sharing Link Type","name":"standards.DefaultSharingLink.SharingLinkType","options":[{"label":"Direct - Only the people the user specifies","value":"Direct"},{"label":"Internal - Only people in your organization","value":"Internal"}]}
         IMPACT
-            Medium Impact
+            Low Impact
         ADDEDDATE
             2025-06-13
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -DefaultSharingLinkType [Direct|Internal] -DefaultLinkPermission View
+            Set-SPOTenant -DefaultSharingLinkType [Direct\|Internal] -DefaultLinkPermission View
         RECOMMENDEDBY
-            CIS
+            "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

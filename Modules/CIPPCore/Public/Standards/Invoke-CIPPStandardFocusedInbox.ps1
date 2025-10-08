@@ -13,6 +13,8 @@ function Invoke-CIPPStandardFocusedInbox {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Configures the default setting for Outlook's Focused Inbox feature, which automatically sorts important emails into a focused view while placing less important emails in a separate section. This can improve employee productivity by reducing email clutter, though users can adjust this setting individually.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.FocusedInbox.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT

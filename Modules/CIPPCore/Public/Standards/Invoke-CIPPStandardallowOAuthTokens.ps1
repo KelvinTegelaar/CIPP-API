@@ -13,6 +13,10 @@ function Invoke-CIPPStandardallowOAuthTokens {
         CAT
             Entra (AAD) Standards
         TAG
+            "EIDSCA.AT01"
+            "EIDSCA.AT02"
+        EXECUTIVETEXT
+            Allows employees to use third-party authentication apps and password managers to generate secure login codes, providing flexibility in authentication methods while maintaining security standards. This accommodates diverse user preferences and existing security tools.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

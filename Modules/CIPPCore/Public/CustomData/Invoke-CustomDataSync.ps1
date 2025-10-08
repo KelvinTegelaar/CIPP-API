@@ -67,7 +67,7 @@ function Invoke-CustomDataSync {
             continue
         }
         $SourceMatchProperty = $SyncConfig.DatasetConfig.sourceMatchProperty
-        $DestinationMatchProperty = $SyncConfigs.DatasetConfig.destinationMatchProperty
+        $DestinationMatchProperty = $SyncConfig.DatasetConfig.destinationMatchProperty
         $CustomDataAttribute = $SyncConfig.CustomDataAttribute
         $ExtensionSyncProperty = $SyncConfig.ExtensionSyncProperty
         $DatasetConfig = $SyncConfig.DatasetConfig

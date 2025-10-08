@@ -13,6 +13,10 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         CAT
             Entra (AAD) Standards
         TAG
+            "CISA (MS.AAD.20.1v1)"
+            "NIST CSF 2.0 (PR.AA-05)"
+        EXECUTIVETEXT
+            Restricts the creation of security groups to IT administrators only, preventing employees from creating unauthorized access groups that could bypass security controls. This ensures proper governance of access permissions and maintains centralized control over who can access what resources.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

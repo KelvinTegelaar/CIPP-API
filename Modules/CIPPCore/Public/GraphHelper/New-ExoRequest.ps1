@@ -54,7 +54,7 @@ function New-ExoRequest {
                 Parameters = $Params
             }
         }
-        $ExoBody = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $ExoBody
+        $ExoBody = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $ExoBody -EscapeForJson
 
         $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }
         if (-not $Tenant -and $NoAuthCheck -eq $true) {

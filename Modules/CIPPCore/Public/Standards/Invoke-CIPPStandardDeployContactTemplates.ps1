@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDeployContactTemplates {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Deploys standardized external contact templates across all company locations, ensuring consistent communication channels with key external partners, vendors, and stakeholders. This streamlines contact management and maintains uniform business relationships.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Mail Contact Templates","name":"standards.DeployContactTemplates.templateIds","api":{"url":"/api/ListContactTemplates","labelField":"name","valueField":"GUID","queryKey":"Contact Templates"}}
         DISABLEDFEATURES

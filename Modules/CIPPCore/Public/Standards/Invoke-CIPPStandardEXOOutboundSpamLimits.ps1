@@ -7,13 +7,15 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     .SYNOPSIS
         (Label) Set Exchange Outbound Spam Limits
     .DESCRIPTION
-        (Helptext) Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.
+        (Helptext) Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. 
         (DocsDescription) Configures the Exchange Online outbound spam recipient limits for external per hour, internal per hour, and per day, along with the action to take (e.g., BlockUser, Alert) when these limits are exceeded. This helps prevent abuse and manage email flow. Microsoft's recommendations can be found [here.](https://learn.microsoft.com/en-us/defender-office-365/recommended-settings-for-eop-and-office365#eop-outbound-spam-policy-settings) The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.
     .NOTES
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.6)"
+        EXECUTIVETEXT
+            Sets limits on how many emails employees can send per hour and per day to prevent spam and protect the organization's email reputation. When limits are exceeded, the system can alert administrators or temporarily block the user, helping detect compromised accounts or prevent abuse.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.EXOOutboundSpamLimits.RecipientLimitExternalPerHour","label":"External Recipient Limit Per Hour","defaultValue":400}
             {"type":"number","name":"standards.EXOOutboundSpamLimits.RecipientLimitInternalPerHour","label":"Internal Recipient Limit Per Hour","defaultValue":800}

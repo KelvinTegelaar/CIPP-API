@@ -13,6 +13,8 @@ function Invoke-CIPPStandardPhishProtection {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Implements advanced phishing protection by adding visual indicators to login pages that help users identify legitimate Microsoft login pages versus fraudulent copies. This security measure protects against sophisticated phishing attacks that attempt to steal employee credentials.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
