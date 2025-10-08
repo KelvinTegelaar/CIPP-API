@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Establishes standard email attachment size limits for all new employees, balancing functionality with system performance and security. This prevents email system overload from large attachments while ensuring employees can share necessary files through appropriate channels.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","defaultValue":35}
             {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","defaultValue":36}
@@ -51,11 +53,10 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
 
     try {
         $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' |
-        Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
-    }
-    catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendReceiveLimitTenant state for $Tenant. Error: $ErrorMessage" -Sev Error
+            Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendReceiveLimitTenant state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
 
@@ -63,6 +64,12 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     $MaxReceiveSize = [int64]"$($Settings.ReceiveLimit)MB"
 
     $NotSetCorrectly = foreach ($MailboxPlan in $AllMailBoxPlans) {
+        # Handle "Unlimited" values - treat them as not matching the desired limit.
+        if ($MailboxPlan.MaxSendSize -match 'Unlimited' -or $MailboxPlan.MaxReceiveSize -match 'Unlimited') {
+            $MailboxPlan
+            continue
+        }
+
         $PlanMaxSendSize = [int64]($MailboxPlan.MaxSendSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
         $PlanMaxReceiveSize = [int64]($MailboxPlan.MaxReceiveSize -replace '.*\(([\d,]+).*', '$1' -replace ',', '')
         if ($PlanMaxSendSize -ne $MaxSendSize -or $PlanMaxReceiveSize -ne $MaxReceiveSize) {
@@ -81,8 +88,8 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
                 }
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set the tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits" -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set the tenant send and receive limits. Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set the tenant send and receive limits. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are already set correctly" -sev Info

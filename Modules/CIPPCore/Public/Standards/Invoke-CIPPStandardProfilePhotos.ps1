@@ -13,6 +13,8 @@ function Invoke-CIPPStandardProfilePhotos {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Manages user profile photo permissions within Microsoft 365, allowing organizations to control whether employees can upload their own photos or require administrative approval. This helps maintain professional appearance standards and prevents inappropriate images in corporate directories.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ProfilePhotos.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT

@@ -17,7 +17,7 @@ function Invoke-ListAdminPortalLicenses {
         $AdminPortalLicenses = @()
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($AdminPortalLicenses)
         })

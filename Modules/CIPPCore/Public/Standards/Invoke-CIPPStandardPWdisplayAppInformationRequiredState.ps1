@@ -13,7 +13,16 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.3.1)"
+            "EIDSCA.AM03"
+            "EIDSCA.AM04"
+            "EIDSCA.AM06"
+            "EIDSCA.AM07"
+            "EIDSCA.AM09"
+            "EIDSCA.AM10"
+            "NIST CSF 2.0 (PR.AA-03)"
+        EXECUTIVETEXT
+            Enhances authentication security by requiring users to match numbers and showing detailed information about login requests, including application names and location data. This helps employees verify legitimate login attempts and prevents unauthorized access through more secure authentication methods.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

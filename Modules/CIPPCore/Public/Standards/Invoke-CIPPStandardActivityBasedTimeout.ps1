@@ -13,8 +13,11 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.2)"
             "spo_idle_session_timeout"
+            "NIST CSF 2.0 (PR.AA-03)"
+        EXECUTIVETEXT
+            Automatically logs out inactive users from Microsoft 365 applications after a specified time period to prevent unauthorized access to company data on unattended devices. This security measure protects against data breaches when employees leave workstations unlocked.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ActivityBasedTimeout.timeout","options":[{"label":"1 Hour","value":"01:00:00"},{"label":"3 Hours","value":"03:00:00"},{"label":"6 Hours","value":"06:00:00"},{"label":"12 Hours","value":"12:00:00"},{"label":"24 Hours","value":"1.00:00:00"}]}
         IMPACT

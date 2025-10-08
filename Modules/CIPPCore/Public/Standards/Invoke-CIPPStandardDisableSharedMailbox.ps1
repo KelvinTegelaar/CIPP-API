@@ -13,7 +13,11 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.2.2)"
+            "CISA (MS.AAD.10.1v1)"
+            "NIST CSF 2.0 (PR.AA-01)"
+        EXECUTIVETEXT
+            Prevents direct login to shared mailbox accounts (like info@company.com), ensuring they can only be accessed through authorized users' accounts. This security measure eliminates the risk of shared passwords and unauthorized access while maintaining proper access control and audit trails.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

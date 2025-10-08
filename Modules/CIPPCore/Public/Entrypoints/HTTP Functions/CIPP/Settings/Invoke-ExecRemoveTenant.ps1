@@ -29,7 +29,7 @@ function Invoke-ExecRemoveTenant {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

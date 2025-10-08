@@ -13,6 +13,8 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Controls how many recipients employees can include in a single email, helping prevent spam distribution and managing email server load. This security measure protects against both accidental mass mailings and potential abuse while ensuring legitimate business communications can still reach necessary recipients.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.MailboxRecipientLimits.RecipientLimit","label":"Recipient Limit","defaultValue":500}
         IMPACT

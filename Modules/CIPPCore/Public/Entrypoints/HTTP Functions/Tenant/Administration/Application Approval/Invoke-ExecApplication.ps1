@@ -7,11 +7,6 @@ function Invoke-ExecApplication {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $ValidTypes = @('applications', 'servicePrincipals')
     $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword')
 
@@ -20,7 +15,7 @@ function Invoke-ExecApplication {
     if (-not $Id) {
         $AppId = $Request.Query.AppId ?? $Request.Body.AppId
         if (-not $AppId) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::BadRequest
                     Body       = "Required parameter 'Id' or 'AppId' is missing"
                 })
@@ -31,7 +26,7 @@ function Invoke-ExecApplication {
         $IdPath = "/$Id"
     }
     if ($Type -and $ValidTypes -notcontains $Type) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Invalid Type specified. Valid types are: $($ValidTypes -join ', ')"
             })
@@ -42,7 +37,7 @@ function Invoke-ExecApplication {
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
     if ($ValidActions -notcontains $Action) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Invalid Action specified. Valid actions are: $($ValidActions -join ', ')"
             })
@@ -77,7 +72,7 @@ function Invoke-ExecApplication {
             # Handle credential removal
             $KeyIds = $Request.Body.KeyIds.value ?? $Request.Body.KeyIds
             if (-not $KeyIds -or $KeyIds.Count -eq 0) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = "KeyIds parameter is required for $Action action"
                     })
@@ -137,7 +132,7 @@ function Invoke-ExecApplication {
             }
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{ Results = $Results }
             })
@@ -147,7 +142,7 @@ function Invoke-ExecApplication {
             state      = 'error'
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ Results = @($Results) }
             })
