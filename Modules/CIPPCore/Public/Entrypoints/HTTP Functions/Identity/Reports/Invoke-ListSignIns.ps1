@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListSignIns {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ListSignIns {
 
     $APINAME = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
@@ -46,15 +44,13 @@ Function Invoke-ListSignIns {
             $response = $response | Group-Object -Property userPrincipalName | Where-Object { $_.Count -ge $FailureThreshold } | Select-Object -ExpandProperty Group
         }
 
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($response)
             })
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = '500'
                 Body       = $(Get-NormalizedError -message $_.Exception.message)
             })

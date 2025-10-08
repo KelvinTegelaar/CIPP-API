@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTwoClickEmailProtection {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Requires employees to click twice before viewing encrypted or sensitive emails, preventing accidental exposure of confidential information when screens might be visible to others. This privacy protection helps prevent shoulder surfing and ensures employees are intentional about viewing sensitive content.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.TwoClickEmailProtection.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT

@@ -12,7 +12,8 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     .NOTES
         CAT
             Teams Standards
-        TAG
+        EXECUTIVETEXT
+            Controls whether Teams channels can receive emails directly, enabling integration between email and team collaboration. This feature can improve workflow efficiency by allowing external communications to flow into team discussions, though it may need management for security or organizational reasons.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsEmailIntegration.AllowEmailIntoChannel","label":"Allow channel emails"}
         IMPACT
@@ -23,6 +24,8 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
             Set-CsTeamsClientConfiguration -AllowEmailIntoChannel \$false
         RECOMMENDEDBY
             "CIS"
+        TAG
+            "CIS M365 5.0 (8.1.2)"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

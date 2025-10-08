@@ -289,7 +289,7 @@ function Get-GraphRequestList {
                 try {
                     $QueueThresholdExceeded = $false
 
-                    if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
+                    if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination.IsPresent -and !$ManualPagination.IsPresent) {
                         if ($Count -gt $singleTenantThreshold) {
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {

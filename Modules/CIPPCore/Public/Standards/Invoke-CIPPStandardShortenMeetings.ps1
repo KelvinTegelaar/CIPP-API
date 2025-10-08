@@ -13,6 +13,8 @@ function Invoke-CIPPStandardShortenMeetings {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Automatically shortens calendar meetings by a specified number of minutes to provide buffer time between meetings, reducing back-to-back scheduling stress and allowing employees time to transition between meetings. This improves work-life balance and meeting effectiveness.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.ShortenMeetings.ShortenEventScopeDefault","options":[{"label":"Disabled/None","value":"None"},{"label":"End early","value":"EndEarly"},{"label":"Start late","value":"StartLate"}]}
             {"type":"number","name":"standards.ShortenMeetings.DefaultMinutesToReduceShortEventsBy","label":"Minutes to reduce short calendar events by (Default is 5)","defaultValue":5}

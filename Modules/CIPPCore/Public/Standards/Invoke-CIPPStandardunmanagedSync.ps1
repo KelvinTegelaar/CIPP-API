@@ -13,6 +13,11 @@ function Invoke-CIPPStandardunmanagedSync {
         CAT
             SharePoint Standards
         TAG
+            "CIS M365 5.0 (7.2.3)"
+            "CISA (MS.SPO.2.1v1)"
+            "NIST CSF 2.0 (PR.AA-05)"
+        EXECUTIVETEXT
+            Restricts access to company files from personal or unmanaged devices, ensuring corporate data can only be accessed from properly secured and monitored devices. This critical security control prevents data leaks while allowing controlled access through web browsers when necessary.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.unmanagedSync.state","label":"State","options":[{"label":"Allow limited, web-only access","value":"1"},{"label":"Block access","value":"2"}],"required":false}
         IMPACT

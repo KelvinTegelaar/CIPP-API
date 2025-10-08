@@ -13,6 +13,8 @@ function Invoke-CIPPStandardAnonReportDisable {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Configures Microsoft 365 reports to display actual usernames instead of anonymized identifiers, enabling IT administrators to effectively troubleshoot issues and generate meaningful usage reports. This improves operational efficiency and system management capabilities.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListSites {
     <#
     .FUNCTIONALITY
@@ -9,17 +7,15 @@ Function Invoke-ListSites {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Query.TenantFilter
     $Type = $request.query.Type
     $UserUPN = $request.query.UserUPN
 
     if (!$TenantFilter) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })
@@ -27,7 +23,7 @@ Function Invoke-ListSites {
     }
 
     if (!$Type) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'Type is required'
             })
@@ -116,8 +112,7 @@ Function Invoke-ListSites {
         $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest | Sort-Object -Property displayName)
         })

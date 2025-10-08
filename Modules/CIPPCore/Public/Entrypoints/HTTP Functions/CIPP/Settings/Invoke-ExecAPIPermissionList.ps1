@@ -10,7 +10,7 @@ function Invoke-ExecAPIPermissionList {
 
     $Roles = Get-CIPPHttpFunctions -ByRoleGroup | ConvertTo-Json -Depth 10
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Roles
         })

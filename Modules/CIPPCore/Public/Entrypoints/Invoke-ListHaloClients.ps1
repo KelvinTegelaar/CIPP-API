@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListHaloClients {
     <#
     .FUNCTIONALITY
@@ -9,12 +7,6 @@ Function Invoke-ListHaloClients {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     # Interact with query parameters or the body of the request.
     try {
         $Table = Get-CIPPTable -TableName Extensionsconfig
@@ -41,10 +33,9 @@ Function Invoke-ListHaloClients {
         $HaloClients = $ErrorMessage
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($HaloClients)
-        })
+        }
 
 }

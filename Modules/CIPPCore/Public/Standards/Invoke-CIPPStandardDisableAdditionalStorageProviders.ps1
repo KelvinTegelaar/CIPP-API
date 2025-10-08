@@ -13,8 +13,10 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.5.3)"
             "exo_storageproviderrestricted"
+        EXECUTIVETEXT
+            Prevents employees from accessing personal cloud storage services like Dropbox or Google Drive through Outlook on the web, reducing data security risks and ensuring company information stays within approved corporate systems. This helps maintain data governance and prevents accidental data leaks.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

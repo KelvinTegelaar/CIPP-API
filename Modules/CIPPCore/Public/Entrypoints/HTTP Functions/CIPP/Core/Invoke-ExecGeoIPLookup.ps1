@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecGeoIPLookup {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ Function Invoke-ExecGeoIPLookup {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $IP = $Request.Query.IP ?? $Request.Body.IP
 
     if (-not $IP) {
@@ -23,8 +16,7 @@ Function Invoke-ExecGeoIPLookup {
         $locationInfo = Get-CIPPGeoIPLocation -IP $IP
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $LocationInfo
         })

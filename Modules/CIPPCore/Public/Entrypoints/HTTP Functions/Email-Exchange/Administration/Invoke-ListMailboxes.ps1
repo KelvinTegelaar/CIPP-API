@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListMailboxes {
+function Invoke-ListMailboxes {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,11 +7,6 @@ Function Invoke-ListMailboxes {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     try {
@@ -73,7 +66,7 @@ Function Invoke-ListMailboxes {
         LitigationHoldEnabled,
         LitigationHoldDate,
         LitigationHoldDuration,
-        @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+        @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE') } },
         ComplianceTagHoldApplied,
         RetentionHoldEnabled,
         InPlaceHolds,
@@ -87,8 +80,7 @@ Function Invoke-ListMailboxes {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })

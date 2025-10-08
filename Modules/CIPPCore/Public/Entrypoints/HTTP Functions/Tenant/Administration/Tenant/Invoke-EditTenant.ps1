@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-EditTenant {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ function Invoke-EditTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
@@ -67,12 +65,30 @@ function Invoke-EditTenant {
                 Remove-AzDataTableEntity @GroupMembersTable -Entity $Group
             }
         }
+        $DomainBasedEntries = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$($Tenant.defaultDomainName)'"
+            if ($DomainBasedEntries) {
+                foreach ($Entry in $DomainBasedEntries) {
+                    try {
+                        # Add corrected GUID-based entry using the actual GUID
+                        $NewEntry = @{
+                            PartitionKey = 'Member'
+                            RowKey       = '{0}-{1}' -f $Entry.GroupId, $Tenant.customerId
+                            GroupId      = $Entry.GroupId
+                            customerId   = $Tenant.customerId
+                        }
+                        Add-CIPPAzDataTableEntity @GroupMembersTable -Entity $NewEntry -Force
+                        Remove-AzDataTableEntity @GroupMembersTable -Entity $Entry
+                    } catch {
+                        Write-Host "Error migrating entry: $($_.Exception.Message)"
+                    }
+                }
+            }
 
         $response = @{
             state      = 'success'
             resultText = 'Tenant details updated successfully'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $response
             })
@@ -82,7 +98,7 @@ function Invoke-EditTenant {
             state      = 'error'
             resultText = $_.Exception.Message
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = $response
             })

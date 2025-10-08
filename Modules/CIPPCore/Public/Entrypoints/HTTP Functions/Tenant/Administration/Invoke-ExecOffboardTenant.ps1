@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecOffboardTenant {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ExecOffboardTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     try {
         $TenantQuery = $Request.Body.TenantFilter.value ?? $Request.Body.TenantFilter
@@ -192,7 +190,7 @@ Function Invoke-ExecOffboardTenant {
         $StatusCode = [HttpStatusCode]::OK
         $body = $_.Exception.message
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

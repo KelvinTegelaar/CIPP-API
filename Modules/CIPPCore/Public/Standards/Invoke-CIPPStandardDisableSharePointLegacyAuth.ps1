@@ -13,8 +13,13 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.5.1)"
+            "CIS M365 5.0 (7.2.1)"
             "spo_legacy_auth"
+            "CISA (MS.AAD.3.1v1)"
+            "NIST CSF 2.0 (PR.IR-01)"
+        EXECUTIVETEXT
+            Disables outdated authentication methods for SharePoint access, forcing applications and users to use modern, more secure authentication protocols. This significantly improves security by eliminating vulnerable authentication pathways while requiring updates to older applications.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

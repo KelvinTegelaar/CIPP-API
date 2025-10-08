@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecSetSharePointMember {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,8 @@ function Invoke-ExecSetSharePointMember {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
@@ -25,7 +20,7 @@ function Invoke-ExecSetSharePointMember {
             } else {
                 $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)' or proxyAddresses/any(x:endsWith(x,'$($Request.Body.GroupID)')) or mailNickname eq '$($Request.Body.GroupID)'" -ComplexFilter -tenantid $TenantFilter).id
             }
-            
+
             if ($Request.Body.Add -eq $true) {
                 $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.user.value -TenantFilter $TenantFilter -Headers $Headers
             } else {
@@ -43,8 +38,7 @@ function Invoke-ExecSetSharePointMember {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Results }
         })

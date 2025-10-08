@@ -7,14 +7,16 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     .SYNOPSIS
         (Label) Set inactive device retirement days
     .DESCRIPTION
-        (Helptext) A value between 0 and 270 is supported. A value of 0 disables retirement, retired devices are removed from Intune after the specified number of days.
-        (DocsDescription) A value between 0 and 270 is supported. A value of 0 disables retirement, retired devices are removed from Intune after the specified number of days.
+        (Helptext) A value between 31 and 365 is supported. retired devices are removed from Intune after the specified number of days.
+        (DocsDescription) A value between 31 and 365 is supported. retired devices are removed from Intune after the specified number of days.
     .NOTES
         CAT
             Intune Standards
         TAG
+        EXECUTIVETEXT
+            Automatically removes inactive devices from management after a specified period, helping maintain a clean device inventory and reducing security risks from abandoned or lost devices. This policy ensures that only actively used corporate devices remain in the management system.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days (0 equals disabled)"}
+            {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days"}
         IMPACT
             Low Impact
         ADDEDDATE

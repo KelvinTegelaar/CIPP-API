@@ -32,7 +32,7 @@ function Invoke-ExecSetRecipientLimits {
     try {
         $null = New-ExoRequest @ExoRequest
         $Results = "Recipient limit for $UserPrincipalName has been set to $recipientLimit"
-        
+
         Write-LogMessage -API $APIName -tenant $TenantFilter -message $Results -sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -42,8 +42,7 @@ function Invoke-ExecSetRecipientLimits {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Results }
         })

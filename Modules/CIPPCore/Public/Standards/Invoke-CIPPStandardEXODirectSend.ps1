@@ -13,6 +13,8 @@ function Invoke-CIPPStandardEXODirectSend {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Controls whether business applications and devices (like printers or scanners) can send emails through the company's email system without authentication. While this enables convenient features like scan-to-email, it may pose security risks and should be carefully managed.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.EXODirectSend.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT

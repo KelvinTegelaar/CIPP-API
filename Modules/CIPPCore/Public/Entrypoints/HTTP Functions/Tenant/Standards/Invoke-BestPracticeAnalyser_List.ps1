@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-BestPracticeAnalyser_List {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ Function Invoke-BestPracticeAnalyser_List {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Tenants = Get-Tenants
     $Table = get-cipptable 'cachebpa'
     $Results = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
@@ -27,8 +20,7 @@ Function Invoke-BestPracticeAnalyser_List {
         }
     }
     Write-Host ($Tenants | ConvertTo-Json)
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @(($Results | Where-Object -Property RowKey -In $Tenants.customerId))
         })

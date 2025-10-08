@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-EditTenantOffboardingDefaults {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ function Invoke-EditTenantOffboardingDefaults {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
@@ -23,7 +21,7 @@ function Invoke-EditTenantOffboardingDefaults {
             state      = 'error'
             resultText = 'Customer ID is required'
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $response
             })
@@ -63,7 +61,7 @@ function Invoke-EditTenantOffboardingDefaults {
             resultText = $resultText
         }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $response
             })
@@ -73,7 +71,7 @@ function Invoke-EditTenantOffboardingDefaults {
             state      = 'error'
             resultText = $_.Exception.Message
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = $response
             })

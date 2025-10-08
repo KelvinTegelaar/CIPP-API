@@ -1,4 +1,3 @@
-using namespace System.Net
 Function Invoke-ExecMailTest {
     <#
     .FUNCTIONALITY
@@ -8,11 +7,6 @@ Function Invoke-ExecMailTest {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         switch ($Request.Query.Action) {
             'CheckConfig' {
@@ -82,8 +76,7 @@ Function Invoke-ExecMailTest {
             Results = @($ErrorMessage)
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

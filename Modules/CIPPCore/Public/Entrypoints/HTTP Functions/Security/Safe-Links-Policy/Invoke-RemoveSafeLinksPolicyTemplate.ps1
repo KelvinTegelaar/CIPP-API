@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-RemoveSafeLinksPolicyTemplate {
     <#
     .FUNCTIONALITY
@@ -27,8 +25,7 @@ Function Invoke-RemoveSafeLinksPolicyTemplate {
         Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Result }
         })

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListPotentialApps {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ Function Invoke-ListPotentialApps {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     if ($request.body.type -eq 'WinGet') {
         $body = @"
 {"MaximumResults":50,"Filters":[{"PackageMatchField":"Market","RequestMatch":{"KeyWord":"US","MatchType":"CaseInsensitive"}}],"Query":{"KeyWord":"$($Request.Body.SearchString)","MatchType":"Substring"}}
@@ -26,10 +19,9 @@ Function Invoke-ListPotentialApps {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($DataRequest)
-        })
+        }
 
 }

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         CAT
             Defender Standards
         TAG
+        EXECUTIVETEXT
+            Notifies IT administrators when employees request to release emails that were quarantined for security reasons, enabling oversight of potentially dangerous messages. This helps ensure that legitimate emails are released while maintaining security controls over suspicious content.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.QuarantineRequestAlert.NotifyUser","label":"E-mail to receive the alert"}
         IMPACT

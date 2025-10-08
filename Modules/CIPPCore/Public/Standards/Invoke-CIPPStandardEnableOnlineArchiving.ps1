@@ -13,6 +13,10 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         CAT
             Exchange Standards
         TAG
+            "Essential 8 (1511)"
+            "NIST CSF 2.0 (PR.DS-11)"
+        EXECUTIVETEXT
+            Automatically enables online email archiving for all licensed employees, providing additional storage for older emails while maintaining easy access. This helps manage mailbox sizes, improves email performance, and supports compliance with data retention requirements.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

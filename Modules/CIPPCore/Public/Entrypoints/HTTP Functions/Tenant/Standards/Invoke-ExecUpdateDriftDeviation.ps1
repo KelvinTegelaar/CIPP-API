@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecUpdateDriftDeviation {
     <#
     .FUNCTIONALITY
@@ -100,14 +98,14 @@ function Invoke-ExecUpdateDriftDeviation {
 
         $Body = @{ Results = @($Results) }
 
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $Body
             })
 
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to update drift deviation: $($_.Exception.Message)" -Sev 'Error'
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = @{error = $_.Exception.Message }
             })

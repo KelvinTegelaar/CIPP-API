@@ -13,6 +13,11 @@ function Invoke-CIPPStandardGuestInvite {
         CAT
             Entra (AAD) Standards
         TAG
+            "CISA (MS.AAD.18.1v1)"
+            "EIDSCA.AP04"
+            "EIDSCA.AP07"
+        EXECUTIVETEXT
+            Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.
         ADDEDCOMPONENT
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Who can send invites?","name":"standards.GuestInvite.allowInvitesFrom","options":[{"label":"Everyone","value":"everyone"},{"label":"Admins, Guest inviters and All Members","value":"adminsGuestInvitersAndAllMembers"},{"label":"Admins and Guest inviters","value":"adminsAndGuestInviters"},{"label":"None","value":"none"}]}
         IMPACT

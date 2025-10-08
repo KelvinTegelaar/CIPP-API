@@ -100,6 +100,9 @@ function Push-DomainAnalyserTenant {
                                 $Domain.DkimSelectors = $OldDomain.DkimSelectors
                                 $Domain.MailProviders = $OldDomain.MailProviders
                             }
+                            # Fix tenant info in the event of a default domain name change in a tenant
+                            $Domain | Add-Member -MemberType NoteProperty -Name 'TenantId' -Value $TenantDomain.Tenant -Force
+                            $Domain | Add-Member -MemberType NoteProperty -Name 'TenantGUID' -Value $TenantDomain.TenantGUID -Force
                         }
                         # Return domain object to list
                         $TenantDomainObjects.Add($Domain)

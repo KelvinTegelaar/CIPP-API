@@ -13,32 +13,77 @@ function Get-CIPPIntunePolicy {
         switch ($TemplateType) {
             'AppProtection' {
                 $PlatformType = 'deviceAppManagement'
-                $TemplateTypeURL = 'androidManagedAppProtections'
+                $AndroidTemplateTypeURL = 'androidManagedAppProtections'
+                $iOSTemplateTypeURL = 'iosManagedAppProtections'
+
+                # Define bulk request for both platforms - used by all scenarios
+                $BulkRequests = @(
+                    @{
+                        id     = 'AndroidPolicies'
+                        url    = "$PlatformType/$AndroidTemplateTypeURL"
+                        method = 'GET'
+                    },
+                    @{
+                        id     = 'iOSPolicies'
+                        url    = "$PlatformType/$iOSTemplateTypeURL"
+                        method = 'GET'
+                    }
+                )
+                $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $tenantFilter
+
+                $androidPolicies = ($BulkResults | Where-Object { $_.id -eq 'AndroidPolicies' }).body.value
+                $iOSPolicies = ($BulkResults | Where-Object { $_.id -eq 'iOSPolicies' }).body.value
 
                 if ($DisplayName) {
-                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
-                    if ($policy) {
-                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
-                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
-                        $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                    $androidPolicy = $androidPolicies | Where-Object -Property displayName -EQ $DisplayName
+                    $iOSPolicy = $iOSPolicies | Where-Object -Property displayName -EQ $DisplayName
+
+                    # Return the matching policy (Android or iOS) - using full data from bulk request
+                    if ($androidPolicy) {
+                        $policyJson = ConvertTo-Json -InputObject $androidPolicy -Depth 100 -Compress
+                        $androidPolicy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                        return $androidPolicy
+                    } elseif ($iOSPolicy) {
+                        $policyJson = ConvertTo-Json -InputObject $iOSPolicy -Depth 100 -Compress
+                        $iOSPolicy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                        return $iOSPolicy
                     }
-                    return $policy
+                    return $null
+
                 } elseif ($PolicyId) {
-                    $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$PolicyId')" -tenantid $tenantFilter
-                    if ($policy) {
+                    $androidPolicy = $androidPolicies | Where-Object -Property id -EQ $PolicyId
+                    $iOSPolicy = $iOSPolicies | Where-Object -Property id -EQ $PolicyId
+
+                    # Return the matching policy - using full data from bulk request
+                    if ($androidPolicy) {
+                        $policyJson = ConvertTo-Json -InputObject $androidPolicy -Depth 100 -Compress
+                        $androidPolicy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                        return $androidPolicy
+                    } elseif ($iOSPolicy) {
+                        $policyJson = ConvertTo-Json -InputObject $iOSPolicy -Depth 100 -Compress
+                        $iOSPolicy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
+                        return $iOSPolicy
+                    }
+                    return $null
+
+                } else {
+                    # Process all Android policies
+                    foreach ($policy in $androidPolicies) {
                         $policyJson = ConvertTo-Json -InputObject $policy -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
-                    return $policy
-                } else {
-                    $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    foreach ($policy in $policies) {
-                        $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
-                        $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
+
+                    # Process all iOS policies
+                    foreach ($policy in $iOSPolicies) {
+                        $policyJson = ConvertTo-Json -InputObject $policy -Depth 100 -Compress
                         $policy | Add-Member -MemberType NoteProperty -Name 'cippconfiguration' -Value $policyJson -Force
                     }
-                    return $policies
+
+                    # Combine and return all policies
+                    $allPolicies = [System.Collections.Generic.List[object]]::new()
+                    if ($androidPolicies) { $allPolicies.AddRange($androidPolicies) }
+                    if ($iOSPolicies) { $allPolicies.AddRange($iOSPolicies) }
+                    return $allPolicies
                 }
             }
             'deviceCompliancePolicies' {

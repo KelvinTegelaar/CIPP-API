@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisableViva {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Disables daily Microsoft Viva Insights reports that are automatically sent to employees, reducing email volume and allowing organizations to control when and how productivity insights are shared. This can help prevent information overload while maintaining the ability to access insights when needed.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

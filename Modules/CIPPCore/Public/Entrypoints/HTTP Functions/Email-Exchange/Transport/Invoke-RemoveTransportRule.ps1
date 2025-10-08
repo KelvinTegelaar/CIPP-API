@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-RemoveTransportRule {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-RemoveTransportRule {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $Identity = $Request.Query.guid ?? $Request.body.guid
@@ -34,8 +32,7 @@ Function Invoke-RemoveTransportRule {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ Results = $Result }
         })

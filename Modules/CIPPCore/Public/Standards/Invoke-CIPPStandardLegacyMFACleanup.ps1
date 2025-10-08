@@ -13,6 +13,8 @@ function Invoke-CIPPStandardLegacyMFACleanup {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            This standard is currently non-functional and should be disabled. It was previously designed to remove outdated multi-factor authentication configurations in favor of modern security policies.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

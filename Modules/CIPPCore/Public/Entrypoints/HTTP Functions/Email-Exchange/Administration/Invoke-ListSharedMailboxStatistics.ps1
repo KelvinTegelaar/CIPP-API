@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListSharedMailboxStatistics {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ Function Invoke-ListSharedMailboxStatistics {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # XXX Seems like an unused endpoint? -Bobby
 
     # Interact with query parameters or the body of the request.
@@ -32,8 +25,7 @@ Function Invoke-ListSharedMailboxStatistics {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })
