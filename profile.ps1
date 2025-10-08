@@ -43,7 +43,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
-        $LastStartup | Add-Member -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString()
+        $LastStartup | Add-Member -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString() -Force
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
