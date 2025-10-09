@@ -38,7 +38,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'GAs'
                     method = 'GET'
-                    url    = "/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?`$count=true"
+                    url    = "/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members/`$count"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -75,13 +75,12 @@ Function Invoke-ListUserCounts {
 
             # All requests succeeded, extract the counts
             $BulkResults | ForEach-Object {
-                $Count = $_.body.'@odata.count'
                 $UsersCount = $_.body
 
                 switch ($_.id) {
                     'Users' { $Users = $UsersCount }
                     'LicUsers' { $LicUsers = $UsersCount }
-                    'GAs' { $GAs = $Count }
+                    'GAs' { $GAs = $UsersCount }
                     'Guests' { $Guests = $UsersCount }
                 }
             }
