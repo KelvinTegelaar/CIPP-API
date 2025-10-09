@@ -46,7 +46,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Guests'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'"
+                    url    = "/users/`$count?`$top=1&`$filter=userType eq 'Guest'"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -82,7 +82,7 @@ Function Invoke-ListUserCounts {
                     'Users' { $Users = $UsersCount }
                     'LicUsers' { $LicUsers = $Count }
                     'GAs' { $GAs = $Count }
-                    'Guests' { $Guests = $Count }
+                    'Guests' { $Guests = $UsersCount }
                 }
             }
 
