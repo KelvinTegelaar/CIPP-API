@@ -22,7 +22,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Users'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=999"
+                    url    = "/users/`$count"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -30,7 +30,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'LicUsers'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=999&`$filter=assignedLicenses/`$count ne 0"
+                    url    = "/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -46,7 +46,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Guests'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=999&`$filter=userType eq 'Guest'"
+                    url    = "/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -54,7 +54,7 @@ Function Invoke-ListUserCounts {
             )
 
             # Execute bulk request
-            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
+            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -noPaginateIds @('LicUsers') -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
 
             # Check if any requests failed
             $FailedRequests = $BulkResults | Where-Object { $_.status -ne 200 }
@@ -76,9 +76,10 @@ Function Invoke-ListUserCounts {
             # All requests succeeded, extract the counts
             $BulkResults | ForEach-Object {
                 $Count = $_.body.'@odata.count'
+                $UsersCount = $_.body
 
                 switch ($_.id) {
-                    'Users' { $Users = $Count }
+                    'Users' { $Users = $UsersCount }
                     'LicUsers' { $LicUsers = $Count }
                     'GAs' { $GAs = $Count }
                     'Guests' { $Guests = $Count }
