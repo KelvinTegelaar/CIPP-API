@@ -30,7 +30,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'LicUsers'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0"
+                    url    = "/users/`$count?`$top=1&`$filter=assignedLicenses/`$count ne 0"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -80,7 +80,7 @@ Function Invoke-ListUserCounts {
 
                 switch ($_.id) {
                     'Users' { $Users = $UsersCount }
-                    'LicUsers' { $LicUsers = $Count }
+                    'LicUsers' { $LicUsers = $UsersCount }
                     'GAs' { $GAs = $Count }
                     'Guests' { $Guests = $UsersCount }
                 }
