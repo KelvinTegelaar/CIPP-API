@@ -22,7 +22,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Users'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1"
+                    url    = "/users?`$count=true&`$top=999"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -30,7 +30,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'LicUsers'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0"
+                    url    = "/users?`$count=true&`$top=999&`$filter=assignedLicenses/`$count ne 0"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -46,7 +46,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Guests'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'"
+                    url    = "/users?`$count=true&`$top=999&`$filter=userType eq 'Guest'"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -58,12 +58,12 @@ Function Invoke-ListUserCounts {
 
             # Check if any requests failed
             $FailedRequests = $BulkResults | Where-Object { $_.status -ne 200 }
-            
+
             if ($FailedRequests) {
                 # If any requests failed, return an error response
                 $FailedIds = ($FailedRequests | ForEach-Object { $_.id }) -join ', '
                 $ErrorMessage = "Failed to retrieve counts for: $FailedIds"
-                
+
                 return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{
