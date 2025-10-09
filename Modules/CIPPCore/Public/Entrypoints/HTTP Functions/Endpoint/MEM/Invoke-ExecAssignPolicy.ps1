@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecAssignPolicy {
     <#
     .FUNCTIONALITY
@@ -24,18 +22,30 @@ Function Invoke-ExecAssignPolicy {
 
     $results = try {
         if ($AssignTo) {
-            $null = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $TenantFilter -GroupName $AssignTo -Type $Type -Headers $Headers
+            $AssignmentResult = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $TenantFilter -GroupName $AssignTo -Type $Type -Headers $Headers
+            if ($AssignmentResult) {
+                # Check if it's a warning message (no groups found)
+                if ($AssignmentResult -like "*No groups found*") {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                } else {
+                    $StatusCode = [HttpStatusCode]::OK
+                }
+                $AssignmentResult
+            } else {
+                $StatusCode = [HttpStatusCode]::OK
+                "Successfully edited policy for $($TenantFilter)"
+            }
+        } else {
+            $StatusCode = [HttpStatusCode]::OK
+            "Successfully edited policy for $($TenantFilter)"
         }
-        "Successfully edited policy for $($TenantFilter)"
-        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        "Failed to add policy for $($TenantFilter): $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::InternalServerError
+        "Failed to add policy for $($TenantFilter): $($_.Exception.Message)"
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $results }
         })

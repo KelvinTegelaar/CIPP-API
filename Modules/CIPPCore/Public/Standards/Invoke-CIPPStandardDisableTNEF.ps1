@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisableTNEF {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Prevents the creation of winmail.dat attachments that can cause compatibility issues when sending emails to external recipients using non-Outlook email clients. This improves email compatibility and reduces support issues with external partners and customers.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

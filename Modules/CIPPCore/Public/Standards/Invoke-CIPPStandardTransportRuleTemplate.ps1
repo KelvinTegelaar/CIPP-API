@@ -18,6 +18,8 @@ function Invoke-CIPPStandardTransportRuleTemplate {
             Medium Impact
         ADDEDDATE
             2023-12-30
+        EXECUTIVETEXT
+            Deploys standardized email flow rules that automatically manage how emails are processed, filtered, and routed within the organization. These templates ensure consistent email security policies, compliance requirements, and business rules are applied across all email communications.
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"transportRuleTemplate","label":"Select Transport Rule Template","api":{"url":"/api/ListTransportRulesTemplates","labelField":"name","valueField":"GUID","queryKey":"ListTransportRulesTemplates"}}
         UPDATECOMMENTBLOCK

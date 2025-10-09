@@ -13,8 +13,10 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.6)"
             "CustomerLockBoxEnabled"
+        EXECUTIVETEXT
+            Requires explicit organizational approval before Microsoft support staff can access company data for service operations. This provides an additional layer of data protection and ensures the organization maintains control over who can access sensitive business information, even during technical support scenarios.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

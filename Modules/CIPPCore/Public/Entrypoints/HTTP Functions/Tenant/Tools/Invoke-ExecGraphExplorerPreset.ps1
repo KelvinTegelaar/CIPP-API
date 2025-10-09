@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecGraphExplorerPreset {
     <#
     .FUNCTIONALITY
@@ -9,10 +7,8 @@ function Invoke-ExecGraphExplorerPreset {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
     $Action = $Request.Body.action ?? ''
@@ -44,7 +40,7 @@ function Invoke-ExecGraphExplorerPreset {
     if (!$Request.Body.preset.name -and $Action -ne 'Delete') {
         $Message = 'Error: Preset name is required'
         $StatusCode = [HttpStatusCode]::BadRequest
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = $StatusCode
                 Body       = @{
                     Results = @(@{
@@ -59,7 +55,7 @@ function Invoke-ExecGraphExplorerPreset {
     if (!$Request.Body.preset.endpoint -and $Action -ne 'Delete') {
         $Message = 'Error: Preset endpoint is required'
         $StatusCode = [HttpStatusCode]::BadRequest
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = $StatusCode
                 Body       = @{
                     Results = @(@{
@@ -110,8 +106,7 @@ function Invoke-ExecGraphExplorerPreset {
         $Message = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{
                 Results = @(@{

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddAutopilotConfig {
     <#
     .FUNCTIONALITY
@@ -9,16 +7,15 @@ function Invoke-AddAutopilotConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Input bindings are passed in via param block.
     $Tenants = $Request.Body.selectedTenants.value
     $Profbod = [pscustomobject]$Request.Body
     $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
     $DeploymentMode = if ($Profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
+
+    # If deployment mode is shared, disable white glove (pre-provisioning) as it's not supported
+    $AllowWhiteGlove = if ($DeploymentMode -eq 'shared') { $false } else { $Profbod.allowWhiteGlove }
+
     $profileParams = @{
         DisplayName        = $Request.Body.DisplayName
         Description        = $Request.Body.Description
@@ -26,7 +23,7 @@ function Invoke-AddAutopilotConfig {
         DeploymentMode     = $DeploymentMode
         AssignTo           = $Request.Body.Assignto
         DeviceNameTemplate = $Profbod.DeviceNameTemplate
-        AllowWhiteGlove    = $Profbod.allowWhiteGlove
+        AllowWhiteGlove    = $AllowWhiteGlove
         CollectHash        = $Profbod.CollectHash
         HideChangeAccount  = $Profbod.HideChangeAccount
         HidePrivacy        = $Profbod.HidePrivacy
@@ -39,8 +36,7 @@ function Invoke-AddAutopilotConfig {
         Set-CIPPDefaultAPDeploymentProfile @profileParams
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = $Results }
         })

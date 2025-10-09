@@ -13,6 +13,8 @@ function Invoke-CIPPStandarddisableMacSync {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Prevents Mac computers from synchronizing files with OneDrive, typically implemented for security or compliance reasons in Windows-centric environments. This restriction helps maintain standardized device management while potentially limiting collaboration for Mac users.
         ADDEDCOMPONENT
         IMPACT
             High Impact

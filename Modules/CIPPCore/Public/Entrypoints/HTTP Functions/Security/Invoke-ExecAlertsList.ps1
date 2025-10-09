@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecAlertsList {
     <#
     .FUNCTIONALITY
@@ -9,12 +7,6 @@ function Invoke-ExecAlertsList {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     function New-FlatArray ([Array]$arr) {
         $arr | ForEach-Object {
             if ($_ -is 'Array') {
@@ -143,7 +135,7 @@ function Invoke-ExecAlertsList {
             Metadata = $Metadata
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

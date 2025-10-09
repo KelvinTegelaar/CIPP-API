@@ -12,7 +12,7 @@ function Invoke-ExecAuditLogSearch {
     $Headers = $Request.Headers
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     switch ($Action) {
         'ProcessLogs' {
@@ -21,7 +21,7 @@ function Invoke-ExecAuditLogSearch {
             $SearchId = $Request.Query.SearchId ?? $Request.Body.SearchId
             $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
             if (!$SearchId) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'SearchId is required'
                     })
@@ -51,7 +51,7 @@ function Invoke-ExecAuditLogSearch {
 
             Write-LogMessage -headers $Headers -API $APIName -message "Queued search for processing: $($Search.displayName)" -Sev 'Info' -tenant $TenantFilter
 
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
                         resultText = "Search '$($Search.displayName)' queued for processing."
@@ -62,14 +62,14 @@ function Invoke-ExecAuditLogSearch {
         default {
             $Query = $Request.Body
             if (!$Query.TenantFilter) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'TenantFilter is required'
                     })
                 return
             }
             if (!$Query.StartTime -or !$Query.EndTime) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'StartTime and EndTime are required'
                     })
@@ -97,7 +97,7 @@ function Invoke-ExecAuditLogSearch {
                 }
             }
             if ($BadProps) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = "Invalid parameters: $($BadProps -join ', ')"
                     })
@@ -124,12 +124,12 @@ function Invoke-ExecAuditLogSearch {
                         state      = 'error'
                     }
                 }
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = $Results
                     })
             } catch {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = $_.Exception.Message
                     })

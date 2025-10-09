@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
@@ -9,12 +7,6 @@ function Invoke-ListCAtemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     Write-Host $Request.query.id
     #Migrating old policies whenever you do a list
     $Table = Get-CippTable -tablename 'templates'
@@ -52,8 +44,7 @@ function Invoke-ListCAtemplates {
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Templates
         })

@@ -13,6 +13,9 @@ function Invoke-CIPPStandardSecurityDefaults {
         CAT
             Entra (AAD) Standards
         TAG
+            "CISA (MS.AAD.11.1v1)"
+        EXECUTIVETEXT
+            Activates Microsoft's baseline security configuration that requires multi-factor authentication and blocks legacy authentication methods. This provides essential security protection for organizations without complex conditional access policies, significantly improving security posture with minimal configuration.
         ADDEDCOMPONENT
         IMPACT
             High Impact
