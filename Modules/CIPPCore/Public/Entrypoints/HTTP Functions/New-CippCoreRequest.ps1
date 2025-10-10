@@ -21,6 +21,9 @@ function New-CippCoreRequest {
     }
 
     if ($PSCmdlet.ShouldProcess("Processing request for $($Request.Params.CIPPEndpoint)")) {
+        # Set script scope variables for Graph API to indicate HTTP request/high priority
+        $script:XMsThrottlePriority = 'high'
+
         if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
             try {
                 $Access = Test-CIPPAccess -Request $Request
