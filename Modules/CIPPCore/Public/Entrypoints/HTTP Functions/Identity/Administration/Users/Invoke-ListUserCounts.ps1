@@ -22,7 +22,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Users'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1"
+                    url    = "/users/`$count"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -30,7 +30,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'LicUsers'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0"
+                    url    = "/users/`$count?`$top=1&`$filter=assignedLicenses/`$count ne 0"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -38,7 +38,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'GAs'
                     method = 'GET'
-                    url    = "/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?`$count=true"
+                    url    = "/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members/`$count"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -46,7 +46,7 @@ Function Invoke-ListUserCounts {
                 @{
                     id     = 'Guests'
                     method = 'GET'
-                    url    = "/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'"
+                    url    = "/users/`$count?`$top=1&`$filter=userType eq 'Guest'"
                     headers = @{
                         'ConsistencyLevel' = 'eventual'
                     }
@@ -54,16 +54,16 @@ Function Invoke-ListUserCounts {
             )
 
             # Execute bulk request
-            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
+            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -noPaginateIds @('LicUsers') -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
 
             # Check if any requests failed
             $FailedRequests = $BulkResults | Where-Object { $_.status -ne 200 }
-            
+
             if ($FailedRequests) {
                 # If any requests failed, return an error response
                 $FailedIds = ($FailedRequests | ForEach-Object { $_.id }) -join ', '
                 $ErrorMessage = "Failed to retrieve counts for: $FailedIds"
-                
+
                 return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{
@@ -75,13 +75,13 @@ Function Invoke-ListUserCounts {
 
             # All requests succeeded, extract the counts
             $BulkResults | ForEach-Object {
-                $Count = $_.body.'@odata.count'
+                $UsersCount = $_.body
 
                 switch ($_.id) {
-                    'Users' { $Users = $Count }
-                    'LicUsers' { $LicUsers = $Count }
-                    'GAs' { $GAs = $Count }
-                    'Guests' { $Guests = $Count }
+                    'Users' { $Users = $UsersCount }
+                    'LicUsers' { $LicUsers = $UsersCount }
+                    'GAs' { $GAs = $UsersCount }
+                    'Guests' { $Guests = $UsersCount }
                 }
             }
 

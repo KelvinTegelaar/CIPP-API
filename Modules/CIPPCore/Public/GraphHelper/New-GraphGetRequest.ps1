@@ -36,6 +36,11 @@ function New-GraphGetRequest {
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
         }
+
+        if ($script:XMsThrottlePriority) {
+            $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
+        }
+
         $nextURL = $uri
         if ($extraHeaders) {
             foreach ($key in $extraHeaders.Keys) {
@@ -68,15 +73,14 @@ function New-GraphGetRequest {
                         Headers     = $headers
                         ContentType = 'application/json; charset=utf-8'
                     }
-                    if ($IncludeResponseHeaders) {
-                        $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
-                    }
 
                     if ($ReturnRawResponse) {
                         $GraphRequest.SkipHttpErrorCheck = $true
                         $Data = Invoke-WebRequest @GraphRequest
                     } else {
+                        $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-RestMethod @GraphRequest)
+                        $script:LastGraphResponseHeaders = $ResponseHeaders
                     }
 
                     # If we reach here, the request was successful
