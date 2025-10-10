@@ -15,9 +15,10 @@ Function Invoke-ExecOneDriveShortCut {
     $Username = $Request.Body.username
     $UserId = $Request.Body.userid
     $URL = $Request.Body.siteUrl.value
+    $LibraryId = $Request.Body.libraryId.value
 
     Try {
-        $Result = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -Headers $Headers
+        $Result = New-CIPPOneDriveShortCut -Username $Username -UserId $UserId -TenantFilter $TenantFilter -URL $URL -LibraryId $LibraryId -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
