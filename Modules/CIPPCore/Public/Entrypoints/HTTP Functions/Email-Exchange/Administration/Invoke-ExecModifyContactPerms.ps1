@@ -11,32 +11,37 @@ function Invoke-ExecModifyContactPerms {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
+    # UPN of the mailbox to modify contact permissions for
     $Username = $Request.Body.userID
+
     $TenantFilter = $Request.Body.tenantFilter
     $Permissions = $Request.Body.permissions
 
     Write-LogMessage -headers $Headers -API $APIName -message "Processing request for user: $Username, tenant: $TenantFilter" -Sev 'Debug'
 
-    if ($null -eq $Username) {
-        Write-LogMessage -headers $Headers -API $APIName -message 'Username is null' -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = @('Username is required') }
+    if ([string]::IsNullOrWhiteSpace($Username)) {
+        Write-LogMessage -headers $Headers -API $APIName -message 'Username is null or whitespace' -Sev 'Error'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
-                Body       = $Body
+                Body       = @{'Results' = @('Username is required') }
             })
         return
     }
 
     try {
-        $UserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $TenantFilter).id
-        Write-LogMessage -headers $Headers -API $APIName -message "Retrieved user ID: $UserId" -Sev 'Debug'
+        try {
+            $UserId = [guid]$Username
+        } catch {
+            # If not a GUID, assume it's a UPN and look up the ID via Graph
+            $UserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $TenantFilter).id
+            Write-LogMessage -headers $Headers -API $APIName -message "Retrieved user ID: $UserId" -Sev 'Debug'
+        }
     } catch {
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to get user ID: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = @("Failed to get user ID: $($_.Exception.Message)") }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to get user ID: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
-                Body       = $Body
+                Body       = @{'Results' = @("Failed to get user ID: $($ErrorMessage.NormalizedError)") }
             })
         return
     }
@@ -90,24 +95,23 @@ function Invoke-ExecModifyContactPerms {
                 # Write-Host "Request params: $($Params | ConvertTo-Json)"
                 $Result = Set-CIPPContactPermission @Params
 
-                $null = $Results.Add($Result)
+                $Results.Add($Result)
             } catch {
                 $HasErrors = $true
-                $null = $Results.Add("$($_.Exception.Message)")
+                $Results.Add("$($_.Exception.Message)")
             }
         }
     }
 
     if ($Results.Count -eq 0) {
         Write-LogMessage -headers $Headers -API $APIName -message 'No results were generated from the operation' -Sev 'Warning'
-        $null = $Results.Add('No results were generated from the operation. Please check the logs for more details.')
+        $Results.Add('No results were generated from the operation. Please check the logs for more details.')
         $HasErrors = $true
     }
 
-    $Body = [pscustomobject]@{'Results' = @($Results) }
 
     return ([HttpResponseContext]@{
             StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
-            Body       = $Body
+            Body       = @{'Results' = @($Results) }
         })
 }
