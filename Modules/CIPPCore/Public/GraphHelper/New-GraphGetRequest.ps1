@@ -36,6 +36,11 @@ function New-GraphGetRequest {
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
         }
+
+        if ($script:XMsThrottlePriority) {
+            $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
+        }
+
         $nextURL = $uri
         if ($extraHeaders) {
             foreach ($key in $extraHeaders.Keys) {
