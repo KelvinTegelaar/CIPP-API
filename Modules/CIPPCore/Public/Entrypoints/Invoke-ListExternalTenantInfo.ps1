@@ -1,4 +1,4 @@
-Function Invoke-ListExternalTenantInfo {
+function Invoke-ListExternalTenantInfo {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -9,7 +9,7 @@ Function Invoke-ListExternalTenantInfo {
     param($Request, $TriggerMetadata)
     $HttpResponse = [HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = "Default response, you should never see this"
+        Body       = 'Default response, you should never see this'
     }
 
     try {
@@ -31,12 +31,12 @@ Function Invoke-ListExternalTenantInfo {
             }
         } else {
             $HttpResponse.StatusCode = [HttpStatusCode]::BadRequest
-            $HttpResponse.Body = "Tenant parameter is required"
+            $HttpResponse.Body = 'Tenant parameter is required'
         }
     } catch {
         $HttpResponse.StatusCode = [HttpStatusCode]::InternalServerError
         $HttpResponse.Body = "Something went wrong while trying to get tenant info for tenant $($Tenant): $($_.Exception.Message)"
     }
 
-    return $1
+    return [HttpResponseContext]$HttpResponse
 }

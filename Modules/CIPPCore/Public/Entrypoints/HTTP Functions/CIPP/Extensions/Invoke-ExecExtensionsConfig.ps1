@@ -1,4 +1,4 @@
-Function Invoke-ExecExtensionsConfig {
+function Invoke-ExecExtensionsConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,6 +25,14 @@ Function Invoke-ExecExtensionsConfig {
             if ($AllowedNinjaHostnames -notcontains $SetNinjaHostname) {
                 "Error: NinjaOne URL is not allowed. Allowed hostnames are: $($AllowedNinjaHostnames -join ', ')"
             }
+        }
+
+        if ($Body.Hudu.NextSync) {
+            #parse unixtime for addedtext
+            $Timestamp = [datetime]::UnixEpoch.AddSeconds([int]$Body.Hudu.NextSync).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            Register-CIPPExtensionScheduledTasks -Reschedule -NextSync $Body.Hudu.NextSync -Extensions 'Hudu'
+            $AddedText = " Next sync will be at $Timestamp."
+            $Body.Hudu.NextSync = ''
         }
 
         $Table = Get-CIPPTable -TableName Extensionsconfig
