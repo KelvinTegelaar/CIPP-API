@@ -124,6 +124,11 @@ function Invoke-ListGraphRequest {
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
+
+        if ($script:LastGraphResponseHeaders) {
+            $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        }
+
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
             if (![string]::IsNullOrEmpty($Results.nextLink) -and $Request.Query.TenantFilter -ne 'AllTenants') {
                 Write-Host "NextLink: $($Results.nextLink | Where-Object { $_ } | Select-Object -Last 1)"

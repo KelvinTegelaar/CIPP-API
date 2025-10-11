@@ -41,6 +41,12 @@ function Import-CommunityTemplate {
                     $excludedTenants = $ExistingJSON.excludedTenants
                     $NewJSON.tenantFilter = $tenantFilter
                     $NewJSON.excludedTenants = $excludedTenants
+
+                    # Extract package tag from existing template
+                    $PackageTag = $Existing.Package
+                    if ($PackageTag) {
+                        $Template | Add-Member -MemberType NoteProperty -Name Package -Value $PackageTag -Force
+                    }
                 }
             }
 
