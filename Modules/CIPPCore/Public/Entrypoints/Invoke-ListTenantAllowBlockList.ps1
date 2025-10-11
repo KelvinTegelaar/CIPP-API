@@ -1,4 +1,4 @@
-Function Invoke-ListTenantAllowBlockList {
+function Invoke-ListTenantAllowBlockList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,7 +25,7 @@ Function Invoke-ListTenantAllowBlockList {
         $Results = $ErrorMessage
     }
     return [HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        }
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 }
