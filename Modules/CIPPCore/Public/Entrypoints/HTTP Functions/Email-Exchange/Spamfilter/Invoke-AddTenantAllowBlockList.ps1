@@ -12,7 +12,15 @@ function Invoke-AddTenantAllowBlockList {
     $Headers = $Request.Headers
 
     $BlockListObject = $Request.Body
-    if ($Request.Body.tenantID -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = @($Request.body.tenantID) }
+    $TenantID = $Request.Body.tenantID.value ?? $Request.Body.tenantID
+
+    if ($TenantID -eq 'AllTenants') {
+        $Tenants = (Get-Tenants).defaultDomainName
+    } elseif ($TenantID -is [array]) {
+        $Tenants = $TenantID
+    } else {
+        $Tenants = @($TenantID)
+    }
     $Results = [System.Collections.Generic.List[string]]::new()
     $Entries = @()
     if ($BlockListObject.entries -is [array]) {
