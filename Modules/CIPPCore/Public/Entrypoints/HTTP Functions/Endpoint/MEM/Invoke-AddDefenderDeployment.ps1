@@ -228,22 +228,7 @@ function Invoke-AddDefenderDeployment {
                             }
                         }
                     }
-                    { $_.Telemetry } {
-                        @{
-                            '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
-                            settingInstance = @{
-                                '@odata.type'                    = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'
-                                settingDefinitionId              = 'device_vendor_msft_windowsadvancedthreatprotection_configuration_telemetryreportingfrequency'
-                                choiceSettingValue               = @{
-                                    settingValueTemplateReference = @{settingValueTemplateId = '350b0bea-b67b-43d4-9a04-c796edb961fd' }
-                                    '@odata.type'                 = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'
-                                    'value'                       = 'device_vendor_msft_windowsadvancedthreatprotection_configuration_telemetryreportingfrequency_2'
-                                }
-                                settingInstanceTemplateReference = @{settingInstanceTemplateId = '03de6095-07c4-4f35-be38-c1cd3bae4484' }
-                            }
-                        }
 
-                    }
                     { $_.Config } {
                         @{
                             '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
@@ -279,10 +264,11 @@ function Invoke-AddDefenderDeployment {
                         "$($tenant): EDR Policy already exists. Skipping"
                     } else {
                         $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
-                        if ($ASR -and $ASR.AssignTo -ne 'none') {
-                            $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                        # Assign if needed
+                        if ($EDR.AssignTo -and $EDR.AssignTo -ne 'none') {
+                            $AssignBody = if ($EDR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($EDR.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenant) -message "Assigned EDR policy $($DisplayName) to $($ASR.AssignTo)" -Sev 'Info'
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $($tenant) -message "Assigned EDR policy $($DisplayName) to $($EDR.AssignTo)" -Sev 'Info'
                         }
                         "$($tenant): Successfully added EDR Settings"
                     }

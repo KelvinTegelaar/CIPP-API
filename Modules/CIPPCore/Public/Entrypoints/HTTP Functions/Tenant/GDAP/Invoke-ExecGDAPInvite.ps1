@@ -93,10 +93,10 @@ function Invoke-ExecGDAPInvite {
                             'InviteUrl'     = $InviteUrl
                             'OnboardingUrl' = $OnboardingUrl
                             'RoleMappings'  = [string](@($RoleMappings) | ConvertTo-Json -Depth 10 -Compress)
-                            'Technician'    = $Technician
+                            'Technician'    = [string]$Technician
                         }
 
-                        if ($Reference) { $InviteEntity['Reference'] = $Reference }
+                        if ($Reference) { $InviteEntity['Reference'] = [string]$Reference }
 
                         Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
 
@@ -125,7 +125,7 @@ function Invoke-ExecGDAPInvite {
                 Invite  = $InviteEntity
             }
         }
-        'Update'{
+        'Update' {
             $Invite = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'invite' and RowKey eq '$InviteId'"
             if ($Invite) {
 

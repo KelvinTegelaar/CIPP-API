@@ -95,10 +95,14 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
             }
         }
         $Tenant.LastGraphError = if ( $_.ErrorDetails.Message) {
-            $msg = $_.ErrorDetails.Message | ConvertFrom-Json
-            "$($msg.error):$($msg.error_description)"
+            if (Test-Json $_.ErrorDetails.Message -ErrorAction SilentlyContinue) {
+                $msg = $_.ErrorDetails.Message | ConvertFrom-Json
+                "$($msg.error):$($msg.error_description)"
+            } else {
+                "$($_.ErrorDetails.Message)"
+            }
         } else {
-            $_.Exception.message
+            $_.Exception.Message
         }
         $Tenant.GraphErrorCount++
 

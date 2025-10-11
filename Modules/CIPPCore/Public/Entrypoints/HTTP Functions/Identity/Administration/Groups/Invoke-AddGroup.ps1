@@ -10,7 +10,6 @@ function Invoke-AddGroup {
 
     $APIName = $Request.Params.CIPPEndpoint
     $SelectedTenants = if ('AllTenants' -in $SelectedTenants) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
 
     $GroupObject = $Request.body
@@ -28,7 +27,6 @@ function Invoke-AddGroup {
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Group creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"
             $StatusCode = [HttpStatusCode]::InternalServerError
         }

@@ -13,7 +13,7 @@
       "maxConcurrentActivityFunctions": 5,
       "maxConcurrentOrchestratorFunctions": 2,
       "tracing": {
-        "distributedTracingEnabled": true,
+        "distributedTracingEnabled": false,
         "version": "V2"
       }
     }
