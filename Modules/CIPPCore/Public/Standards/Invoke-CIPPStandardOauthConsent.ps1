@@ -13,7 +13,14 @@ function Invoke-CIPPStandardOauthConsent {
         CAT
             Entra (AAD) Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.5.1)"
+            "CISA (MS.AAD.4.2v1)"
+            "EIDSCA.AP08"
+            "EIDSCA.AP09"
+            "Essential 8 (1175)"
+            "NIST CSF 2.0 (PR.AA-05)"
+        EXECUTIVETEXT
+            Requires administrative approval before employees can grant applications access to company data, preventing unauthorized data sharing and potential security breaches. This protects against malicious applications while allowing approved business tools to function normally.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated","required":false}
         IMPACT

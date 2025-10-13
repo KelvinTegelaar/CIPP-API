@@ -13,7 +13,8 @@ function Get-CIPPTextReplacement {
     #>
     param (
         [string]$TenantFilter,
-        $Text
+        $Text,
+        [switch]$EscapeForJson
     )
     if ($Text -isnot [string]) {
         return $Text
@@ -54,13 +55,25 @@ function Get-CIPPTextReplacement {
     $Vars = @{}
     if ($GlobalMap) {
         foreach ($Var in $GlobalMap) {
+            if ($EscapeForJson.IsPresent) {
+                # Escape quotes for JSON if not already escaped
+                $Var.Value = $Var.Value -replace '(?<!\\)"', '\"'
+            }
             $Vars[$Var.RowKey] = $Var.Value
         }
     }
     # Tenant Specific Variables
     $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
+    # If no results found by customerId, try by defaultDomainName
+    if (!$ReplaceMap) {
+        $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$($Tenant.defaultDomainName)'"
+    }
     if ($ReplaceMap) {
         foreach ($Var in $ReplaceMap) {
+            if ($EscapeForJson.IsPresent) {
+                # Escape quotes for JSON if not already escaped
+                $Var.Value = $Var.Value -replace '(?<!\\)"', '\"'
+            }
             $Vars[$Var.RowKey] = $Var.Value
         }
     }

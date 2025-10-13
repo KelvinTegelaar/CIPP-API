@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-AddUser {
+function Invoke-AddUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,14 +10,15 @@ Function Invoke-AddUser {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $UserObj = $Request.Body
 
     if ($UserObj.Scheduled.Enabled) {
+        $Username = $UserObj.username ?? $UserObj.mailNickname
         $TaskBody = [pscustomobject]@{
             TenantFilter  = $UserObj.tenantFilter
-            Name          = "New user creation: $($UserObj.mailNickname)@$($UserObj.PrimDomain.value)"
+            Name          = "New user creation: $($Username)@$($UserObj.PrimDomain.value)"
             Command       = @{
                 value = 'New-CIPPUserTask'
                 label = 'New-CIPPUserTask'
@@ -52,10 +51,10 @@ Function Invoke-AddUser {
                 'Success' = $CreationResults.CopyFrom.Success
                 'Error'   = $CreationResults.CopyFrom.Error
             }
+            'User'     = $CreationResults.User
         }
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         CAT
             Intune Standards
         TAG
+        EXECUTIVETEXT
+            Configures how the system treats devices that don't have specific compliance policies and sets how often devices must check in to maintain their compliance status. This ensures proper security oversight of all corporate devices and maintains current compliance information.
         ADDEDCOMPONENT
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.IntuneComplianceSettings.secureByDefault","label":"Mark devices with no compliance policy as","options":[{"label":"Compliant","value":"false"},{"label":"Non-Compliant","value":"true"}]}
             {"type":"number","name":"standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays","label":"Compliance status validity period (days)"}

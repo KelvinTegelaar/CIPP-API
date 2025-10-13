@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecCopyForSent {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-ExecCopyForSent {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter ?? $Request.Body.TenantFilter
@@ -28,8 +26,7 @@ Function Invoke-ExecCopyForSent {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Result }
         })

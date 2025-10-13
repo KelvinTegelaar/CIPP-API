@@ -13,6 +13,8 @@ function Invoke-CIPPStandardExternalMFATrusted {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Allows external partners and vendors to use their own organization's multi-factor authentication when accessing company resources, streamlining collaboration while maintaining security standards. This reduces friction for external users while ensuring they still meet authentication requirements.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ExternalMFATrusted.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT

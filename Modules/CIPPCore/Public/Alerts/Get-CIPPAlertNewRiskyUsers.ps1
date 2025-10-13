@@ -4,7 +4,7 @@ function Get-CIPPAlertNewRiskyUsers {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $TenantFilter
@@ -13,17 +13,17 @@ function Get-CIPPAlertNewRiskyUsers {
     try {
         # Check if tenant has P2 capabilities
         $Capabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
-        if (-not $Capabilities.AADPremiumService) {
+        if (-not ($Capabilities.AAD_PREMIUM_P2 -eq $true)) {
             Write-AlertMessage -tenant $($TenantFilter) -message 'Tenant does not have Azure AD Premium P2 licensing required for risky users detection'
             return
         }
 
         $Filter = "PartitionKey eq 'RiskyUsersDelta' and RowKey eq '{0}'" -f $TenantFilter
         $RiskyUsersDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
-        
+
         # Get current risky users with more detailed information
         $NewDelta = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyUsers' -tenantid $TenantFilter) | Select-Object userPrincipalName, riskLevel, riskState, riskDetail, riskLastUpdatedDateTime, isProcessing, history
-        
+
         $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
         $DeltaEntity = @{
             PartitionKey = 'RiskyUsersDelta'
@@ -33,17 +33,16 @@ function Get-CIPPAlertNewRiskyUsers {
         Add-CIPPAzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
 
         if ($RiskyUsersDelta) {
-            $AlertData = $NewDelta | Where-Object { 
-                $_.userPrincipalName -notin $RiskyUsersDelta.userPrincipalName 
+            $AlertData = $NewDelta | Where-Object {
+                $_.userPrincipalName -notin $RiskyUsersDelta.userPrincipalName
             } | ForEach-Object {
                 $riskHistory = if ($_.history) {
                     $latestHistory = $_.history | Sort-Object -Property riskLastUpdatedDateTime -Descending | Select-Object -First 1
                     "Previous Risk Level: $($latestHistory.riskLevel), Last Updated: $($latestHistory.riskLastUpdatedDateTime)"
-                }
-                else {
+                } else {
                     'No previous risk history'
                 }
-                
+
                 # Map risk level to severity
                 $severity = switch ($_.riskLevel) {
                     'high' { 'Critical' }
@@ -51,7 +50,7 @@ function Get-CIPPAlertNewRiskyUsers {
                     'low' { 'Info' }
                     default { 'Info' }
                 }
-                
+
                 @{
                     Message = "New risky user detected: $($_.userPrincipalName)"
                     Details = @{
@@ -65,13 +64,12 @@ function Get-CIPPAlertNewRiskyUsers {
                     }
                 }
             }
-            
+
             if ($AlertData) {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
         }
-    }
-    catch {
+    } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Could not get risky users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }

@@ -13,6 +13,9 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         CAT
             Exchange Standards
         TAG
+            "CIS M365 5.0 (6.4.1)"
+        EXECUTIVETEXT
+            Automatically and permanently removes deleted emails after a specified number of days, helping manage storage costs and ensuring compliance with data retention policies. This prevents accumulation of unnecessary deleted items while maintaining a reasonable recovery window for accidentally deleted emails.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.RetentionPolicyTag.AgeLimitForRetention","label":"Retention Days","required":true}
         IMPACT

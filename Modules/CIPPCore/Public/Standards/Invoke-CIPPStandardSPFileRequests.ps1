@@ -7,15 +7,17 @@ function Invoke-CIPPStandardSPFileRequests {
     .SYNOPSIS
         (Label) Set SharePoint and OneDrive File Requests
     .DESCRIPTION
-        (Helptext) Enables or disables File Requests for SharePoint and OneDrive, allowing users to create secure upload-only links. Optionally sets the maximum number of days for the link to remain active.
-        (DocsDescription) File Requests allow users to create secure upload-only share links where uploads are hidden from other people using the link. This creates a secure and private way for people to upload files to a folder. This standard enables or disables this feature and optionally configures link expiration settings.
+        (Helptext) Enables or disables File Requests for SharePoint and OneDrive, allowing users to create secure upload-only links. Optionally sets the maximum number of days for the link to remain active before expiring.
+        (DocsDescription) File Requests allow users to create secure upload-only share links where uploads are hidden from other people using the link. This creates a secure and private way for people to upload files to a folder. This feature is not enabled by default on new tenants and requires PowerShell configuration. This standard enables or disables this feature and optionally configures link expiration settings for both SharePoint and OneDrive.
     .NOTES
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Enables secure file upload functionality that allows external users to submit files directly to company folders without seeing other submissions or folder contents. This provides a professional and secure way to collect documents from clients, vendors, and partners while maintaining data privacy and security.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.SPFileRequests.state","label":"Enable File Requests"}
-            {"type":"number","name":"standards.SPFileRequests.expirationDays","label":"Link Expiration Days (Optional - 1-730)","required":false}
+            {"type":"number","name":"standards.SPFileRequests.expirationDays","label":"Link Expiration 1-730 Days (Optional)","required":false}
         IMPACT
             Medium Impact
         ADDEDDATE

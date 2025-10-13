@@ -11,21 +11,21 @@ function Get-CIPPHttpFunctions {
             if ($Help.Functionality -notmatch 'Entrypoint') { continue }
             if ($Help.Role -eq 'Public') { continue }
             [PSCustomObject]@{
-                Function = $Function.Name
-                Role     = $Help.Role
+                Function    = $Function.Name
+                Role        = $Help.Role
+                Description = $Help.Description
             }
         }
 
         if ($ByRole.IsPresent -or $ByRoleGroup.IsPresent) {
-            $Results = $Results | Group-Object -Property Role | Select-Object -Property @{l = 'Permission'; e = { $_.Name -eq '' ? 'None' : $_.Name } }, Count, @{l = 'Functions'; e = { $_.Group.Function -replace 'Invoke-' } } | Sort-Object -Property Permission
-
+            $Results = $Results | Group-Object -Property Role | Select-Object -Property @{l = 'Permission'; e = { $_.Name -eq '' ? 'None' : $_.Name } }, Count, @{l = 'Functions'; e = { $_.Group | Select-Object @{l = 'Name'; e = { $_.Function -replace 'Invoke-' } }, Description } } | Sort-Object -Property Permission
             if ($ByRoleGroup.IsPresent) {
                 $RoleGroup = @{}
                 foreach ($Permission in $Results) {
                     $PermSplit = $Permission.Permission -split '\.'
                     if ($PermSplit.Count -ne 3) { continue }
-                    if ($RoleGroup[$PermSplit[0]] -eq $null) { $RoleGroup[$PermSplit[0]] = @{} }
-                    if ($RoleGroup[$PermSplit[0]][$PermSplit[1]] -eq $null) { $RoleGroup[$PermSplit[0]][$PermSplit[1]] = @{} }
+                    if ($null -eq $RoleGroup[$PermSplit[0]]) { $RoleGroup[$PermSplit[0]] = @{} }
+                    if ($null -eq $RoleGroup[$PermSplit[0]][$PermSplit[1]]) { $RoleGroup[$PermSplit[0]][$PermSplit[1]] = @{} }
                     $RoleGroup[$PermSplit[0]][$PermSplit[1]][$PermSplit[2]] = @($Permission.Functions)
                 }
                 $Results = $RoleGroup

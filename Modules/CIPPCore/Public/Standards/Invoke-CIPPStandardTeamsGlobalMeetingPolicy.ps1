@@ -13,6 +13,14 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         CAT
             Teams Standards
         TAG
+            "CIS M365 5.0 (8.5.1)"
+            "CIS M365 5.0 (8.5.2)"
+            "CIS M365 5.0 (8.5.3)"
+            "CIS M365 5.0 (8.5.4)"
+            "CIS M365 5.0 (8.5.5)"
+            "CIS M365 5.0 (8.5.6)"
+        EXECUTIVETEXT
+            Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.
         ADDEDCOMPONENT
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"EveryoneUserOverride","value":"EveryoneUserOverride"},{"label":"EveryoneInCompanyUserOverride","value":"EveryoneInCompanyUserOverride"},{"label":"EveryoneInSameAndFederatedCompanyUserOverride","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"OrganizerOnlyUserOverride","value":"OrganizerOnlyUserOverride"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}

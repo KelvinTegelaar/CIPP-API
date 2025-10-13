@@ -13,9 +13,11 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.10)"
             "Security"
             "PhishingProtection"
+        EXECUTIVETEXT
+            Implements advanced email security for Microsoft's default domain names (onmicrosoft.com) to prevent criminals from impersonating your organization. This blocks fraudulent emails that could damage your company's reputation and protects partners and customers from phishing attacks using your domain names.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":true,"required":false,"placeholder":"v=DMARC1; p=reject; (recommended)","label":"Value","name":"standards.AddDMARCToMOERA.RecordValue","options":[{"label":"v=DMARC1; p=reject; (recommended)","value":"v=DMARC1; p=reject;"}]}
         IMPACT
@@ -40,12 +42,12 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         HostName = '_dmarc'
         TtlValue = 3600
         Type     = 'TXT'
-        Value    = $Settings.RecordValue.Value ?? "v=DMARC1; p=reject;"
+        Value    = $Settings.RecordValue.Value ?? 'v=DMARC1; p=reject;'
     }
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
-        $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property Name -like "*.onmicrosoft.com"
+        $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property Name -Like '*.onmicrosoft.com'
 
         $CurrentInfo = $Domains | ForEach-Object {
             # Get current DNS records that matches _dmarc hostname and TXT type
@@ -54,9 +56,9 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             if ($CurrentRecords.count -eq 0) {
                 #record not found, return a model with Match set to false
                 [PSCustomObject]@{
-                    DomainName      = $_.Name
-                    Match           = $false
-                    CurrentRecord   = $null
+                    DomainName    = $_.Name
+                    Match         = $false
+                    CurrentRecord = $null
                 }
             } else {
                 foreach ($CurrentRecord in $CurrentRecords) {
@@ -71,15 +73,15 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
                     # Compare the current record with the expected record model
                     if (!(Compare-Object -ReferenceObject $RecordModel -DifferenceObject $CurrentRecordModel -Property HostName, TtlValue, Type, Value)) {
                         [PSCustomObject]@{
-                            DomainName      = $_.Name
-                            Match           = $true
-                            CurrentRecord   = $CurrentRecord
+                            DomainName    = $_.Name
+                            Match         = $true
+                            CurrentRecord = $CurrentRecord
                         }
                     } else {
                         [PSCustomObject]@{
-                            DomainName      = $_.Name
-                            Match           = $false
-                            CurrentRecord   = $CurrentRecord
+                            DomainName    = $_.Name
+                            Match         = $false
+                            CurrentRecord = $CurrentRecord
                         }
                     }
                 }
@@ -90,32 +92,29 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     } catch {
         if ($_.Exception.Message -like '*403*') {
             $Message = "AddDMARCToMOERA: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Domain Name Administrator' role: $(Get-NormalizedError -message $_.Exception.message)"
-        }
-        else {
+        } else {
             $Message = "Failed to get dns records for MOERA domains: $(Get-NormalizedError -message $_.Exception.message)"
         }
         Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error
-        throw $Message
+        return $Message
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DMARC record is already set for all MOERA (onmicrosoft.com) domains.' -sev Info
-        }
-        else {
+        } else {
             # Loop through each domain and set the DMARC record, existing misconfigured records and duplicates will be deleted
             foreach ($Domain in ($CurrentInfo | Sort-Object -Property DomainName -Unique)) {
                 try {
-                    foreach ($Record in ($CurrentInfo | Where-Object -Property DomainName -eq $Domain.DomainName)) {
+                    foreach ($Record in ($CurrentInfo | Where-Object -Property DomainName -EQ $Domain.DomainName)) {
                         if ($Record.CurrentRecord) {
-                            New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body ($Record.CurrentRecord | ConvertTo-Json -Compress) -AddedHeaders @{'x-http-method-override' = 'Delete'}
+                            New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body ($Record.CurrentRecord | ConvertTo-Json -Compress) -AddedHeaders @{'x-http-method-override' = 'Delete' }
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted incorrect DMARC record for domain $($Domain.DomainName)" -sev Info
                         }
-                        New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -type "PUT" -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body (@{RecordModel = $RecordModel} | ConvertTo-Json -Compress)
+                        New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -type 'PUT' -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body (@{RecordModel = $RecordModel } | ConvertTo-Json -Compress)
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Set DMARC record for domain $($Domain.DomainName)" -sev Info
                     }
-                }
-                catch {
+                } catch {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DMARC record for domain $($Domain.DomainName): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
                 }
             }
@@ -127,10 +126,10 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DMARC record is already set for all MOERA (onmicrosoft.com) domains.' -sev Info
         } else {
             $UniqueDomains = ($CurrentInfo | Sort-Object -Property DomainName -Unique)
-            $NotSetDomains = @($UniqueDomains | ForEach-Object {if ($_.Match -eq $false -or ($CurrentInfo | Where-Object -Property DomainName -eq $_.DomainName).Count -eq 1) { $_.DomainName } })
+            $NotSetDomains = @($UniqueDomains | ForEach-Object { if ($_.Match -eq $false -or ($CurrentInfo | Where-Object -Property DomainName -EQ $_.DomainName).Count -eq 1) { $_.DomainName } })
             $Message = "DMARC record is not set for $($NotSetDomains.count) of $($UniqueDomains.count) MOERA (onmicrosoft.com) domains."
 
-            Write-StandardsAlert -message $Message -object @{MissingDMARC = ($NotSetDomains -join ', ')} -tenant $tenant -standardName 'AddDMARCToMOERA' -standardId $Settings.standardId
+            Write-StandardsAlert -message $Message -object @{MissingDMARC = ($NotSetDomains -join ', ') } -tenant $tenant -standardName 'AddDMARCToMOERA' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "$Message. Missing for: $($NotSetDomains -join ', ')" -sev Info
         }
     }

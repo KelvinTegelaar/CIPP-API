@@ -13,6 +13,9 @@ function Invoke-CIPPStandardAntiSpamSafeList {
         CAT
             Defender Standards
         TAG
+            "CIS M365 5.0 (2.1.13)"
+        EXECUTIVETEXT
+            Enables Microsoft's pre-approved list of trusted email servers to improve email delivery from legitimate sources while maintaining spam protection. This reduces false positives where legitimate emails might be blocked while still protecting against spam and malicious emails.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.AntiSpamSafeList.EnableSafeList","label":"Enable Safe List"}
         IMPACT

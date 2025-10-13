@@ -13,6 +13,8 @@ function Invoke-CIPPStandardlaps {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Enables Local Administrator Password Solution (LAPS) capability, which automatically manages and rotates local administrator passwords on company computers. This significantly improves security by preventing the use of shared or static administrator passwords that could be exploited by attackers.
         ADDEDCOMPONENT
         IMPACT
             Low Impact

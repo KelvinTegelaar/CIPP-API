@@ -13,7 +13,8 @@ function Invoke-CIPPStandardAutoAddProxy {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+        EXECUTIVETEXT
+            Automatically creates email addresses for employees across all company domains, ensuring they can receive emails sent to any of the organization's domain names. This improves email delivery reliability and maintains consistent communication channels across different business units or brands.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

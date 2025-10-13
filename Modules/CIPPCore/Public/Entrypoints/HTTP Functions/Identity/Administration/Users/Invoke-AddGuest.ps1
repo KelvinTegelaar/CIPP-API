@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-AddGuest {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-AddGuest {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $TenantFilter = $Request.Body.tenantFilter
     $UserObject = $Request.Body
@@ -50,8 +48,7 @@ Function Invoke-AddGuest {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = @($Result) }
         })
