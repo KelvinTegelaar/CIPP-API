@@ -5,7 +5,7 @@ function Invoke-ExecPartnerWebhook {
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>
-    Param($Request, $TriggerMetadata)
+    param($Request, $TriggerMetadata)
     switch ($Request.Query.Action) {
         'ListEventTypes' {
             $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/events'
@@ -72,7 +72,7 @@ function Invoke-ExecPartnerWebhook {
         }
     }
 
-    return @{
+    return [HttpResponseContext]@{
         StatusCode = [System.Net.HttpStatusCode]::OK
         Body       = $Body
     }
