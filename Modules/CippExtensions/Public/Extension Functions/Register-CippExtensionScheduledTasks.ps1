@@ -1,6 +1,8 @@
 function Register-CIPPExtensionScheduledTasks {
     param(
-        [switch]$Reschedule
+        [switch]$Reschedule,
+        [int64]$NextSync = (([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds,
+        [string[]]$Extensions = @('Hudu', 'NinjaOne', 'CustomData')
     )
 
     # get extension configuration and mappings table
@@ -14,7 +16,6 @@ function Register-CIPPExtensionScheduledTasks {
     $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
-    $Extensions = @('Hudu', 'NinjaOne', 'CustomData')
     $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
@@ -69,7 +70,7 @@ function Register-CIPPExtensionScheduledTasks {
                 $MappedTenants.Add($Tenant.defaultDomainName)
                 foreach ($SyncType in $SyncTypes) {
                     $ExistingTask = $ScheduledTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $SyncType }
-                    if (!$ExistingTask -or $Reschedule.IsPresent) {
+                    if (!$ExistingTask) {
                         $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
                         $Task = [pscustomobject]@{
                             Name          = "Extension Sync - $SyncType"
@@ -96,7 +97,7 @@ function Register-CIPPExtensionScheduledTasks {
                 $ExistingPushTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
                 if ((!$ExistingPushTask -or $Reschedule.IsPresent) -and $Extension -ne 'NinjaOne') {
                     # push cached data to extension
-                    $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
+
                     $Task = [pscustomobject]@{
                         Name          = "$Extension Extension Sync"
                         Command       = @{
@@ -108,7 +109,7 @@ function Register-CIPPExtensionScheduledTasks {
                             Extension    = $Extension
                         }
                         Recurrence    = '1d'
-                        ScheduledTime = $in30mins
+                        ScheduledTime = $NextSync
                         TenantFilter  = $Tenant.defaultDomainName
                     }
                     if ($ExistingPushTask) {
