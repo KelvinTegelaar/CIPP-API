@@ -5328,12 +5328,12 @@
     "value": "AllSites.FullControl"
   },
   {
-    "description": "Allows to read the LAPs passwords.",
-    "displayName": "Manage LAPs passwords",
+    "description": "Allows to read the LAPS passwords.",
+    "displayName": "Manage LAPS passwords",
     "id": "280b3b69-0437-44b1-bc20-3b2fca1ee3e9",
     "Origin": "Delegated",
-    "userConsentDescription": "Allows to read the LAPs passwords.",
-    "userConsentDisplayName": "Manage LAPs passwords",
+    "userConsentDescription": "Allows to read the LAPS passwords.",
+    "userConsentDisplayName": "Manage LAPS passwords",
     "value": "DeviceLocalCredential.Read.All"
   },
   {
