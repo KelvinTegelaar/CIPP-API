@@ -184,6 +184,7 @@ function Add-CIPPScheduledTask {
                 AdditionalProperties = [string]$AdditionalProperties
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'
+                AlertComment         = [string]$task.AlertComment
             }
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {
