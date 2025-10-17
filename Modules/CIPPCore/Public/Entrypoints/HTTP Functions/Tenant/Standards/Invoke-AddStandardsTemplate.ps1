@@ -10,7 +10,9 @@ function Invoke-AddStandardsTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-
+    if ($Request.Body.tenantFilter -eq 'tenantFilter') {
+        throw 'Invalid Tenant Selected: Have you left the tenantFilter blank?'
+    }
 
     $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
