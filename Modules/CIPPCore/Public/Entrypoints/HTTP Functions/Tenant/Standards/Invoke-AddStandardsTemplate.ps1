@@ -11,7 +11,7 @@ function Invoke-AddStandardsTemplate {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     if ($Request.Body.tenantFilter -eq 'tenantFilter') {
-        throw 'Invalid Tenant Selected: Have you left the tenantFilter blank?'
+        throw 'Invalid Tenant Selection. A standard must be assigned to at least 1 tenant.'
     }
 
     $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
