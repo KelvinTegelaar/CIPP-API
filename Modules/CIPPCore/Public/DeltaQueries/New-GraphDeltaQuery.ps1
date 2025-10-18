@@ -4,10 +4,15 @@ function New-GraphDeltaQuery {
         Creates a new Graph Delta Query.
     .DESCRIPTION
         This function creates a new Graph Delta Query to track changes in a specified resource.
+        Always returns the full response including the deltaLink for future incremental queries.
     .PARAMETER Resource
         The resource to track changes for (e.g., 'users', 'groups').
     .PARAMETER TenantFilter
         The tenant to filter the query on.
+    .PARAMETER Parameters
+        Additional query parameters (e.g., $select, $filter, $top).
+    .PARAMETER DeltaUrl
+        Use this parameter to continue a delta query with a specific delta or next link.
     #>
     [CmdletBinding(DefaultParameterSetName = 'NewDeltaQuery')]
     param(
@@ -52,11 +57,41 @@ function New-GraphDeltaQuery {
             }
             $GraphQuery.Query = $ParamCollection.ToString()
         }
+        
+        $allResults = [System.Collections.ArrayList]::new()
+        $nextUrl = $GraphQuery.ToString()
+        $deltaLink = $null
 
-        #Write-Information "Creating Delta Query for $Resource with parameters: $($GraphQuery.Query)"
-        $response = New-GraphGetRequest -tenantid $TenantFilter -uri $GraphQuery.ToString() -ReturnRawResponse
-        Write-Information "Delta Query created successfully for $Resource. Response: $($response | ConvertTo-Json -Depth 5)"
-        return $response.Content
+        do {
+            $response = New-GraphGetRequest -tenantid $TenantFilter -uri $nextUrl -ReturnRawResponse
+
+            if ($response.Content) {
+                $content = $response.Content
+                if ($content -is [string]) {
+                    $content = $content | ConvertFrom-Json
+                }
+
+                # Add results from this page
+                if ($content.value) {
+                    $allResults.AddRange($content.value)
+                }
+
+                # Check for next page or delta link
+                $nextUrl = $content.'@odata.nextLink'
+                $deltaLink = $content.'@odata.deltaLink'
+            }
+        } while ($nextUrl -and -not $deltaLink)
+
+        # Return results with delta link for future queries
+        $result = @{
+            value              = $allResults.ToArray()
+            '@odata.deltaLink' = $deltaLink
+        }
+
+        Write-Information "Delta Query completed for $Resource. Total items: $($allResults.Count)"
+
+        # Always return full response with deltaLink
+        return $result
     } catch {
         Write-Error "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
         Write-Warning $_.InvocationInfo.PositionMessage
