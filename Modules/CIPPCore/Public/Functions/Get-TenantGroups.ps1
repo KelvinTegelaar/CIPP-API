@@ -77,10 +77,13 @@ function Get-TenantGroups {
                 $SortedMembers = @()
             }
             $Results.Add([PSCustomObject]@{
-                    Id          = $Group.RowKey
-                    Name        = $Group.Name
-                    Description = $Group.Description
-                    Members     = @($SortedMembers)
+                    Id           = $Group.RowKey
+                    Name         = $Group.Name
+                    Description  = $Group.Description
+                    GroupType    = $Group.GroupType ?? 'static'
+                    RuleLogic    = $Group.RuleLogic ?? 'and'
+                    DynamicRules = $Group.DynamicRules ? ( $(@($Group.DynamicRules | ConvertFrom-Json)) ) : @()
+                    Members      = @($SortedMembers)
                 })
         }
         return $Results | Sort-Object Name
