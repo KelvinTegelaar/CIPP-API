@@ -84,7 +84,7 @@ function Invoke-ListIntuneTemplates {
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = ($Templates | ConvertTo-Json -Depth 100)
+            Body       = ConvertTo-Json -Depth 100 -InputObject @($Templates)
         })
 
 }
