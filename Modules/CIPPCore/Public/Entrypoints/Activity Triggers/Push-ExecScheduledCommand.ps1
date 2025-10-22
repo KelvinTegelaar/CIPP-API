@@ -58,15 +58,8 @@ function Push-ExecScheduledCommand {
                     RowKey        = $task.RowKey
                     TaskState     = 'Planned'
                     ScheduledTime = [string]$nextRunUnixTime
-                    DeltaLink     = [string]($Query.'@odata.deltaLink')
                 }
                 return
-            } else {
-                $null = Update-AzDataTableEntity -Force @Table -Entity @{
-                    PartitionKey = $task.PartitionKey
-                    RowKey       = $task.RowKey
-                    DeltaLink    = [string]($Query.'@odata.deltaLink')
-                }
             }
         }
     } else {
