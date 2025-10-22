@@ -18,6 +18,61 @@ function Push-ExecScheduledCommand {
     # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
 
+    if ($task.Trigger) {
+        # Extract trigger data from the task and process
+        $Trigger = if (Test-Json -Json $task.Trigger) { $task.Trigger | ConvertFrom-Json } else { $task.Trigger }
+        $TriggerType = $Trigger.Type.value ?? $Trigger.Type
+        if ($TriggerType -eq 'DeltaQuery') {
+            $IsTriggerTask = $true
+            $DeltaUrl = Get-DeltaQueryUrl -TenantFilter $Tenant -PartitionKey $task.RowKey
+            $DeltaQuery = @{
+                DeltaUrl     = $DeltaUrl
+                TenantFilter = $Tenant
+                PartitionKey = $task.RowKey
+            }
+            $Query = New-GraphDeltaQuery @DeltaQuery
+
+            $secondsToAdd = switch -Regex ($task.Recurrence) {
+                '(\d+)m$' { [int64]$matches[1] * 60 }
+                '(\d+)h$' { [int64]$matches[1] * 3600 }
+                '(\d+)d$' { [int64]$matches[1] * 86400 }
+                default { 0 }
+            }
+
+            $Minutes = [int]($secondsToAdd / 60)
+
+            $DeltaQueryConditions = @{
+                Query        = $Query
+                Trigger      = $Trigger
+                TenantFilter = $Tenant
+                LastTrigger  = [datetime]::UtcNow.AddMinutes(-$Minutes)
+            }
+            $DeltaResults = Test-DeltaQueryConditions @DeltaQueryConditions
+
+            if (-not $DeltaResults.ConditionsMet) {
+                Write-Information "Delta query conditions not met for tenant $Tenant. Skipping execution."
+                # update interval
+                $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                    PartitionKey  = $task.PartitionKey
+                    RowKey        = $task.RowKey
+                    TaskState     = 'Planned'
+                    ScheduledTime = [string]$nextRunUnixTime
+                    DeltaLink     = [string]($Query.'@odata.deltaLink')
+                }
+                return
+            } else {
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                    PartitionKey = $task.PartitionKey
+                    RowKey       = $task.RowKey
+                    DeltaLink    = [string]($Query.'@odata.deltaLink')
+                }
+            }
+        }
+    } else {
+        $IsTriggerTask = $false
+    }
+
     $null = Update-AzDataTableEntity -Force @Table -Entity @{
         PartitionKey = $task.PartitionKey
         RowKey       = $task.RowKey
@@ -54,18 +109,72 @@ function Push-ExecScheduledCommand {
         Write-Information "Failed to remove parameters: $($_.Exception.Message)"
     }
 
-    Write-Information "Started Task: $($Item.Command) for tenant: $Tenant"
-    try {
-
+    if ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -ne $true) {
+        # iterate through paramters looking for %variables% and replace them with matched data from the delta query
+        # examples would be %id% to be the id of the result
+        # if %triggerdata% is found, pass the entire matched data object
         try {
-            Write-Information "Starting task: $($Item.Command) with parameters: $($commandParameters | ConvertTo-Json)"
-            $results = & $Item.Command @commandParameters
+            foreach ($key in $commandParameters.Keys) {
+                if ($commandParameters[$key] -is [string]) {
+                    if ($commandParameters[$key] -match '^%(.*)%$') {
+                        $variableName = $matches[1]
+                        if ($variableName -eq 'triggerdata') {
+                            Write-Information "Replacing parameter $key with full matched data object."
+                            $commandParameters[$key] = $DeltaResults.MatchedData
+                        } else {
+                            # Replace with array of matched property values
+                            Write-Information "Replacing parameter $key with matched data property '$variableName'."
+                            $commandParameters[$key] = $DeltaResults.MatchedData | Select-Object -ExpandProperty $variableName
+                        }
+                    }
+                }
+            }
         } catch {
-            $results = "Task Failed: $($_.Exception.Message)"
-            $State = 'Failed'
+            Write-Information "Failed to process trigger data parameters: $($_.Exception.Message)"
         }
+    } elseif ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -eq $true) {
+        Write-Information 'This is a trigger task with ExecutePerResource set to true. Iterating through matched data to execute command per resource.'
+        $results = foreach ($dataItem in $DeltaResults.MatchedData) {
+            $individualCommandParameters = $commandParameters.Clone()
+            try {
+                foreach ($key in $individualCommandParameters.Keys) {
+                    if ($individualCommandParameters[$key] -is [string]) {
+                        if ($individualCommandParameters[$key] -match '^%(.*)%$') {
+                            if ($matches[1] -eq 'triggerdata') {
+                                Write-Information "Replacing parameter $key with full matched data object for individual execution."
+                                $individualCommandParameters[$key] = $dataItem
+                            } else {
+                                $variableName = $matches[1]
+                                Write-Information "Replacing parameter $key with matched data property '$variableName' for individual execution."
+                                $individualCommandParameters[$key] = $dataItem.$variableName
+                            }
+                        }
+                    }
+                }
+            } catch {
+                Write-Information "Failed to process trigger data parameters for individual execution: $($_.Exception.Message)"
+            }
+            try {
+                Write-Information "Executing command $($Item.Command) for individual matched data item with parameters: $($individualCommandParameters | ConvertTo-Json -Depth 10)"
+                & $Item.Command @individualCommandParameters
+                Write-Information "Results for individual execution: $($results | ConvertTo-Json -Depth 10)"
+            } catch {
+                Write-Information "Failed to execute command for individual matched data item: $($_.Exception.Message)"
+            }
+        }
+    }
 
-        Write-Information 'Ran the command. Processing results'
+    try {
+        if (-not $Trigger.ExecutePerResource) {
+            try {
+                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json)"
+                $results = & $Item.Command @commandParameters
+            } catch {
+                $results = "Task Failed: $($_.Exception.Message)"
+                $State = 'Failed'
+            }
+            Write-Information 'Ran the command. Processing results'
+        }
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
@@ -174,7 +283,7 @@ function Push-ExecScheduledCommand {
     Write-Information 'Sent the results to the target. Updating the task state.'
 
     try {
-        if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence)) {
+        if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once') {
             Write-Information 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey = $task.PartitionKey
