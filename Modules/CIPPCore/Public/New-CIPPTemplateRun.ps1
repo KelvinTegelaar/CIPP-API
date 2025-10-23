@@ -41,7 +41,7 @@ function New-CIPPTemplateRun {
             }
             foreach ($File in $Files) {
                 if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
-                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) } | Select-Object -First 1
+                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) -and ![string]::IsNullOrEmpty($_.SHA) } | Select-Object -First 1
 
                 $UpdateNeeded = $false
                 if ($ExistingTemplate -and $ExistingTemplate.SHA -ne $File.sha) {
