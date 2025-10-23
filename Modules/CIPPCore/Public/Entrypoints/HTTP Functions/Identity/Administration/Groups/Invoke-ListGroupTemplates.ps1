@@ -16,7 +16,12 @@ function Invoke-ListGroupTemplates {
         $data = $_.JSON | ConvertFrom-Json
 
         # Normalize groupType to camelCase for consistent frontend handling
+        # Handle both stored normalized values and legacy values
         $normalizedGroupType = switch -Wildcard ($data.groupType.ToLower()) {
+            # Already normalized values (most common)
+            'dynamicdistribution' { 'dynamicDistribution'; break }
+            'azurerole' { 'azureRole'; break }
+            # Legacy values that might exist in stored templates
             '*dynamicdistribution*' { 'dynamicDistribution'; break }
             '*dynamic*' { 'dynamic'; break }
             '*azurerole*' { 'azureRole'; break }

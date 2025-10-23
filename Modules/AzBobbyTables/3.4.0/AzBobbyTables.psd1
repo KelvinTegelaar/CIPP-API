@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.3.1'
+ModuleVersion = '3.4.0'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -69,6 +69,7 @@ CmdletsToExport = @(
     'Clear-AzDataTable'
     'Get-AzDataTable'
     'Get-AzDataTableEntity'
+    'Get-AzDataTableSupportedEntityType'
     'Remove-AzDataTableEntity'
     'Update-AzDataTableEntity'
     'New-AzDataTableContext'
@@ -109,11 +110,19 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.3.1] - 2024-10-19
+          ReleaseNotes = '## [3.4.0] - 2025-07-03
 
 ### Added
 
-- Added `-OperationType` parameter to `Add-AzDataTableEntity` and `Update-AzDataTableEntity` to support merge or replace operations [#81](https://github.com/PalmEmanuel/AzBobbyTables/pull/81)
+- Added SortedList as valid type for -Entity parameter [#52](https://github.com/PalmEmanuel/AzBobbyTables/issues/52)
+- New command `Get-AzDataTableSupportedEntityType` to get the supported data types for the module when using `-Entity` parameter
+
+### Changed
+
+- Dependency version bumps
+- Rewrote core module logic to add a converter system which allows for flexible entity types
+- Updated gitversion config for build and release
+- Improved module tests for the new type converter system
 
 '
 

@@ -371,6 +371,20 @@ function Invoke-EditGroup {
         }
     }
 
+    # Only process visibility if it was explicitly sent for Microsoft 365 groups
+    if ($GroupType -eq 'Microsoft 365' -and -not [string]::IsNullOrWhiteSpace($UserObj.visibility)) {
+        try {
+            $VisibilityValue = $UserObj.visibility
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)" -type PATCH -tenantid $TenantId -body (@{'visibility' = $VisibilityValue } | ConvertTo-Json)
+
+            $Results.Add("Set group visibility to $VisibilityValue for $($GroupName).")
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Warning "Error in visibility: $($ErrorMessage.NormalizedError) - $($_.InvocationInfo.ScriptLineNumber)"
+            $Results.Add("Failed to set group visibility for $($GroupName): $($ErrorMessage.NormalizedError)")
+        }
+    }
+
     # Only process sendCopies if it was explicitly sent
     if ($null -ne $UserObj.sendCopies) {
         try {
