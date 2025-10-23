@@ -89,7 +89,7 @@ function Get-TenantGroups {
                     Description  = $Group.Description
                     GroupType    = $Group.GroupType ?? 'static'
                     RuleLogic    = $Group.RuleLogic ?? 'and'
-                    DynamicRules = $Group.DynamicRules ? ( $(@($Group.DynamicRules | ConvertFrom-Json)) ) : @()
+                    DynamicRules = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
                     Members      = @($SortedMembers)
                 })
         }
