@@ -39,6 +39,7 @@ function Invoke-ListIntuneTemplates {
                 $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
                 $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
                 $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
+                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA))
                 $data
             } catch {
 
@@ -84,7 +85,7 @@ function Invoke-ListIntuneTemplates {
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = ($Templates | ConvertTo-Json -Depth 100)
+            Body       = ConvertTo-Json -Depth 100 -InputObject @($Templates)
         })
 
 }

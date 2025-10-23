@@ -79,7 +79,7 @@ function Invoke-CippWebhookProcessing {
     # Save audit log entry to table
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
     $AuditRecord = $Data.AuditRecord | ConvertFrom-Json -ErrorAction SilentlyContinue
-    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -AlertComment $WebhookRule.AlertComment
     $JsonContent = @{
         Title                 = $GenerateJSON.Title
         ActionUrl             = $GenerateJSON.ButtonUrl
@@ -102,7 +102,7 @@ function Invoke-CippWebhookProcessing {
     $LogId = Send-CIPPAlert @CIPPAlert
 
     $AuditLogLink = '{0}/tenant/administration/audit-logs/log?logId={1}&tenantFilter={2}' -f $CIPPURL, $LogId, $Tenant.defaultDomainName
-    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink
+    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $WebhookRule.AlertComment
 
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
