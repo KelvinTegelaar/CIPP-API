@@ -3,6 +3,7 @@ function New-GraphBulkRequest {
     .FUNCTIONALITY
     Internal
     #>
+    [CmdletBinding()]
     param(
         $tenantid,
         $NoAuthCheck,
