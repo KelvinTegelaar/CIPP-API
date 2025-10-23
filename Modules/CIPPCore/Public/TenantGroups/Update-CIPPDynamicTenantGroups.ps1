@@ -52,18 +52,28 @@ function Update-CIPPDynamicTenantGroups {
                             if ($Operator -in @('in', 'notin')) {
                                 $arrayValues = if ($Value -is [array]) { $Value.guid } else { @($Value.guid) }
                                 $arrayAsString = $arrayValues | ForEach-Object { "'$_'" }
-                                "(`$_.skuId | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
+                                if ($Operator -eq 'in') {
+                                    "(`$_.skuId | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
+                                } else {
+                                    "(`$_.skuId | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -eq 0"
+                                }
                             } else {
-                                "`$_.skuId -contains '$($Value.guid)'"
+                                "`$_.skuId -$Operator '$($Value.guid)'"
                             }
                         }
                         'availableServicePlan' {
                             if ($Operator -in @('in', 'notin')) {
                                 $arrayValues = if ($Value -is [array]) { $Value.value } else { @($Value.value) }
                                 $arrayAsString = $arrayValues | ForEach-Object { "'$_'" }
-                                "(`$_.servicePlans | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
+                                if ($Operator -eq 'in') {
+                                    # Keep tenants with ANY of the provided plans
+                                    "(`$_.servicePlans | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
+                                } else {
+                                    # Exclude tenants with ANY of the provided plans
+                                    "(`$_.servicePlans | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -eq 0"
+                                }
                             } else {
-                                "`$_.servicePlans -contains '$($Value.value)'"
+                                "`$_.servicePlans -$Operator '$($Value.value)'"
                             }
                         }
                         default {
@@ -72,6 +82,9 @@ function Update-CIPPDynamicTenantGroups {
                         }
                     }
 
+                }
+                if (!$WhereConditions) {
+                    throw 'Generating the conditions failed. The conditions seem to be empty.'
                 }
                 $TenantObj = $AllTenants | ForEach-Object {
                     if ($Rules.property -contains 'availableLicense') {
