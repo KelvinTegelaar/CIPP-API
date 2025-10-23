@@ -37,7 +37,7 @@ function Update-CIPPDynamicTenantGroups {
         foreach ($Group in $DynamicGroups) {
             try {
                 Write-LogMessage -API 'TenantGroups' -message "Processing dynamic group: $($Group.Name)" -sev Info
-                $Rules = $Group.DynamicRules | ConvertFrom-Json
+                $Rules = @($Group.DynamicRules | ConvertFrom-Json)
                 # Build a single Where-Object string for AND logic
                 $WhereConditions = foreach ($Rule in $Rules) {
                     $Property = $Rule.property
@@ -74,8 +74,10 @@ function Update-CIPPDynamicTenantGroups {
 
                 }
                 $TenantObj = $AllTenants | ForEach-Object {
-                    $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
-                    $SKUId = $LicenseInfo.SKUId
+                    if ($Rules.property -contains 'availableLicense') {
+                        $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                    }
+                    $SKUId = $LicenseInfo.SKUId ?? @()
                     $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
                     [pscustomobject]@{
                         customerId               = $_.customerId
@@ -89,8 +91,12 @@ function Update-CIPPDynamicTenantGroups {
                 # Combine all conditions with the specified logic (AND or OR)
                 $LogicOperator = if ($Group.RuleLogic -eq 'or') { ' -or ' } else { ' -and ' }
                 $WhereString = $WhereConditions -join $LogicOperator
+                Write-Information "Evaluating tenants with condition: $WhereString"
+
                 $ScriptBlock = [ScriptBlock]::Create($WhereString)
                 $MatchingTenants = $TenantObj | Where-Object $ScriptBlock
+
+                Write-Information "Found $($MatchingTenants.Count) matching tenants for group '$($Group.Name)'"
 
                 $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$($Group.RowKey)'"
                 $CurrentMemberIds = $CurrentMembers.customerId
