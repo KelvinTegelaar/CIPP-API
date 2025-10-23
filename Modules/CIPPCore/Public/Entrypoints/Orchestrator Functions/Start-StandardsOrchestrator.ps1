@@ -2,6 +2,9 @@ function Start-StandardsOrchestrator {
     <#
     .SYNOPSIS
     Start the Standards Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

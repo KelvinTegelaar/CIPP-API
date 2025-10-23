@@ -64,7 +64,7 @@ function Push-UploadApplication {
 
         foreach ($tenant in $tenants) {
             try {
-                $ApplicationList = (New-GraphGetRequest -Uri $baseuri -tenantid $tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.Applicationname }
+                $ApplicationList = New-GraphGetRequest -Uri $baseuri -tenantid $tenant | Where-Object { $_.DisplayName -eq $ChocoApp.Applicationname -and ($_.'@odata.type' -eq '#microsoft.graph.win32LobApp' -or $_.'@odata.type' -eq '#microsoft.graph.winGetApp') }
                 if ($ApplicationList.displayname.count -ge 1) {
                     Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) exists. Skipping this application" -Sev 'Info'
                     continue
