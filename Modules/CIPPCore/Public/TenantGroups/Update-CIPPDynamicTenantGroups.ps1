@@ -17,6 +17,16 @@ function Update-CIPPDynamicTenantGroups {
     try {
         $GroupTable = Get-CippTable -tablename 'TenantGroups'
         $MembersTable = Get-CippTable -tablename 'TenantGroupMembers'
+        $LicenseCacheTable = Get-CippTable -tablename 'cachetenantskus'
+
+        $Skus = Get-CIPPAzDataTableEntity @LicenseCacheTable -Filter "PartitionKey eq 'sku' and Timestamp ge datetime'$( (Get-Date).ToUniversalTime().AddHours(-8).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
+
+        $SkuHashtable = @{}
+        foreach ($Sku in $Skus) {
+            if ($Sku.JSON -and (Test-Json -Json $Sku.JSON -ErrorAction SilentlyContinue)) {
+                $SkuHashtable[$Sku.RowKey] = $Sku.JSON | ConvertFrom-Json
+            }
+        }
 
         if ($GroupId) {
             $DynamicGroups = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$GroupId'"
@@ -88,7 +98,20 @@ function Update-CIPPDynamicTenantGroups {
                 }
                 $TenantObj = $AllTenants | ForEach-Object {
                     if ($Rules.property -contains 'availableLicense') {
-                        $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                        if ($SkuHashtable.ContainsKey($_.customerId)) {
+                            Write-Information "Using cached licenses for tenant $($_.defaultDomainName)"
+                            $LicenseInfo = $SkuHashtable[$_.customerId]
+                        } else {
+                            Write-Information "Fetching licenses for tenant $($_.defaultDomainName)"
+                            $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                            # Cache the result
+                            $CacheEntity = @{
+                                PartitionKey = 'sku'
+                                RowKey       = [string]$_.customerId
+                                JSON         = [string]($LicenseInfo | ConvertTo-Json -Depth 5 -Compress)
+                            }
+                            Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
+                        }
                     }
                     $SKUId = $LicenseInfo.SKUId ?? @()
                     $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
