@@ -2,6 +2,9 @@ function Start-DriftStandardsOrchestrator {
     <#
     .SYNOPSIS
     Start the Drift Standards Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

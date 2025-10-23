@@ -106,6 +106,14 @@
     "RunOnProcessor": true
   },
   {
+    "Id": "0967c860-3a57-4860-8f33-e5136eae7b4e",
+    "Command": "Start-TenantDynamicGroupOrchestrator",
+    "Description": "Orchestrator to update dynamic tenant groups",
+    "Cron": "0 0 */4 * * *",
+    "Priority": 6,
+    "RunOnProcessor": true
+  },
+  {
     "Id": "4ca242d0-8dc8-4256-b0ed-186599f4233f",
     "Command": "Start-UpdateTokensTimer",
     "Description": "Orchestrator to update tokens",

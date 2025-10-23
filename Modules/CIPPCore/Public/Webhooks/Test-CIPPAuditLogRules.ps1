@@ -117,8 +117,6 @@ function Test-CIPPAuditLogRules {
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
 
         $ExtendedPropertiesIgnoreList = @(
-            'OAuth2:Authorize'
-            'OAuth2:Token'
             'SAS:EndAuth'
             'SAS:ProcessAuth'
             'deviceAuth:ReprocessTls'

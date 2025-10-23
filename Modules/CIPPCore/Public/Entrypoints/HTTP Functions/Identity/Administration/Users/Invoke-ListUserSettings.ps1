@@ -20,6 +20,9 @@ function Invoke-ListUserSettings {
             $UserSettings = $UserSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
         } catch {
             Write-Warning "Failed to convert UserSettings JSON: $($_.Exception.Message)"
+        }
+
+        if (!$UserSettings) {
             $UserSettings = [pscustomobject]@{
                 direction      = 'ltr'
                 paletteMode    = 'light'
@@ -36,8 +39,7 @@ function Invoke-ListUserSettings {
         try {
             $UserSpecificSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
             $UserSpecificSettings = $UserSpecificSettings.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-        }
-        catch {
+        } catch {
             Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
         }
 

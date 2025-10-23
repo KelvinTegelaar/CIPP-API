@@ -59,7 +59,7 @@ function Invoke-CIPPStandardAutopilotProfile {
         if ($Settings.NotLocalAdmin -eq $true) { $userType = 'Standard' } else { $userType = 'Administrator' }
         if ($Settings.SelfDeployingMode -eq $true) {
             $DeploymentMode = 'shared'
-            $Setings.AllowWhiteGlove = $false
+            $Settings.AllowWhiteGlove = $false
         } else {
             $DeploymentMode = 'singleUser'
         }

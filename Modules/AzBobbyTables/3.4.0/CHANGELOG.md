@@ -6,7 +6,27 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ### Added
 
-- Added `-OperationType` parameter to `Add-AzDataTableEntity` and `Update-AzDataTableEntity` to support merge or replace operations [#81](https://github.com/PalmEmanuel/AzBobbyTables/pull/81)
+- Added SortedList as valid type for -Entity parameter [#52](https://github.com/PalmEmanuel/AzBobbyTables/issues/52)
+- New command `Get-AzDataTableSupportedEntityType` to get the supported data types for the module when using `-Entity` parameter
+
+### Changed
+
+- Dependency version bumps
+- Rewrote core module logic to add a converter system which allows for flexible entity types
+- Updated gitversion config for build and release
+- Improved module tests for the new type converter system
+
+## [3.3.2] - 2025-02-26
+
+### Fixed
+
+- Fixed bug where validation for Partition- and RowKey was not checking case sensitivity [#68](https://github.com/PalmEmanuel/AzBobbyTables/pull/81)
+
+## [3.3.1] - 2024-10-19
+
+### Added
+
+-   Added `-OperationType` parameter to `Add-AzDataTableEntity` and `Update-AzDataTableEntity` to support merge or replace operations [#81](https://github.com/PalmEmanuel/AzBobbyTables/pull/81)
 
 ## [3.3.0] - 2024-10-18
 
@@ -49,7 +69,11 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ## 3.1.1 - 2023-05-03
 
-[Unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.2...HEAD
+
+[3.3.2]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.1...v3.3.2
+
+[3.3.1]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.0...v3.3.1
 
 [3.3.0]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.2.1...v3.3.0
 

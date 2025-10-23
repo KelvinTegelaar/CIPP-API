@@ -32,6 +32,7 @@ function Invoke-ListAlertsQueue {
             RowKey          = $Task.RowKey
             PartitionKey    = $Task.PartitionKey
             RepeatsEvery    = 'When received'
+            AlertComment    = $Task.AlertComment
             RawAlert        = @{
                 Conditions   = @($Conditions)
                 Actions      = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
@@ -39,7 +40,7 @@ function Invoke-ListAlertsQueue {
                 type         = $Task.type
                 RowKey       = $Task.RowKey
                 PartitionKey = $Task.PartitionKey
-
+                AlertComment = $Task.AlertComment
             }
         }
 
@@ -101,6 +102,7 @@ function Invoke-ListAlertsQueue {
             LogType         = 'Scripted'
             EventType       = 'Scheduled Task'
             RepeatsEvery    = $Task.Recurrence
+            AlertComment    = $Task.AlertComment
             RawAlert        = $Task
         }
 

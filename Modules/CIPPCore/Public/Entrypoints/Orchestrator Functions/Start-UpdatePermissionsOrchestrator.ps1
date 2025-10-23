@@ -2,6 +2,9 @@ function Start-UpdatePermissionsOrchestrator {
     <#
     .SYNOPSIS
     Start the Update Permissions Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

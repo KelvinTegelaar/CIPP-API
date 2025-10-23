@@ -1,8 +1,10 @@
+
 function Get-Tenants {
     <#
     .FUNCTIONALITY
     Internal
     #>
+    [CmdletBinding(DefaultParameterSetName = 'Standard')]
     param (
         [Parameter( ParameterSetName = 'Skip', Mandatory = $True )]
         [switch]$SkipList,

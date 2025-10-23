@@ -14,7 +14,7 @@
       "maxConcurrentOrchestratorFunctions": 2,
       "tracing": {
         "distributedTracingEnabled": false,
-        "version": "V2"
+        "version": "None"
       }
     }
   }

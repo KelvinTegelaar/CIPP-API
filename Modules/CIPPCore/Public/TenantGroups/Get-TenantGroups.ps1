@@ -11,8 +11,9 @@ function Get-TenantGroups {
     #>
     [CmdletBinding()]
     param(
-        $GroupId,
-        $TenantFilter
+        [string]$GroupId,
+        [string]$TenantFilter,
+        [switch]$Dynamic
     )
 
     $GroupTable = Get-CippTable -tablename 'TenantGroups'
@@ -29,6 +30,12 @@ function Get-TenantGroups {
         }
     }
     $Tenants = Get-Tenants @TenantParams
+
+    if ($Dynamic.IsPresent) {
+        $GroupTable.Filter = "PartitionKey eq 'TenantGroup' and GroupType eq 'dynamic'"
+    } else {
+        $GroupTable.Filter = "PartitionKey eq 'TenantGroup'"
+    }
 
     if ($GroupId) {
         $Groups = Get-CIPPAzDataTableEntity @GroupTable -Filter "RowKey eq '$GroupId'"
@@ -77,10 +84,13 @@ function Get-TenantGroups {
                 $SortedMembers = @()
             }
             $Results.Add([PSCustomObject]@{
-                    Id          = $Group.RowKey
-                    Name        = $Group.Name
-                    Description = $Group.Description
-                    Members     = @($SortedMembers)
+                    Id           = $Group.RowKey
+                    Name         = $Group.Name
+                    Description  = $Group.Description
+                    GroupType    = $Group.GroupType ?? 'static'
+                    RuleLogic    = $Group.RuleLogic ?? 'and'
+                    DynamicRules = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
+                    Members      = @($SortedMembers)
                 })
         }
         return $Results | Sort-Object Name
