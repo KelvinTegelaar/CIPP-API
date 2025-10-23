@@ -2,6 +2,9 @@ function Start-UserTasksOrchestrator {
     <#
     .SYNOPSIS
     Start the User Tasks Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
