@@ -25,7 +25,19 @@ function Send-CIPPAlert {
                 $Recipients = if ($AltEmail) {
                     [pscustomobject]@{EmailAddress = @{Address = $AltEmail } }
                 } else {
-                    $Config.email.split($(if ($Config.email -like '*,*') { ',' } else { ';' })).trim() | ForEach-Object { if ($_ -like '*@*') { [pscustomobject]@{EmailAddress = @{Address = $_ } } } }
+                    $Config.email.split($(if ($Config.email -like '*,*') { ',' } else { ';' })).trim() | ForEach-Object {
+                        if ($_ -like '*@*') {
+                            ($Alias, $Domain) = $_ -split '@'
+                            if ($Alias -match '%') {
+                                # Allow for text replacement in alias portion of email address
+                                $Alias = Get-CIPPTextReplacement -Text $Alias -Tenant $TenantFilter
+                                $Recipient = "$Alias@$Domain"
+                            } else {
+                                $Recipient = $_
+                            }
+                            [pscustomobject]@{EmailAddress = @{Address = $Recipient } }
+                        }
+                    }
                 }
                 $PowerShellBody = [PSCustomObject]@{
                     message         = @{
@@ -43,9 +55,14 @@ function Send-CIPPAlert {
                 if ($PSCmdlet.ShouldProcess($($Recipients.EmailAddress.Address -join ', '), 'Sending email')) {
                     $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
                 }
+
+                $LogData = @{
+                    Recipients = $Recipients
+                }
+                Write-LogMessage -API 'Webhook Alerts' -message "Sent an email alert: $Title" -tenant $TenantFilter -sev info -LogData $LogData
+                return "Sent an email alert: $Title"
             }
-            Write-LogMessage -API 'Webhook Alerts' -message "Sent an email alert: $Title" -tenant $TenantFilter -sev info
-            return "Sent an email alert: $Title"
+
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"

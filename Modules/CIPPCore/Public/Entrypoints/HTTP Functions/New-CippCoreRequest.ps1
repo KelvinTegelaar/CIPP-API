@@ -50,10 +50,17 @@ function New-CippCoreRequest {
                         return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
                     } else {
                         # If no valid response context found, create a default success response
-                        return ([HttpResponseContext]@{
-                                StatusCode = [HttpStatusCode]::OK
-                                Body       = $Response
-                            })
+                        if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {
+                            return ([HttpResponseContext]@{
+                                    StatusCode = $Response.StatusCode
+                                    Body       = $Response.Body
+                                })
+                        } else {
+                            return ([HttpResponseContext]@{
+                                    StatusCode = [HttpStatusCode]::OK
+                                    Body       = $Response
+                                })
+                        }
                     }
                 }
             } catch {

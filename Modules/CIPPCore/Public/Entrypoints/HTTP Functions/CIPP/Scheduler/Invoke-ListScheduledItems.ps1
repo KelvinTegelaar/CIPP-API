@@ -101,6 +101,17 @@ function Invoke-ListScheduledItems {
                 type  = 'Tenant'
             }
         }
+        if ($Task.Trigger) {
+            try {
+                $TriggerObject = $Task.Trigger | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($TriggerObject) {
+                    $Task | Add-Member -NotePropertyName Trigger -NotePropertyValue $TriggerObject -Force
+                }
+            } catch {
+                Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"
+                # Fall back to keeping original trigger value
+            }
+        }
 
         $Task
     }

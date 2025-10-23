@@ -22,6 +22,7 @@ Function Invoke-AddAlert {
         type            = $Request.Body.logbook.value
         RowKey          = $RowKey
         PartitionKey    = 'Webhookv2'
+        AlertComment    = [string]$Request.Body.AlertComment
     }
     $WebhookTable = Get-CippTable -TableName 'WebhookRules'
     Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force

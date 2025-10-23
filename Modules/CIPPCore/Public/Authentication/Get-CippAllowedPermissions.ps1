@@ -187,5 +187,5 @@ function Get-CippAllowedPermissions {
     }
 
     # Return sorted unique permissions
-    return ($AllowedPermissions | Sort-Object -Unique)
+    return ($AllowedPermissions | Where-Object { $_ -notmatch 'None$' } | Sort-Object -Unique)
 }

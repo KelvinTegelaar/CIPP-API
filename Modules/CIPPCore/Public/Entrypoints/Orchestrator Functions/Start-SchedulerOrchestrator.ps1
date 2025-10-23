@@ -2,6 +2,9 @@ function Start-SchedulerOrchestrator {
     <#
     .SYNOPSIS
     Start the Scheduler Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

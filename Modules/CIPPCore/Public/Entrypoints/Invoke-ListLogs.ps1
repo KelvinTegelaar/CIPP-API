@@ -58,6 +58,7 @@ function Invoke-ListLogs {
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'
             $TenantFilter = $Request.Query.Tenant
+            $ApiFilter = $Request.Query.API
 
             $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
             $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
@@ -87,7 +88,8 @@ function Invoke-ListLogs {
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
             $_.Severity -in $LogLevel -and
             $_.Username -like $username -and
-            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter)
+            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter")
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
@@ -122,8 +124,8 @@ function Invoke-ListLogs {
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
-        }
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
+    }
 
 }
