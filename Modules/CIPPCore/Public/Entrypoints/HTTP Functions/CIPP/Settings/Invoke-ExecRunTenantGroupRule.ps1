@@ -20,8 +20,9 @@ function Invoke-ExecRunTenantGroupRule {
 
         if (-not $Group) { $Body = @{ Results = 'Group not found' } }
 
-        $UpdateResult = Update-CIPPDynamicTenantGroups -GroupId $GroupId
-        $Body = @{ Results = "Dynamic rules executed successfully for group '$($Group.Name)'. Members added: $($UpdateResult.MembersAdded), Members removed: $($UpdateResult.MembersRemoved)" }
+        $null = Start-TenantDynamicGroupOrchestrator -GroupId $GroupId
+
+        $Body = @{ Results = "Dynamic rules executed successfully for group '$($Group.Name)'. Processing will continue in the background. Check the logbook for details." }
 
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK

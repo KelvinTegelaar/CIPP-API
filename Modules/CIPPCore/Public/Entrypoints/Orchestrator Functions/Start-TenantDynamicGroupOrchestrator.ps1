@@ -28,6 +28,7 @@ function Start-TenantDynamicGroupOrchestrator {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'UpdateDynamicTenantGroups'
                 Batch            = @($TenantBatch)
+                SkipLog          = $true
             }
             if ($PSCmdlet.ShouldProcess('Start-TenantDynamicGroupOrchestrator', 'Starting Tenant Dynamic Group Orchestrator')) {
                 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
