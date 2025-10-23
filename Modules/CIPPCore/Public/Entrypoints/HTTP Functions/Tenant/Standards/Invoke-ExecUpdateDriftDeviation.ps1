@@ -42,11 +42,19 @@ function Invoke-ExecUpdateDriftDeviation {
                     if ($Deviation.status -eq 'DeniedRemediate') {
                         $Setting = $Deviation.standardName -replace 'standards.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
-                        $StandardTemplate = $StandardTemplate.standardSettings.$Setting
-
-                        $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
-                        $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
-
+                        if ($Setting -like '*IntuneTemplate*') {
+                            $Setting = 'IntuneTemplate'
+                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Last 1
+                            $StandardTemplate = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object { $_.TemplateList.value -eq $TemplateId }
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                            $Settings = $StandardTemplate
+                        } else {
+                            $StandardTemplate = $StandardTemplate.standardSettings.$Setting
+                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                            $Settings = $StandardTemplate.standards.$Setting
+                        }
                         $TaskBody = @{
                             TenantFilter  = $TenantFilter
                             Name          = "One Off Drift Remediation: $Setting - $TenantFilter"
@@ -57,7 +65,7 @@ function Invoke-ExecUpdateDriftDeviation {
 
                             Parameters    = [pscustomobject]@{
                                 Tenant   = $TenantFilter
-                                Settings = $StandardTemplate.standards.$Setting
+                                Settings = $Settings
                             }
                             ScheduledTime = '0'
                             PostExecution = @{

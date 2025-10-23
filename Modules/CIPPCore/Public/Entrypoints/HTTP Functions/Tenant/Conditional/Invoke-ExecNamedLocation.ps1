@@ -18,6 +18,7 @@ function Invoke-ExecNamedLocation {
     $NamedLocationId = $Request.Body.namedLocationId ?? $Request.Query.namedLocationId
     $Change = $Request.Body.change ?? $Request.Query.change
     $Content = $Request.Body.input ?? $Request.Query.input
+    if ($content.value) { $content = $content.value }
 
     try {
         $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers

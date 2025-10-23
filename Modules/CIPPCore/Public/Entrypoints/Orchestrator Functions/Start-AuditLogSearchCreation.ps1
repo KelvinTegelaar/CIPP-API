@@ -2,6 +2,9 @@ function Start-AuditLogSearchCreation {
     <#
     .SYNOPSIS
     Start the Audit Log Searches
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

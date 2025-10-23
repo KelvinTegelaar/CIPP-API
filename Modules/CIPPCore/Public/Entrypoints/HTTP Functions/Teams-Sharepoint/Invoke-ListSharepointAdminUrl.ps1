@@ -23,6 +23,7 @@ function Invoke-ListSharepointAdminUrl {
             $Tenant | Add-Member -MemberType NoteProperty -Name SharepointAdminUrl -Value $SharePointInfo.AdminUrl
             $Table = Get-CIPPTable -TableName 'Tenants'
             Add-CIPPAzDataTableEntity @Table -Entity $Tenant -Force
+            $AdminUrl = $SharePointInfo.AdminUrl
         }
 
         if ($Request.Query.ReturnUrl) {
