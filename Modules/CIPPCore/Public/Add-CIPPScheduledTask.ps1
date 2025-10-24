@@ -221,7 +221,8 @@ function Add-CIPPScheduledTask {
                         $Parameters.'$select' = $task.Trigger.WatchedAttributes | ForEach-Object { $_.value ?? $_ } -join ','
                     }
                     if ($task.Trigger.ResourceFilter) {
-                        $Parameters.'$filter' = "id eq '" + $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ } -join "' or id eq '"
+                        $ResourceFilterValues = $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ }
+                        $Parameters.'$filter' = "id eq '" + ($ResourceFilterValues -join "' or id eq '") + "'"
                     }
                     $Resource = $task.Trigger.DeltaResource.value ?? $task.Trigger.DeltaResource
 
