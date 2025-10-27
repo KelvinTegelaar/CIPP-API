@@ -21,39 +21,8 @@ function New-HaloPSATicket {
       $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets/$($ExistingTicket.TicketID)?includedetails=true&includelastaction=false&nocache=undefined&includeusersassets=false&isdetailscreen=true" -ContentType 'application/json; charset=utf-8' -Method Get -Headers @{Authorization = "Bearer $($token.access_token)" } -SkipHttpErrorCheck
       if ($Ticket.id) {
         if (!$Ticket.hasbeenclosed) {
-          Write-Information 'Ticket is still open, adding new note'
-          $Object = [PSCustomObject]@{
-            ticket_id      = $ExistingTicket.TicketID
-            outcome_id     = 7
-            hiddenfromuser = $true
-            note_html      = $description
-          }
-  
-          if ($Configuration.Outcome) {
-            $Outcome = $Configuration.Outcome.value ?? $Configuration.Outcome
-            $Object.outcome_id = $Outcome
-          }
-  
-          $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
-          try {
-            if ($PSCmdlet.ShouldProcess('Add note to HaloPSA ticket', 'Add note')) {
-              $Action = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/actions" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-              Write-Information "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
-            }
-            return "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
-          }
-          catch {
-            $Message = if ($_.ErrorDetails.Message) {
-              Get-NormalizedError -Message $_.ErrorDetails.Message
-            }
-            else {
-              $_.Exception.message
-            }
-            Write-LogMessage -message "Failed to add note to HaloPSA ticket: $Message" -API 'HaloPSATicket' -sev Error -LogData (Get-CippException -Exception $_)
-            Write-Information "Failed to add note to HaloPSA ticket: $Message"
-            Write-Information "Body we tried to ship: $body"
-            return "Failed to add note to HaloPSA ticket: $Message"
-          }
+          Write-Information 'Ticket is still open, skipping ticket creation'
+          return "Ticket already exists in HaloPSA: $($ExistingTicket.TicketID)"
         }
       }
       else {
