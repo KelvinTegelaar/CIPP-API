@@ -60,7 +60,17 @@ function Get-Tenants {
     }
 
     if ($CleanOld.IsPresent) {
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
+        try {
+            $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
+            if (!$GDAPRelationships) {
+                Write-LogMessage -API 'Get-Tenants' -message 'Tried cleaning old tenants but failed to get GDAP relationships - No relationships returned' -Sev 'Critical'
+                throw 'Failed to get GDAP relationships for cleaning old tenants.'
+            }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Get-Tenants' -message "Tried cleaning old tenants but failed to get GDAP relationships - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
+            throw $_
+        }
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
