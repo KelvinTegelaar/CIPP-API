@@ -95,6 +95,9 @@ function Get-Tenants {
         }
         #get the full list of tenants
         $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
+        Write-Host "GDAP relationships found: $($GDAPRelationships.Count)"
+        $totalTenants = $GDAPRelationships.customer.tenantId.Count | Select-Object -Unique
+        Write-Host "Total tenants found in relationships result: $totalTenants"
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
