@@ -11,7 +11,7 @@ function Invoke-CIPPOffboardingJob {
     if ($Options -is [string]) {
         $Options = $Options | ConvertFrom-Json
     }
-    $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName" -tenantid $TenantFilter
+    $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName,onPremisesSyncEnabled,onPremisesImmutableId" -tenantid $TenantFilter
     $UserID = $User.id
     $DisplayName = $User.displayName
     Write-Host "Running offboarding job for $Username with options: $($Options | ConvertTo-Json -Depth 10)"
@@ -182,10 +182,45 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.ClearImmutableId -eq $true } {
-            try {
-                Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
-            } catch {
-                $_.Exception.Message
+            if ($User.onPremisesSyncEnabled -ne $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
+                Write-LogMessage -Message "User $Username has an ImmutableID set but is not synced from on-premises. Proceeding to clear the ImmutableID." -TenantFilter $TenantFilter -Severity 'Warning' -APIName $APIName -Headers $Headers
+                try {
+                    Clear-CIPPImmutableID -UserID $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
+                } catch {
+                    $_.Exception.Message
+                }
+            } elseif ($User.onPremisesSyncEnabled -eq $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
+                Write-LogMessage -Message "User $Username is synced from on-premises. Scheduling an Immutable ID clear for when the user account has been soft deleted." -TenantFilter $TenantFilter -Severity 'Error' -APIName $APIName -Headers $Headers
+
+                $ScheduledTask = @{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Clear Immutable ID: $Username"
+                    Command       = @{
+                        value = 'Clear-CIPPImmutableID'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        userid  = $userid
+                        APIName = $APIName
+                        Headers = $Headers
+                    }
+                    Trigger       = @{
+                        Type               = 'DeltaQuery'
+                        DeltaResource      = 'users'
+                        ResourceFilter     = @($UserID)
+                        EventType          = 'deleted'
+                        UseConditions      = $false
+                        ExecutePerResource = $true
+                        ExecutionMode      = 'once'
+                    }
+                    ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(5) - (Get-Date '1/1/1970')).TotalSeconds
+                    Recurrence    = '15m'
+                    PostExecution = @{
+                        Webhook = $false
+                        Email   = $false
+                        PSA     = $false
+                    }
+                }
+                Add-CIPPScheduledTask -Task $ScheduledTask -hidden $false
             }
         }
     }
