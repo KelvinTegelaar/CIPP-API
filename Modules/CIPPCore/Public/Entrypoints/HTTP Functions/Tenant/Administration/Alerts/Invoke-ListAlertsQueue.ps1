@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListAlertsQueue {
     <#
     .FUNCTIONALITY
@@ -9,12 +7,6 @@ function Invoke-ListAlertsQueue {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
     $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable
 
@@ -40,6 +32,7 @@ function Invoke-ListAlertsQueue {
             RowKey          = $Task.RowKey
             PartitionKey    = $Task.PartitionKey
             RepeatsEvery    = 'When received'
+            AlertComment    = $Task.AlertComment
             RawAlert        = @{
                 Conditions   = @($Conditions)
                 Actions      = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
@@ -47,7 +40,7 @@ function Invoke-ListAlertsQueue {
                 type         = $Task.type
                 RowKey       = $Task.RowKey
                 PartitionKey = $Task.PartitionKey
-
+                AlertComment = $Task.AlertComment
             }
         }
 
@@ -109,6 +102,7 @@ function Invoke-ListAlertsQueue {
             LogType         = 'Scripted'
             EventType       = 'Scheduled Task'
             RepeatsEvery    = $Task.Recurrence
+            AlertComment    = $Task.AlertComment
             RawAlert        = $Task
         }
 
@@ -158,8 +152,7 @@ function Invoke-ListAlertsQueue {
     }
 
     $finalList = ConvertTo-Json -InputObject @($AllTasksArrayList) -Depth 10
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $finalList
         })

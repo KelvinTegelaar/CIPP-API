@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ function Invoke-ListLogs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Table = Get-CIPPTable
 
     $ReturnedLog = if ($Request.Query.ListLogs) {
@@ -65,6 +58,7 @@ function Invoke-ListLogs {
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'
             $TenantFilter = $Request.Query.Tenant
+            $ApiFilter = $Request.Query.API
 
             $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
             $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
@@ -94,7 +88,8 @@ function Invoke-ListLogs {
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
             $_.Severity -in $LogLevel -and
             $_.Username -like $username -and
-            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter)
+            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter")
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
@@ -128,9 +123,9 @@ function Invoke-ListLogs {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
-        })
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
+    }
 
 }

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Preserves all email content for legal and compliance purposes by preventing permanent deletion of emails, even when users attempt to delete them. This is essential for organizations subject to legal discovery requirements or regulatory compliance mandates.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.EnableLitigationHold.days","required":false,"label":"Days to apply for litigation hold"}
         IMPACT
@@ -29,7 +31,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableLitigationHold' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableLitigationHold' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -39,9 +41,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
     try {
         $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' |
-        Where-Object { $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
-    }
-    catch {
+            Where-Object { $_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' }
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableLitigationHold state for $Tenant. Error: $ErrorMessage" -Sev Error
         return

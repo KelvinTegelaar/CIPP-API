@@ -39,46 +39,122 @@ function Receive-CippHttpTrigger {
     # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Information "Function: $($Request.Params.CIPPEndpoint)"
 
-    $HttpTrigger = @{
-        Request         = [pscustomobject]($Request)
-        TriggerMetadata = $TriggerMetadata
-    }
-
-    if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
+    if ($Request.Params.CIPPEndpoint -eq '$batch') {
+        # Implement batch processing in the style of graph api $batch
         try {
-            $Access = Test-CIPPAccess -Request $Request
-            if ($FunctionName -eq 'Invoke-Me') {
+            $BatchRequests = $Request.Body.requests
+            if (-not $BatchRequests -or $BatchRequests.Count -eq 0) {
+                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ error = @{ message = 'No requests found in batch body' } }
+                    })
                 return
             }
-        } catch {
-            Write-Information "Access denied for $FunctionName : $($_.Exception.Message)"
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::Forbidden
-                    Body       = $_.Exception.Message
-                })
-            return
-        }
-        
-        try {
-            Write-Information "Access: $Access"
-            if ($Access) {
-                & $FunctionName @HttpTrigger
+
+            # Validate batch request limit (this might need to be fine tuned for SWA timeouts)
+            if ($BatchRequests.Count -gt 20) {
+                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ error = @{ message = 'Batch request limit exceeded. Maximum 20 requests allowed per batch.' } }
+                    })
+                return
             }
+
+            # Process batch requests in parallel for better performance
+            $BatchResponses = $BatchRequests | ForEach-Object -Parallel {
+                $BatchRequest = $_
+                $RequestHeaders = $using:Request.Headers
+                $TriggerMeta = $using:TriggerMetadata
+
+                try {
+                    # Import required modules in the parallel thread
+                    Import-Module CIPPCore -Force
+                    Import-Module CippExtensions -Force -ErrorAction SilentlyContinue
+                    Import-Module DNSHealth -Force -ErrorAction SilentlyContinue
+                    Import-Module AzBobbyTables -Force -ErrorAction SilentlyContinue
+
+                    # Create individual request object for each batch item
+                    $IndividualRequest = @{
+                        Params  = @{
+                            CIPPEndpoint = $BatchRequest.url  # Use batch request URL as endpoint
+                        }
+                        Body    = $BatchRequest.body
+                        Headers = $RequestHeaders
+                        Query   = $BatchRequest.query
+                        Method  = $BatchRequest.method
+                    }
+
+                    # Process individual request using New-CippCoreRequest
+                    $IndividualResponse = New-CippCoreRequest -Request $IndividualRequest -TriggerMetadata $TriggerMeta
+
+                    # Format response in Graph API batch style
+                    $BatchResponse = @{
+                        id     = $BatchRequest.id
+                        status = [int]$IndividualResponse.StatusCode
+                        body   = $IndividualResponse.Body
+                    }
+
+                } catch {
+                    # Handle individual request errors
+                    $BatchResponse = @{
+                        id     = $BatchRequest.id
+                        status = 500
+                        body   = @{
+                            error = @{
+                                code    = 'InternalServerError'
+                                message = $_.Exception.Message
+                            }
+                        }
+                    }
+                }
+
+                return $BatchResponse
+            } -ThrottleLimit 10
+
+            $BodyObj = @{
+                responses = @($BatchResponses)
+            }
+
+            $Body = ConvertTo-Json -InputObject $BodyObj -Depth 20 -Compress
+
+            # Return batch response in Graph API format
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $Body
+                })
+
         } catch {
-            Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
+            Write-Warning "Exception occurred during batch processing: $($_.Exception.Message)"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::InternalServerError
-                    Body       = $_.Exception.Message
+                    Body       = @{
+                        error = @{
+                            code    = 'InternalServerError'
+                            message = "Batch processing failed: $($_.Exception.Message)"
+                        }
+                    }
                 })
         }
+        return
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::NotFound
-                Body       = 'Endpoint not found'
-            })
+        $Response = New-CippCoreRequest -Request $Request -TriggerMetadata $TriggerMetadata
+        if ($Response.StatusCode) {
+            if ($Response.Body -is [PSCustomObject]) {
+                $Response.Body = $Response.Body | ConvertTo-Json -Depth 20 -Compress
+            }
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]$Response)
+        } else {
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{
+                        error = @{
+                            code    = 'InternalServerError'
+                            message = 'An error occurred processing the request'
+                        }
+                    }
+                })
+        }
     }
     return
 }
@@ -179,6 +255,7 @@ function Receive-CippActivityTrigger {
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Start = Get-Date
+        $Output = $null
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
         if ($Item.QueueId) {
@@ -202,7 +279,7 @@ function Receive-CippActivityTrigger {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
                 Write-Warning "Activity starting Function: $FunctionName."
-                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
+                $Output = Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
                 Write-Warning "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
@@ -244,7 +321,13 @@ function Receive-CippActivityTrigger {
             $null = Set-CippQueueTask @QueueTask
         }
     }
-    return $true
+
+    # Return the captured output if it exists and is not null, otherwise return $true
+    if ($null -ne $Output -and $Output -ne '') {
+        return $Output
+    } else {
+        return $true
+    }
 }
 
 function Receive-CIPPTimerTrigger {
@@ -291,7 +374,7 @@ function Receive-CIPPTimerTrigger {
 
             $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-                $FunctionStatus.OrchestratorId = $Results
+                $FunctionStatus.OrchestratorId = $Results -join ','
                 $Status = 'Started'
             } else {
                 $Status = 'Completed'

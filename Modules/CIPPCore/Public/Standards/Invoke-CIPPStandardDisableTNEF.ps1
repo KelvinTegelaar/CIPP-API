@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDisableTNEF {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Prevents the creation of winmail.dat attachments that can cause compatibility issues when sending emails to external recipients using non-Outlook email clients. This improves email compatibility and reduces support issues with external partners and customers.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -30,7 +32,7 @@ function Invoke-CIPPStandardDisableTNEF {
 
     param ($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTNEF'
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableTNEF' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableTNEF' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

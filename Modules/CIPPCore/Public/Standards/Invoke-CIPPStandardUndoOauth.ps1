@@ -13,6 +13,8 @@ function Invoke-CIPPStandardUndoOauth {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Reverses application consent restrictions, allowing employees to approve applications independently without administrative oversight. This increases productivity and user autonomy but reduces security controls over data access permissions.
         ADDEDCOMPONENT
         IMPACT
             High Impact

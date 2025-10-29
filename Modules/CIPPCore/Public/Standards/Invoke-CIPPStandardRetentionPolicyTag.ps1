@@ -13,6 +13,9 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         CAT
             Exchange Standards
         TAG
+            "CIS M365 5.0 (6.4.1)"
+        EXECUTIVETEXT
+            Automatically and permanently removes deleted emails after a specified number of days, helping manage storage costs and ensuring compliance with data retention policies. This prevents accumulation of unnecessary deleted items while maintaining a reasonable recovery window for accidentally deleted emails.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.RetentionPolicyTag.AgeLimitForRetention","label":"Retention Days","required":true}
         IMPACT
@@ -29,7 +32,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'RetentionPolicyTag' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'RetentionPolicyTag' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

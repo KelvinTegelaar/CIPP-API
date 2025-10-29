@@ -8,7 +8,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         (Label) Default Spam Filter Policy
     .DESCRIPTION
         (Helptext) This standard creates a Spam filter policy similar to the default strict policy.
-        (DocsDescription) This standard creates a Spam filter policy similar to the default strict policy.
+        (DocsDescription) This standard creates a Spam filter policy similar to the default strict policy, the following settings are configured to on by default: IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, MarkAsSpamEmptyMessages, MarkAsSpamJavaScriptInHtml, MarkAsSpamSpfRecordHardFail, MarkAsSpamFromAddressAuthFail, MarkAsSpamNdrBackscatter, MarkAsSpamBulkMail, InlineSafetyTipsEnabled, PhishZapEnabled, SpamZapEnabled
     .NOTES
         CAT
             Defender Standards
@@ -51,14 +51,15 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SpamFilterPolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SpamFilterPolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
-    $PolicyName = 'CIPP Default Spam Filter Policy'
+    # Use custom name if provided, otherwise use default for backward compatibility
+    $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Spam Filter Policy' }
 
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
@@ -124,10 +125,10 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         ($CurrentState.PhishZapEnabled -eq $true) -and
         ($CurrentState.SpamZapEnabled -eq $true) -and
         ($CurrentState.EnableLanguageBlockList -eq $Settings.EnableLanguageBlockList) -and
-        ((-not $CurrentState.LanguageBlockList -and -not $Settings.LanguageBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
+        ((($null -eq $CurrentState.LanguageBlockList -or $CurrentState.LanguageBlockList.Count -eq 0) -and ($null -eq $Settings.LanguageBlockList.value)) -or ($null -ne $CurrentState.LanguageBlockList -and $CurrentState.LanguageBlockList.Count -gt 0 -and $null -ne $Settings.LanguageBlockList.value -and !(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
         ($CurrentState.EnableRegionBlockList -eq $Settings.EnableRegionBlockList) -and
-        ((-not $CurrentState.RegionBlockList -and -not $Settings.RegionBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
-        (!(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains)))
+        ((($null -eq $CurrentState.RegionBlockList -or $CurrentState.RegionBlockList.Count -eq 0) -and ($null -eq $Settings.RegionBlockList.value)) -or ($null -ne $CurrentState.RegionBlockList -and $CurrentState.RegionBlockList.Count -gt 0 -and $null -ne $Settings.RegionBlockList.value -and !(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
+        ((($null -eq $CurrentState.AllowedSenderDomains -or $CurrentState.AllowedSenderDomains.Count -eq 0) -and ($null -eq ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains))) -or ($null -ne $CurrentState.AllowedSenderDomains -and $CurrentState.AllowedSenderDomains.Count -gt 0 -and $null -ne ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains) -and !(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains))))
     }
     catch {
         $StateIsCorrect = $false

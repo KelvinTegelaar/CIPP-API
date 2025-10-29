@@ -13,7 +13,9 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.6)"
+        EXECUTIVETEXT
+            Sets limits on how many emails employees can send per hour and per day to prevent spam and protect the organization's email reputation. When limits are exceeded, the system can alert administrators or temporarily block the user, helping detect compromised accounts or prevent abuse.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.EXOOutboundSpamLimits.RecipientLimitExternalPerHour","label":"External Recipient Limit Per Hour","defaultValue":400}
             {"type":"number","name":"standards.EXOOutboundSpamLimits.RecipientLimitInternalPerHour","label":"Internal Recipient Limit Per Hour","defaultValue":800}
@@ -35,7 +37,7 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EXOOutboundSpamLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EXOOutboundSpamLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

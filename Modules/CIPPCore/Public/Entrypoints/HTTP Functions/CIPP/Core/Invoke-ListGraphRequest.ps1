@@ -81,7 +81,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.manualPagination) {
-        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.manualPagination
+        $GraphRequestParams.ManualPagination = [System.Boolean]$Request.Query.manualPagination
     }
 
     if ($Request.Query.nextLink) {
@@ -124,6 +124,11 @@ function Invoke-ListGraphRequest {
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
+
+        if ($script:LastGraphResponseHeaders) {
+            $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        }
+
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
             if (![string]::IsNullOrEmpty($Results.nextLink) -and $Request.Query.TenantFilter -ne 'AllTenants') {
                 Write-Host "NextLink: $($Results.nextLink | Where-Object { $_ } | Select-Object -Last 1)"
@@ -139,7 +144,7 @@ function Invoke-ListGraphRequest {
             if ($Results.Queued -eq $true) {
                 $Metadata.Queued = $Results.Queued
                 $Metadata.QueueMessage = $Results.QueueMessage
-                $Metadata.QueuedId = $Results.QueueId
+                $Metadata.QueueId = $Results.QueueId
                 $Results = @()
             }
         }
@@ -162,10 +167,9 @@ function Invoke-ListGraphRequest {
     if ($request.Query.Sort) {
         $GraphRequestData.Results = $GraphRequestData.Results | Sort-Object -Property $request.Query.Sort
     }
-    $Outputdata = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Outputdata
+            Body       = $GraphRequestData
         })
 }

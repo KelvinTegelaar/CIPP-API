@@ -13,8 +13,12 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.3.1)"
             "exo_outlookaddins"
+            "NIST CSF 2.0 (PR.AA-05)"
+            "NIST CSF 2.0 (PR.PS-05)"
+        EXECUTIVETEXT
+            Prevents employees from installing third-party add-ins in Outlook without administrative approval, reducing security risks from potentially malicious extensions. This ensures only vetted and approved tools can access company email data while maintaining centralized control over email functionality.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -31,7 +35,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableOutlookAddins' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableOutlookAddins' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

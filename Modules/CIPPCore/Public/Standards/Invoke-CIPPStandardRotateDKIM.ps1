@@ -13,7 +13,9 @@ function Invoke-CIPPStandardRotateDKIM {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.9)"
+        EXECUTIVETEXT
+            Upgrades email security by replacing older 1024-bit encryption keys with stronger 2048-bit keys for email authentication. This improves the organization's email security posture and helps prevent email spoofing and tampering, maintaining trust with email recipients.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -31,7 +33,7 @@ function Invoke-CIPPStandardRotateDKIM {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'RotateDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'RotateDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

@@ -12,39 +12,46 @@ function Invoke-ExecAuditLogSearch {
     $Headers = $Request.Headers
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     switch ($Action) {
         'ProcessLogs' {
+            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+
             $SearchId = $Request.Query.SearchId ?? $Request.Body.SearchId
             $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
             if (!$SearchId) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'SearchId is required'
                     })
                 return
             }
 
-            $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
-            Write-Information ($Search | ConvertTo-Json -Depth 10)
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Search' and RowKey eq '$SearchId' and Tenant eq '$TenantFilter'"
+            if (!$Existing) {
+                $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
+                Write-Information ($Search | ConvertTo-Json -Depth 10)
 
-            $Entity = [PSCustomObject]@{
-                PartitionKey = [string]'Search'
-                RowKey       = [string]$SearchId
-                Tenant       = [string]$TenantFilter
-                DisplayName  = [string]$Search.displayName
-                StartTime    = [datetime]$Search.filterStartDateTime
-                EndTime      = [datetime]$Search.filterEndDateTime
-                Query        = [string]($Search | ConvertTo-Json -Compress)
-                CippStatus   = [string]'Pending'
+                $Entity = [PSCustomObject]@{
+                    PartitionKey = [string]'Search'
+                    RowKey       = [string]$SearchId
+                    Tenant       = [string]$TenantFilter
+                    DisplayName  = [string]$Search.displayName
+                    StartTime    = [datetime]$Search.filterStartDateTime
+                    EndTime      = [datetime]$Search.filterEndDateTime
+                    Query        = [string]($Search | ConvertTo-Json -Compress)
+                    CippStatus   = [string]'Pending'
+                }
+            } else {
+                $Existing.CippStatus = 'Pending'
             }
-            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 
             Write-LogMessage -headers $Headers -API $APIName -message "Queued search for processing: $($Search.displayName)" -Sev 'Info' -tenant $TenantFilter
 
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
                         resultText = "Search '$($Search.displayName)' queued for processing."
@@ -55,14 +62,14 @@ function Invoke-ExecAuditLogSearch {
         default {
             $Query = $Request.Body
             if (!$Query.TenantFilter) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'TenantFilter is required'
                     })
                 return
             }
             if (!$Query.StartTime -or !$Query.EndTime) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = 'StartTime and EndTime are required'
                     })
@@ -90,7 +97,7 @@ function Invoke-ExecAuditLogSearch {
                 }
             }
             if ($BadProps) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = "Invalid parameters: $($BadProps -join ', ')"
                     })
@@ -117,12 +124,12 @@ function Invoke-ExecAuditLogSearch {
                         state      = 'error'
                     }
                 }
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = $Results
                     })
             } catch {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::BadRequest
                         Body       = $_.Exception.Message
                     })

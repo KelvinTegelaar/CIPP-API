@@ -20,6 +20,8 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
             Medium Impact
         ADDEDDATE
             2025-04-29
+        EXECUTIVETEXT
+            Deploys standardized URL protection policies that automatically scan and verify links in emails and documents before users click them. This template-based approach ensures consistent protection against malicious websites and phishing attacks across the organization.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":true,"creatable":false,"name":"standards.SafeLinksTemplatePolicy.TemplateIds","label":"Select SafeLinks Policy Templates","api":{"url":"/api/ListSafeLinksPolicyTemplates","labelField":"TemplateName","valueField":"GUID","queryKey":"ListSafeLinksPolicyTemplates"}}
         UPDATECOMMENTBLOCK
@@ -29,7 +31,7 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SafeLinksTemplatePolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SafeLinksTemplatePolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

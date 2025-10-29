@@ -13,6 +13,8 @@ function Invoke-CIPPStandardAutoExpandArchive {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Enables automatic expansion of email archive storage when users approach their archive limits, ensuring continuous email retention without manual intervention. This prevents email storage issues and maintains compliance with data retention policies without requiring ongoing administrative management.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -28,7 +30,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoExpandArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoExpandArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

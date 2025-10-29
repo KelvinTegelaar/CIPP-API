@@ -13,7 +13,9 @@ function Invoke-CIPPStandardAddDKIM {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.9)"
+        EXECUTIVETEXT
+            Enables email authentication technology that digitally signs outgoing emails to verify they actually came from your organization. This prevents email spoofing, improves email deliverability, and protects the company's reputation by ensuring recipients can trust emails from your domains.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -32,7 +34,7 @@ function Invoke-CIPPStandardAddDKIM {
 
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AddDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AddDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

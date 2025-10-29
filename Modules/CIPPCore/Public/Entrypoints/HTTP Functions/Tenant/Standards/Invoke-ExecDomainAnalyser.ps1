@@ -3,7 +3,7 @@ function Invoke-ExecDomainAnalyser {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Tenant.DomainAnalyser.Read
+        Tenant.DomainAnalyser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -32,7 +32,7 @@ function Invoke-ExecDomainAnalyser {
         $Results = [pscustomobject]@{'Results' = $Message }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

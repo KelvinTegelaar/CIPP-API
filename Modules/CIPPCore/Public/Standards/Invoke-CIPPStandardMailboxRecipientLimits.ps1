@@ -13,6 +13,8 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Controls how many recipients employees can include in a single email, helping prevent spam distribution and managing email server load. This security measure protects against both accidental mass mailings and potential abuse while ensuring legitimate business communications can still reach necessary recipients.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.MailboxRecipientLimits.RecipientLimit","label":"Recipient Limit","defaultValue":500}
         IMPACT
@@ -30,7 +32,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'MailboxRecipientLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'MailboxRecipientLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

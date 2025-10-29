@@ -13,8 +13,10 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (1.3.3)"
             "exo_individualsharing"
+        EXECUTIVETEXT
+            Prevents employees from sharing their calendars with external parties, protecting sensitive meeting information and internal schedules from unauthorized access. This security measure helps maintain confidentiality of business activities while still allowing internal collaboration.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -31,7 +33,7 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableExternalCalendarSharing' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableExternalCalendarSharing' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

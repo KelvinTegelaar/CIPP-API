@@ -13,6 +13,8 @@ function Invoke-CIPPStandardFocusedInbox {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Configures the default setting for Outlook's Focused Inbox feature, which automatically sorts important emails into a focused view while placing less important emails in a separate section. This can improve employee productivity by reducing email clutter, though users can adjust this setting individually.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.FocusedInbox.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
@@ -29,7 +31,7 @@ function Invoke-CIPPStandardFocusedInbox {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'FocusedInbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'FocusedInbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

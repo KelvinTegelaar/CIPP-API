@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ListUserCounts {
     <#
     .FUNCTIONALITY
@@ -10,10 +8,6 @@ Function Invoke-ListUserCounts {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     if ($Request.Query.TenantFilter -eq 'AllTenants') {
@@ -22,12 +16,86 @@ Function Invoke-ListUserCounts {
         $GAs = 'Not Supported'
         $Guests = 'Not Supported'
     } else {
-        try { $Users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Users = 'Not available' }
-        try { $LicUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $LicUsers = 'Not available' }
-        try { $GAs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?`$count=true" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $GAs = 'Not available' }
-        try { $Guests = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Guests = 'Not available' }
+        try {
+            # Build bulk requests array
+            [System.Collections.Generic.List[PSCustomObject]]$BulkRequests = @(
+                @{
+                    id     = 'Users'
+                    method = 'GET'
+                    url    = "/users/`$count"
+                    headers = @{
+                        'ConsistencyLevel' = 'eventual'
+                    }
+                }
+                @{
+                    id     = 'LicUsers'
+                    method = 'GET'
+                    url    = "/users/`$count?`$top=1&`$filter=assignedLicenses/`$count ne 0"
+                    headers = @{
+                        'ConsistencyLevel' = 'eventual'
+                    }
+                }
+                @{
+                    id     = 'GAs'
+                    method = 'GET'
+                    url    = "/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members/`$count"
+                    headers = @{
+                        'ConsistencyLevel' = 'eventual'
+                    }
+                }
+                @{
+                    id     = 'Guests'
+                    method = 'GET'
+                    url    = "/users/`$count?`$top=1&`$filter=userType eq 'Guest'"
+                    headers = @{
+                        'ConsistencyLevel' = 'eventual'
+                    }
+                }
+            )
+
+            # Execute bulk request
+            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -noPaginateIds @('LicUsers') -tenantid $TenantFilter @('Users', 'LicUsers', 'GAs', 'Guests')
+
+            # Check if any requests failed
+            $FailedRequests = $BulkResults | Where-Object { $_.status -ne 200 }
+
+            if ($FailedRequests) {
+                # If any requests failed, return an error response
+                $FailedIds = ($FailedRequests | ForEach-Object { $_.id }) -join ', '
+                $ErrorMessage = "Failed to retrieve counts for: $FailedIds"
+
+                return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{
+                        Error   = $ErrorMessage
+                        Details = $FailedRequests
+                    }
+                })
+            }
+
+            # All requests succeeded, extract the counts
+            $BulkResults | ForEach-Object {
+                $UsersCount = $_.body
+
+                switch ($_.id) {
+                    'Users' { $Users = $UsersCount }
+                    'LicUsers' { $LicUsers = $UsersCount }
+                    'GAs' { $GAs = $UsersCount }
+                    'Guests' { $Guests = $UsersCount }
+                }
+            }
+
+        } catch {
+            # Return error status on exception
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = @{
+                    Error = "Failed to retrieve user counts: $($_.Exception.Message)"
+                }
+            })
+        }
     }
-    $StatusCode = [HttpStatusCode]::OK
+
     $Counts = @{
         Users    = $Users
         LicUsers = $LicUsers
@@ -35,9 +103,8 @@ Function Invoke-ListUserCounts {
         Guests   = $Guests
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
+    return ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
             Body       = $Counts
         })
 

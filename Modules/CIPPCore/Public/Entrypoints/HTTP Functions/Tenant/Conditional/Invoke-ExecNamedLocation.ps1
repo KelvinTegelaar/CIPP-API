@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecNamedLocation {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ function Invoke-ExecNamedLocation {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     # Interact with query parameters or the body of the request.
@@ -20,6 +18,7 @@ function Invoke-ExecNamedLocation {
     $NamedLocationId = $Request.Body.namedLocationId ?? $Request.Query.namedLocationId
     $Change = $Request.Body.change ?? $Request.Query.change
     $Content = $Request.Body.input ?? $Request.Query.input
+    if ($content.value) { $content = $content.value }
 
     try {
         $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers
@@ -31,8 +30,7 @@ function Invoke-ExecNamedLocation {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = @($results) }
         })

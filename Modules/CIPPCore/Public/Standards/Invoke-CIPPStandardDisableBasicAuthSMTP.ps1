@@ -7,12 +7,16 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     .SYNOPSIS
         (Label) Disable SMTP Basic Authentication
     .DESCRIPTION
-        (Helptext) Disables SMTP AUTH for the organization and all users. This is the default for new tenants.
-        (DocsDescription) Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
+        (Helptext) Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)
+        (DocsDescription) Disables tenant-wide SMTP basic authentication, including for all explicitly enabled users, impacting POP and IMAP clients that rely on SMTP for sending emails. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).
     .NOTES
         CAT
             Global Standards
         TAG
+            "CIS M365 5.0 (6.5.4)"
+            "NIST CSF 2.0 (PR.IR-01)"
+        EXECUTIVETEXT
+            Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -30,7 +34,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableBasicAuthSMTP' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableBasicAuthSMTP' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

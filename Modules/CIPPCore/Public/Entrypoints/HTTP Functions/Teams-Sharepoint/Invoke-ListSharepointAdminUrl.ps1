@@ -23,17 +23,18 @@ function Invoke-ListSharepointAdminUrl {
             $Tenant | Add-Member -MemberType NoteProperty -Name SharepointAdminUrl -Value $SharePointInfo.AdminUrl
             $Table = Get-CIPPTable -TableName 'Tenants'
             Add-CIPPAzDataTableEntity @Table -Entity $Tenant -Force
+            $AdminUrl = $SharePointInfo.AdminUrl
         }
 
         if ($Request.Query.ReturnUrl) {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
                         AdminUrl = $AdminUrl
                     }
                 })
         } else {
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Found
                     Headers    = @{
                         Location = $AdminUrl
@@ -41,7 +42,7 @@ function Invoke-ListSharepointAdminUrl {
                 })
         }
     } else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })

@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ExecAlertsList {
+function Invoke-ExecAlertsList {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,12 +7,6 @@ Function Invoke-ExecAlertsList {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     function New-FlatArray ([Array]$arr) {
         $arr | ForEach-Object {
             if ($_ -is 'Array') {
@@ -63,11 +55,12 @@ Function Invoke-ExecAlertsList {
             $Filter = "PartitionKey eq '$PartitionKey'"
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             # If a queue is running, we will not start a new one
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                    QueueId      = $RunningQueue.RowKey
                 }
                 [PSCustomObject]@{
                     Waiting = $true
@@ -78,6 +71,7 @@ Function Invoke-ExecAlertsList {
                 $Queue = New-CippQueueEntry -Name 'Alerts List - All Tenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                    QueueId      = $Queue.RowKey
                 }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'AlertsOrchestrator'
@@ -97,6 +91,10 @@ Function Invoke-ExecAlertsList {
                     InstanceId = $InstanceId
                 }
             } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
+
                 $Alerts = $Rows
                 $AlertsObj = foreach ($Alert in $Alerts) {
                     $AlertInfo = $Alert.Alert | ConvertFrom-Json
@@ -137,7 +135,7 @@ Function Invoke-ExecAlertsList {
             Metadata = $Metadata
         }
     }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

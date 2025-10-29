@@ -7,11 +7,6 @@ function Invoke-ExecServicePrincipals {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $env:TenantID
 
     $Success = $true
@@ -94,7 +89,7 @@ function Invoke-ExecServicePrincipals {
     }
 
     $Json = $Body | ConvertTo-Json -Depth 10 -Compress
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Json
         })

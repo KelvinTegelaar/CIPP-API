@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListScheduledItemDetails {
     <#
     .FUNCTIONALITY
@@ -11,15 +9,12 @@ function Invoke-ListScheduledItemDetails {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Get parameters from the request
     $RowKey = $Request.Query.RowKey ?? $Request.Body.RowKey
 
     # Validate required parameters
     if (-not $RowKey) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Required parameter 'RowKey' is missing"
             })
@@ -28,10 +23,10 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = "Task with RowKey '$RowKey' not found"
             })
@@ -84,6 +79,18 @@ function Invoke-ListScheduledItemDetails {
             type  = 'Tenant'
         }
         $Task.Tenant = $TenantForDisplay
+    }
+
+    if ($Task.Trigger) {
+        try {
+            $TriggerObject = $Task.Trigger | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($TriggerObject) {
+                $Task | Add-Member -NotePropertyName Trigger -NotePropertyValue $TriggerObject -Force
+            }
+        } catch {
+            Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"
+            # Fall back to keeping original trigger value
+        }
     }
 
     # Get the results if available
@@ -193,7 +200,7 @@ function Invoke-ListScheduledItemDetails {
     }
 
     # Return the response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Response
         })

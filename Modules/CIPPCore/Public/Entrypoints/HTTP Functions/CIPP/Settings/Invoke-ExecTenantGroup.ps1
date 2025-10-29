@@ -19,6 +19,9 @@ function Invoke-ExecTenantGroup {
     $groupName = $Request.Body.groupName
     $groupDescription = $Request.Body.groupDescription
     $members = $Request.Body.members
+    $groupType = $Request.Body.groupType ?? 'static'
+    $dynamicRules = $Request.Body.dynamicRules
+    $ruleLogic = $Request.Body.ruleLogic ?? 'and'
 
     switch ($Action) {
         'AddEdit' {
@@ -32,6 +35,13 @@ function Invoke-ExecTenantGroup {
                 if ($groupDescription) {
                     $GroupEntity.Description = $groupDescription
                 }
+                $GroupEntity | Add-Member -NotePropertyName 'GroupType' -NotePropertyValue $groupType -Force
+                if ($groupType -eq 'dynamic' -and $dynamicRules) {
+                    $GroupEntity.DynamicRules = "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)"
+                    $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $ruleLogic -Force
+                } else {
+                    $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $null -Force
+                }
                 Add-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
             } else {
                 $GroupEntity = @{
@@ -39,39 +49,51 @@ function Invoke-ExecTenantGroup {
                     RowKey       = $groupId
                     Name         = $groupName
                     Description  = $groupDescription
+                    GroupType    = $groupType
+                }
+                if ($groupType -eq 'dynamic' -and $dynamicRules) {
+                    $GroupEntity.DynamicRules = "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)"
+                    $GroupEntity.RuleLogic = $ruleLogic
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
             }
 
-            $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$groupId'"
-
+            # Handle members based on group type
             $Adds = [System.Collections.Generic.List[string]]::new()
             $Removes = [System.Collections.Generic.List[string]]::new()
-            # Add members
-            foreach ($member in $members) {
-                if ($CurrentMembers) {
-                    $CurrentMember = $CurrentMembers | Where-Object { $_.customerId -eq $member.value }
-                    if ($CurrentMember) {
-                        continue
-                    }
-                }
-                $MemberEntity = @{
-                    PartitionKey = 'Member'
-                    RowKey       = '{0}-{1}' -f $groupId, $member.value
-                    GroupId      = $groupId
-                    customerId   = $member.value
-                }
-                Add-CIPPAzDataTableEntity @MembersTable -Entity $MemberEntity -Force
-                $Adds.Add('Added member {0}' -f $member.label)
-            }
 
-            if ($CurrentMembers) {
-                foreach ($CurrentMember in $CurrentMembers) {
-                    if ($members.value -notcontains $CurrentMember.customerId) {
-                        Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
-                        $Removes.Add('Removed member {0}' -f $CurrentMember.customerId)
+            if ($groupType -eq 'static') {
+                # Static group - manage members manually
+                $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$groupId'"
+
+                # Add members
+                foreach ($member in $members) {
+                    if ($CurrentMembers) {
+                        $CurrentMember = $CurrentMembers | Where-Object { $_.customerId -eq $member.value }
+                        if ($CurrentMember) {
+                            continue
+                        }
+                    }
+                    $MemberEntity = @{
+                        PartitionKey = 'Member'
+                        RowKey       = '{0}-{1}' -f $groupId, $member.value
+                        GroupId      = $groupId
+                        customerId   = $member.value
+                    }
+                    Add-CIPPAzDataTableEntity @MembersTable -Entity $MemberEntity -Force
+                    $Adds.Add('Added member {0}' -f $member.label)
+                }
+
+                if ($CurrentMembers) {
+                    foreach ($CurrentMember in $CurrentMembers) {
+                        if ($members.value -notcontains $CurrentMember.customerId) {
+                            Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
+                            $Removes.Add('Removed member {0}' -f $CurrentMember.customerId)
+                        }
                     }
                 }
+            } elseif ($groupType -eq 'dynamic') {
+                $Adds.Add('Dynamic group updated. Rules will be processed on next scheduled run.')
             }
             $Results.Add(@{
                     resultText = "Group '$groupName' saved successfully"
@@ -107,7 +129,7 @@ function Invoke-ExecTenantGroup {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

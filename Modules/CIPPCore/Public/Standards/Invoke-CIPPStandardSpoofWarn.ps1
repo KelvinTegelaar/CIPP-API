@@ -13,7 +13,9 @@ function Invoke-CIPPStandardSpoofWarn {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.2.3)"
+        EXECUTIVETEXT
+            Displays visual warnings in Outlook when emails come from external senders, helping employees identify potentially suspicious messages and reducing the risk of phishing attacks. This security feature makes it easier for staff to distinguish between internal and external communications.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.SpoofWarn.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Enter allowed senders(domain.com, *.domain.com or test@domain.com)","name":"standards.SpoofWarn.AllowListAdd"}
@@ -33,7 +35,7 @@ function Invoke-CIPPStandardSpoofWarn {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SpoofWarn' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SpoofWarn' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

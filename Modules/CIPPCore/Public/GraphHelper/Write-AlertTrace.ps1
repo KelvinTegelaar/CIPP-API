@@ -6,10 +6,11 @@ function Write-AlertTrace {
     param(
         $cmdletName,
         $data,
-        $tenantFilter
+        $tenantFilter,
+        [string]$PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString(),
+        [string]$AlertComment = $null
     )
     $Table = Get-CIPPTable -tablename AlertLastRun
-    $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
     #Get current row and compare the $logData object. If it's the same, don't write it.
     $Row = Get-CIPPAzDataTableEntity @table -Filter "RowKey eq '$($tenantFilter)-$($cmdletName)' and PartitionKey eq '$PartitionKey'"
     try {
@@ -23,6 +24,7 @@ function Write-AlertTrace {
                 'CmdletName'   = "$cmdletName"
                 'Tenant'       = "$tenantFilter"
                 'LogData'      = [string]$LogData
+                'AlertComment' = [string]$AlertComment
             }
             $Table.Entity = $TableRow
             Add-CIPPAzDataTableEntity @Table -Force | Out-Null
@@ -36,6 +38,7 @@ function Write-AlertTrace {
             'CmdletName'   = "$cmdletName"
             'Tenant'       = "$tenantFilter"
             'LogData'      = [string]$LogData
+            'AlertComment' = [string]$AlertComment
         }
         $Table.Entity = $TableRow
         Add-CIPPAzDataTableEntity @Table -Force | Out-Null

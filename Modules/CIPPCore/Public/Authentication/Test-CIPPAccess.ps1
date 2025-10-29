@@ -79,7 +79,7 @@ function Test-CIPPAccess {
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
                         @{
@@ -90,7 +90,6 @@ function Test-CIPPAccess {
                             'permissions'     = $Permissions
                         } | ConvertTo-Json -Depth 5)
                 })
-            return
         }
 
     } else {
@@ -107,7 +106,7 @@ function Test-CIPPAccess {
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 
             if (!$User.userRoles) {
-                Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = (
                             @{
@@ -118,7 +117,7 @@ function Test-CIPPAccess {
             }
 
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
                         @{
@@ -126,7 +125,6 @@ function Test-CIPPAccess {
                             'permissions'     = $Permissions
                         } | ConvertTo-Json -Depth 5)
                 })
-            return
         }
 
         if ($User.userRoles -contains 'admin' -or $User.userRoles -contains 'superadmin') {
@@ -199,6 +197,7 @@ function Test-CIPPAccess {
                     continue
                 }
             }
+
             if ($PermissionsFound) {
                 if ($TenantList.IsPresent) {
                     $LimitedTenantList = foreach ($Permission in $PermissionSet) {
@@ -248,6 +247,9 @@ function Test-CIPPAccess {
                 foreach ($Role in $PermissionSet) {
                     foreach ($Perm in $Role.Permissions) {
                         if ($Perm -match $APIRole) {
+                            if ($Role.BlockedEndpoints -contains $Request.Params.CIPPEndpoint) {
+                                throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
+                            }
                             $APIAllowed = $true
                             break
                         }

@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListDeletedItems {
+function Invoke-ListDeletedItems {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,22 +7,33 @@ Function Invoke-ListDeletedItems {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
-    $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    # Interact with query parameters or the body of the request.
-    $Types = 'Application', 'User', 'Group'
-    $GraphRequest = foreach ($Type in $Types) {
-    (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.$($Type)" -tenantid $TenantFilter) |
-            Where-Object -Property '@odata.context' -NotLike '*graph.microsoft.com*' |
-            Select-Object *, @{ Name = 'TargetType'; Expression = { $Type } }
+    $Types = @('administrativeUnit', 'application', 'externalUserProfile', 'pendingExternalUserProfile', 'user', 'group', 'servicePrincipal', 'certificateBasedAuthPki', 'certificateAuthorityDetail')
+    $Requests = foreach ($Type in $Types) {
+        [PSCustomObject]@{
+            id     = $Type
+            url    = "directory/deletedItems/microsoft.graph.$($Type)"
+            method = 'GET'
+        }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    $BulkResults = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
+
+    $GraphRequest = foreach ($Type in $Types) {
+        # pretty format the type name
+        $FormattedType = (Get-Culture).TextInfo.ToTitleCase(($Type -creplace '([A-Z])', ' $1').Trim())
+
+        $Result = $BulkResults | Where-Object { $_.id -eq $Type }
+        if ($Result.status -eq 200) {
+            $Result.body.value | ForEach-Object {
+                $_ | Add-Member -NotePropertyName 'TargetType' -NotePropertyValue $FormattedType
+                $_
+            }
+        }
+    }
+
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)
         })

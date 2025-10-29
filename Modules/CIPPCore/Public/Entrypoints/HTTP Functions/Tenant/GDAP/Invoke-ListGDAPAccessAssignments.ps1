@@ -5,11 +5,6 @@ function Invoke-ListGDAPAccessAssignments {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Id = $Request.Query.Id
     $TenantFilter = $env:TenantID
 
@@ -32,7 +27,7 @@ function Invoke-ListGDAPAccessAssignments {
             'method' = 'GET'
         }
     }
-    $Members = New-GraphBulkRequest -Requests $ContainerMembers -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
+    $Members = New-GraphBulkRequest -Requests @($ContainerMembers) -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
 
     $Results = foreach ($AccessAssignment in $AccessAssignments) {
         [PSCustomObject]@{
@@ -55,7 +50,7 @@ function Invoke-ListGDAPAccessAssignments {
         Results = @($Results)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

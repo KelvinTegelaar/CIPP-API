@@ -13,6 +13,8 @@ function Invoke-CIPPStandardDeployMailContact {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Automatically creates external email contacts in the organization's address book, enabling seamless communication with external partners and vendors. This standardizes contact management across all company locations and improves collaboration efficiency.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.DeployMailContact.ExternalEmailAddress","label":"External Email Address","required":true}
             {"type":"textField","name":"standards.DeployMailContact.DisplayName","label":"Display Name","required":true}
@@ -33,7 +35,7 @@ function Invoke-CIPPStandardDeployMailContact {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DeployMailContact' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DeployMailContact' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

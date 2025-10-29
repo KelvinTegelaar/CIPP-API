@@ -13,8 +13,11 @@ function Invoke-CIPPStandardAuditLog {
         CAT
             Global Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (3.1.1)"
             "mip_search_auditlog"
+            "NIST CSF 2.0 (DE.CM-09)"
+        EXECUTIVETEXT
+            Activates comprehensive activity logging across Microsoft 365 services to track user actions, system changes, and security events. This provides essential audit trails for compliance requirements, security investigations, and regulatory reporting.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -32,7 +35,7 @@ function Invoke-CIPPStandardAuditLog {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AuditLog' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AuditLog' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -43,7 +46,7 @@ function Invoke-CIPPStandardAuditLog {
     Write-Host ($Settings | ConvertTo-Json)
     $AuditLogEnabled = [bool](New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
         $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -Select IsDehydrated).IsDehydrated

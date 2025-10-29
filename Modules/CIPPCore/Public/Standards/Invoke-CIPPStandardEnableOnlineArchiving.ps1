@@ -13,6 +13,10 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         CAT
             Exchange Standards
         TAG
+            "Essential 8 (1511)"
+            "NIST CSF 2.0 (PR.DS-11)"
+        EXECUTIVETEXT
+            Automatically enables online email archiving for all licensed employees, providing additional storage for older emails while maintaining easy access. This helps manage mailbox sizes, improves email performance, and supports compliance with data retention requirements.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -28,7 +32,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableOnlineArchiving' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableOnlineArchiving' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

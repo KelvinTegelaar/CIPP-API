@@ -56,7 +56,7 @@ function Add-CIPPScheduledTask {
 
             $propertiesToCheck = @('Webhook', 'Email', 'PSA')
             $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
-            $PostExecution = $PostExecutionObject ? ($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
+            $PostExecution = $PostExecutionObject ? @($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
             $Parameters = [System.Collections.Hashtable]@{}
             foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
                 $Param = $task.Parameters.$Key
@@ -122,6 +122,10 @@ function Add-CIPPScheduledTask {
                 $task.Recurrence.value
             }
 
+            if ($task.PSObject.Properties.Name -notcontains 'ScheduledTime') {
+                $task | Add-Member -MemberType NoteProperty -Name 'ScheduledTime' -Value 0 -Force
+            }
+
             if ($DesiredStartTime) {
                 try {
                     # Parse the epoch time
@@ -184,7 +188,10 @@ function Add-CIPPScheduledTask {
                 AdditionalProperties = [string]$AdditionalProperties
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'
+                AlertComment         = [string]$task.AlertComment
             }
+
+
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {
                 $entity['DesiredStartTime'] = [string]$DesiredStartTime
@@ -204,6 +211,40 @@ function Add-CIPPScheduledTask {
                     # Not a JSON object, ignore
                 }
             }
+
+            if ($task.Trigger) {
+                $entity.Trigger = [string]($task.Trigger | ConvertTo-Json -Compress)
+                $TriggerType = $task.Trigger.Type.value ?? $task.Trigger.Type
+                if ($TriggerType -eq 'DeltaQuery') {
+                    $Parameters = @{}
+                    if ($task.Trigger.WatchedAttributes -and ($task.Trigger.WatchedAttributes | Measure-Object).Count -gt 0) {
+                        $Parameters.'$select' = $task.Trigger.WatchedAttributes | ForEach-Object { $_.value ?? $_ } -join ','
+                    }
+                    if ($task.Trigger.ResourceFilter) {
+                        $ResourceFilterValues = $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ }
+                        $Parameters.'$filter' = "id eq '" + ($ResourceFilterValues -join "' or id eq '") + "'"
+                    }
+                    $Resource = $task.Trigger.DeltaResource.value ?? $task.Trigger.DeltaResource
+
+                    if ($entity.TenantGroup) {
+                        $tenantFilter = $entity.TenantGroup | ConvertFrom-Json
+                    }
+                    $DeltaQuery = @{
+                        TenantFilter = $tenantFilter
+                        Resource     = $Resource
+                        Parameters   = $Parameters
+                        PartitionKey = $RowKey
+                    }
+
+                    try {
+                        $null = New-GraphDeltaQuery @DeltaQuery
+                        Write-Information "Created delta query for resource $($Resource)"
+                    } catch {
+                        Write-Warning "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
+                    }
+                }
+            }
+
             if ($SyncType) {
                 $entity.SyncType = $SyncType
             }
@@ -211,15 +252,17 @@ function Add-CIPPScheduledTask {
                 Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                return "Could not add task: $ErrorMessage"
+                Write-Information $_.InvocationInfo.PositionMessage
+                Write-Information ($entity | ConvertTo-Json)
+                return "Error - Could not add task: $ErrorMessage"
             }
             Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Added task $($entity.Name) with ID $($entity.RowKey)" -Sev 'Info' -Tenant $tenantFilter
             return "Successfully added task: $($entity.Name)"
         }
     } catch {
         Write-Warning "Failed to add scheduled task: $($_.Exception.Message)"
-        Write-Information $_.InvocationInfo.PositionMessage
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        throw "Could not add task: $ErrorMessage"
+        #Write-Information ($Task | ConvertTo-Json)
+        throw "Error - Could not add task: $ErrorMessage"
     }
 }

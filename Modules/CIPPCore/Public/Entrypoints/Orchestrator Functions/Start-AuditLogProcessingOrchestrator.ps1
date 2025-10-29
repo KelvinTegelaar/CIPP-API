@@ -2,6 +2,9 @@ function Start-AuditLogProcessingOrchestrator {
     <#
     .SYNOPSIS
     Start the Audit Log Processing Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()

@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListExternalTenantInfo {
+function Invoke-ListExternalTenantInfo {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -9,14 +7,9 @@ Function Invoke-ListExternalTenantInfo {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $HttpResponse = [HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = "Default response, you should never see this"
+        Body       = 'Default response, you should never see this'
     }
 
     try {
@@ -38,12 +31,12 @@ Function Invoke-ListExternalTenantInfo {
             }
         } else {
             $HttpResponse.StatusCode = [HttpStatusCode]::BadRequest
-            $HttpResponse.Body = "Tenant parameter is required"
+            $HttpResponse.Body = 'Tenant parameter is required'
         }
     } catch {
         $HttpResponse.StatusCode = [HttpStatusCode]::InternalServerError
         $HttpResponse.Body = "Something went wrong while trying to get tenant info for tenant $($Tenant): $($_.Exception.Message)"
     }
 
-    Push-OutputBinding -Name Response -Value $HttpResponse
+    return [HttpResponseContext]$HttpResponse
 }
