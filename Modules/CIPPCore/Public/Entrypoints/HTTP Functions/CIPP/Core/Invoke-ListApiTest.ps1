@@ -8,13 +8,19 @@ function Invoke-ListApiTest {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Response = @{}
+    $Response.Request = $Request
+    if ($env:DEBUG_ENV_VARS -eq 'true') {
+        $BlockedKeys = @('ApplicationSecret', 'RefreshToken', 'AzureWebJobsStorage', 'DEPLOYMENT_STORAGE_CONNECTION_STRING')
+        $EnvironmentVariables = [PSCustomObject]@{}
+        Get-ChildItem env: | Where-Object { $BlockedKeys -notcontains $_.Name } | ForEach-Object {
+            $EnvironmentVariables | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value
+        }
+        $Response.EnvironmentVariables = $EnvironmentVariables
+    }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = ($Request | ConvertTo-Json -Depth 5)
+            Body       = $Response
         })
 }

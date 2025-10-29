@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ExecStandardsRun {
+function Invoke-ExecStandardsRun {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,7 +9,7 @@ Function Invoke-ExecStandardsRun {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
 
     $TenantFilter = $Request.Query.tenantFilter ?? 'allTenants'
@@ -38,7 +36,7 @@ Function Invoke-ExecStandardsRun {
 
             $ProcessorFunction = [PSCustomObject]@{
                 PartitionKey = 'Function'
-                RowKey       = "Invoke-CIPPStandardsRun-$TenantFilter"
+                RowKey       = "Invoke-CIPPStandardsRun-$TenantFilter-$TemplateId"
                 FunctionName = 'Invoke-CIPPStandardsRun'
                 Parameters   = [string](ConvertTo-Json -Compress -InputObject @{
                         TenantFilter = $TenantFilter
@@ -65,8 +63,7 @@ Function Invoke-ExecStandardsRun {
 
     $Results = [pscustomobject]@{'Results' = "$Results" }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

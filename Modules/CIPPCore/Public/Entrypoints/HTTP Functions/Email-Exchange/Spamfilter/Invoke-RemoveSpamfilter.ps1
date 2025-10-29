@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-RemoveSpamfilter {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,7 @@ Function Invoke-RemoveSpamfilter {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Query.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
 
@@ -34,8 +32,7 @@ Function Invoke-RemoveSpamfilter {
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ExecCombinedSetup {
     <#
     .FUNCTIONALITY
@@ -14,7 +12,7 @@ function Invoke-ExecCombinedSetup {
     $Results = [System.Collections.ArrayList]::new()
     try {
         # Set up Azure context if needed for Key Vault access
-        if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:MSI_SECRET) {
+        if (($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -ne 'true') -and $env:MSI_SECRET) {
             Disable-AzContextAutosave -Scope Process | Out-Null
             $null = Connect-AzAccount -Identity
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
@@ -67,7 +65,7 @@ function Invoke-ExecCombinedSetup {
         if ($Request.Body.selectedOption -eq 'Manual') {
             $KV = $env:WEBSITE_DEPLOYMENT_ID
 
-            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                 $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                 $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
                 if (!$Secret) {
@@ -85,6 +83,7 @@ function Invoke-ExecCombinedSetup {
                 if ($Request.Body.tenantId) { $Secret.TenantId = $Request.Body.tenantid }
                 if ($Request.Body.applicationId) { $Secret.ApplicationId = $Request.Body.applicationId }
                 if ($Request.Body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.Body.ApplicationSecret }
+                if ($Request.Body.RefreshToken) { $Secret.RefreshToken = $Request.Body.RefreshToken }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                 $Results.add('Manual credentials have been set in the DevSecrets table.')
             } else {
@@ -100,6 +99,10 @@ function Invoke-ExecCombinedSetup {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationSecret -AsPlainText -Force)
                     $Results.add('Set application secret in Key Vault.')
                 }
+                if ($Request.Body.RefreshToken) {
+                    Set-AzKeyVaultSecret -VaultName $kv -Name 'refreshtoken' -SecretValue (ConvertTo-SecureString -String $Request.Body.RefreshToken -AsPlainText -Force)
+                    $Results.add('Set refresh token in Key Vault.')
+                }
             }
 
             $Results.add('Manual credentials setup has been completed.')
@@ -112,8 +115,7 @@ function Invoke-ExecCombinedSetup {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })

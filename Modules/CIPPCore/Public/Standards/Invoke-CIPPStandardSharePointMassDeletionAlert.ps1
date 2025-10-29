@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         CAT
             Defender Standards
         TAG
+        EXECUTIVETEXT
+            Alerts administrators when employees delete large numbers of SharePoint files in a short time period, helping detect potential data destruction attacks, ransomware, or accidental mass deletions. This early warning system enables rapid response to protect critical business documents and data.
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SharePointMassDeletionAlert.Threshold","label":"Max files to delete within the time frame","defaultValue":20}
             {"type":"number","name":"standards.SharePointMassDeletionAlert.TimeWindow","label":"Time frame in minutes","defaultValue":60}
@@ -31,20 +33,33 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
     #>
 
     param ($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('RMS_S_PREMIUM2')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $PolicyName = 'CIPP SharePoint mass deletion of files by a user'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-    Where-Object { $_.Name -eq $PolicyName } |
-    Select-Object -Property *
+    try {
+        $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
+        Where-Object { $_.Name -eq $PolicyName } |
+        Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the sharingCapability state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $EmailsOutsideSettings = $CurrentState.NotifyUser | Where-Object { $_ -notin $Settings.NotifyUser.value }
     $MissingEmailsInSettings = $Settings.NotifyUser.value | Where-Object { $_ -notin $CurrentState.NotifyUser }
 
     $StateIsCorrect = ($EmailsOutsideSettings.Count -eq 0) -and
-        ($MissingEmailsInSettings.Count -eq 0) -and
-        ($CurrentState.Threshold -eq $Settings.Threshold) -and
-        ($CurrentState.TimeWindow -eq $Settings.TimeWindow)
+    ($MissingEmailsInSettings.Count -eq 0) -and
+    ($CurrentState.Threshold -eq $Settings.Threshold) -and
+    ($CurrentState.TimeWindow -eq $Settings.TimeWindow)
 
     $CompareField = [PSCustomObject]@{
         'Threshold'  = $CurrentState.Threshold
@@ -52,10 +67,10 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         'NotifyUser' = $CurrentState.NotifyUser -join ', '
     }
 
-    If ($Settings.remediate -eq $true) {
-        If ($StateIsCorrect -eq $true) {
+    if ($Settings.remediate -eq $true) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint mass deletion of files alert is configured correctly' -sev Info
-        } Else {
+        } else {
             $cmdParams = @{
                 'NotifyUser'      = $Settings.NotifyUser.value
                 'Category'        = 'DataGovernance'
@@ -66,7 +81,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
                 'TimeWindow'      = $Settings.TimeWindow
             }
 
-            If ($CurrentState.Name -eq $PolicyName) {
+            if ($CurrentState.Name -eq $PolicyName) {
                 try {
                     $cmdParams['Identity'] = $PolicyName
                     New-ExoRequest -TenantId $Tenant -cmdlet 'Set-ProtectionAlert' -Compliance -cmdParams $cmdParams -UseSystemMailbox $true
@@ -75,7 +90,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to configure SharePoint mass deletion of files alert. Error: $ErrorMessage" -sev Error
                 }
-            } Else {
+            } else {
                 try {
                     $cmdParams['name'] = $PolicyName
                     $cmdParams['ThreatType'] = 'Activity'
@@ -90,16 +105,16 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         }
     }
 
-    If ($Settings.alert -eq $true) {
-        If ($StateIsCorrect -eq $true) {
+    if ($Settings.alert -eq $true) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint mass deletion of files alert is enabled' -sev Info
-        } Else {
+        } else {
             Write-StandardsAlert -message 'SharePoint mass deletion of files alert is disabled' -object $CompareField -tenant $tenant -standardName 'SharePointMassDeletionAlert' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint mass deletion of files alert is disabled' -sev Info
         }
     }
 
-    If ($Settings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         $FieldValue = $StateIsCorrect ? $true : $CompareField
         Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -FieldValue $FieldValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant

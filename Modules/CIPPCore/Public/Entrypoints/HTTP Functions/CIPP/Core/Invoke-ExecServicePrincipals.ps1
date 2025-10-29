@@ -3,15 +3,10 @@ function Invoke-ExecServicePrincipals {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.ReadWrite
+        Tenant.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $env:TenantID
 
     $Success = $true
@@ -61,7 +56,12 @@ function Invoke-ExecServicePrincipals {
                     $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals/$($Request.Query.Id)" -tenantid $TenantFilter -NoAuthCheck $true
                 } else {
                     $Action = 'List'
-                    $Results = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$orderby=displayName&$count=true' -ComplexFilter -tenantid $TenantFilter -NoAuthCheck $true
+                    $Uri = 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$orderby=displayName&$count=true'
+                    if ($Request.Query.Select) {
+                        $Uri = '{0}&$select={1}' -f $Uri, $Request.Query.Select
+                    }
+
+                    $Results = New-GraphGetRequest -Uri $Uri -ComplexFilter -tenantid $TenantFilter -NoAuthCheck $true
                 }
             }
         }
@@ -89,7 +89,7 @@ function Invoke-ExecServicePrincipals {
     }
 
     $Json = $Body | ConvertTo-Json -Depth 10 -Compress
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Json
         })

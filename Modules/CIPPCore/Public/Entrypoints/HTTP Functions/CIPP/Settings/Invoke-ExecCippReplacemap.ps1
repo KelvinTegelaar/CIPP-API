@@ -10,10 +10,17 @@ function Invoke-ExecCippReplacemap {
 
     $Table = Get-CippTable -tablename 'CippReplacemap'
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    $customerId = $Request.Query.tenantId ?? $Request.Body.tenantId
+    $TenantId = $Request.Query.tenantId ?? $Request.Body.tenantId
+    if ($TenantId -eq 'AllTenants') {
+        $customerId = $TenantId
+    } else {
+        # ensure we use a consistent id for the table storage
+        $Tenant = Get-Tenants -TenantFilter $TenantId
+        $customerId = $Tenant.customerId
+    }
 
     if (!$customerId) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'customerId is required'
             })
@@ -31,11 +38,13 @@ function Invoke-ExecCippReplacemap {
         'AddEdit' {
             $VariableName = $Request.Body.RowKey
             $VariableValue = $Request.Body.Value
+            $VariableDescription = $Request.Body.Description
 
             $VariableEntity = @{
                 PartitionKey = $customerId
                 RowKey       = $VariableName
                 Value        = $VariableValue
+                Description  = $VariableDescription
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force
@@ -57,7 +66,7 @@ function Invoke-ExecCippReplacemap {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

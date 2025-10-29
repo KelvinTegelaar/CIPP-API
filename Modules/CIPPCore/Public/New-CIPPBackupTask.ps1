@@ -6,6 +6,25 @@ function New-CIPPBackupTask {
     )
 
     $BackupData = switch ($Task) {
+        'CippCustomVariables' {
+            Write-Host "Backing up Custom Variables for $TenantFilter"
+            $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
+
+            # Get tenant-specific variables
+            $Tenant = Get-Tenants -TenantFilter $TenantFilter
+            $CustomerId = $Tenant.customerId
+
+            $TenantVariables = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
+
+            # If backing up AllTenants, also get global variables
+            if ($TenantFilter -eq 'AllTenants') {
+                $GlobalVariables = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq 'AllTenants'"
+                $AllVariables = @($TenantVariables) + @($GlobalVariables)
+                $AllVariables
+            } else {
+                $TenantVariables
+            }
+        }
         'users' {
             Write-Host "Backup users for $TenantFilter"
             $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
@@ -45,7 +64,7 @@ function New-CIPPBackupTask {
                 'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles'
             )
 
-            $Policies = foreach ($url in $GraphURLS) {
+            foreach ($url in $GraphURLS) {
                 try {
                     $Policies = New-GraphGetRequest -uri "$($url)" -tenantid $TenantFilter
                     $URLName = (($url).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''

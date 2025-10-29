@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListScheduledItemDetails {
     <#
     .FUNCTIONALITY
@@ -11,15 +9,12 @@ function Invoke-ListScheduledItemDetails {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Get parameters from the request
     $RowKey = $Request.Query.RowKey ?? $Request.Body.RowKey
 
     # Validate required parameters
     if (-not $RowKey) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Required parameter 'RowKey' is missing"
             })
@@ -28,10 +23,10 @@ function Invoke-ListScheduledItemDetails {
 
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, Hidden, Results, Timestamp
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = "Task with RowKey '$RowKey' not found"
             })
@@ -56,6 +51,47 @@ function Invoke-ListScheduledItemDetails {
     try {
         $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
     } catch {}
+
+    # Handle tenant group display information (similar to Invoke-ListScheduledItems)
+    if ($Task.TenantGroup) {
+        try {
+            $TenantGroupObject = $Task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($TenantGroupObject) {
+                # Create a tenant group object for the frontend formatting
+                $TenantGroupForDisplay = [PSCustomObject]@{
+                    label = $TenantGroupObject.label
+                    value = $TenantGroupObject.value
+                    type  = 'Group'
+                }
+                $Task | Add-Member -NotePropertyName TenantGroupInfo -NotePropertyValue $TenantGroupForDisplay -Force
+                # Update the tenant to show the group object for proper formatting
+                $Task.Tenant = $TenantGroupForDisplay
+            }
+        } catch {
+            Write-Warning "Failed to parse tenant group information for task $($Task.RowKey): $($_.Exception.Message)"
+            # Fall back to keeping original tenant value
+        }
+    } else {
+        # For regular tenants, create a tenant object for consistent formatting
+        $TenantForDisplay = [PSCustomObject]@{
+            label = $Task.Tenant
+            value = $Task.Tenant
+            type  = 'Tenant'
+        }
+        $Task.Tenant = $TenantForDisplay
+    }
+
+    if ($Task.Trigger) {
+        try {
+            $TriggerObject = $Task.Trigger | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($TriggerObject) {
+                $Task | Add-Member -NotePropertyName Trigger -NotePropertyValue $TriggerObject -Force
+            }
+        } catch {
+            Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"
+            # Fall back to keeping original trigger value
+        }
+    }
 
     # Get the results if available
     $ResultsTable = Get-CIPPTable -TableName 'ScheduledTaskResults'
@@ -164,7 +200,7 @@ function Invoke-ListScheduledItemDetails {
     }
 
     # Return the response
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Response
         })

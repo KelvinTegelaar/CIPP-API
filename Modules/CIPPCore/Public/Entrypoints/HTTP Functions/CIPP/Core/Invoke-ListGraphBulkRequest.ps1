@@ -7,19 +7,14 @@ function Invoke-ListGraphBulkRequest {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $TenantFilter = $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Requests = $Request.Body.requests
     $NoPaginateIds = $Request.Body.noPaginateIds
 
     $GraphRequestParams = @{
-        tenantid = $TenantFilter
-        Requests = @()
+        tenantid      = $TenantFilter
+        Requests      = @()
         NoPaginateIds = $NoPaginateIds ?? @()
     }
 
@@ -58,5 +53,5 @@ function Invoke-ListGraphBulkRequest {
         }
     }
 
-    Push-OutputBinding -Name Response -Value $Results
+    return [HttpResponseContext]$Results
 }

@@ -17,6 +17,7 @@ function New-CIPPBackup {
                     'AppPermissions'
                     'AccessRoleGroups'
                     'ApiClients'
+                    'CippReplacemap'
                     'CustomData'
                     'CustomRoles'
                     'Config'
@@ -89,7 +90,7 @@ function New-CIPPBackup {
             try {
                 $null = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
                 Write-LogMessage -headers $Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
-                $State = 'Backup finished succesfully'
+                $State = 'Backup finished successfully'
             } catch {
                 $State = 'Failed to write backup to table storage'
                 $ErrorMessage = Get-CippException -Exception $_
@@ -99,10 +100,9 @@ function New-CIPPBackup {
         }
 
     }
-    return [pscustomobject]@{
-        BackupName  = $RowKey
-        BackupState = $State
-        BackupData  = $BackupData
-    }
+    return @([pscustomobject]@{
+            BackupName  = $RowKey
+            BackupState = $State
+        })
 }
 

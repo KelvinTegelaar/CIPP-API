@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-AddAutopilotConfig {
+function Invoke-AddAutopilotConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,47 +7,37 @@ Function Invoke-AddAutopilotConfig {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
-
-
     # Input bindings are passed in via param block.
-    $Tenants = $Request.body.selectedTenants.value
-    $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
-    $Profbod = [pscustomobject]$Request.body
-    $usertype = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
-    $DeploymentMode = if ($profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
+    $Tenants = $Request.Body.selectedTenants.value
+    $Profbod = [pscustomobject]$Request.Body
+    $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
+    $DeploymentMode = if ($Profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
+
+    # If deployment mode is shared, disable white glove (pre-provisioning) as it's not supported
+    $AllowWhiteGlove = if ($DeploymentMode -eq 'shared') { $false } else { $Profbod.allowWhiteGlove }
+
     $profileParams = @{
-        displayname        = $request.body.Displayname
-        description        = $request.body.Description
-        usertype           = $usertype
+        DisplayName        = $Request.Body.DisplayName
+        Description        = $Request.Body.Description
+        UserType           = $UserType
         DeploymentMode     = $DeploymentMode
-        assignto           = $AssignTo
-        devicenameTemplate = $Profbod.deviceNameTemplate
-        allowWhiteGlove    = $Profbod.allowWhiteGlove
-        CollectHash        = $Profbod.collectHash
-        hideChangeAccount  = $Profbod.hideChangeAccount
-        hidePrivacy        = $Profbod.hidePrivacy
-        hideTerms          = $Profbod.hideTerms
+        AssignTo           = $Request.Body.Assignto
+        DeviceNameTemplate = $Profbod.DeviceNameTemplate
+        AllowWhiteGlove    = $AllowWhiteGlove
+        CollectHash        = $Profbod.CollectHash
+        HideChangeAccount  = $Profbod.HideChangeAccount
+        HidePrivacy        = $Profbod.HidePrivacy
+        HideTerms          = $Profbod.HideTerms
         Autokeyboard       = $Profbod.Autokeyboard
         Language           = $ProfBod.languages.value
     }
-    $results = foreach ($Tenant in $tenants) {
-        $profileParams['tenantFilter'] = $Tenant
+    $Results = foreach ($tenant in $Tenants) {
+        $profileParams['tenantFilter'] = $tenant
         Set-CIPPDefaultAPDeploymentProfile @profileParams
     }
-    $body = [pscustomobject]@{'Results' = $results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = $Results }
         })
-
-
-
 }

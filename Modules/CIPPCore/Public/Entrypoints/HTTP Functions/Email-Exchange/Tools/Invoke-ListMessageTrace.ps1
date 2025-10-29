@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListMessageTrace {
+function Invoke-ListMessageTrace {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,9 +9,6 @@ Function Invoke-ListMessageTrace {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         $TenantFilter = $Request.Body.tenantFilter
 
@@ -65,11 +60,11 @@ Function Invoke-ListMessageTrace {
                 MessageTraceId   = $Request.Body.ID
                 RecipientAddress = $Request.Body.recipient
             }
-            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTraceDetail' -CmdParams $CmdParams | Select-Object @{ Name = 'Date'; Expression = { $_.Date.ToString('u') } }, Event, Action, Detail
+            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTraceDetailV2' -CmdParams $CmdParams | Select-Object @{ Name = 'Date'; Expression = { $_.Date.ToString('u') } }, Event, Action, Detail
         } else {
             Write-Information ($SearchParams | ConvertTo-Json)
 
-            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTrace' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
+            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTraceV2' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
 
         }
@@ -78,8 +73,7 @@ Function Invoke-ListMessageTrace {
         $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($trace)
         })

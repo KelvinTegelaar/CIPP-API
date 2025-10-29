@@ -26,6 +26,7 @@ function Invoke-ExecPermissionRepair {
 
             $NewPermissions = @{}
             foreach ($AppId in $AppIds) {
+                if (!$AppId) { continue }
                 $ApplicationPermissions = [system.collections.generic.list[object]]::new()
                 $DelegatedPermissions = [system.collections.generic.list[object]]::new()
 
@@ -82,7 +83,7 @@ function Invoke-ExecPermissionRepair {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

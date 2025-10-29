@@ -1,4 +1,8 @@
 function Add-CIPPAzDataTableEntity {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding(DefaultParameterSetName = 'OperationType')]
     param(
         $Context,
@@ -12,6 +16,16 @@ function Add-CIPPAzDataTableEntity {
         [ValidateSet('Add', 'UpsertMerge', 'UpsertReplace')]
         [string]$OperationType = 'Add'
     )
+
+    # Validate input parameters
+    if ($null -eq $Context) {
+        throw 'Context parameter cannot be null'
+    }
+
+    if ($null -eq $Entity) {
+        Write-Warning 'Entity parameter is null - nothing to process'
+        return
+    }
 
     $Parameters = @{
         Context                = $Context
@@ -28,8 +42,47 @@ function Add-CIPPAzDataTableEntity {
 
     foreach ($SingleEnt in @($Entity)) {
         try {
+            # Skip null entities
+            if ($null -eq $SingleEnt) {
+                Write-Warning 'Skipping null entity'
+                continue
+            }
+
             if ($null -eq $SingleEnt.PartitionKey -or $null -eq $SingleEnt.RowKey) {
                 throw 'PartitionKey or RowKey is null'
+            }
+
+            # Ensure entity is not empty
+            if ($SingleEnt -is [hashtable] -and $SingleEnt.Count -eq 0) {
+                Write-Warning 'Skipping empty hashtable entity'
+                continue
+            } elseif ($SingleEnt -is [PSCustomObject] -and ($SingleEnt.PSObject.Properties | Measure-Object).Count -eq 0) {
+                Write-Warning 'Skipping empty PSCustomObject entity'
+                continue
+            }
+
+            # Additional validation for AzBobbyTables compatibility
+            try {
+                # Ensure all property values are not null for string properties
+                if ($SingleEnt -is [hashtable]) {
+                    foreach ($key in @($SingleEnt.Keys)) {
+                        if ($null -eq $SingleEnt[$key]) {
+                            $SingleEnt.Remove($key)
+                        }
+                    }
+                } elseif ($SingleEnt -is [PSCustomObject]) {
+                    $propsToRemove = [system.Collections.Generic.List[string]]::new()
+                    foreach ($prop in $SingleEnt.PSObject.Properties) {
+                        if ($null -eq $prop.Value) {
+                            $propsToRemove.Add($prop.Name)
+                        }
+                    }
+                    foreach ($propName in $propsToRemove) {
+                        $SingleEnt.PSObject.Properties.Remove($propName)
+                    }
+                }
+            } catch {
+                Write-Warning "Error during entity validation: $($_.Exception.Message)"
             }
 
             Add-AzDataTableEntity @Parameters -Entity $SingleEnt -ErrorAction Stop
@@ -37,7 +90,7 @@ function Add-CIPPAzDataTableEntity {
         } catch [System.Exception] {
             if ($_.Exception.ErrorCode -in @('PropertyValueTooLarge', 'EntityTooLarge', 'RequestBodyTooLarge')) {
                 try {
-                    Write-Host 'Entity is too large. Splitting entity into multiple parts.'
+                    Write-Information 'Entity is too large. Splitting entity into multiple parts.'
 
                     $largePropertyNames = [System.Collections.Generic.List[string]]::new()
                     $entitySize = 0
@@ -102,6 +155,7 @@ function Add-CIPPAzDataTableEntity {
 
                             $propertiesToRemove = [System.Collections.Generic.List[object]]::new()
                             foreach ($key in $SingleEnt.Keys) {
+                                if ($key -in @('RowKey', 'PartitionKey')) { continue }
                                 $newEntitySize = [System.Text.Encoding]::UTF8.GetByteCount($($newEntity | ConvertTo-Json -Compress))
                                 if ($newEntitySize -lt $MaxRowSize) {
                                     $propertySize = [System.Text.Encoding]::UTF8.GetByteCount($SingleEnt[$key].ToString())
@@ -172,11 +226,13 @@ function Add-CIPPAzDataTableEntity {
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-Warning 'AzBobbyTables Error'
-                    Write-Information ($SingleEnt | ConvertTo-Json)
                     throw "Error processing entity: $ErrorMessage Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
                 }
             } else {
+                Write-Information ($_.Exception | ConvertTo-Json)
                 Write-Information "THE ERROR IS $($_.Exception.message). The size of the entity is $entitySize."
+                Write-Information "Parameters are: $($Parameters | ConvertTo-Json -Compress)"
+                Write-Information $_.InvocationInfo.PositionMessage
                 throw $_
             }
         }

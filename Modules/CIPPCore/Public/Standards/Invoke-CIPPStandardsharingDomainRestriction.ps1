@@ -13,7 +13,11 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (7.2.6)"
+            "CISA (MS.AAD.14.3v1)"
+            "CISA (MS.SPO.1.3v1)"
+        EXECUTIVETEXT
+            Controls which external domains employees can share files with, enabling secure collaboration with trusted partners while blocking sharing with unauthorized organizations. This targeted approach maintains necessary business relationships while preventing data exposure to unknown entities.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
             {"type":"textField","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated","required":false}
@@ -31,8 +35,21 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'sharingDomainRestriction' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SharingDomainRestriction state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Get mode value using null-coalescing operator
     $mode = $Settings.Mode.value ?? $Settings.Mode

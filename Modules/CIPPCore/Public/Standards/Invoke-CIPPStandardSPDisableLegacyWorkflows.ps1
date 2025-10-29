@@ -13,6 +13,8 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         CAT
             SharePoint Standards
         TAG
+        EXECUTIVETEXT
+            Disables outdated SharePoint workflow features and classic interface options, encouraging use of modern, more secure and efficient collaboration tools. This helps maintain security standards while guiding users toward current, supported functionality.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -27,9 +29,22 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDisableLegacyWorkflows' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
         Select-Object -Property *
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDisableLegacyWorkflows state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.StopNew2010Workflows -eq $true) -and
     ($CurrentState.StopNew2013Workflows -eq $true) -and
@@ -46,7 +61,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully disabled Legacy Workflows' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

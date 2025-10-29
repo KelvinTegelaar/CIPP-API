@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
@@ -9,11 +7,6 @@ function Invoke-ListLogs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Table = Get-CIPPTable
 
     $ReturnedLog = if ($Request.Query.ListLogs) {
@@ -23,11 +16,49 @@ function Invoke-ListLogs {
                 label = $_.PartitionKey
             }
         }
+    } elseif ($Request.Query.logentryid) {
+        # Return single log entry by RowKey
+        $Filter = "RowKey eq '{0}'" -f $Request.Query.logentryid
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        Write-Host "Getting single log entry for RowKey: $($Request.Query.logentryid)"
+
+        $Row = Get-AzDataTableEntity @Table -Filter $Filter
+
+        if ($Row) {
+            if ($AllowedTenants -notcontains 'AllTenants') {
+                $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
+            }
+
+            if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
+                $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
+                    $Row.LogData | ConvertFrom-Json
+                } else { $Row.LogData }
+                [PSCustomObject]@{
+                    DateTime = $Row.Timestamp
+                    Tenant   = $Row.Tenant
+                    API      = $Row.API
+                    Message  = $Row.Message
+                    User     = $Row.Username
+                    Severity = $Row.Severity
+                    LogData  = $LogData
+                    TenantID = if ($Row.TenantID -ne $null) {
+                        $Row.TenantID
+                    } else {
+                        'None'
+                    }
+                    AppId    = $Row.AppId
+                    IP       = $Row.IP
+                    RowKey   = $Row.RowKey
+                }
+            }
+        }
     } else {
         if ($request.Query.Filter -eq 'True') {
             $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' }
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'
+            $TenantFilter = $Request.Query.Tenant
+            $ApiFilter = $Request.Query.API
 
             $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
             $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
@@ -48,12 +79,18 @@ function Invoke-ListLogs {
             $LogLevel = 'Info', 'Warn', 'Error', 'Critical', 'Alert'
             $PartitionKey = Get-Date -UFormat '%Y%m%d'
             $username = '*'
+            $TenantFilter = $null
             $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
         }
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
 
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -in $LogLevel -and $_.Username -like $username }
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
+            $_.Severity -in $LogLevel -and
+            $_.Username -like $username -and
+            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter")
+        }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
             $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
@@ -80,14 +117,15 @@ function Invoke-ListLogs {
                     }
                     AppId    = $Row.AppId
                     IP       = $Row.IP
+                    RowKey   = $Row.RowKey
                 }
             }
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
-        })
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
+    }
 
 }

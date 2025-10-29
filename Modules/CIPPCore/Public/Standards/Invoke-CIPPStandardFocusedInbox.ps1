@@ -13,6 +13,8 @@ function Invoke-CIPPStandardFocusedInbox {
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Configures the default setting for Outlook's Focused Inbox feature, which automatically sorts important emails into a focused view while placing less important emails in a separate section. This can improve employee productivity by reducing email clutter, though users can adjust this setting individually.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.FocusedInbox.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
@@ -29,6 +31,12 @@ function Invoke-CIPPStandardFocusedInbox {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'FocusedInbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'FocusedInbox'
 
     # Get state value using null-coalescing operator
@@ -40,7 +48,14 @@ function Invoke-CIPPStandardFocusedInbox {
         Return
     }
 
-    $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').FocusedInboxOn
+    try {
+        $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').FocusedInboxOn
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the FocusedInbox state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $WantedState = if ($state -eq 'enabled') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }

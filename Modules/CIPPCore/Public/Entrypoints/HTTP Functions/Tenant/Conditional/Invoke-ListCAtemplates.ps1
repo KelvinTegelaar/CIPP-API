@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ListCAtemplates {
+function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -9,12 +7,6 @@ Function Invoke-ListCAtemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     Write-Host $Request.query.id
     #Migrating old policies whenever you do a list
     $Table = Get-CippTable -tablename 'templates'
@@ -39,16 +31,20 @@ Function Invoke-ListCAtemplates {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'CATemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -Depth 100
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-        $data
+        try {
+            $row = $_
+            $data = $row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $row.GUID -Force
+            $data
+        } catch {
+            Write-Warning "Failed to process CA template: $($row.RowKey) - $($_.Exception.Message)"
+        }
     } | Sort-Object -Property displayName
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Templates
         })

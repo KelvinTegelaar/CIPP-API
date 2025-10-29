@@ -6,11 +6,15 @@ function New-CIPPTemplateRun {
     )
     $Table = Get-CippTable -tablename 'templates'
     $ExistingTemplates = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue -Depth 100
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-        $data | Add-Member -NotePropertyName 'PartitionKey' -NotePropertyValue $_.PartitionKey -Force
-        $data | Add-Member -NotePropertyName 'SHA' -NotePropertyValue $_.SHA -Force
-        $data
+        try {
+            $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue -Depth 100
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force -ErrorAction Stop
+            $data | Add-Member -NotePropertyName 'PartitionKey' -NotePropertyValue $_.PartitionKey -Force -ErrorAction Stop
+            $data | Add-Member -NotePropertyName 'SHA' -NotePropertyValue $_.SHA -Force -ErrorAction Stop
+            $data
+        } catch {
+            return
+        }
     } | Sort-Object -Property displayName
 
     function Get-SanitizedFilename {
@@ -37,7 +41,7 @@ function New-CIPPTemplateRun {
             }
             foreach ($File in $Files) {
                 if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
-                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) } | Select-Object -First 1
+                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) -and ![string]::IsNullOrEmpty($_.SHA) } | Select-Object -First 1
 
                 $UpdateNeeded = $false
                 if ($ExistingTemplate -and $ExistingTemplate.SHA -ne $File.sha) {

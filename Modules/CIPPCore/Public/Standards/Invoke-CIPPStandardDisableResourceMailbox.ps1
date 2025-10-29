@@ -13,7 +13,9 @@ function Invoke-CIPPStandardDisableResourceMailbox {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "NIST CSF 2.0 (PR.AA-01)"
+        EXECUTIVETEXT
+            Prevents direct login to resource mailbox accounts (like conference rooms or equipment), ensuring they can only be managed through proper administrative channels. This security measure eliminates potential unauthorized access to resource scheduling systems while maintaining proper booking functionality.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -22,7 +24,7 @@ function Invoke-CIPPStandardDisableResourceMailbox {
         POWERSHELLEQUIVALENT
             Get-Mailbox & Update-MgUser
         RECOMMENDEDBY
-            "CIS"
+            "Microsoft"
             "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -31,13 +33,26 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableResourceMailbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableResourceMailbox'
 
     # Get all users that are able to be
-    $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true' -Tenantid $Tenant -ComplexFilter |
+    try {
+        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true' -Tenantid $Tenant -ComplexFilter |
         Where-Object { $_.userType -eq 'Member' }
-    $ResourceMailboxList = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'RoomMailbox' -or RecipientTypeDetails -eq 'EquipmentMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
+        $ResourceMailboxList = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'RoomMailbox' -or RecipientTypeDetails -eq 'EquipmentMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
         Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableResourceMailbox state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

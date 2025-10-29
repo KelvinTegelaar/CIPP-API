@@ -73,7 +73,7 @@ function Invoke-ListCommunityRepos {
         Results = @($Repos | Sort-Object -Property FullName)
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

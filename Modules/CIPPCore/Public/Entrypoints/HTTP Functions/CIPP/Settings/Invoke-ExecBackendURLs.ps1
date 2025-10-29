@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ExecBackendURLs {
+function Invoke-ExecBackendURLs {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,11 +7,6 @@ Function Invoke-ExecBackendURLs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     $Subscription = ($env:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1
     $SWAName = $env:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
 
@@ -21,7 +14,7 @@ Function Invoke-ExecBackendURLs {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $Owner = $env:WEBSITE_OWNER_NAME
-    if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+    if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
         $RGName = $Matches.RGName
     } else {
         $RGName = $env:WEBSITE_RESOURCE_GROUP
@@ -44,8 +37,7 @@ Function Invoke-ExecBackendURLs {
 
     $body = @{Results = $Results }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [httpstatusCode]::OK
             Body       = $body
         })

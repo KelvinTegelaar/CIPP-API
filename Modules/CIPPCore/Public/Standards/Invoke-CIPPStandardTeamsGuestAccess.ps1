@@ -13,6 +13,8 @@ function Invoke-CIPPStandardTeamsGuestAccess {
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Determines whether external partners, vendors, and collaborators can be invited to participate in Teams conversations and meetings. This fundamental setting enables external collaboration while requiring careful management to balance openness with security and information protection.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsGuestAccess.AllowGuestUser","label":"Allow guest users"}
         IMPACT
@@ -29,12 +31,26 @@ function Invoke-CIPPStandardTeamsGuestAccess {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsGuestAccess' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object AllowGuestUser
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
-    if ($null -eq $Settings.AllowGuestUser) { $Settings.AllowGuestUser = $false }
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } |
+        Select-Object AllowGuestUser
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsGuestAccess state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
-    $StateIsCorrect = ($CurrentState.AllowGuestUser -eq $Settings.AllowGuestUser)
+    $AllowGuestUser = $Settings.AllowGuestUser ?? $false
+
+    $StateIsCorrect = ($CurrentState.AllowGuestUser -eq $AllowGuestUser)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -42,7 +58,7 @@ function Invoke-CIPPStandardTeamsGuestAccess {
         } else {
             $cmdParams = @{
                 Identity       = 'Global'
-                AllowGuestUser = $Settings.AllowGuestUser
+                AllowGuestUser = $AllowGuestUser
             }
 
             try {

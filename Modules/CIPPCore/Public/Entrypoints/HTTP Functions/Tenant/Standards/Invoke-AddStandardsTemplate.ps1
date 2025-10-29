@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-AddStandardsTemplate {
     <#
     .FUNCTIONALITY
@@ -12,7 +10,9 @@ function Invoke-AddStandardsTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    if ($Request.Body.tenantFilter -eq 'tenantFilter') {
+        throw 'Invalid Tenant Selection. A standard must be assigned to at least 1 tenant.'
+    }
 
     $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
@@ -30,11 +30,19 @@ function Invoke-AddStandardsTemplate {
         PartitionKey = 'StandardsTemplateV2'
         GUID         = "$GUID"
     }
+
+    $AddObject = @{
+        PartitionKey = 'InstanceProperties'
+        RowKey       = 'CIPPURL'
+        Value        = [string]([System.Uri]$Headers.'x-ms-original-url').Host
+    }
+    $ConfigTable = Get-CIPPTable -tablename 'Config'
+    Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
+
     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Standards Template $($Request.body.templateName) with GUID $GUID added/edited." -Sev 'Info'
     $body = [pscustomobject]@{'Results' = 'Successfully added template'; Metadata = @{id = $GUID } }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

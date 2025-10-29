@@ -1,5 +1,3 @@
-﻿using namespace System.Net
-
 function Invoke-RemoveIntuneScript {
     <#
     .FUNCTIONALITY
@@ -35,12 +33,12 @@ function Invoke-RemoveIntuneScript {
             'Linux' {
                 "https://graph.microsoft.com/beta/deviceManagement/ConfigurationPolicies('$($ID)')"
             }
-            Default { $null }
+            default { $null }
         }
 
         $null = New-GraphPOSTRequest -uri $URI -type DELETE -tenantid $TenantFilter
         $Result = "Deleted $($ScriptType) script $($DisplayName) with ID: $($ID)"
-        Write-LogMessage -headers $.Headers -API $APINAME -tenant $Tenant -message $Result -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -49,11 +47,9 @@ function Invoke-RemoveIntuneScript {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    $body = [pscustomobject]@{'Results' = "$Result" }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $body
+            Body       = @{'Results' = "$Result" }
         })
 
 }

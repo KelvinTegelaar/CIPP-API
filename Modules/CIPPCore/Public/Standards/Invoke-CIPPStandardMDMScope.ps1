@@ -13,6 +13,8 @@ function Invoke-CIPPStandardMDMScope {
         CAT
             Intune Standards
         TAG
+        EXECUTIVETEXT
+            Defines which users can enroll their devices in mobile device management, controlling access to corporate resources and applications. This setting determines the scope of device management coverage and ensures appropriate users have access to necessary business tools.
         ADDEDCOMPONENT
             {"name":"appliesTo","label":"MDM User Scope?","type":"radio","options":[{"label":"All","value":"all"},{"label":"None","value":"none"},{"label":"Custom Group","value":"selected"}]}
             {"type":"textField","name":"standards.MDMScope.customGroup","label":"Custom Group Name","required":false}
@@ -30,8 +32,21 @@ function Invoke-CIPPStandardMDMScope {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'MDMScope' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MDM Scope state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentInfo.termsOfUseUrl -eq 'https://portal.manage.microsoft.com/TermsofUse.aspx') -and
         ($CurrentInfo.discoveryUrl -eq 'https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc') -and

@@ -101,7 +101,7 @@ function Invoke-ExecApiClient {
         'GetAzureConfiguration' {
             $Owner = $env:WEBSITE_OWNER_NAME
             Write-Information "Owner: $Owner"
-            if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
                 $RGName = $Matches.RGName
             } else {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
@@ -123,7 +123,7 @@ function Invoke-ExecApiClient {
         'SaveToAzure' {
             $TenantId = $env:TenantID
             $Owner = $env:WEBSITE_OWNER_NAME
-            if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
                 $RGName = $Matches.RGName
             } else {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
@@ -200,7 +200,7 @@ function Invoke-ExecApiClient {
         }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })

@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListGraphExplorerPresets {
     <#
     .FUNCTIONALITY
@@ -9,13 +7,10 @@ function Invoke-ListGraphExplorerPresets {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Interact with query parameters or the body of the request.
-    $Username = $Request.Headers['x-ms-client-principal-name']
+
+    $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
     try {
         $Table = Get-CIPPTable -TableName 'GraphPresets'
@@ -26,6 +21,7 @@ function Invoke-ListGraphExplorerPresets {
                 name       = $Preset.name
                 IsShared   = $Preset.IsShared
                 IsMyPreset = $Preset.Owner -eq $Username
+                Owner      = $Preset.Owner
                 params     = (ConvertFrom-Json -InputObject $Preset.Params)
             }
         }
@@ -39,8 +35,7 @@ function Invoke-ListGraphExplorerPresets {
         Write-Information $_.InvocationInfo.PositionMessage
         $Results = @()
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{
                 Results  = @($Results)

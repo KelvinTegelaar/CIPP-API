@@ -13,7 +13,9 @@ function Invoke-CIPPStandardSpoofWarn {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (6.2.3)"
+        EXECUTIVETEXT
+            Displays visual warnings in Outlook when emails come from external senders, helping employees identify potentially suspicious messages and reducing the risk of phishing attacks. This security feature makes it easier for staff to distinguish between internal and external communications.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.SpoofWarn.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Enter allowed senders(domain.com, *.domain.com or test@domain.com)","name":"standards.SpoofWarn.AllowListAdd"}
@@ -33,8 +35,21 @@ function Invoke-CIPPStandardSpoofWarn {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SpoofWarn' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
-    $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpoofWarn state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
@@ -42,16 +57,22 @@ function Invoke-CIPPStandardSpoofWarn {
 
     # Test if all entries in the AllowListAdd variable are in the AllowList
     $AllowListCorrect = $true
-    $AllowListAddEntries = foreach ($entry in $AllowListAdd) {
-        if ($CurrentInfo.AllowList -notcontains $entry) {
-            $AllowListCorrect = $false
-            Write-Host "AllowList entry $entry not found in current AllowList"
-            $entry
-        } else {
-            Write-Host "AllowList entry $entry found in current AllowList."
+
+    if ($AllowListAdd -eq $null -or $AllowListAdd.Count -eq 0) {
+        Write-Host 'No AllowList entries provided, skipping AllowList check.'
+        $AllowListAdd = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = @() }
+    } else {
+        $AllowListAddEntries = foreach ($entry in $AllowListAdd) {
+            if ($CurrentInfo.AllowList -notcontains $entry) {
+                $AllowListCorrect = $false
+                Write-Host "AllowList entry $entry not found in current AllowList"
+                $entry
+            } else {
+                Write-Host "AllowList entry $entry found in current AllowList."
+            }
         }
+        $AllowListAdd = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $AllowListAddEntries }
     }
-    $AllowListAdd = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $AllowListAddEntries }
 
     # Debug output
     # Write-Host ($CurrentInfo | ConvertTo-Json -Depth 10)

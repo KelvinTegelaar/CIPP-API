@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ExecEditTemplate {
+function Invoke-ExecEditTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -11,24 +9,20 @@ Function Invoke-ExecEditTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $guid = $request.body.guid
+        $guid = $request.body.id ? $request.body.id : $request.body.GUID
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.body | Select-Object * -ExcludeProperty GUID)
-        $Type = $request.Body.Type
+        $Type = $request.query.Type
 
         if ($Type -eq 'IntuneTemplate') {
             Write-Host 'Intune Template'
             $OriginalTemplate = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
             $OriginalTemplate = ($OriginalTemplate.JSON | ConvertFrom-Json -Depth 100)
-            $RawJSON = $OriginalTemplate.RAWJson
+            $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.body.parsedRAWJson
             Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Request.Headers
         } else {
             $Table.Force = $true
-
             Add-CIPPAzDataTableEntity @Table -Entity @{
                 JSON         = "$JSON"
                 RowKey       = "$GUID"
@@ -45,8 +39,7 @@ Function Invoke-ExecEditTemplate {
     }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
         })

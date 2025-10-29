@@ -5,7 +5,7 @@ function Push-UpdateTenants {
     #>
     Param($Item)
     $QueueReference = 'UpdateTenants'
-    $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+    $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
 
     $Queue = New-CippQueueEntry -Name 'Update Tenants' -Reference $QueueReference -TotalTasks 1
     try {

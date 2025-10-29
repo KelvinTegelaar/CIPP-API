@@ -13,7 +13,8 @@ function Invoke-CIPPStandardAutoAddProxy {
         CAT
             Exchange Standards
         TAG
-            "CIS"
+        EXECUTIVETEXT
+            Automatically creates email addresses for employees across all company domains, ensuring they can receive emails sent to any of the organization's domain names. This improves email delivery reliability and maintains consistent communication channels across different business units or brands.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -35,9 +36,16 @@ function Invoke-CIPPStandardAutoAddProxy {
         $QueueItem
     )
 
-    $Domains = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-AcceptedDomain' | Select-Object -ExpandProperty DomainName
-    $AllMailboxes = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-Mailbox'
-    
+    try {
+        $Domains = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-AcceptedDomain' | Select-Object -ExpandProperty DomainName
+        $AllMailboxes = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-Mailbox'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AutoAddProxy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     $MissingProxies = 0
     foreach ($Domain in $Domains) {
         $ProcessMailboxes = $AllMailboxes | Where-Object {
@@ -47,15 +55,15 @@ function Invoke-CIPPStandardAutoAddProxy {
         }
         $MissingProxies += $ProcessMailboxes.Count
     }
-    
+
     $StateIsCorrect = $MissingProxies -eq 0
-    
+
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect ? $true : $MissingProxies
         Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoAddProxy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
-    
+
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes have proxy addresses for all domains' -sev Info

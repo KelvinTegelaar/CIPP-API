@@ -10,7 +10,7 @@ Function Invoke-AddRoomMailbox {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     $Tenant = $Request.Body.tenantid
 
@@ -32,12 +32,11 @@ Function Invoke-AddRoomMailbox {
 
         # Block sign-in for the mailbox
         try {
-            $BlockSignInRequest = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $Headers -AccountEnabled $false
-            if ($BlockSignInRequest -like 'Could not disable*') { throw $BlockSignInRequest }
-            $Results.Add("Blocked sign-in for Room mailbox; $($MailboxObject.userPrincipalName)")
+            $null = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $Headers -AccountEnabled $false
+            $Results.Add("Successfully blocked sign-in for Room mailbox $($MailboxObject.userPrincipalName)")
         } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            $Results.Add("Failed to block sign-in for Room mailbox: $($MailboxObject.userPrincipalName). Error: $($ErrorMessage.NormalizedError)")
+            $ErrorMessage = $_.Exception.Message
+            $Results.Add("Failed to block sign-in for Room mailbox: $($MailboxObject.userPrincipalName). Error: $ErrorMessage")
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -49,8 +48,7 @@ Function Invoke-AddRoomMailbox {
     }
 
     $Body = [pscustomobject] @{ 'Results' = @($Results) }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

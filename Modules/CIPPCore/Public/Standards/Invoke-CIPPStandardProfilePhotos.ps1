@@ -13,6 +13,8 @@ function Invoke-CIPPStandardProfilePhotos {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Manages user profile photo permissions within Microsoft 365, allowing organizations to control whether employees can upload their own photos or require administrative approval. This helps maintain professional appearance standards and prevents inappropriate images in corporate directories.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ProfilePhotos.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
@@ -29,6 +31,12 @@ function Invoke-CIPPStandardProfilePhotos {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ProfilePhotos' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     # Get state value using null-coalescing operator
     $StateValue = $Settings.state.value ?? $Settings.state
@@ -43,8 +51,15 @@ function Invoke-CIPPStandardProfilePhotos {
     $DesiredState = $StateValue -eq 'enabled'
 
     # Get current Graph policy state
-    $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
-    $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
+    try {
+        $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
+        $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ProfilePhotos state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
     $UsersCanChangePhotos = if ([string]::IsNullOrWhiteSpace($CurrentGraphState.allowedRoles) ) { $true } else { $false }
     $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
 

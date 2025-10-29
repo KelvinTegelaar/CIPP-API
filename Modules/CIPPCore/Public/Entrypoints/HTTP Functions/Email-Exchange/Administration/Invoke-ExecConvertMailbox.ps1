@@ -1,5 +1,3 @@
-using namespace System.Net
-
 Function Invoke-ExecConvertMailbox {
     <#
     .FUNCTIONALITY
@@ -11,27 +9,24 @@ Function Invoke-ExecConvertMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $Request.Body.tenantFilter
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Body.tenantFilter
     $UserID = $Request.Body.ID
     $MailboxType = $Request.Body.MailboxType
 
     try {
-        $ConvertedMailbox = Set-CIPPMailboxType -UserID $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Request.Headers -MailboxType $MailboxType
-        if ($ConvertedMailbox -like 'Could not convert*') { throw $ConvertedMailbox }
-        $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
+        $Results = Set-CIPPMailboxType -UserID $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -MailboxType $MailboxType
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = $_.Exception.Message
-        $Results = [pscustomobject]@{'Results' = "$ErrorMessage" }
+        $Results = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{'Results' = $Results }
         })
 
 }

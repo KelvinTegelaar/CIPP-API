@@ -13,6 +13,8 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         CAT
             Teams Standards
         TAG
+        EXECUTIVETEXT
+            Defines what messaging capabilities employees have in Teams, including the ability to edit or delete messages, create custom emojis, and report inappropriate content. These policies help maintain professional communication standards while enabling necessary collaboration features.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","defaultValue":false}
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","defaultValue":true}
@@ -38,7 +40,21 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMessagingPolicy'
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMessagingPolicy' -CmdParams @{Identity = 'Global' }
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMessagingPolicy' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMessagingPolicy' -CmdParams @{Identity = 'Global' }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMessagingPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     if ($null -eq $Settings.AllowOwnerDeleteMessage) { $Settings.AllowOwnerDeleteMessage = $CurrentState.AllowOwnerDeleteMessage }
     if ($null -eq $Settings.AllowUserDeleteMessage) { $Settings.AllowUserDeleteMessage = $CurrentState.AllowUserDeleteMessage }

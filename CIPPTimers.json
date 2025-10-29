@@ -81,6 +81,15 @@
     "PreferredProcessor": "standards"
   },
   {
+    "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
+    "Command": "Start-DriftStandardsOrchestrator",
+    "Description": "Orchestrator to process drift standards",
+    "Cron": "0 0 */1 * * *",
+    "Priority": 5,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
+  },
+  {
     "Id": "97145a1d-28f0-4bb2-b929-5a43517d23cc",
     "Command": "Start-SchedulerOrchestrator",
     "Description": "Orchestrator to process system scheduled tasks",
@@ -94,6 +103,14 @@
     "Description": "Orchestrator to map the groups for GDAP invites",
     "Cron": "0 0 */3 * * *",
     "Priority": 5,
+    "RunOnProcessor": true
+  },
+  {
+    "Id": "0967c860-3a57-4860-8f33-e5136eae7b4e",
+    "Command": "Start-TenantDynamicGroupOrchestrator",
+    "Description": "Orchestrator to update dynamic tenant groups",
+    "Cron": "0 0 */4 * * *",
+    "Priority": 6,
     "RunOnProcessor": true
   },
   {

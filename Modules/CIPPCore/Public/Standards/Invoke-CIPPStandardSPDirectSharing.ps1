@@ -7,13 +7,14 @@ function Invoke-CIPPStandardSPDirectSharing {
     .SYNOPSIS
         (Label) Default sharing to Direct users
     .DESCRIPTION
-        (Helptext) Ensure default link sharing is set to Direct in SharePoint and OneDrive
-        (DocsDescription) Ensure default link sharing is set to Direct in SharePoint and OneDrive
+        (Helptext) This standard has been deprecated in favor of the Default Sharing Link standard. 
+        (DocsDescription) This standard has been deprecated in favor of the Default Sharing Link standard. 
     .NOTES
         CAT
             SharePoint Standards
         TAG
-            "CIS"
+        EXECUTIVETEXT
+            Configures SharePoint and OneDrive to share files directly with specific people rather than creating anonymous links, improving security by ensuring only intended recipients can access shared documents. This reduces the risk of accidental data exposure through link sharing.
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -31,9 +32,24 @@ function Invoke-CIPPStandardSPDirectSharing {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDirectSharing' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DefaultSharingLinkType
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+
+    Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'The default sharing to Direct users standard has been deprecated in favor of the "Set Default Sharing Link Settings" standard. Please update your standards to use new standard. However this will continue to function.' -Sev Alert
+    try {
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
+        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDirectSharing state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
 
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq 'Direct' -or $CurrentState.DefaultSharingLinkType -eq 1)
 
@@ -46,7 +62,7 @@ function Invoke-CIPPStandardSPDirectSharing {
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set the SharePoint Default Direct Sharing to Direct' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

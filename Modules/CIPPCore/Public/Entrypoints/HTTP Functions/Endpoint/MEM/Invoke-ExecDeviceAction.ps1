@@ -1,6 +1,4 @@
-using namespace System.Net
-
-Function Invoke-ExecDeviceAction {
+function Invoke-ExecDeviceAction {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -12,7 +10,7 @@ Function Invoke-ExecDeviceAction {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
 
     # Interact with Body parameters or the body of the request.
     $Action = $Request.Body.Action
@@ -22,6 +20,16 @@ Function Invoke-ExecDeviceAction {
     try {
         switch ($Action) {
             'setDeviceName' {
+                if ($Request.Body.input -match '%') {
+                    $Device = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceFilter" -tenantid $TenantFilter
+                    $Request.Body.input = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Request.Body.input
+                    $Request.Body.input = $Request.Body.input -replace '%SERIAL%', $Device.serialNumber
+                    # limit to 15 characters
+                    if ($Request.Body.input.Length -gt 15) {
+                        $Request.Body.input = $Request.Body.input.Substring(0, 15)
+                    }
+                }
+
                 $ActionBody = @{ deviceName = $Request.Body.input } | ConvertTo-Json -Compress
                 break
             }
@@ -30,7 +38,7 @@ Function Invoke-ExecDeviceAction {
                 Write-Host "ActionBody: $ActionBody"
                 break
             }
-            Default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
+            default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
         }
 
         $cmdParams = @{
@@ -51,8 +59,7 @@ Function Invoke-ExecDeviceAction {
         $Results = "$($_.Exception.Message)"
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{ 'Results' = $Results }
         })

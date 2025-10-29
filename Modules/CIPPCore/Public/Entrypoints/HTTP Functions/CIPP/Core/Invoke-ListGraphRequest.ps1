@@ -33,6 +33,10 @@ function Invoke-ListGraphRequest {
         $Parameters.'$expand' = $Request.Query.'$expand'
     }
 
+    if ($Request.Query.expand) {
+        $Parameters.'expand' = $Request.Query.expand
+    }
+
     if ($Request.Query.'$top') {
         $Parameters.'$top' = $Request.Query.'$top'
     }
@@ -77,7 +81,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.manualPagination) {
-        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.manualPagination
+        $GraphRequestParams.ManualPagination = [System.Boolean]$Request.Query.manualPagination
     }
 
     if ($Request.Query.nextLink) {
@@ -120,13 +124,18 @@ function Invoke-ListGraphRequest {
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
-        if ($Results.nextLink) {
-            Write-Host "NextLink: $($Results.nextLink | Select-Object -Last 1)"
-            if ($Request.Query.TenantFilter -ne 'AllTenants') {
-                $Metadata['nextLink'] = $Results.nextLink | Select-Object -Last 1
+
+        if ($script:LastGraphResponseHeaders) {
+            $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        }
+
+        if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
+            if (![string]::IsNullOrEmpty($Results.nextLink) -and $Request.Query.TenantFilter -ne 'AllTenants') {
+                Write-Host "NextLink: $($Results.nextLink | Where-Object { $_ } | Select-Object -Last 1)"
+                $Metadata['nextLink'] = $Results.nextLink | Where-Object { $_ } | Select-Object -Last 1
             }
-            #Results is an array of objects, so we need to remove the last object before returning
-            $Results = $Results | Select-Object -First ($Results.Count - 1)
+            # Remove nextLink trailing object only if it’s the last item
+            $Results = $Results | Where-Object { $_.PSObject.Properties.Name -notcontains 'nextLink' }
         }
         if ($Request.Query.ListProperties) {
             $Columns = ($Results | Select-Object -First 1).PSObject.Properties.Name
@@ -135,7 +144,7 @@ function Invoke-ListGraphRequest {
             if ($Results.Queued -eq $true) {
                 $Metadata.Queued = $Results.Queued
                 $Metadata.QueueMessage = $Results.QueueMessage
-                $Metadata.QueuedId = $Results.QueueId
+                $Metadata.QueueId = $Results.QueueId
                 $Results = @()
             }
         }
@@ -158,10 +167,9 @@ function Invoke-ListGraphRequest {
     if ($request.Query.Sort) {
         $GraphRequestData.Results = $GraphRequestData.Results | Sort-Object -Property $request.Query.Sort
     }
-    $Outputdata = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Outputdata
+            Body       = $GraphRequestData
         })
 }

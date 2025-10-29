@@ -13,9 +13,10 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         CAT
             Defender Standards
         TAG
-            "CIS"
+            "CIS M365 5.0 (2.1.1)"
             "mdo_safelinksforemail"
             "mdo_safelinksforOfficeApps"
+            "NIST CSF 2.0 (DE.CM-09)"
         ADDEDCOMPONENT
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
             {"type":"switch","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
@@ -36,30 +37,51 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SafeLinksPolicy' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
 
     $ServicePlans = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus?$select=servicePlans' -tenantid $Tenant
     $ServicePlans = $ServicePlans.servicePlans.servicePlanName
     $MDOLicensed = $ServicePlans -contains 'ATP_ENTERPRISE'
 
     if ($MDOLicensed) {
-        $PolicyList = @('CIPP Default SafeLinks Policy', 'Default SafeLinks Policy')
-        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList
+        # Use custom name if provided, otherwise use default for backward compatibility
+        $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
+        $PolicyList = @($PolicyName, 'CIPP Default SafeLinks Policy', 'Default SafeLinks Policy')
+        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
         if ($null -eq $ExistingPolicy.Name) {
-            $PolicyName = $PolicyList[0]
+            # No existing policy - use the configured/default name
+            $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
         } else {
+            # Use existing policy name if found
             $PolicyName = $ExistingPolicy.Name
         }
-        $RuleList = @( 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
-        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList
+        # Derive rule name from policy name, but check for old names for backward compatibility
+        $DesiredRuleName = "$PolicyName Rule"
+        $RuleList = @($DesiredRuleName, 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
+        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList | Select-Object -First 1
         if ($null -eq $ExistingRule.Name) {
-            $RuleName = $RuleList[0]
+            # No existing rule - use the derived name
+            $RuleName = $DesiredRuleName
         } else {
+            # Use existing rule name if found
             $RuleName = $ExistingRule.Name
         }
 
-        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
+        try {
+            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
             Where-Object -Property Name -EQ $PolicyName |
             Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
+        }
+        catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.EnableSafeLinksForEmail -eq $true) -and

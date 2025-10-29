@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListUserMailboxDetails {
     <#
     .FUNCTIONALITY
@@ -9,15 +7,13 @@ function Invoke-ListUserMailboxDetails {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
+    $UserMail = $Request.Query.userMail
+    Write-Host "TenantFilter: $TenantFilter"
+    Write-Host "UserID: $UserID"
+    Write-Host "UserMail: $UserMail"
 
     try {
         $Requests = @(
@@ -53,7 +49,7 @@ function Invoke-ListUserMailboxDetails {
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-BlockedSenderAddress'
-                    Parameters = @{ Identity = $UserID }
+                    Parameters = @{ SenderAddress = $UserMail }
                 }
             },
             @{
@@ -63,7 +59,6 @@ function Invoke-ListUserMailboxDetails {
                 }
             }
         )
-        Write-Host $UserID
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
         Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
@@ -105,9 +100,9 @@ function Invoke-ListUserMailboxDetails {
 
         # Determine if the user is blocked for spam
         if ($BlockedSender -and $BlockedSender.Count -gt 0) {
-            $BlockedForSpam = $false
-        } else {
             $BlockedForSpam = $true
+        } else {
+            $BlockedForSpam = $false
         }
     } catch {
         Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"
@@ -267,6 +262,7 @@ function Invoke-ListUserMailboxDetails {
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
+        RetentionPolicy          = $MailboxDetailedRequest.RetentionPolicy
         MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
             @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
@@ -284,13 +280,13 @@ function Invoke-ListUserMailboxDetails {
             LitigationHoldEnabled,
             LitigationHoldDate,
             LitigationHoldDuration,
-            @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+            @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE') } },
             ComplianceTagHoldApplied,
             RetentionHoldEnabled,
             InPlaceHolds)
     } # Select statement taken from ListMailboxes to save a EXO request. If updated here, update in ListMailboxes as well.
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($GraphRequest)
         })

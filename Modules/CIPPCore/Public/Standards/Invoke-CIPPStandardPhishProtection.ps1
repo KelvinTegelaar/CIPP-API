@@ -13,6 +13,8 @@ function Invoke-CIPPStandardPhishProtection {
         CAT
             Global Standards
         TAG
+        EXECUTIVETEXT
+            Implements advanced phishing protection by adding visual indicators to login pages that help users identify legitimate Microsoft login pages versus fraudulent copies. This security measure protects against sophisticated phishing attacks that attempt to steal employee credentials.
         ADDEDCOMPONENT
         IMPACT
             Low Impact
@@ -35,6 +37,10 @@ function Invoke-CIPPStandardPhishProtection {
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
+    $Table = Get-CIPPTable -TableName Config
+    $CippConfig = (Get-CIPPAzDataTableEntity @Table)
+    $CIPPUrl = ($CippConfig | Where-Object { $_.RowKey -eq 'CIPPURL' }).Value
+
     try {
         $currentBody = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -tenantid $tenant)
     } catch {
@@ -42,10 +48,21 @@ function Invoke-CIPPStandardPhishProtection {
     }
     $CSS = @"
 .ext-sign-in-box {
-    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=$($Settings.URL));
+    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=https://$($CIPPUrl));
 }
 "@
     if ($Settings.remediate -eq $true) {
+
+        $malformedCSSPattern = '\.ext-sign-in-box\s*\{\s*background-image:\s*url\(https://clone\.cipp\.app/api/PublicPhishingCheck\?Tenantid=[^&]*&URL=\);\s*\}'
+        if ($currentBody -match $malformedCSSPattern) {
+            if ($Settings.remediate -eq $true) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Attempting to fix malformed PhishProtection CSS by removing the problematic pattern' -sev Info
+                # Remove the malformed CSS pattern
+                $currentBody = $currentBody -replace $malformedCSSPattern, ''
+                # Clean up any duplicate .ext-sign-in-box entries
+                #$currentBody = $currentBody -replace '\.ext-sign-in-box\s*\{[^}]*\}\s*\.ext-sign-in-box', '.ext-sign-in-box'
+            }
+        }
 
         try {
             if (!$currentBody) {

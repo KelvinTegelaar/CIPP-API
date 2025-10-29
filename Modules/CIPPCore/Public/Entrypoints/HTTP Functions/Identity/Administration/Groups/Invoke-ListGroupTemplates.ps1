@@ -1,5 +1,3 @@
-using namespace System.Net
-
 function Invoke-ListGroupTemplates {
     <#
     .FUNCTIONALITY
@@ -9,12 +7,6 @@ function Invoke-ListGroupTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
-
     Write-Host $Request.query.id
 
     #List new policies
@@ -22,10 +14,31 @@ function Invoke-ListGroupTemplates {
     $Filter = "PartitionKey eq 'GroupTemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
         $data = $_.JSON | ConvertFrom-Json
+
+        # Normalize groupType to camelCase for consistent frontend handling
+        # Handle both stored normalized values and legacy values
+        $normalizedGroupType = switch -Wildcard ($data.groupType.ToLower()) {
+            # Already normalized values (most common)
+            'dynamicdistribution' { 'dynamicDistribution'; break }
+            'azurerole' { 'azureRole'; break }
+            # Legacy values that might exist in stored templates
+            '*dynamicdistribution*' { 'dynamicDistribution'; break }
+            '*dynamic*' { 'dynamic'; break }
+            '*azurerole*' { 'azureRole'; break }
+            '*unified*' { 'm365'; break }
+            '*microsoft*' { 'm365'; break }
+            '*m365*' { 'm365'; break }
+            '*generic*' { 'generic'; break }
+            '*security*' { 'security'; break }
+            '*distribution*' { 'distribution'; break }
+            '*mail*' { 'distribution'; break }
+            default { $data.groupType }
+        }
+
         [PSCustomObject]@{
             displayName     = $data.displayName
             description     = $data.description
-            groupType       = $data.groupType
+            groupType       = $normalizedGroupType
             membershipRules = $data.membershipRules
             allowExternal   = $data.allowExternal
             username        = $data.username
@@ -36,8 +49,7 @@ function Invoke-ListGroupTemplates {
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)
         })

@@ -13,6 +13,8 @@ function Invoke-CIPPStandardUndoOauth {
         CAT
             Entra (AAD) Standards
         TAG
+        EXECUTIVETEXT
+            Reverses application consent restrictions, allowing employees to approve applications independently without administrative oversight. This increases productivity and user autonomy but reduces security controls over data access permissions.
         ADDEDCOMPONENT
         IMPACT
             High Impact
@@ -30,7 +32,15 @@ function Invoke-CIPPStandardUndoOauth {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'UndoOauth'
 
-    $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole'
+    try {
+        $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole'
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the App Consent state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     $StateIsCorrect = ($CurrentState.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy')
 
     If ($Settings.remediate -eq $true) {
