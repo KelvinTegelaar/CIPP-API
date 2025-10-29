@@ -1,4 +1,4 @@
-Function Invoke-ExecBackendURLs {
+function Invoke-ExecBackendURLs {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,7 +14,7 @@ Function Invoke-ExecBackendURLs {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $Owner = $env:WEBSITE_OWNER_NAME
-    if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+    if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
         $RGName = $Matches.RGName
     } else {
         $RGName = $env:WEBSITE_RESOURCE_GROUP
