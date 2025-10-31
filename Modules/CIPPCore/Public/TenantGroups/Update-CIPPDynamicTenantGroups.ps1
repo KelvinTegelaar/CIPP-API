@@ -103,14 +103,18 @@ function Update-CIPPDynamicTenantGroups {
                             $LicenseInfo = $SkuHashtable[$_.customerId]
                         } else {
                             Write-Information "Fetching licenses for tenant $($_.defaultDomainName)"
-                            $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
-                            # Cache the result
-                            $CacheEntity = @{
-                                PartitionKey = 'sku'
-                                RowKey       = [string]$_.customerId
-                                JSON         = [string]($LicenseInfo | ConvertTo-Json -Depth 5 -Compress)
+                            try {
+                                $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                                # Cache the result
+                                $CacheEntity = @{
+                                    PartitionKey = 'sku'
+                                    RowKey       = [string]$_.customerId
+                                    JSON         = [string]($LicenseInfo | ConvertTo-Json -Depth 5 -Compress)
+                                }
+                                Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
+                            } catch {
+                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippExeception -Exception $_)
                             }
-                            Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
                         }
                     }
                     $SKUId = $LicenseInfo.SKUId ?? @()
