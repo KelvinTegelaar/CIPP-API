@@ -26,6 +26,13 @@ function Invoke-ListCustomVariables {
                 Category    = 'tenant'
             },
             @{
+                Name        = 'organizationid'
+                Variable    = '%organizationid%'
+                Description = 'The tenant customer ID'
+                Type        = 'reserved'
+                Category    = 'tenant'
+            },
+            @{
                 Name        = 'tenantfilter'
                 Variable    = '%tenantfilter%'
                 Description = 'The tenant default domain name'
