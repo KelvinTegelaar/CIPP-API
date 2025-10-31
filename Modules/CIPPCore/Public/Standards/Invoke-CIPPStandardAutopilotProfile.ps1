@@ -76,8 +76,8 @@ function Invoke-CIPPStandardAutopilotProfile {
         ($CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
         ($CurrentConfig.outOfBoxExperienceSetting.keyboardSelectionPageSkipped -eq $Settings.AutoKeyboard)
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot profile: $ErrorMessage" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot profile: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $StateIsCorrect = $false
     }
 
@@ -111,8 +111,8 @@ function Invoke-CIPPStandardAutopilotProfile {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Autopilot profile '$($DisplayName)'" -sev Info
                 }
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Autopilot profile: $ErrorMessage" -sev 'Error'
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Autopilot profile: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
                 throw $ErrorMessage
             }
         }
