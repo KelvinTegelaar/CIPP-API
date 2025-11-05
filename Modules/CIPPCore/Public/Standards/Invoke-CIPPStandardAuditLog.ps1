@@ -69,8 +69,8 @@ function Invoke-CIPPStandardAuditLog {
             }
 
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $ErrorMessage" -sev Error
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
     if ($Settings.alert -eq $true) {
