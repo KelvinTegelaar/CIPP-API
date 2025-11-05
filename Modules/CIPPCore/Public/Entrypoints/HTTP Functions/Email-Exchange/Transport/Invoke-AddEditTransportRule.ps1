@@ -1,11 +1,11 @@
-function Invoke-ExecNewTransportRule {
+function Invoke-AddEditTransportRule {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Exchange.TransportRule.ReadWrite
     .DESCRIPTION
-        This function creates a new transport rule (mail flow rule).
+        This function creates a new transport rule or edits an existing one (mail flow rule).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,9 +13,8 @@ function Invoke-ExecNewTransportRule {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $TenantFilter = $Request.Body.tenantFilter
 
     if (!$TenantFilter) {
         return ([HttpResponseContext]@{
@@ -26,11 +25,14 @@ function Invoke-ExecNewTransportRule {
     }
 
     # Extract basic rule settings from body
+    $Identity = $Request.Body.ruleId
     $Name = $Request.Body.Name
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
     $Mode = $Request.Body.Mode
     $SetAuditSeverity = $Request.Body.SetAuditSeverity
+    $State = $Request.Body.State
+    $CmdletState = $Request.Body.State ?? $Request.Body.Enabled
     $Enabled = $Request.Body.Enabled
     $StopRuleProcessing = $Request.Body.StopRuleProcessing
     $SenderAddressLocation = $Request.Body.SenderAddressLocation
@@ -112,12 +114,6 @@ function Invoke-ExecNewTransportRule {
     $ExceptIfHeaderMatchesPatterns = $Request.Body.ExceptIfHeaderMatchesPatterns
     $ExceptIfHeaderMatchesPatternsMessageHeader = $Request.Body.ExceptIfHeaderMatchesPatternsMessageHeader
 
-    function Test-RuleExists {
-        param($TenantFilter, $RuleName)
-        $ExistingRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-TransportRule' -useSystemMailbox $true
-        return $ExistingRules | Where-Object { $_.Name -eq $RuleName }
-    }
-
     # Helper function to process array fields
     function Process-ArrayField {
         param (
@@ -187,6 +183,23 @@ function Invoke-ExecNewTransportRule {
         return @($Field)
     }
 
+    # Convert state to bool when creating new rule
+    if ($State -eq "Disabled") {
+        $State = $false
+    }
+
+    if ($State -eq "Enabled") {
+        $State = $true
+    }
+
+    if ($Enabled -eq "Disabled") {
+        $State = $false
+    }
+
+    if ($Enabled -eq "Enabled") {
+        $State = $true
+    }
+
     # Process array fields for recipients/users
     $From = Process-ArrayField -Field $From
     $SentTo = Process-ArrayField -Field $SentTo
@@ -228,31 +241,25 @@ function Invoke-ExecNewTransportRule {
     $ExceptIfHeaderMatchesPatterns = Process-TextArrayField -Field $ExceptIfHeaderMatchesPatterns
 
     try {
-        # Check if rule already exists
-        if (Test-RuleExists -TenantFilter $TenantFilter -RuleName $Name) {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Transport rule '$Name' already exists" -Sev 'Warning'
-            $Result = "Transport rule '$Name' already exists in tenant $TenantFilter"
-            $StatusCode = [HttpStatusCode]::Conflict
-            return ([HttpResponseContext]@{
-                    StatusCode = $StatusCode
-                    Body       = @{Results = $Result }
-                })
-            return
-        }
-
         # Build command parameters for transport rule
         $ruleParams = @{
             Name = $Name
         }
 
+        # If editing existing rule add Identity
+        if ($null -ne $Identity) { $ruleParams.Add('Identity', $Identity) }
+
+        # State uses a different cmdlet for updating an existing rule so extract the required data to enable or disable it
+        $CmdletState = if ($CmdletState -eq 'Enabled') { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
+
         # Basic parameters
+        if (($null -ne $State) -and (!$Identity)) { $ruleParams.Add('Enabled', $State) }
         if ($null -ne $Priority) { $ruleParams.Add('Priority', $Priority) }
         if ($null -ne $Comments) { $ruleParams.Add('Comments', $Comments) }
         if ($null -ne $Mode -and $null -ne $Mode.value) { $ruleParams.Add('Mode', $Mode.value) }
         if ($null -ne $SetAuditSeverity -and $null -ne $SetAuditSeverity.value -and $SetAuditSeverity.value -ne '') {
             $ruleParams.Add('SetAuditSeverity', $SetAuditSeverity.value)
         }
-        if ($null -ne $Enabled) { $ruleParams.Add('Enabled', $Enabled) }
         if ($null -ne $StopRuleProcessing) { $ruleParams.Add('StopRuleProcessing', $StopRuleProcessing) }
         if ($null -ne $SenderAddressLocation -and $null -ne $SenderAddressLocation.value) {
             $ruleParams.Add('SenderAddressLocation', $SenderAddressLocation.value)
@@ -425,26 +432,49 @@ function Invoke-ExecNewTransportRule {
             $ruleParams.Add('ExceptIfHeaderMatchesPatterns', $ExceptIfHeaderMatchesPatterns)
         }
 
-        $ExoRequestParam = @{
-            tenantid         = $TenantFilter
-            cmdlet           = 'New-TransportRule'
-            cmdParams        = $ruleParams
-            useSystemMailbox = $true
+        if (!$Identity) {
+            $ExoRequestParam = @{
+                tenantid         = $TenantFilter
+                cmdlet           = 'New-TransportRule'
+                cmdParams        = $ruleParams
+                useSystemMailbox = $true
+            }
+            $null = New-ExoRequest @ExoRequestParam
+            $Results = "Successfully created transport rule '$Name'"
         }
-
-        $null = New-ExoRequest @ExoRequestParam
-        $Result = "Successfully created transport rule '$Name'"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        else {
+            $ExoRequestParam = @{
+                tenantid         = $TenantFilter
+                cmdlet           = 'Set-TransportRule'
+                cmdParams        = $ruleParams
+                useSystemMailbox = $true
+            }
+            $ExoRequestState = @{
+                tenantid         = $TenantFilter
+                cmdlet           = $CmdletState
+                cmdParams        = @{ Identity = $Identity }
+                useSystemMailbox = $true
+            }
+            if ($Enabled) {
+                $null = New-ExoRequest @ExoRequestState
+                $Results = "Successfully $($Enabled) transport rule $($Name)"
+            } else {
+                $null = New-ExoRequest @ExoRequestParam
+                $null = New-ExoRequest @ExoRequestState
+                $Results = "Successfully configured transport rule '$Name'"
+            }
+        }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to create transport rule '$Name'. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
+        $Results = "Failed to configure transport rule '$Name'. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{Results = $Result }
+            Body       = @{Results = $Results }
         })
 }
