@@ -31,7 +31,7 @@ function Invoke-ExecSetPackageTag {
 
         foreach ($GUID in $GUIDS) {
             $Filter = "RowKey eq '$GUID'"
-
+            $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Entity = @{
                 JSON         = $Template.JSON
                 RowKey       = "$GUID"
@@ -41,7 +41,7 @@ function Invoke-ExecSetPackageTag {
                 SHA          = $Template.SHA ?? $null
             }
 
-            $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
             if ($Remove -eq $true) {
