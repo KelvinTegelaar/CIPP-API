@@ -49,6 +49,13 @@ function Invoke-ExecUpdateDriftDeviation {
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
                             $Settings = $StandardTemplate
+                        } elseif ($Setting -like '*ConditionalAccessTemplate*') {
+                            $Setting = 'ConditionalAccessTemplate'
+                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Last 1
+                            $StandardTemplate = $StandardTemplate.standardSettings.ConditionalAccessTemplate | Where-Object { $_.TemplateList.value -eq $TemplateId }
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                            $Settings = $StandardTemplate
                         } else {
                             $StandardTemplate = $StandardTemplate.standardSettings.$Setting
                             $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
