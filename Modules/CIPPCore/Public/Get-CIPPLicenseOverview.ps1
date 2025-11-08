@@ -38,9 +38,9 @@ function Get-CIPPLicenseOverview {
     $ConvertTable = Import-Csv ConversionTable.csv
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
-    $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
-        $skuid = $singlereq.Licenses
-        foreach ($sku in $skuid) {
+    $GraphRequest = foreach ($singleReq in $RawGraphRequest) {
+        $skuId = $singleReq.Licenses
+        foreach ($sku in $skuId) {
             if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.SkuId -eq $sku.skuId } | Select-Object -ExpandProperty Name
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
@@ -72,7 +72,7 @@ function Get-CIPPLicenseOverview {
                 }
             }
             [pscustomobject]@{
-                Tenant         = [string]$singlereq.Tenant
+                Tenant         = [string]$singleReq.Tenant
                 License        = [string]$PrettyName
                 CountUsed      = [string]"$($sku.consumedUnits)"
                 CountAvailable = [string]$sku.prepaidUnits.enabled - $sku.consumedUnits
@@ -82,7 +82,7 @@ function Get-CIPPLicenseOverview {
                 availableUnits = [string]$sku.prepaidUnits.enabled - $sku.consumedUnits
                 TermInfo       = [string]($TermInfo | ConvertTo-Json -Depth 10 -Compress)
                 'PartitionKey' = 'License'
-                'RowKey'       = "$($singlereq.Tenant) - $($sku.skuid)"
+                'RowKey'       = "$($singleReq.Tenant) - $($sku.skuid)"
             }
         }
     }
