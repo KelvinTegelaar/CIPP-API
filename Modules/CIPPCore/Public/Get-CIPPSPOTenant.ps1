@@ -3,7 +3,8 @@ function Get-CIPPSPOTenant {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-        [string]$SharepointPrefix
+        [string]$SharepointPrefix,
+        [switch]$SkipCache
     )
 
     if (!$SharepointPrefix) {
@@ -18,11 +19,12 @@ function Get-CIPPSPOTenant {
 
     $Table = Get-CIPPTable -tablename 'cachespotenant'
     $Filter = "PartitionKey eq 'Tenant' and RowKey eq '$TenantFilter' and Timestamp gt datetime'$( (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
-    $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-
-    if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {
-        $Results = $CachedTenant.JSON | ConvertFrom-Json
-        return $Results
+    if (!$SkipCache.IsPresent) {
+        $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {
+            $Results = $CachedTenant.JSON | ConvertFrom-Json
+            return $Results
+        }
     }
 
     # Query tenant settings
