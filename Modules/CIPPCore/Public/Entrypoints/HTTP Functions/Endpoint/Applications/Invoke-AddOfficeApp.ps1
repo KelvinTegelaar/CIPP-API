@@ -9,22 +9,25 @@ function Invoke-AddOfficeApp {
     param($Request, $TriggerMetadata)
 
     # Input bindings are passed in via param block.
-    $Tenants = $Request.body.selectedTenants.defaultDomainName
+    $Tenants = $Request.Body.selectedTenants.defaultDomainName
+    $Headers = $Request.Headers
+    $APIName = $Request.Params.CIPPEndpoint
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
-    $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
+    $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
 
-    $results = foreach ($Tenant in $tenants) {
+    $Results = foreach ($Tenant in $Tenants) {
         try {
-            $ExistingO365 = New-graphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $tenant | Where-Object { $_.displayname -eq 'Microsoft 365 Apps for Windows 10 and later' }
+            $ExistingO365 = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $Tenant | Where-Object { $_.displayName -eq 'Microsoft 365 Apps for Windows 10 and later' }
             if (!$ExistingO365) {
                 # Check if custom XML is provided
-                if ($request.body.useCustomXml -and $request.body.customXml) {
+                if ($Request.Body.useCustomXml -and $Request.Body.customXml) {
                     # Use custom XML configuration
                     $ObjBody = [pscustomobject]@{
                         '@odata.type'            = '#microsoft.graph.officeSuiteApp'
                         'displayName'            = 'Microsoft 365 Apps for Windows 10 and later'
                         'description'            = 'Microsoft 365 Apps for Windows 10 and later'
                         'informationUrl'         = 'https://products.office.com/en-us/explore-office-for-home'
+                        'privacyInformationUrl'  = 'https://privacy.microsoft.com/en-us/privacystatement'
                         'isFeatured'             = $true
                         'publisher'              = 'Microsoft'
                         'notes'                  = ''
@@ -38,7 +41,7 @@ function Invoke-AddOfficeApp {
                     }
                 } else {
                     # Use standard configuration
-                    $Arch = if ($request.body.arch) { 'x64' } else { 'x86' }
+                    $Arch = if ($Request.Body.arch) { 'x64' } else { 'x86' }
                     $products = @('o365ProPlusRetail')
                     $ExcludedApps = [pscustomobject]@{
                         infoPath           = $true
@@ -54,26 +57,27 @@ function Invoke-AddOfficeApp {
                         access             = $false
                         bing               = $false
                     }
-                    foreach ($ExcludedApp in $request.body.excludedApps.value) {
-                        $ExcludedApps.$excludedapp = $true
+                    foreach ($ExcludedApp in $Request.Body.excludedApps.value) {
+                        $ExcludedApps.$ExcludedApp = $true
                     }
                     $ObjBody = [pscustomobject]@{
                         '@odata.type'                          = '#microsoft.graph.officeSuiteApp'
                         'displayName'                          = 'Microsoft 365 Apps for Windows 10 and later'
                         'description'                          = 'Microsoft 365 Apps for Windows 10 and later'
                         'informationUrl'                       = 'https://products.office.com/en-us/explore-office-for-home'
+                        'privacyInformationUrl'                = 'https://privacy.microsoft.com/en-us/privacystatement'
                         'isFeatured'                           = $true
                         'publisher'                            = 'Microsoft'
                         'notes'                                = ''
                         'owner'                                = 'Microsoft'
-                        'autoAcceptEula'                       = [bool]$request.body.AcceptLicense
+                        'autoAcceptEula'                       = [bool]$Request.Body.AcceptLicense
                         'excludedApps'                         = $ExcludedApps
                         'officePlatformArchitecture'           = $Arch
                         'officeSuiteAppDefaultFileFormat'      = 'OfficeOpenXMLFormat'
-                        'localesToInstall'                     = @($request.body.languages.value)
-                        'shouldUninstallOlderVersionsOfOffice' = [bool]$request.body.RemoveVersions
-                        'updateChannel'                        = $request.body.updateChannel.value
-                        'useSharedComputerActivation'          = [bool]$request.body.SharedComputerActivation
+                        'localesToInstall'                     = @($Request.Body.languages.value)
+                        'shouldUninstallOlderVersionsOfOffice' = [bool]$Request.Body.RemoveVersions
+                        'updateChannel'                        = $Request.Body.updateChannel.value
+                        'useSharedComputerActivation'          = [bool]$Request.Body.SharedComputerActivation
                         'productIds'                           = $products
                         'largeIcon'                            = @{
                             '@odata.type' = 'microsoft.graph.mimeContent'
@@ -88,25 +92,24 @@ function Invoke-AddOfficeApp {
                 "Office deployment already exists for $($Tenant)"
                 continue
             }
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Added Office profile to $($tenant)" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Added Office profile to $($Tenant)" -Sev 'Info'
             if ($AssignTo) {
                 $AssignO365 = if ($AssignTo -ne 'AllDevicesAndUsers') { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required"}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required"},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required"}]}' }           Write-Host ($AssignO365)
-                New-graphPostRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $tenant -Body $AssignO365 -type POST
-                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
+                New-GraphPOSTRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $Tenant -Body $AssignO365 -type POST
+                Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
             }
             "Successfully added Office App for $($Tenant)"
         } catch {
-            "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($tenant) -message "Failed to add Office App. Error: $($_.Exception.Message)" -Sev 'Error'
+            $ErrorMessage = Get-CippException -Exception $_
+            "Failed to add Office App for $($Tenant): $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Failed to add Office App. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -Logdata $ErrorMessage
             continue
         }
 
     }
 
-    $body = [pscustomobject]@{'Results' = $results }
-
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = $Results }
         })
 }
