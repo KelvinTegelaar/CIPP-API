@@ -88,10 +88,10 @@ function Invoke-ListGroups {
                 groupInfo              = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
                 @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true } else { $false } } },
                 @{Name = 'calculatedGroupType'; Expression = {
-                        if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-                        if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
                         if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-                        if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+                        elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                        elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                        elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
                     }
                 }, @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
                 members                = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value
@@ -105,11 +105,10 @@ function Invoke-ListGroups {
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
             @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
             @{Name = 'calculatedGroupType'; Expression = {
-
-                    if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-                    if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-                    if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+                    elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                    elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                    elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
                 }
             },
             @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
