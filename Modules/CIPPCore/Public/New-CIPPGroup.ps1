@@ -76,6 +76,22 @@ function New-CIPPGroup {
             $null
         }
 
+        # Extract local part of username if exists and remove special characters for mailNickname
+        if ($GroupObject.username -like '*@*') {
+            $MailNickname = ($GroupObject.username -split '@')[0]
+        } else {
+            $MailNickname = $GroupObject.username
+        }
+
+        # Remove forbidden characters per Microsoft 365 mailNickname requirements:
+        # ASCII 0-127 only, excluding: @ () / [] ' ; : <> , SPACE and any non-ASCII
+        $MailNickname = $MailNickname -replace "[@()\[\]/'`;:<>,\s]|[^\x00-\x7F]", ''
+
+        # Ensure max length of 64 characters
+        if ($MailNickname.Length -gt 64) {
+            $MailNickname = $MailNickname.Substring(0, 64)
+        }
+
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info
 
         # Handle Graph API groups (Security, Generic, AzureRole, Dynamic, M365)
@@ -84,7 +100,7 @@ function New-CIPPGroup {
             $BodyParams = [PSCustomObject]@{
                 'displayName'        = $GroupObject.displayName
                 'description'        = $GroupObject.description
-                'mailNickname'       = $GroupObject.username
+                'mailNickname'       = $MailNickname
                 'mailEnabled'        = ($NormalizedGroupType -in @('Security', 'M365'))
                 'securityEnabled'    = $true
                 'isAssignableToRole' = ($NormalizedGroupType -eq 'AzureRole')
