@@ -1,0 +1,49 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  registryServiceConnection: '<YOUR_REGISTRY_SERVICE_CONNECTION_NAME>'
+  imageRepository: '<YOUR_IMAGE_REPOSITORY_NAME>'
+  imageTag: '$(Build.BuildId)'
+
+steps:
+- task: Docker@2
+  displayName: Login to container registry
+  inputs:
+    command: login
+    containerRegistry: $(registryServiceConnection)
+
+# 2) Build & Push
+- task: Docker@2
+  displayName: Build and push image
+  inputs:
+    command: buildAndPush
+    containerRegistry: $(registryServiceConnection)
+    repository: $(imageRepository)
+    dockerfile: $(Build.SourcesDirectory)/Dockerfile
+    buildContext: $(Build.SourcesDirectory)
+    tags: |
+      dev
+      $(imageTag)
+
+# （optional）If your Dockerfile needs build args
+# - task: Docker@2
+#   displayName: Build and push with build args
+#   inputs:
+#     command: buildAndPush
+#     containerRegistry: $(registryServiceConnection)
+#     repository: $(imageRepository)
+#     dockerfile: $(Build.SourcesDirectory)/Dockerfile
+#     buildContext: $(Build.SourcesDirectory)
+#     buildArguments: |
+#       NODE_ENV=production
+#       API_BASE_URL=$(API_BASE_URL)
+#     tags: |
+#       dev
+#       $(imageTag)
