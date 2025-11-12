@@ -1,4 +1,4 @@
-Function Invoke-ExecGDAPRoleTemplate {
+function Invoke-ExecGDAPRoleTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
