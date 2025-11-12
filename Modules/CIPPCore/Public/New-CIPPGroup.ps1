@@ -43,6 +43,7 @@ function New-CIPPGroup {
     try {
         # Normalize group type for consistent handling (accept camelCase from templates)
         $NormalizedGroupType = switch -Wildcard ($GroupObject.groupType.ToLower()) {
+            'mail-enabled security' { 'Security'; break }
             '*dynamicdistribution*' { 'DynamicDistribution'; break }  # Check this first before *dynamic* and *distribution*
             '*dynamic*' { 'Dynamic'; break }
             '*generic*' { 'Generic'; break }
@@ -57,7 +58,7 @@ function New-CIPPGroup {
         }
 
         # Determine if this group type needs an email address
-        $GroupTypesNeedingEmail = @('M365', 'Distribution', 'DynamicDistribution')
+        $GroupTypesNeedingEmail = @('M365', 'Distribution', 'DynamicDistribution', 'Security')
         $NeedsEmail = $NormalizedGroupType -in $GroupTypesNeedingEmail
 
         # Determine email address only for group types that need it
@@ -95,13 +96,13 @@ function New-CIPPGroup {
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info
 
         # Handle Graph API groups (Security, Generic, AzureRole, Dynamic, M365)
-        if ($NormalizedGroupType -in @('Generic', 'Security', 'AzureRole', 'Dynamic', 'M365')) {
+        if ($NormalizedGroupType -in @('Generic', 'AzureRole', 'Dynamic', 'M365')) {
             Write-Information "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })"
             $BodyParams = [PSCustomObject]@{
                 'displayName'        = $GroupObject.displayName
                 'description'        = $GroupObject.description
                 'mailNickname'       = $MailNickname
-                'mailEnabled'        = ($NormalizedGroupType -in @('Security', 'M365'))
+                'mailEnabled'        = ($NormalizedGroupType -eq 'M365')
                 'securityEnabled'    = $true
                 'isAssignableToRole' = ($NormalizedGroupType -eq 'AzureRole')
             }
@@ -194,11 +195,15 @@ function New-CIPPGroup {
 
                 $ExoParams = @{
                     Name                               = $GroupObject.displayName
-                    Alias                              = $GroupObject.username
+                    Alias                              = $MailNickname
                     Description                        = $GroupObject.description
                     PrimarySmtpAddress                 = $Email
                     Type                               = $GroupObject.groupType
                     RequireSenderAuthenticationEnabled = [bool]!$GroupObject.allowExternal
+                }
+
+                if ($NormalizedGroupType -eq 'Security') {
+                    $ExoParams.Type = 'Security'
                 }
 
                 # Add owners
