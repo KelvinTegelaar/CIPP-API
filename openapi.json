@@ -3561,7 +3561,9 @@
       "get": {
         "description": "List Contact Templates",
         "summary": "List Contact Templates",
-        "tags": ["GET"],
+        "tags": [
+          "GET"
+        ],
         "responses": {
           "200": {
             "content": {
@@ -3584,7 +3586,9 @@
       "get": {
         "description": "Remove Contact Template",
         "summary": "Remove Contact Template",
-        "tags": ["GET"],
+        "tags": [
+          "GET"
+        ],
         "parameters": [
           {
             "required": true,
@@ -3614,7 +3618,9 @@
       "post": {
         "description": "Add Contact Template",
         "summary": "Add Contact Template",
-        "tags": ["POST"],
+        "tags": [
+          "POST"
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3770,7 +3776,10 @@
                         "Modification": {
                           "type": "string",
                           "description": "Type of modification (Add, Remove)",
-                          "enum": ["Add", "Remove"]
+                          "enum": [
+                            "Add",
+                            "Remove"
+                          ]
                         },
                         "UserID": {
                           "type": "array",
@@ -7856,6 +7865,14 @@
             "schema": {
               "type": "string"
             },
+            "name": "CAReportOnly",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
             "name": "DefenderStatus",
             "in": "body"
           },
@@ -10032,7 +10049,9 @@
                         "description": "Array of retention tag names to link to this policy"
                       }
                     },
-                    "required": ["Name"]
+                    "required": [
+                      "Name"
+                    ]
                   },
                   "description": "Array of retention policies to create"
                 },
@@ -10071,7 +10090,9 @@
                         "description": "Array of retention tag names to remove from the policy"
                       }
                     },
-                    "required": ["Identity"]
+                    "required": [
+                      "Identity"
+                    ]
                   },
                   "description": "Array of retention policies to modify"
                 },
@@ -10254,12 +10275,39 @@
                       },
                       "Type": {
                         "type": "string",
-                        "enum": ["All", "Inbox", "SentItems", "DeletedItems", "Drafts", "Outbox", "JunkEmail", "Journal", "SyncIssues", "ConversationHistory", "Personal", "RecoverableItems", "NonIpmRoot", "LegacyArchiveJournals", "Clutter", "Calendar", "Notes", "Tasks", "Contacts", "RssSubscriptions", "ManagedCustomFolder"],
+                        "enum": [
+                          "All",
+                          "Inbox",
+                          "SentItems",
+                          "DeletedItems",
+                          "Drafts",
+                          "Outbox",
+                          "JunkEmail",
+                          "Journal",
+                          "SyncIssues",
+                          "ConversationHistory",
+                          "Personal",
+                          "RecoverableItems",
+                          "NonIpmRoot",
+                          "LegacyArchiveJournals",
+                          "Clutter",
+                          "Calendar",
+                          "Notes",
+                          "Tasks",
+                          "Contacts",
+                          "RssSubscriptions",
+                          "ManagedCustomFolder"
+                        ],
                         "description": "Type of the retention tag"
                       },
                       "RetentionAction": {
                         "type": "string",
-                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "enum": [
+                          "DeleteAndAllowRecovery",
+                          "PermanentlyDelete",
+                          "MoveToArchive",
+                          "MarkAsPastRetentionLimit"
+                        ],
                         "description": "Action to take when retention period expires"
                       },
                       "AgeLimitForRetention": {
@@ -10285,7 +10333,10 @@
                         "description": "Localized name for the retention policy tag"
                       }
                     },
-                    "required": ["Name", "Type"]
+                    "required": [
+                      "Name",
+                      "Type"
+                    ]
                   },
                   "description": "Array of retention tags to create"
                 },
@@ -10304,7 +10355,12 @@
                       },
                       "RetentionAction": {
                         "type": "string",
-                        "enum": ["DeleteAndAllowRecovery", "PermanentlyDelete", "MoveToArchive", "MarkAsPastRetentionLimit"],
+                        "enum": [
+                          "DeleteAndAllowRecovery",
+                          "PermanentlyDelete",
+                          "MoveToArchive",
+                          "MarkAsPastRetentionLimit"
+                        ],
                         "description": "Action to take when retention period expires"
                       },
                       "AgeLimitForRetention": {
@@ -10330,7 +10386,9 @@
                         "description": "Localized name for the retention policy tag"
                       }
                     },
-                    "required": ["Identity"]
+                    "required": [
+                      "Identity"
+                    ]
                   },
                   "description": "Array of retention tags to modify"
                 },
@@ -10424,7 +10482,10 @@
                   "description": "Array of mailbox identities (email addresses or names) to apply the policy to"
                 }
               },
-              "required": ["PolicyName", "Mailboxes"]
+              "required": [
+                "PolicyName",
+                "Mailboxes"
+              ]
             }
           }
         }
