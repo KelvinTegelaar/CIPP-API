@@ -20,7 +20,15 @@ function Push-CIPPStandard {
         Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
     try {
-        & $FunctionName -Tenant $Item.Tenant -Settings $Item.Settings -ErrorAction Stop
+        # Convert settings to JSON, replace %variables%, then convert back to object
+        $SettingsJSON = $Item.Settings | ConvertTo-Json -Depth 10 -Compress
+        if ($SettingsJSON -match '%') {
+            $Settings = Get-CIPPTextReplacement -TenantFilter $Item.Tenant -Text $SettingsJSON | ConvertFrom-Json
+        } else {
+            $Settings = $Item.Settings
+        }
+
+        & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
         Write-Information "Standard $($Standard) completed for tenant $($Tenant)"
     } catch {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error running standard $($Standard) for tenant $($Tenant) - $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
