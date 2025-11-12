@@ -1,4 +1,4 @@
-Function Invoke-ExecSetUserPhoto {
+function Invoke-ExecSetUserPhoto {
     <#
     .FUNCTIONALITY
         Entrypoint
