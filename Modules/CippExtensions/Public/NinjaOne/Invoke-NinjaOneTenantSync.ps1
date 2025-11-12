@@ -8,7 +8,7 @@ function Invoke-NinjaOneTenantSync {
         Write-Information "$(Get-Date) - Starting NinjaOne Sync"
 
         $MappingTable = Get-CIPPTable -TableName CippMapping
-        $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq '$ExtensionPartitionKey'")
+        $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'NinjaOneMapping'")
         $CurrentMap | ForEach-Object {
             if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne '') {
                 $_.lastEndTime = (Get-Date($_.lastEndTime))
