@@ -12,7 +12,12 @@ function Invoke-GitHubApiRequest {
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
+    $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config
+    if (Test-Json -Json $ExtensionConfig) {
+        $Configuration = ($ExtensionConfig | ConvertFrom-Json).GitHub
+    } else {
+        $Configuration = @{ Enabled = $false }
+    }
 
     if ($Configuration.Enabled) {
         $APIKey = Get-ExtensionAPIKey -Extension 'GitHub'
