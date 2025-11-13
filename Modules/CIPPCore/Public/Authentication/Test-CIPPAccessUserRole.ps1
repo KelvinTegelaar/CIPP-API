@@ -21,7 +21,7 @@ function Test-CIPPAccessUserRole {
     )
     $Roles = @()
     $Table = Get-CippTable -TableName cacheAccessUserRoles
-    $Filter = "PartitionKey eq 'AccessRole' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToString('yyyy-MM-ddTHH:mm:ss'))'"
+    $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
     $UserRole = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if ($UserRole) {
         Write-Information "Found cached user role for $($User.userDetails)"
