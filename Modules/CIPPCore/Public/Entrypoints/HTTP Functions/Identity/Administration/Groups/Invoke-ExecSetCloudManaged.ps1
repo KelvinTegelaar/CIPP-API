@@ -21,7 +21,16 @@ function Invoke-ExecSetCloudManaged {
     $IsCloudManaged = [System.Convert]::ToBoolean($Request.Body.isCloudManaged)
 
     try {
-        $Result = Set-CIPPCloudManaged -Id $GroupID -TenantFilter $TenantFilter -DisplayName $DisplayName -Type $Type -IsCloudManaged $IsCloudManaged -APIName $APIName -Headers $Headers
+        $Params = @{
+            Id             = $GroupID
+            TenantFilter   = $TenantFilter
+            DisplayName    = $DisplayName
+            Type           = $Type
+            IsCloudManaged = $IsCloudManaged
+            APIName        = $APIName
+            Headers        = $Headers
+        }
+        $Result = Set-CIPPCloudManaged @Params
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = "$($_.Exception.Message)"

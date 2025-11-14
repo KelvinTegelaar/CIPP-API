@@ -12,9 +12,9 @@ function Set-CIPPCloudManaged(
         $statusText = if ($IsCloudManaged -eq $true) { 'cloud-managed' } else { 'on-premises managed' }
 
         $URI = switch ($Type) {
-            'User' { "https://graph.microsoft.com/v1.0/users/$Id/onPremisesSyncBehavior" }
+            'User' { "https://graph.microsoft.com/beta/users/$Id/onPremisesSyncBehavior" }
             'Group' { "https://graph.microsoft.com/v1.0/groups/$Id/onPremisesSyncBehavior" }
-            'Contact' { "https://graph.microsoft.com/v1.0/contacts/$Id/onPremisesSyncBehavior" }
+            'Contact' { "https://graph.microsoft.com/beta/contacts/$Id/onPremisesSyncBehavior" }
         }
 
         $Body = @{
