@@ -1,9 +1,9 @@
-function Invoke-ExecSetGroupCloudManaged {
+function Invoke-ExecSetCloudManaged {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.Group.ReadWrite
+        Identity.DirSync.ReadWrite
     .DESCRIPTION
         Sets the cloud-managed status of a group.
     #>
@@ -17,10 +17,11 @@ function Invoke-ExecSetGroupCloudManaged {
     $TenantFilter = $Request.Body.tenantFilter
     $GroupID = $Request.Body.ID
     $DisplayName = $Request.Body.displayName
+    $Type = $Request.Body.type
     $IsCloudManaged = [System.Convert]::ToBoolean($Request.Body.isCloudManaged)
 
     try {
-        $Result = Set-CIPPGroupCloudManaged -Id $GroupID -TenantFilter $TenantFilter -DisplayName $DisplayName -IsCloudManaged $IsCloudManaged -APIName $APIName -Headers $Headers
+        $Result = Set-CIPPCloudManaged -Id $GroupID -TenantFilter $TenantFilter -DisplayName $DisplayName -Type $Type -IsCloudManaged $IsCloudManaged -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = "$($_.Exception.Message)"
