@@ -5,7 +5,7 @@ function Invoke-ExecSetCloudManaged {
     .ROLE
         Identity.DirSync.ReadWrite
     .DESCRIPTION
-        Sets the cloud-managed status of a group.
+        Sets the cloud-managed status of a user, group, or contact.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
