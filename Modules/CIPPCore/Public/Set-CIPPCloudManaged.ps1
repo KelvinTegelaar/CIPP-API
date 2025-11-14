@@ -13,7 +13,7 @@ function Set-CIPPCloudManaged(
 
         $URI = switch ($Type) {
             'User' { "https://graph.microsoft.com/beta/users/$Id/onPremisesSyncBehavior" }
-            'Group' { "https://graph.microsoft.com/v1.0/groups/$Id/onPremisesSyncBehavior" }
+            'Group' { "https://graph.microsoft.com/beta/groups/$Id/onPremisesSyncBehavior" }
             'Contact' { "https://graph.microsoft.com/beta/contacts/$Id/onPremisesSyncBehavior" }
         }
 
