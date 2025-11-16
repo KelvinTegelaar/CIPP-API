@@ -38,6 +38,18 @@ function New-CippCoreRequest {
                     })
             }
 
+            $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+            $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+
+            if ($AllowedTenants -notcontains 'AllTenants') {
+                Write-Warning 'Limiting tenant access'
+                $script:AllowedTenants = $AllowedTenants
+            }
+            if ($AllowedGroups -notcontains 'AllGroups') {
+                Write-Warning 'Limiting group access'
+                $script:AllowedGroups = $AllowedGroups
+            }
+
             try {
                 Write-Information "Access: $Access"
                 Write-LogMessage -headers $Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
