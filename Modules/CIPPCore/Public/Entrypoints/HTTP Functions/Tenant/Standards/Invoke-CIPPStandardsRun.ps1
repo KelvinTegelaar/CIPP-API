@@ -4,7 +4,7 @@ function Invoke-CIPPStandardsRun {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Standards.ReadWrite
+        Tenant.Standards.ReadWrite
     #>
     [CmdletBinding()]
     param(
