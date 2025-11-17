@@ -13,7 +13,7 @@ function New-CippCoreRequest {
     param($Request, $TriggerMetadata)
 
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Information "API: $($Request.Params.CIPPEndpoint)"
+    Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
 
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
