@@ -68,4 +68,5 @@ function Push-AuditLogSearchCreation {
         Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
     }
+    return $true
 }
