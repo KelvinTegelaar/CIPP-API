@@ -10,7 +10,7 @@ function Get-CIPPTimerFunctions {
 
     # Check running nodes
     $VersionTable = Get-CIPPTable -tablename 'Version'
-    $Nodes = Get-CIPPAzDataTableEntity @VersionTable -Filter "PartitionKey eq 'Version' and RowKey ne 'Version'"
+    $Nodes = Get-CIPPAzDataTableEntity @VersionTable -Filter "PartitionKey eq 'Version' and RowKey ne 'Version' and RowKey ne 'frontend'"
 
     $FunctionName = $env:WEBSITE_SITE_NAME
     $MainFunctionVersion = ($Nodes | Where-Object { $_.RowKey -eq $FunctionName }).Version
