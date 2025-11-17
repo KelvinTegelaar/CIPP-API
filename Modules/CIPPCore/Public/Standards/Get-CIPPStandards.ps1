@@ -340,7 +340,7 @@ function Get-CIPPStandards {
                             }
                         }
 
-                        $Actions = $CurrentStandard.action.value ?? $CurrentStandard.action
+                        $Actions = $CurrentStandard.action.value
                         if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
                             if (-not $ComputedStandards.Contains($StandardName)) {
                                 $ComputedStandards[$StandardName] = $CurrentStandard
