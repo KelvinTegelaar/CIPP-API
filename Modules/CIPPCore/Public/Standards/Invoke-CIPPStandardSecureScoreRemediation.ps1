@@ -174,25 +174,21 @@ function Invoke-CIPPStandardSecureScoreRemediation {
             }
 
             $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
-
-            if ($CurrentControl) {
+            $LatestState = ($CurrentControl.controlStateUpdates | Select-Object -Last 1).state
+            if ($LatestState -ne $Control.State) {
                 $ReportData.Add(@{
                         ControlName  = $Control.ControlName
-                        CurrentState = $CurrentControl.state
-                        DesiredState = $Control.State
-                        InCompliance = ($CurrentControl.state -eq $Control.State)
-                    })
-            } else {
-                $ReportData.Add(@{
-                        ControlName  = $Control.ControlName
-                        CurrentState = 'Not Found'
+                        CurrentState = $LatestState
                         DesiredState = $Control.State
                         InCompliance = $false
                     })
             }
         }
+        if ($ReportData.count -eq 0) {
+            $ReportData = $true
+        }
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -FieldValue $ReportData.ToArray() -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData.ToArray() -StoreAs json -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -FieldValue $ReportData -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData -StoreAs json -Tenant $tenant
     }
 }
