@@ -33,25 +33,6 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
     param($Tenant, $Settings)
     
-    # Validate that Controls array exists and is not empty
-    if (-not $Settings.Controls -or $Settings.Controls.Count -eq 0) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'No controls specified for Secure Score remediation. Skipping.' -sev Info
-        return
-    }
-
-    # Process controls from settings
-    # Settings.Controls should be an array of objects with ControlName, State, Reason, and optionally VendorInformation
-    $Controls = $Settings.Controls
-    if ($Controls -is [string]) {
-        try {
-            $Controls = $Controls | ConvertFrom-Json
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to parse Controls JSON: $ErrorMessage" -sev Error
-            return
-        }
-    }
-
     # Get current secure score controls
     try {
         $CurrentControls = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/secureScoreControlProfiles' -tenantid $Tenant
@@ -64,16 +45,10 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     if ($Settings.remediate -eq $true) {
         Write-Host 'Processing Secure Score control updates'
         
-        foreach ($Control in $Controls) {
+        foreach ($Control in $Settings.Controls) {
             # Skip if this is a Defender control (starts with scid_)
             if ($Control.ControlName -match '^scid_') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping Defender control $($Control.ControlName) - cannot be updated via this API" -sev Info
-                continue
-            }
-
-            # Validate required fields
-            if (-not $Control.ControlName -or -not $Control.State) {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping control update - ControlName and State are required" -sev Warning
                 continue
             }
 
@@ -92,11 +67,6 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
             try {
                 $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
-                
-                if (-not $CurrentControl) {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) not found in tenant" -sev Warning
-                    continue
-                }
 
                 # Check if already in desired state
                 if ($CurrentControl.state -eq $Control.State) {
@@ -114,9 +84,9 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     }
 
     if ($Settings.alert -eq $true) {
-        $AlertMessages = @()
+        $AlertMessages = [System.Collections.Generic.List[string]]::new()
         
-        foreach ($Control in $Controls) {
+        foreach ($Control in $Settings.Controls) {
             if ($Control.ControlName -match '^scid_') {
                 continue
             }
@@ -128,25 +98,25 @@ function Invoke-CIPPStandardSecureScoreRemediation {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) is in expected state: $($Control.State)" -sev Info
                 } else {
                     $AlertMessage = "Control $($Control.ControlName) is in state $($CurrentControl.state), expected $($Control.State)"
-                    $AlertMessages += $AlertMessage
+                    $AlertMessages.Add($AlertMessage)
                     Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Alert
                 }
             } else {
                 $AlertMessage = "Control $($Control.ControlName) not found in tenant"
-                $AlertMessages += $AlertMessage
+                $AlertMessages.Add($AlertMessage)
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Warning
             }
         }
         
         if ($AlertMessages.Count -gt 0) {
-            Write-StandardsAlert -message "Secure Score controls not in expected state" -object @{Issues = $AlertMessages} -tenant $Tenant -standardName 'SecureScoreRemediation' -standardId $Settings.standardId
+            Write-StandardsAlert -message "Secure Score controls not in expected state" -object @{Issues = $AlertMessages.ToArray()} -tenant $Tenant -standardName 'SecureScoreRemediation' -standardId $Settings.standardId
         }
     }
 
     if ($Settings.report -eq $true) {
-        $ReportData = @()
+        $ReportData = [System.Collections.Generic.List[object]]::new()
         
-        foreach ($Control in $Controls) {
+        foreach ($Control in $Settings.Controls) {
             if ($Control.ControlName -match '^scid_') {
                 continue
             }
@@ -154,23 +124,23 @@ function Invoke-CIPPStandardSecureScoreRemediation {
             $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
             
             if ($CurrentControl) {
-                $ReportData += @{
+                $ReportData.Add(@{
                     ControlName = $Control.ControlName
                     CurrentState = $CurrentControl.state
                     DesiredState = $Control.State
                     InCompliance = ($CurrentControl.state -eq $Control.State)
-                }
+                })
             } else {
-                $ReportData += @{
+                $ReportData.Add(@{
                     ControlName = $Control.ControlName
                     CurrentState = 'Not Found'
                     DesiredState = $Control.State
                     InCompliance = $false
-                }
+                })
             }
         }
         
-        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -FieldValue $ReportData -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData -StoreAs json -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -FieldValue $ReportData.ToArray() -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData.ToArray() -StoreAs json -Tenant $tenant
     }
 }
