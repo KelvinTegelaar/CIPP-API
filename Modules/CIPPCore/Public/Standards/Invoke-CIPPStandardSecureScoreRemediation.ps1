@@ -7,8 +7,8 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     .SYNOPSIS
         (Label) Update Secure Score Control Profiles
     .DESCRIPTION
-        (Helptext) Allows bulk updating of Secure Score control profiles across tenants. Configure controls as resolved, ignored, or third-party mitigated to accurately reflect your security posture.
-        (DocsDescription) Enables automated or template-based updates to Microsoft Secure Score recommendations. This is particularly useful for MSPs managing multiple tenants, allowing you to mark controls as "Third-party mitigation" (e.g., when using Mimecast, IronScales, or other third-party security tools) or set them to other states in bulk. This ensures Secure Scores accurately reflect each tenant's true security posture without repetitive manual updates.
+        (Helptext) Allows bulk updating of Secure Score control profiles across tenants. Select controls and assign them to different states: Default, Ignored, Third-Party, or Reviewed.
+        (DocsDescription) Enables automated or template-based updates to Microsoft Secure Score recommendations. This is particularly useful for MSPs managing multiple tenants, allowing you to mark controls as "Third-party" (e.g., when using Mimecast, IronScales, or other third-party security tools) or set them to other states in bulk. This ensures Secure Scores accurately reflect each tenant's true security posture without repetitive manual updates.
     .NOTES
         CAT
             Global Standards
@@ -17,7 +17,10 @@ function Invoke-CIPPStandardSecureScoreRemediation {
         EXECUTIVETEXT
             Automates the management of Secure Score control profiles by allowing bulk updates across tenants. This ensures accurate representation of security posture when using third-party security tools or when certain controls need to be marked as resolved or ignored, significantly reducing manual administrative overhead for MSPs managing multiple clients.
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.SecureScoreRemediation.Controls","label":"Control Updates (JSON array)","placeholder":"[{\"ControlName\":\"example\",\"State\":\"thirdPartyMitigation\",\"Reason\":\"Using third-party tool\"}]"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Default","label":"Controls to set to Default"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Ignored","label":"Controls to set to Ignored"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.ThirdParty","label":"Controls to set to Third-Party"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Reviewed","label":"Controls to set to Reviewed"}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -32,6 +35,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     #>
 
     param($Tenant, $Settings)
+
     
     # Get current secure score controls
     try {
@@ -42,10 +46,61 @@ function Invoke-CIPPStandardSecureScoreRemediation {
         return
     }
 
+    # Build list of controls with their desired states
+    $ControlsToUpdate = [System.Collections.Generic.List[object]]::new()
+    
+    # Process Default controls
+    $DefaultControls = $Settings.Default.value ?? $Settings.Default
+    if ($DefaultControls) {
+        foreach ($ControlName in $DefaultControls) {
+            $ControlsToUpdate.Add(@{
+                ControlName = $ControlName
+                State = 'default'
+                Reason = 'Default'
+            })
+        }
+    }
+    
+    # Process Ignored controls
+    $IgnoredControls = $Settings.Ignored.value ?? $Settings.Ignored
+    if ($IgnoredControls) {
+        foreach ($ControlName in $IgnoredControls) {
+            $ControlsToUpdate.Add(@{
+                ControlName = $ControlName
+                State = 'ignored'
+                Reason = 'Ignored'
+            })
+        }
+    }
+    
+    # Process ThirdParty controls
+    $ThirdPartyControls = $Settings.ThirdParty.value ?? $Settings.ThirdParty
+    if ($ThirdPartyControls) {
+        foreach ($ControlName in $ThirdPartyControls) {
+            $ControlsToUpdate.Add(@{
+                ControlName = $ControlName
+                State = 'thirdParty'
+                Reason = 'ThirdParty'
+            })
+        }
+    }
+    
+    # Process Reviewed controls
+    $ReviewedControls = $Settings.Reviewed.value ?? $Settings.Reviewed
+    if ($ReviewedControls) {
+        foreach ($ControlName in $ReviewedControls) {
+            $ControlsToUpdate.Add(@{
+                ControlName = $ControlName
+                State = 'reviewed'
+                Reason = 'Reviewed'
+            })
+        }
+    }
+
     if ($Settings.remediate -eq $true) {
         Write-Host 'Processing Secure Score control updates'
         
-        foreach ($Control in $Settings.Controls) {
+        foreach ($Control in $ControlsToUpdate) {
             # Skip if this is a Defender control (starts with scid_)
             if ($Control.ControlName -match '^scid_') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping Defender control $($Control.ControlName) - cannot be updated via this API" -sev Info
@@ -55,14 +110,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
             # Build the request body
             $Body = @{
                 state = $Control.State
-            }
-            
-            if ($Control.Reason) {
-                $Body.comment = $Control.Reason
-            }
-            
-            if ($Control.VendorInformation) {
-                $Body.vendorInformation = $Control.VendorInformation
+                comment = $Control.Reason
             }
 
             try {
@@ -86,7 +134,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     if ($Settings.alert -eq $true) {
         $AlertMessages = [System.Collections.Generic.List[string]]::new()
         
-        foreach ($Control in $Settings.Controls) {
+        foreach ($Control in $ControlsToUpdate) {
             if ($Control.ControlName -match '^scid_') {
                 continue
             }
@@ -116,7 +164,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     if ($Settings.report -eq $true) {
         $ReportData = [System.Collections.Generic.List[object]]::new()
         
-        foreach ($Control in $Settings.Controls) {
+        foreach ($Control in $ControlsToUpdate) {
             if ($Control.ControlName -match '^scid_') {
                 continue
             }
