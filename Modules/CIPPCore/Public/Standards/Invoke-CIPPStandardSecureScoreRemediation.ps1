@@ -109,8 +109,12 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
             # Build the request body
             $Body = @{
-                state   = $Control.State
-                comment = $Control.Reason
+                state             = $Control.State
+                comment           = $Control.Reason
+                vendorInformation = @{
+                    vendor   = 'Microsoft'
+                    provider = 'SecureScore'
+                }
             }
 
             try {
