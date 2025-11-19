@@ -69,10 +69,10 @@ function Write-LogMessage {
     if ($script:StandardInfo) {
         $TableRow.Standard = [string]$script:StandardInfo.Standard
         $TableRow.StandardTemplateId = [string]$script:StandardInfo.StandardTemplateId
-        if ($script:StandardInfo.IntuneTemplate) {
+        if ($script:StandardInfo.IntuneTemplateId) {
             $TableRow.IntuneTemplateId = [string]$script:StandardInfo.IntuneTemplateId
         }
-        if ($script:StandardInfo.ConditionalAccessTemplate) {
+        if ($script:StandardInfo.ConditionalAccessTemplateId) {
             $TableRow.ConditionalAccessTemplateId = [string]$script:StandardInfo.ConditionalAccessTemplateId
         }
     }

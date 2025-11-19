@@ -27,16 +27,18 @@ function Push-CIPPStandard {
         Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
 
-    $script:StandardInfo = @{
+    $StandardInfo = @{
         Standard           = $Standard
         StandardTemplateId = $Item.templateId
     }
     if ($Standard -eq 'IntuneTemplate') {
-        $script:StandardInfo.IntuneTemplateId = $Item.Settings.TemplateList.value
+        $StandardInfo.IntuneTemplateId = $Item.Settings.TemplateList.value
     }
     if ($Standard -eq 'ConditionalAccessTemplate') {
-        $script:StandardInfo.ConditionalAccessTemplateId = $Item.Settings.TemplateList.value
+        $StandardInfo.ConditionalAccessTemplateId = $Item.Settings.TemplateList.value
     }
+
+    $Script:StandardInfo = $StandardInfo
 
     try {
         # Convert settings to JSON, replace %variables%, then convert back to object

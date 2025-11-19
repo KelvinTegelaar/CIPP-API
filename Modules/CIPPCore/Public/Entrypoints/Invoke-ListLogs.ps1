@@ -30,6 +30,30 @@ function Invoke-ListLogs {
             }
 
             if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
+
+                if ($Row.StandardTemplateId) {
+                    $TemplatesTable = Get-CIPPTable -tablename 'templates'
+                    $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
+
+                    $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+
+                    $StandardInfo = @{
+                        Standard = $Standard.templateName
+                    }
+
+                    if ($Row.IntuneTemplateId) {
+                        $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                    }
+                    if ($Row.ConditionalAccessTemplateId) {
+                        $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                    }
+
+                } else {
+                    $StandardInfo = @{}
+                }
+
                 $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
                     $Row.LogData | ConvertFrom-Json
                 } else { $Row.LogData }
@@ -49,6 +73,7 @@ function Invoke-ListLogs {
                     AppId    = $Row.AppId
                     IP       = $Row.IP
                     RowKey   = $Row.RowKey
+                    Standard = $StandardInfo
                 }
             }
         }
