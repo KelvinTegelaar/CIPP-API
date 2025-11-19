@@ -95,7 +95,7 @@ function Send-CIPPAlert {
         Write-Information 'Trying to send webhook'
 
         try {
-            if ($Config.webhook -ne '' -or $AltWebhook -ne '') {
+            if (![string]::IsNullOrWhiteSpace($Config.webhook) -or ![string]::IsNullOrWhiteSpace($AltWebhook)) {
                 if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
                     $webhook = if ($AltWebhook) { $AltWebhook } else { $Config.webhook }
                     switch -wildcard ($webhook) {
@@ -121,8 +121,10 @@ function Send-CIPPAlert {
                         }
                     }
                 }
+                Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
+            } else {
+                Write-LogMessage -API 'Webhook Alerts' -message 'No webhook URL configured' -sev warning
             }
-            Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
 
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
