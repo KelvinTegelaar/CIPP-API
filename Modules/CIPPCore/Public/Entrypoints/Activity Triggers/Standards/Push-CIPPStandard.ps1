@@ -12,13 +12,32 @@ function Push-CIPPStandard {
     $Standard = $Item.Standard
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
     Write-Information "We'll be running $FunctionName"
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API "$($Standard)_$($Item.templateId)"
+
+    if ($Standard -in @('IntuneTemplate', 'ConditionalAccessTemplate')) {
+        $API = "$Standard_$($Item.templateId)_$($Item.Settings.TemplateList.value)"
+    } else {
+        $API = "$Standard_$($Item.templateId)"
+    }
+
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
         exit 0
     } else {
         Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
+
+    $script:StandardInfo = @{
+        Standard           = $Standard
+        StandardTemplateId = $Item.templateId
+    }
+    if ($Standard -eq 'IntuneTemplate') {
+        $script:StandardInfo.IntuneTemplateId = $Item.Settings.TemplateList.value
+    }
+    if ($Standard -eq 'ConditionalAccessTemplate') {
+        $script:StandardInfo.ConditionalAccessTemplateId = $Item.Settings.TemplateList.value
+    }
+
     try {
         # Convert settings to JSON, replace %variables%, then convert back to object
         $SettingsJSON = $Item.Settings | ConvertTo-Json -Depth 10 -Compress
