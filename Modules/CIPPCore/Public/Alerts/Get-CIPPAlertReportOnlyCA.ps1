@@ -4,7 +4,7 @@ function Get-CIPPAlertReportOnlyCA {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -20,13 +20,18 @@ function Get-CIPPAlertReportOnlyCA {
 
         if (('AAD_PREMIUM' -in $CAAvailable.servicePlanName) -or ('AAD_PREMIUM_P2' -in $CAAvailable.servicePlanName)) {
             $CAPolicies = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -ErrorAction Stop)
-            
+
             # Filter for policies in report-only mode
             $ReportOnlyPolicies = $CAPolicies | Where-Object { $_.state -eq 'enabledForReportingButNotEnforced' }
-            
+
             if ($ReportOnlyPolicies) {
-                $PolicyNames = $ReportOnlyPolicies.displayName -join ', '
-                $AlertData = "The following Conditional Access policies are in report-only mode: $PolicyNames"
+                $AlertData = foreach ($Policy in $ReportOnlyPolicies) {
+                    [PSCustomObject]@{
+                        PolicyNames = $Policy.displayName
+                        State       = $Policy.state
+                        Tenant      = $TenantFilter
+                    }
+                }
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
         }
