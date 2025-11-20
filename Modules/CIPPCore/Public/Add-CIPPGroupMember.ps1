@@ -80,16 +80,29 @@ function Add-CIPPGroupMember {
                 }
             }
         } else {
-            $MemberIDs = foreach ($User in $Users) {
-                $ODataBindString -f $User.body.id
+            # Build one bulk request list; New-GraphBulkRequest handles internal chunking
+            $AddRequests = foreach ($User in $Users) {
+                @{
+                    id      = $User.body.id
+                    method  = 'POST'
+                    url     = "/groups/$($GroupId)/members/`$ref"
+                    body    = @{ '@odata.id' = ($ODataBindString -f $User.body.id) }
+                    headers = @{ 'Content-Type' = 'application/json' }
+                }
             }
-            $AddMembers = @{
-                'members@odata.bind' = @($MemberIDs)
+            $AddResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($AddRequests)
+            $SuccessfulUsers = [system.collections.generic.list[string]]::new()
+            foreach ($Result in $AddResults) {
+                if ($Result.status -lt 200 -or $Result.status -gt 299) {
+                    $FailedUsername = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($FailedUsername): $($Result.body.error.message)" -Sev 'Error'
+                } else {
+                    $UserPrincipalName = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
+                    $SuccessfulUsers.Add($UserPrincipalName)
+                }
             }
-            $AddMemberBody = ConvertTo-Json -InputObject $AddMembers
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $TenantFilter -type patch -body $AddMemberBody -Verbose
         }
-        $UserList = ($Users.body.userPrincipalName -join ', ')
+        $UserList = ($SuccessfulUsers -join ', ')
         $Results = "Successfully added user $UserList to $($GroupId)."
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         return $Results
