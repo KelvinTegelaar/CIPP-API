@@ -35,14 +35,14 @@ function Invoke-ExecCAExclusion {
         }
 
         $SecurityGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=securityEnabled eq true and mailEnabled eq false&`$count=true" -tenantid $TenantFilter
-        $VacationGroup = $SecurityGroups | Where-Object { $_.displayName -contains "CIPP-Vacation-$($Policy.displayName)" }
+        $VacationGroup = $SecurityGroups | Where-Object { $_.displayName -contains "Vacation Exclusion - $($Policy.displayName)" }
 
         if (!$VacationGroup) {
-            Write-Information "Creating vacation group: CIPP-Vacation-$($Policy.displayName)"
+            Write-Information "Creating vacation group: Vacation Exclusion - $($Policy.displayName)"
             $Guid = [guid]::NewGuid().ToString()
             $GroupObject = @{
                 groupType       = 'generic'
-                displayName     = "CIPP-Vacation-$($Policy.displayName)"
+                displayName     = "Vacation Exclusion - $($Policy.displayName)"
                 username        = "vacation$Guid"
                 securityEnabled = $true
             }
