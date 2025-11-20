@@ -1,9 +1,63 @@
 Function Invoke-ListUsers {
     <#
+    .SYNOPSIS
+    List users from Microsoft 365 tenants
+    
+    .DESCRIPTION
+    Retrieves a list of users from Microsoft 365 tenants with optional filtering and detailed information
+    
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Identity.User.Read
+        
+    .NOTES
+    Group: Identity Management
+    Summary: List Users
+    Description: Retrieves a list of users from Microsoft 365 tenants with filtering, licensing information, and optional sign-in details
+    Tags: Identity,Users
+    Parameter: tenantFilter (string) [query] - The tenant to filter users from
+    Parameter: UserID (string) [query] - Specific user ID to retrieve
+    Parameter: graphFilter (string) [query] - Microsoft Graph filter to apply to the user query
+    Parameter: IncludeLogonDetails (boolean) [query] - Include detailed sign-in information for the user
+    Response: Returns an array of user objects with the following properties:
+    Response: - id (string): User's unique identifier
+    Response: - userPrincipalName (string): User's principal name (email address)
+    Response: - displayName (string): User's display name
+    Response: - accountEnabled (boolean): Whether the account is enabled
+    Response: - username (string): Username portion of the email
+    Response: - onPremisesSyncEnabled (boolean): Whether user is synced from on-premises
+    Response: - LicJoined (string): Comma-separated list of assigned licenses
+    Response: - Aliases (string): Comma-separated list of email aliases
+    Response: - primDomain (object): Primary domain information with value and label
+    Response: - manager (object): Manager information including id, userPrincipalName, and displayName
+    Response: When IncludeLogonDetails=true, additional fields are included:
+    Response: - LastSigninApplication (string): Last application used to sign in
+    Response: - LastSigninDate (string): Last sign-in date
+    Response: - LastSigninStatus (string): Last sign-in operation
+    Response: - LastSigninResult (string): Result status of last sign-in
+    Response: - LastSigninFailureReason (string): Reason for sign-in failure or success message
+    Example: [
+      {
+        "id": "12345678-1234-1234-1234-123456789012",
+        "userPrincipalName": "john.doe@contoso.com",
+        "displayName": "John Doe",
+        "accountEnabled": true,
+        "username": "john.doe",
+        "onPremisesSyncEnabled": false,
+        "LicJoined": "Microsoft 365 Business Premium, Microsoft Teams",
+        "Aliases": "j.doe@contoso.com, jdoe@contoso.com",
+        "primDomain": {
+          "value": "contoso.com",
+          "label": "contoso.com"
+        },
+        "manager": {
+          "id": "87654321-4321-4321-4321-210987654321",
+          "userPrincipalName": "jane.smith@contoso.com",
+          "displayName": "Jane Smith"
+        }
+      }
+    ]
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
