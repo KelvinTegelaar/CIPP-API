@@ -48,7 +48,7 @@ function Invoke-ListScheduledItems {
     }
 
     if ($SearchTitle) {
-        $Tasks | Where-Object { $_.Name -like $SearchTitle }
+        $Tasks = $Tasks | Where-Object { $_.Name -like $SearchTitle }
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
