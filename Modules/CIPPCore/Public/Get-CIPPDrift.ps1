@@ -82,18 +82,25 @@ function Get-CIPPDrift {
                         } else {
                             'New'
                         }
+                        # Reset displayName and description for each deviation to prevent carryover from previous iterations
+                        $displayName = $null
+                        $standardDescription = $null
                         #if the $ComparisonItem.StandardName contains *intuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
                         if ($ComparisonItem.StandardName -like '*intuneTemplate*') {
                             $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Index 2
                             Write-Host "Extracted GUID: $CompareGuid"
                             $Template = $AllIntuneTemplates | Where-Object { $_.GUID -like "*$CompareGuid*" }
-                            if ($Template) { $displayName = $Template.displayName }
+                            if ($Template) {
+                                $displayName = $Template.displayName
+                                $standardDescription = $Template.description
+                            }
                         }
                         $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }
                         $User = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].User }
                         $StandardsDeviations.Add([PSCustomObject]@{
                                 standardName        = $ComparisonItem.StandardName
                                 standardDisplayName = $displayName
+                                standardDescription = $standardDescription
                                 expectedValue       = 'Compliant'
                                 receivedValue       = $ComparisonItem.StandardValue
                                 state               = 'current'

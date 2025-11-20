@@ -44,15 +44,15 @@ function Invoke-ExecUpdateDriftDeviation {
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
                         if ($Setting -like '*IntuneTemplate*') {
                             $Setting = 'IntuneTemplate'
-                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Last 1
-                            $StandardTemplate = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object { $_.TemplateList.value -eq $TemplateId }
+                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Index 2
+                            $StandardTemplate = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object { $_.TemplateList.value -like "*$TemplateId*" }
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
                             $Settings = $StandardTemplate
                         } elseif ($Setting -like '*ConditionalAccessTemplate*') {
                             $Setting = 'ConditionalAccessTemplate'
-                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Last 1
-                            $StandardTemplate = $StandardTemplate.standardSettings.ConditionalAccessTemplate | Where-Object { $_.TemplateList.value -eq $TemplateId }
+                            $TemplateId = $Deviation.standardName.split('.') | Select-Object -Index 2
+                            $StandardTemplate = $StandardTemplate.standardSettings.ConditionalAccessTemplate | Where-Object { $_.TemplateList.value -like "*$TemplateId*" }
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
                             $Settings = $StandardTemplate
