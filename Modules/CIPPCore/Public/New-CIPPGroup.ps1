@@ -167,7 +167,15 @@ function New-CIPPGroup {
                 GroupType = $NormalizedGroupType
                 Email     = if ($NeedsEmail) { $Email } else { $null }
             }
-
+            if ($GroupObject.subscribeMembers) {
+                #Waiting for group to become available in Exo.
+                Start-Sleep -Seconds 10
+                $SubParams = @{
+                    Identity                  = $GraphRequest.id
+                    'autoSubscribeNewMembers' = $true
+                }
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-UnifiedGroup' -cmdParams $SubParams
+            }
         } else {
             # Handle Exchange Online groups (Distribution, DynamicDistribution)
 
