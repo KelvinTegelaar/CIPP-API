@@ -18,6 +18,7 @@ function Invoke-ExecCAExclusion {
         $EndDate = $Request.Body.EndDate
         $PolicyId = $Request.Body.PolicyId
         $ExclusionType = $Request.Body.ExclusionType
+        $ExcludeLocationAuditAlerts = $Request.Body.excludeLocationAuditAlerts
 
         if ($Users) {
             $UserID = $Users.value
@@ -61,6 +62,12 @@ function Invoke-ExecCAExclusion {
         if ($Request.Body.vacation -eq 'true') {
             $StartDate = $Request.Body.StartDate
             $EndDate = $Request.Body.EndDate
+            # Detect if policy targets specific named locations (GUIDs) and user requested audit log exclusion
+            $GuidRegex = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            $LocationIds = @()
+            if ($Policy.conditions.locations.includeLocations) { $LocationIds += $Policy.conditions.locations.includeLocations }
+            if ($Policy.conditions.locations.excludeLocations) { $LocationIds += $Policy.conditions.locations.excludeLocations }
+            $PolicyHasGuidLocations = $LocationIds | Where-Object { $_ -match $GuidRegex }
 
             $Parameters = [PSCustomObject]@{
                 GroupType = 'Security'
@@ -82,6 +89,18 @@ function Invoke-ExecCAExclusion {
             Write-Information ($TaskBody | ConvertTo-Json -Depth 10)
 
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
+            # Optional: schedule audit log exclusion add task if requested and policy has location GUIDs
+            if ($ExcludeLocationAuditAlerts -and $PolicyHasGuidLocations) {
+                $AuditUsers = $Users.addedFields.userPrincipalName ?? $Users.value ?? $Users ?? $UserID
+                $AuditAddTask = [pscustomobject]@{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Add Audit Log Location Exclusion: $PolicyName"
+                    Command       = @{ value = 'Set-CIPPAuditLogUserExclusion'; label = 'Set-CIPPAuditLogUserExclusion' }
+                    Parameters    = [pscustomobject]@{ Users = $AuditUsers; Action = 'Add'; Type = 'Location' }
+                    ScheduledTime = $StartDate
+                }
+                Add-CIPPScheduledTask -Task $AuditAddTask -hidden $true
+            }
             #Removal of the exclusion
             $TaskBody.Command = @{
                 label = 'Remove-CIPPGroupMember'
@@ -90,6 +109,17 @@ function Invoke-ExecCAExclusion {
             $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $PolicyName"
             $TaskBody.ScheduledTime = $EndDate
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
+            if ($ExcludeLocationAuditAlerts -and $PolicyHasGuidLocations) {
+                $AuditUsers = $Users.addedFields.userPrincipalName ?? $Users.value ?? $Users ?? $UserID
+                $AuditRemoveTask = [pscustomobject]@{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Remove Audit Log Location Exclusion: $PolicyName"
+                    Command       = @{ value = 'Set-CIPPAuditLogUserExclusion'; label = 'Set-CIPPAuditLogUserExclusion' }
+                    Parameters    = [pscustomobject]@{ Users = $AuditUsers; Action = 'Remove'; Type = 'Location' }
+                    ScheduledTime = $EndDate
+                }
+                Add-CIPPScheduledTask -Task $AuditRemoveTask -hidden $true
+            }
             $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
         } else {
             $Parameters = @{
