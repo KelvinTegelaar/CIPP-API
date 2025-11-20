@@ -54,7 +54,7 @@ function Invoke-ExecCAExclusion {
         }
 
         if ($Policy.conditions.users.excludeGroups -notcontains $GroupId) {
-            Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType 'Add' -PolicyId $PolicyId -Groups @{ value = @($GroupId); addedFields = @{ displayName = @("CIPP-Vacation-$($Policy.displayName)") } } -Headers $Headers
+            Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType 'Add' -PolicyId $PolicyId -Groups @{ value = @($GroupId); addedFields = @{ displayName = @("Vacation Exclusion - $($Policy.displayName)") } } -Headers $Headers
         }
 
         $PolicyName = $Policy.displayName
