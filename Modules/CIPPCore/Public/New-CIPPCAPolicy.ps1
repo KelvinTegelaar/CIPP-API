@@ -123,16 +123,19 @@ function New-CIPPCAPolicy {
         if (!$locations) { continue }
         foreach ($location in $locations) {
             if (!$location.displayName) { continue }
-            $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true
-            if ($Location.displayName -in $CheckExististing.displayName) {
+            $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true
+            if ($Location.displayName -in $CheckExisting.displayName) {
                 [pscustomobject]@{
-                    id   = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
-                    name = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).displayName
+                    id         = ($CheckExisting | Where-Object -Property displayName -EQ $Location.displayName).id
+                    name       = ($CheckExisting | Where-Object -Property displayName -EQ $Location.displayName).displayName
+                    templateId = $location.id
                 }
                 Write-LogMessage -Headers $User -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
 
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
+                $location | Select-Object * -ExcludeProperty id
+                Remove-ODataProperties -Object $location
                 $Body = ConvertTo-Json -InputObject $Location
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $tenantfilter -asApp $true
                 $retryCount = 0
@@ -151,19 +154,21 @@ function New-CIPPCAPolicy {
             }
         }
     }
+    Write-Information 'Location Lookup Table:'
+    Write-Information ($LocationLookupTable | ConvertTo-Json -Depth 10)
 
     foreach ($location in $JSONobj.conditions.locations.includeLocations) {
-        Write-Information "Replacing named location - $location"
-        $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
-        Write-Information "Found $lookup"
+        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
         if (!$lookup) { continue }
+        Write-Information "Replacing named location - $location"
         $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
         $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
     }
 
     foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
-        $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
+        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
         if (!$lookup) { continue }
+        Write-Information "Replacing named location - $location"
         $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
         $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
     }
