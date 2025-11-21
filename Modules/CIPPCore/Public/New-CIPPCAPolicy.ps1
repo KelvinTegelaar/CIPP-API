@@ -153,7 +153,7 @@ function New-CIPPCAPolicy {
                     name       = ($CheckExisting | Where-Object -Property displayName -EQ $Location.displayName).displayName
                     templateId = $location.id
                 }
-                Write-LogMessage -Headers $User -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
+                Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
 
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
@@ -169,7 +169,7 @@ function New-CIPPCAPolicy {
                     Start-Sleep -Seconds 2
                     $retryCount++
                 } while ((!$LocationRequest -or !$LocationRequest.id) -and ($retryCount -lt 5))
-                Write-LogMessage -Headers $User -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
+                Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 [pscustomobject]@{
                     id   = $GraphRequest.id
                     name = $GraphRequest.displayName
@@ -248,7 +248,7 @@ function New-CIPPCAPolicy {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONobj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Failed to replace displayNames for conditional access rule $($JSONobj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
                 throw "Failed to replace displayNames for conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError)"
             }
         }
@@ -278,8 +278,8 @@ function New-CIPPCAPolicy {
         #Send request to disable security defaults.
         $body = '{ "isEnabled": false }'
         try {
-            $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -asApp $true -ContentType 'application/json'
-            Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $($Tenant) -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
+            $null = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -asApp $true -ContentType 'application/json'
+            Write-LogMessage -Headers $User -API 'Create CA Policy' -tenant $TenantFilter -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
             Start-Sleep 3
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
@@ -340,7 +340,7 @@ function New-CIPPCAPolicy {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError) " -sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Failed to create or update conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError) " -sev 'Error' -LogData $ErrorMessage
 
         Write-Warning "Failed to create or update conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError)"
         Write-Information $_.InvocationInfo.PositionMessage
