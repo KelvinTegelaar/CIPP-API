@@ -32,7 +32,17 @@ function Get-CIPPAlertOneDriveQuota {
 
         if ($UsagePercent -gt $InputValue) {
             $GBLeft = [math]::Round(($_.storageAllocatedInBytes - $_.storageUsedInBytes) / 1GB)
-            "$($_.ownerPrincipalName): OneDrive is $UsagePercent% full. OneDrive has $($GBLeft)GB storage left"
+            [PSCustomObject]@{
+                Details = @{
+                    Message                 = "$($_.ownerPrincipalName): OneDrive is $UsagePercent% full. OneDrive has $($GBLeft)GB storage left"
+                    Owner                   = $_.ownerPrincipalName
+                    UsagePercent            = $UsagePercent
+                    GBLeft                  = $GBLeft
+                    StorageUsedInBytes      = $_.storageUsedInBytes
+                    StorageAllocatedInBytes = $_.storageAllocatedInBytes
+                    Tenant                  = $TenantFilter
+                }
+            }
         }
 
     }

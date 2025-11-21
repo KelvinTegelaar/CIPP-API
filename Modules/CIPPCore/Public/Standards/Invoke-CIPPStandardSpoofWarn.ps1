@@ -44,8 +44,7 @@ function Invoke-CIPPStandardSpoofWarn {
 
     try {
         $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpoofWarn state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -53,6 +52,8 @@ function Invoke-CIPPStandardSpoofWarn {
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
+
+    $IsEnabled = $state -eq 'enabled'
     $AllowListAdd = $Settings.AllowListAdd.value ?? $Settings.AllowListAdd
 
     # Test if all entries in the AllowListAdd variable are in the AllowList
@@ -131,7 +132,7 @@ function Invoke-CIPPStandardSpoofWarn {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $Tenant
 
-        if ($AllowListCorrect -eq $true -and $CurrentInfo.Enabled -eq $status) {
+        if ($AllowListCorrect -eq $true -and $CurrentInfo.Enabled -eq $IsEnabled) {
             $FieldValue = $true
         } else {
             $FieldValue = $CurrentInfo | Select-Object Enabled, AllowList

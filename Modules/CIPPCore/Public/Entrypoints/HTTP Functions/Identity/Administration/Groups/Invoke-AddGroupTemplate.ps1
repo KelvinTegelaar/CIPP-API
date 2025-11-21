@@ -29,7 +29,7 @@ function Invoke-AddGroupTemplate {
             '*unified*' { 'm365'; break }
             '*m365*' { 'm365'; break }
             '*generic*' { 'generic'; break }
-            '*security*' { 'generic'; break }
+            '*security*' { 'security'; break }
             '*distribution*' { 'distribution'; break }
             '*mail*' { 'distribution'; break }
             default { $Request.Body.groupType }

@@ -43,20 +43,19 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     # Input validation
     if ([string]::IsNullOrWhiteSpace($timeout) -or $timeout -eq 'Select a value' ) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'ActivityBasedTimeout: Invalid timeout parameter set' -sev Error
-        Return
+        return
     }
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $Tenant
-    }
-    catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ActivityBasedTimeout state for $Tenant. Error: $ErrorMessage" -Sev Error
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ActivityBasedTimeout state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
     $StateIsCorrect = if ($CurrentState.definition -like "*$timeout*") { $true } else { $false }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             if ($StateIsCorrect -eq $true) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Activity Based Timeout is already enabled and set to $timeout" -sev Info
@@ -78,11 +77,12 @@ function Invoke-CIPPStandardActivityBasedTimeout {
                     $RequestType = 'PATCH'
                     $URI = "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies/$($CurrentState.id)"
                 }
-                New-GraphPostRequest -tenantid $Tenant -Uri $URI -Type $RequestType -Body $body -ContentType 'application/json'
+                New-GraphPostRequest -tenantid $Tenant -Uri $URI -Type $RequestType -Body $body
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled Activity Based Timeout with a value of $timeout" -sev Info
             }
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable Activity Based Timeout a value of $timeout." -sev Error -LogData $_
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable Activity Based Timeout a value of $timeout." -sev Error -LogData $ErrorMessage
         }
     }
 

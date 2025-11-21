@@ -19,7 +19,7 @@ function Get-CippApiAuth {
 
     if ($AuthSettings.properties) {
         [PSCustomObject]@{
-            ApiUrl    = "https://$($FunctionAppName).azurewebsites.net"
+            ApiUrl    = "https://$($env:WEBSITE_HOSTNAME)"
             TenantID  = $AuthSettings.properties.identityProviders.azureActiveDirectory.registration.openIdIssuer -replace 'https://sts.windows.net/', '' -replace '/v2.0', ''
             ClientIDs = $AuthSettings.properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedApplications
             Enabled   = $AuthSettings.properties.identityProviders.azureActiveDirectory.enabled

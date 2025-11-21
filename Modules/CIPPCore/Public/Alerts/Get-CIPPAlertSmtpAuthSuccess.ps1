@@ -4,7 +4,7 @@ function Get-CIPPAlertSmtpAuthSuccess {
         Entrypoint – Check sign-in logs for SMTP AUTH with success status
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -19,7 +19,7 @@ function Get-CIPPAlertSmtpAuthSuccess {
         $SignIns = New-GraphGetRequest -uri $uri -tenantid $TenantFilter
 
         # Select only the properties you care about
-        $AlertData = $SignIns.value | Select-Object userPrincipalName, createdDateTime, clientAppUsed, ipAddress, status
+        $AlertData = $SignIns.value | Select-Object userPrincipalName, createdDateTime, clientAppUsed, ipAddress, status, @{Name = 'Tenant'; Expression = { $TenantFilter } }
 
         # Write results into the alert pipeline
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData

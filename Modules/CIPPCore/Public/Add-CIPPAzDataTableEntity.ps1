@@ -229,7 +229,7 @@ function Add-CIPPAzDataTableEntity {
                     throw "Error processing entity: $ErrorMessage Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
                 }
             } else {
-                Write-Information ($_.Exception | ConvertTo-Json)
+                try { Write-Information ($_.Exception | ConvertTo-Json) } catch { Write-Information $_.Exception }
                 Write-Information "THE ERROR IS $($_.Exception.message). The size of the entity is $entitySize."
                 Write-Information "Parameters are: $($Parameters | ConvertTo-Json -Compress)"
                 Write-Information $_.InvocationInfo.PositionMessage

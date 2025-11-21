@@ -20,7 +20,7 @@ function Invoke-PublicPhishingCheck {
         $ID = (New-Guid).GUID
         $TableBody = @{
             RowKey                   = "$ID"
-            PartitionKey             = [string]$Tenant.defaultDomainName
+            PartitionKey             = 'CheckAlert'
             tenantFilter             = [string]$Tenant.defaultDomainName
             message                  = [string]$Message
             type                     = [string]$request.body.type
@@ -39,7 +39,7 @@ function Invoke-PublicPhishingCheck {
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = 'OK'
-        }
+        StatusCode = [HttpStatusCode]::OK
+        Body       = 'OK'
+    }
 }

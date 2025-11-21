@@ -37,7 +37,6 @@ function Invoke-AddScheduledItem {
             DesiredStartTime      = $Request.Body.DesiredStartTime
         }
         $Result = Add-CIPPScheduledTask @ScheduledTask
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Info'
     }
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
