@@ -4,7 +4,7 @@ function Get-CIPPAlertLicenseAssignmentErrors {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory)]
         $TenantFilter,
         [Alias('input')]
@@ -14,24 +14,24 @@ function Get-CIPPAlertLicenseAssignmentErrors {
     # Define error code translations for human-readable messages
     $ErrorTranslations = @(
         @{
-            ErrorCode = "CountViolation"
-            Description = "Not enough licenses available - the organization has exceeded the number of available licenses for this SKU"
+            ErrorCode   = 'CountViolation'
+            Description = 'Not enough licenses available - the organization has exceeded the number of available licenses for this SKU'
         },
         @{
-            ErrorCode = "MutuallyExclusiveViolation"
-            Description = "Conflicting licenses assigned - this license cannot be assigned alongside another license the user already has"
+            ErrorCode   = 'MutuallyExclusiveViolation'
+            Description = 'Conflicting licenses assigned - this license cannot be assigned alongside another license the user already has'
         },
         @{
-            ErrorCode = "ProhibitedInUsageLocationViolation"
+            ErrorCode   = 'ProhibitedInUsageLocationViolation'
             Description = "License not available in user's location - this license cannot be assigned to users in the user's current usage location"
         },
         @{
-            ErrorCode = "UniquenessViolation"
-            Description = "Duplicate license assignment - this license can only be assigned once per user"
+            ErrorCode   = 'UniquenessViolation'
+            Description = 'Duplicate license assignment - this license can only be assigned once per user'
         },
         @{
-            ErrorCode = "Unknown"
-            Description = "Unknown license assignment error - an unspecified error occurred during license assignment"
+            ErrorCode   = 'Unknown'
+            Description = 'Unknown license assignment error - an unspecified error occurred during license assignment'
         }
     )
 
@@ -44,11 +44,11 @@ function Get-CIPPAlertLicenseAssignmentErrors {
             $_.licenseAssignmentStates -and
             ($_.licenseAssignmentStates | Where-Object {
                 $_.error -and (
-                    $_.error -like "*CountViolation*" -or
-                    $_.error -like "*MutuallyExclusiveViolation*" -or
-                    $_.error -like "*ProhibitedInUsageLocationViolation*" -or
-                    $_.error -like "*UniquenessViolation*" -or
-                    $_.error -like "*Unknown*"
+                    $_.error -like '*CountViolation*' -or
+                    $_.error -like '*MutuallyExclusiveViolation*' -or
+                    $_.error -like '*ProhibitedInUsageLocationViolation*' -or
+                    $_.error -like '*UniquenessViolation*' -or
+                    $_.error -like '*Unknown*'
                 )
             })
         }
@@ -57,11 +57,11 @@ function Get-CIPPAlertLicenseAssignmentErrors {
         $LicenseAssignmentErrors = foreach ($User in $UsersWithViolations) {
             $ViolationErrors = $User.licenseAssignmentStates | Where-Object {
                 $_.error -and (
-                    $_.error -like "*CountViolation*" -or
-                    $_.error -like "*MutuallyExclusiveViolation*" -or
-                    $_.error -like "*ProhibitedInUsageLocationViolation*" -or
-                    $_.error -like "*UniquenessViolation*" -or
-                    $_.error -like "*Unknown*"
+                    $_.error -like '*CountViolation*' -or
+                    $_.error -like '*MutuallyExclusiveViolation*' -or
+                    $_.error -like '*ProhibitedInUsageLocationViolation*' -or
+                    $_.error -like '*UniquenessViolation*' -or
+                    $_.error -like '*Unknown*'
                 )
             }
 
@@ -74,9 +74,19 @@ function Get-CIPPAlertLicenseAssignmentErrors {
                     "Unknown license assignment error: $($Violation.error)"
                 }
 
-                $PrettyName = Convert-SKUname -skuID $Violation.skuId
+                $PrettyName = Convert-SKUname -SkuID $Violation.skuId
 
-                "$($User.userPrincipalName): $HumanReadableError (License: $PrettyName)"
+                $Message = "$($User.userPrincipalName): $HumanReadableError (License: $PrettyName)"
+                [PSCustomObject]@{
+                    Message           = $Message
+                    UserPrincipalName = $User.userPrincipalName
+                    Error             = $HumanReadableError
+                    LicenseName       = $PrettyName
+                    SkuId             = $Violation.skuId
+                    DisplayName       = $User.displayName
+                    Id                = $User.id
+                    Tenant            = $TenantFilter
+                }
             }
         }
 

@@ -38,6 +38,7 @@ function New-CIPPAssignmentFilter {
 
         [Parameter(Mandatory = $false)]
         [string]$ExecutingUser = 'CIPP'
+
     )
 
     try {
@@ -45,11 +46,11 @@ function New-CIPPAssignmentFilter {
 
         # Build the request body for Graph API
         $BodyParams = [PSCustomObject]@{
-            '@odata.type'                   = '#microsoft.graph.deviceAndAppManagementAssignmentFilter'
-            'displayName'                   = $FilterObject.displayName
-            'description'                   = $FilterObject.description ?? ''
-            'platform'                      = $FilterObject.platform
-            'rule'                          = $FilterObject.rule
+            '@odata.type'                    = '#microsoft.graph.deviceAndAppManagementAssignmentFilter'
+            'displayName'                    = $FilterObject.displayName
+            'description'                    = $FilterObject.description ?? ''
+            'platform'                       = $FilterObject.platform
+            'rule'                           = $FilterObject.rule
             'assignmentFilterManagementType' = $FilterObject.assignmentFilterManagementType ?? 'devices'
         }
 

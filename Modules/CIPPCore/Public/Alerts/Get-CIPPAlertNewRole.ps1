@@ -4,7 +4,7 @@ function Get-CIPPAlertNewRole {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -14,9 +14,9 @@ function Get-CIPPAlertNewRole {
     try {
         $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $TenantFilter
         $AdminDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
-        $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter) | Select-Object displayname, Members | ForEach-Object {
+        $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter) | Select-Object displayName, Members | ForEach-Object {
             @{
-                GroupName = $_.displayname
+                GroupName = $_.displayName
                 Members   = $_.Members.UserPrincipalName
             }
         }
@@ -32,7 +32,12 @@ function Get-CIPPAlertNewRole {
             $AlertData = foreach ($Group in $NewDelta) {
                 $OldDelta = $AdminDelta | Where-Object { $_.GroupName -eq $Group.GroupName }
                 $Group.members | Where-Object { $_ -notin $OldDelta.members } | ForEach-Object {
-                    "$_ has been added to the $($Group.GroupName) Role"
+                    [PSCustomObject]@{
+                        Message = "$_ has been added to the $($Group.GroupName) Role"
+                        User    = $_
+                        Role    = $Group.GroupName
+                        Tenant  = $TenantFilter
+                    }
                 }
             }
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData

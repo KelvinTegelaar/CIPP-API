@@ -4,7 +4,7 @@ function Get-CIPPAlertQuotaUsed {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -31,9 +31,16 @@ function Get-CIPPAlertQuotaUsed {
             $Value = 90
         }
         if ($PercentLeft -gt $Value) {
-            "$($_.userPrincipalName): Mailbox is more than $($value)% full. Mailbox is $PercentLeft% full"
+            [PSCustomObject]@{
+                Message                         = "$($_.userPrincipalName): Mailbox is more than $($value)% full. Mailbox is $PercentLeft% full"
+                Owner                           = $_.userPrincipalName
+                RecipientType                   = $_.recipientType
+                UsagePercent                    = $PercentLeft
+                StorageUsedInBytes              = $_.storageUsedInBytes
+                ProhibitSendReceiveQuotaInBytes = $_.prohibitSendReceiveQuotaInBytes
+                Tenant                          = $TenantFilter
+            }
         }
-
     }
     Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
 }

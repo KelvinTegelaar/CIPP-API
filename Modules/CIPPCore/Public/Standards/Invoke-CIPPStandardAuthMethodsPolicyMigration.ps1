@@ -33,15 +33,14 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     param($Tenant, $Settings)
     try {
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
-    }
-    catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AuthMethodsPolicyMigration state for $Tenant. Error: $ErrorMessage" -Sev Error
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AuthMethodsPolicyMigration state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
 
     if ($null -eq $CurrentInfo) {
-        throw "Failed to retrieve current authentication methods policy information"
+        throw 'Failed to retrieve current authentication methods policy information'
     }
 
     if ($Settings.remediate -eq $true) {
@@ -52,7 +51,8 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
                 New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant -body '{"policyMigrationState": "migrationComplete"}' -type PATCH
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authentication methods policy migration completed successfully.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to complete authentication methods policy migration: $($_.Exception.Message)" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to complete authentication methods policy migration: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }

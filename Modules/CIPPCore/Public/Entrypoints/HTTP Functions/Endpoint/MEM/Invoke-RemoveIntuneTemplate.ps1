@@ -1,4 +1,4 @@
-Function Invoke-RemoveIntuneTemplate {
+function Invoke-RemoveIntuneTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,13 +15,15 @@ Function Invoke-RemoveIntuneTemplate {
     $ID = $request.Query.ID ?? $Request.Body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        Write-Host $ID
 
         $Filter = "PartitionKey eq 'IntuneTemplate' and RowKey eq '$ID'"
-        Write-Host $Filter
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        $Result = "Removed Intune Template with ID $ID"
+        if ($ClearRow) {
+            Remove-AzDataTableEntity @Table -Entity $clearRow -Force
+            $Result = "Removed Intune Template with ID $ID."
+        } else {
+            $Result = "The template with ID $ID has already been deleted."
+        }
         Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {

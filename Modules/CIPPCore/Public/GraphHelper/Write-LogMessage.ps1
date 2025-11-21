@@ -66,6 +66,16 @@ function Write-LogMessage {
     if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
     }
+    if ($script:StandardInfo) {
+        $TableRow.Standard = [string]$script:StandardInfo.Standard
+        $TableRow.StandardTemplateId = [string]$script:StandardInfo.StandardTemplateId
+        if ($script:StandardInfo.IntuneTemplateId) {
+            $TableRow.IntuneTemplateId = [string]$script:StandardInfo.IntuneTemplateId
+        }
+        if ($script:StandardInfo.ConditionalAccessTemplateId) {
+            $TableRow.ConditionalAccessTemplateId = [string]$script:StandardInfo.ConditionalAccessTemplateId
+        }
+    }
 
     $Table.Entity = $TableRow
     Add-CIPPAzDataTableEntity @Table | Out-Null

@@ -9,8 +9,12 @@ function Start-ExtensionOrchestrator {
     param()
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json)
+    $ExtensionConfig = (Get-AzDataTableEntity @Table).config
+    if (Test-Json -Json $ExtensionConfig) {
+        $Configuration = ($ExtensionConfig | ConvertFrom-Json)
+    } else {
+        $Configuration = @{}
+    }
 
     Write-Host 'Started Scheduler for Extensions'
 

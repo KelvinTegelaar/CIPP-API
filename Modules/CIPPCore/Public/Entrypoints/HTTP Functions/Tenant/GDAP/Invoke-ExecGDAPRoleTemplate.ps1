@@ -1,4 +1,4 @@
-Function Invoke-ExecGDAPRoleTemplate {
+function Invoke-ExecGDAPRoleTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -44,19 +44,33 @@ Function Invoke-ExecGDAPRoleTemplate {
                 }
             }
             'Edit' {
-                $RowKey = $Request.Body.TemplateId
-                $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
+                # Use OriginalTemplateId if provided (for rename), otherwise use TemplateId
+                $OriginalRowKey = $Request.Body.OriginalTemplateId ?? $Request.Body.TemplateId
+                $NewRowKey = $Request.Body.TemplateId
+                $Template = $Templates | Where-Object -Property RowKey -EQ $OriginalRowKey
                 if ($Template) {
                     $RoleMappings = $Request.Body.RoleMappings
-                    Add-CIPPGDAPRoleTemplate -TemplateId $RowKey -RoleMappings $RoleMappings -Overwrite
-                    Write-LogMessage -headers $Headers -API $APIName -message "Updated role mappings for GDAP template '$RowKey'" -Sev 'Info'
-                    $Body = @{
-                        Results = "Updated role mappings for template $RowKey"
+                    
+                    # If the template ID is being changed, delete the old one and create a new one
+                    if ($OriginalRowKey -ne $NewRowKey) {
+                        Remove-AzDataTableEntity -Force @Table -Entity $Template
+                        Add-CIPPGDAPRoleTemplate -TemplateId $NewRowKey -RoleMappings $RoleMappings -Overwrite
+                        Write-LogMessage -headers $Headers -API $APIName -message "Renamed GDAP template from '$OriginalRowKey' to '$NewRowKey' and updated role mappings" -Sev 'Info'
+                        $Body = @{
+                            Results = "Renamed template from $OriginalRowKey to $NewRowKey and updated role mappings"
+                        }
+                    } else {
+                        # Just update the existing template
+                        Add-CIPPGDAPRoleTemplate -TemplateId $NewRowKey -RoleMappings $RoleMappings -Overwrite
+                        Write-LogMessage -headers $Headers -API $APIName -message "Updated role mappings for GDAP template '$NewRowKey'" -Sev 'Info'
+                        $Body = @{
+                            Results = "Updated role mappings for template $NewRowKey"
+                        }
                     }
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$RowKey' not found for editing" -Sev 'Warning'
+                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$OriginalRowKey' not found for editing" -Sev 'Warning'
                     $Body = @{
-                        Results = "Template $RowKey not found"
+                        Results = "Template $OriginalRowKey not found"
                     }
                 }
             }

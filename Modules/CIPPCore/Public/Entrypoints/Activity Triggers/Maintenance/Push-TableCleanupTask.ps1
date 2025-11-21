@@ -25,6 +25,7 @@ function Push-TableCleanupTask {
                     Write-Information "Table $Table not found"
                 }
             }
+            Write-Information "#### $($Type) task complete for $($Item.TableName)"
         } elseif ($Type -eq 'CleanupRule') {
             if ($Item.Where) {
                 $Where = [scriptblock]::Create($Item.Where)
@@ -35,6 +36,8 @@ function Push-TableCleanupTask {
             $DataTableProps = $Item.DataTableProps | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             $Table = Get-CIPPTable -tablename $Item.TableName
             $CleanupCompleted = $false
+
+            $RowsRemoved = 0
             do {
                 Write-Information "Fetching entities from $($Item.TableName) with filter: $($DataTableProps.Filter)"
                 try {
@@ -43,6 +46,7 @@ function Push-TableCleanupTask {
                         Write-Information "Removing $($Entities.Count) entities from $($Item.TableName)"
                         try {
                             Remove-AzDataTableEntity @Table -Entity $Entities -Force
+                            $RowsRemoved += $Entities.Count
                             if ($DataTableProps.First -and $Entities.Count -lt $DataTableProps.First) {
                                 $CleanupCompleted = $true
                             }
@@ -59,9 +63,10 @@ function Push-TableCleanupTask {
                     $CleanupCompleted = $true
                 }
             } while (!$CleanupCompleted)
+            Write-Information "#### $($Type) task complete for $($Item.TableName). Rows removed: $RowsRemoved"
         } else {
             Write-Warning "Unknown task type: $Type"
         }
     }
-    Write-Information "#### $($Type) task complete"
+
 }

@@ -4,7 +4,7 @@ function Get-CIPPAlertLowDomainScore {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory)]
         $TenantFilter,
         [Alias('input')]
@@ -13,10 +13,14 @@ function Get-CIPPAlertLowDomainScore {
     )
 
     $DomainData = Get-CIPPDomainAnalyser -TenantFilter $TenantFilter
-    $LowScoreDomains = $DomainData | Where-Object {
-        $_.ScorePercentage -lt $InputValue -and $_.ScorePercentage -ne ''
-    } | ForEach-Object {
-        "$($_.Domain): Domain security score is $($_.ScorePercentage)%, which is below the threshold of $InputValue%. Issues: $($_.ScoreExplanation)"
+    $LowScoreDomains = $DomainData | Where-Object { $_.ScorePercentage -lt $InputValue -and $_.ScorePercentage -ne '' } | ForEach-Object {
+        [PSCustomObject]@{
+            Message          = "$($_.Domain): Domain security score is $($_.ScorePercentage)%, which is below the threshold of $InputValue%. Issues: $($_.ScoreExplanation)"
+            Domain           = $_.Domain
+            ScorePercentage  = $_.ScorePercentage
+            ScoreExplanation = $_.ScoreExplanation
+            Tenant           = $TenantFilter
+        }
     }
 
     if ($LowScoreDomains) {

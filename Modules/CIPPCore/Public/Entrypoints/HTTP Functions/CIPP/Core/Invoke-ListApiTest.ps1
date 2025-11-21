@@ -18,6 +18,8 @@ function Invoke-ListApiTest {
         }
         $Response.EnvironmentVariables = $EnvironmentVariables
     }
+    $Response.AllowedTenants = $script:AllowedTenants
+    $Response.AllowedGroups = $script:AllowedGroups
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

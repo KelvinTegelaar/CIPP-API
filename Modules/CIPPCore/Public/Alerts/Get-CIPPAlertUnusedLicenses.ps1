@@ -4,7 +4,7 @@ function Get-CIPPAlertUnusedLicenses {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -15,13 +15,21 @@ function Get-CIPPAlertUnusedLicenses {
         $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
         $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
         $AlertData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter | ForEach-Object {
-            $skuId = $_
-            foreach ($sku in $skuId) {
+            $SkuId = $_
+            foreach ($sku in $SkuId) {
                 if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-                $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuId }).'Product_Display_Name' | Select-Object -Last 1
+                $PrettyName = Convert-SKUname -SkuID $sku.skuId
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
                 if ($sku.prepaidUnits.enabled - $sku.consumedUnits -gt 0) {
-                    "$PrettyName has unused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
+                    [PSCustomObject]@{
+                        Message       = "$PrettyName has unused licenses. Using $($sku.consumedUnits) of $($sku.prepaidUnits.enabled)."
+                        LicenseName   = $PrettyName
+                        SkuId         = $sku.skuId
+                        SkuPartNumber = $sku.skuPartNumber
+                        ConsumedUnits = $sku.consumedUnits
+                        EnabledUnits  = $sku.prepaidUnits.enabled
+                        Tenant        = $TenantFilter
+                    }
                 }
             }
         }

@@ -12,7 +12,12 @@ function Invoke-GitHubApiRequest {
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
+    $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config
+    if ($ExtensionConfig -and (Test-Json -Json $ExtensionConfig)) {
+        $Configuration = ($ExtensionConfig | ConvertFrom-Json).GitHub
+    } else {
+        $Configuration = @{ Enabled = $false }
+    }
 
     if ($Configuration.Enabled) {
         $APIKey = Get-ExtensionAPIKey -Extension 'GitHub'
@@ -59,6 +64,8 @@ function Invoke-GitHubApiRequest {
             Body   = $Body
             Accept = $Accept
         }
-        (Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Action | ConvertTo-Json -Depth 10) -ContentType 'application/json').Results
+        $Body = $Action | ConvertTo-Json -Depth 10
+
+        (Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body $Body -ContentType 'application/json').Results
     }
 }

@@ -47,14 +47,12 @@ function Invoke-CIPPStandardBranding {
     if ($Localizations | Where-Object { $_.id -eq '0' }) {
         try {
             $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0" -tenantID $Tenant -AsApp $true
-        }
-        catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Branding state for $Tenant. Error: $ErrorMessage" -Sev Error
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Branding state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             return
         }
-    }
-    else {
+    } else {
         try {
             $GraphRequest = @{
                 tenantID    = $Tenant
@@ -76,10 +74,9 @@ function Invoke-CIPPStandardBranding {
                 } | ConvertTo-Json -Compress
             }
             $CurrentState = New-GraphPostRequest @GraphRequest
-        }
-        catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not create the default Branding localization for $Tenant. Error: $ErrorMessage" -Sev Error
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not create the default Branding localization for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             return
         }
     }
@@ -91,11 +88,10 @@ function Invoke-CIPPStandardBranding {
     ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
     ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is already applied correctly.' -Sev Info
-        }
-        else {
+        } else {
             try {
                 $GraphRequest = @{
                     tenantID    = $Tenant
@@ -118,8 +114,7 @@ function Invoke-CIPPStandardBranding {
                 }
                 $null = New-GraphPostRequest @GraphRequest
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated branding.' -Sev Info
-            }
-            catch {
+            } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update branding. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             }
@@ -127,18 +122,17 @@ function Invoke-CIPPStandardBranding {
 
     }
 
-    If ($Settings.alert -eq $true) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is correctly set.' -Sev Info
-        }
-        else {
+        } else {
             Write-StandardsAlert -message 'Branding is incorrectly set.' -object ($CurrentState | Select-Object -Property signInPageText, usernameHintText, loginPageTextVisibilitySettings, loginPageLayoutConfiguration) -tenant $Tenant -standardName 'Branding' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is incorrectly set.' -Sev Info
         }
     }
 
-    If ($Settings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         $state = $StateIsCorrect -eq $true ? $true : ($CurrentState | Select-Object -Property signInPageText, usernameHintText, loginPageTextVisibilitySettings, loginPageLayoutConfiguration)
         Set-CIPPStandardsCompareField -FieldName 'standards.Branding' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'Branding' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant

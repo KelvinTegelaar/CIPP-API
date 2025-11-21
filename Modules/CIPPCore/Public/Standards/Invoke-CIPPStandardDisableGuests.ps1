@@ -33,7 +33,17 @@ function Invoke-CIPPStandardDisableGuests {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableGuests' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        #writing to each item that the license is not present.
+        $settings.TemplateList | ForEach-Object {
+            Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        }
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
     $checkDays = if ($Settings.days) { $Settings.days } else { 90 } # Default to 90 days if not set. Pre v8.5.0 compatibility
     $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
     $Lookup = $Days.ToString('o')
@@ -58,7 +68,7 @@ function Invoke-CIPPStandardDisableGuests {
             foreach ($guest in $GraphRequest) {
                 try {
                     $null = New-GraphPostRequest -type Patch -tenantid $tenant -uri "https://graph.microsoft.com/beta/users/$($guest.id)" -body '{"accountEnabled":"false"}'
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabling guest $($guest.UserPrincipalName) ($($guest.id))" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabling guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $($guest.signInActivity.lastSuccessfulSignInDateTime)" -sev Info
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

@@ -1,7 +1,7 @@
 function Invoke-ListCippQueue {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>

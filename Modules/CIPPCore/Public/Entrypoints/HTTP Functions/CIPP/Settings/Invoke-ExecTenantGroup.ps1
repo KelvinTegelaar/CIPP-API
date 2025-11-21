@@ -23,6 +23,14 @@ function Invoke-ExecTenantGroup {
     $dynamicRules = $Request.Body.dynamicRules
     $ruleLogic = $Request.Body.ruleLogic ?? 'and'
 
+    $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+    if ($AllowedGroups -notcontains 'AllGroups') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'You do not have permission to manage tenant groups.' }
+            })
+    }
+
     switch ($Action) {
         'AddEdit' {
             $Results = [System.Collections.Generic.List[object]]::new()

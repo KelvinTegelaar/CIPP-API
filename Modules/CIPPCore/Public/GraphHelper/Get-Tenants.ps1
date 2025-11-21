@@ -16,10 +16,7 @@ function Get-Tenants {
         [switch]$CleanOld,
         [string]$TenantFilter
     )
-    #$caller = $MyInvocation.InvocationName
-    #$scriptName = $MyInvocation.ScriptName
-    #Write-Host "Called by: $caller"
-    #Write-Host "In script: $scriptName"
+
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
@@ -277,5 +274,11 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
+
+    # Limit tenant list to allowed tenants if set in script scope from New-CippCoreRequest
+    if ($script:AllowedTenants) {
+        $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:AllowedTenants -contains $_.customerId }
+    }
+
     return $IncludedTenantsCache | Where-Object { ($null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) } | Where-Object $IncludedTenantFilter | Sort-Object -Property displayName
 }

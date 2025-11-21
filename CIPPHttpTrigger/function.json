@@ -7,49 +7,20 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "Request",
-      "methods": ["get", "post"],
-      "route": "{CIPPEndpoint}"
+      "methods": [
+        "get",
+        "post",
+        "patch",
+        "put",
+        "delete",
+        "options"
+      ],
+      "route": "{*CIPPEndpoint}"
     },
     {
       "type": "http",
       "direction": "out",
       "name": "Response"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "QueueItem",
-      "queueName": "CIPPGenericQueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "Subscription",
-      "queueName": "AlertSubscriptions"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "gradientqueue",
-      "queueName": "billqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "alertqueue",
-      "queueName": "alertqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "incidentqueue",
-      "queueName": "incidentqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "offboardingmailbox",
-      "queueName": "offboardingmailbox"
     },
     {
       "name": "starter",

@@ -172,8 +172,14 @@ function Invoke-ExecCommunityRepo {
                         Write-Host 'Found a migration table, getting contents'
                         $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
                     }
+
+                    $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
+                    $LocationData = foreach ($Location in $NamedLocations) {
+                        (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $Location.path).content | ConvertFrom-Json
+                    }
                 }
-                Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable
+                Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData
+
                 $Results = @{
                     resultText = 'Template imported'
                     state      = 'success'

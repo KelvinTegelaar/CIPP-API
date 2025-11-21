@@ -7,9 +7,21 @@ function Invoke-NinjaOneTenantSync {
         $StartQueueTime = Get-Date
         Write-Information "$(Get-Date) - Starting NinjaOne Sync"
 
-        # Stagger start
-        # Check Global Rate Limiting
-        $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOneMapping' -RateLimit 5 -WaitTime 10
+        $MappingTable = Get-CIPPTable -TableName CippMapping
+        $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'NinjaOneMapping'")
+        $CurrentMap | ForEach-Object {
+            if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne '') {
+                $_.lastEndTime = (Get-Date($_.lastEndTime))
+            } else {
+                $_ | Add-Member -NotePropertyName lastEndTime -NotePropertyValue $Null -Force
+            }
+
+            if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
+                $_.lastStartTime = (Get-Date($_.lastStartTime))
+            } else {
+                $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
+            }
+        }
 
         $StartTime = Get-Date
 

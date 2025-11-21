@@ -11,12 +11,13 @@ function Invoke-EditAssignmentFilter {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev Debug
-
     $TenantFilter = $Request.Body.tenantFilter
 
     try {
         $FilterId = $Request.Body.filterId
+        $DisplayName = $Request.Body.displayName
+        $Description = $Request.Body.description
+        $Rule = $Request.Body.rule
 
         if (!$FilterId) {
             throw 'Filter ID is required'
@@ -26,28 +27,28 @@ function Invoke-EditAssignmentFilter {
         # Note: Platform and assignmentFilterManagementType cannot be changed after creation per Graph API restrictions
         $UpdateBody = @{}
 
-        if ($Request.Body.displayName) {
-            $UpdateBody.displayName = $Request.Body.displayName
+        if (-not [string]::IsNullOrWhiteSpace($DisplayName)) {
+            $UpdateBody.displayName = $DisplayName
         }
 
-        if ($null -ne $Request.Body.description) {
-            $UpdateBody.description = $Request.Body.description
+        if ($null -ne $Description) {
+            $UpdateBody.description = $Description
         }
 
-        if ($Request.Body.rule) {
-            $UpdateBody.rule = $Request.Body.rule
+        if (-not [string]::IsNullOrWhiteSpace($Rule)) {
+            $UpdateBody.rule = $Rule
         }
 
         # Update the assignment filter
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/assignmentFilters/$FilterId" -tenantid $TenantFilter -type PATCH -body ($UpdateBody | ConvertTo-Json -Depth 10)
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/assignmentFilters/$FilterId" -tenantid $TenantFilter -type PATCH -body (ConvertTo-Json -InputObject $UpdateBody -Depth 10)
 
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Updated assignment filter $($Request.Body.displayName)" -Sev Info
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Updated assignment filter $($DisplayName)" -Sev Info
 
-        $Result = "Successfully updated assignment filter $($Request.Body.displayName)"
+        $Result = "Successfully updated assignment filter $($DisplayName)"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Failed to update assignment filter: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to update assignment filter: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Result = "Failed to update assignment filter: $($ErrorMessage.NormalizedError)"
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

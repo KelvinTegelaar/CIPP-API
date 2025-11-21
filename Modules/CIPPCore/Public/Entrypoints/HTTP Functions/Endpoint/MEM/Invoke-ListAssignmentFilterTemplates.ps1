@@ -8,12 +8,7 @@ function Invoke-ListAssignmentFilterTemplates {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-
-
-
-    Write-Host $Request.query.id
+    $ID = $Request.Query.ID
 
     #List assignment filter templates
     $Table = Get-CippTable -tablename 'templates'
@@ -22,16 +17,16 @@ function Invoke-ListAssignmentFilterTemplates {
         $data = $_.JSON | ConvertFrom-Json
 
         [PSCustomObject]@{
-            displayName                     = $data.displayName
-            description                     = $data.description
-            platform                        = $data.platform
-            rule                            = $data.rule
-            assignmentFilterManagementType  = $data.assignmentFilterManagementType
-            GUID                            = $_.RowKey
+            displayName                    = $data.displayName
+            description                    = $data.description
+            platform                       = $data.platform
+            rule                           = $data.rule
+            assignmentFilterManagementType = $data.assignmentFilterManagementType
+            GUID                           = $_.RowKey
         }
     } | Sort-Object -Property displayName
 
-    if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
+    if ($ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $ID }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

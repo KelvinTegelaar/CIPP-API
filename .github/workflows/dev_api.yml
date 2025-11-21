@@ -10,22 +10,33 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "." # set this to the path to your web app project, defaults to the repository root
 
 jobs:
   deploy:
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
     if: github.event.repository.fork == false && github.event_name == 'push'
     runs-on: windows-latest
-    
+
     steps:
-      - name: 'Checkout GitHub Action'
+      - name: "Checkout GitHub Action"
         uses: actions/checkout@v4
-      
-      - name: 'Run Azure Functions Action'
+        with:
+          persist-credentials: false
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.DEV_CLIENTID }}
+          tenant-id: ${{ secrets.DEV_TENANTID }}
+          subscription-id: ${{ secrets.DEV_SUBSCRIPTIONID }}
+
+      - name: "Run Azure Functions Action"
         uses: Azure/functions-action@v1
         id: fa
         with:
-          app-name: 'cippjta72'
-          slot-name: 'Production'
+          app-name: "cippjta72"
+          slot-name: "Production"
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5B44448119C645C099EE192346D7433A }}
