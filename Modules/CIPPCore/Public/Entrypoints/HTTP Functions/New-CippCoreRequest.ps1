@@ -13,7 +13,22 @@ function New-CippCoreRequest {
     param($Request, $TriggerMetadata)
 
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Information "API: $($Request.Params.CIPPEndpoint)"
+    Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
+
+    if ($Request.Headers.'X-CIPP-Version') {
+        $Table = Get-CippTable -tablename 'Version'
+        $FrontendVer = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'frontend'"
+
+        if (!$FrontendVer -or ([semver]$FrontendVer.Version -lt [semver]$Request.Headers.'X-CIPP-Version')) {
+            Add-CIPPAzDataTableEntity @Table -Entity ([pscustomobject]@{
+                    PartitionKey = 'Version'
+                    RowKey       = 'frontend'
+                    Version      = $Request.Headers.'X-CIPP-Version'
+                }) -Force
+        } elseif ([semver]$FrontendVer.Version -gt [semver]$Request.Headers.'X-CIPP-Version') {
+            Write-Warning "Client version $($Request.Headers.'X-CIPP-Version') is older than the current frontend version $($FrontendVer.Version)"
+        }
+    }
 
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
@@ -36,6 +51,18 @@ function New-CippCoreRequest {
                         StatusCode = [HttpStatusCode]::Forbidden
                         Body       = $_.Exception.Message
                     })
+            }
+
+            $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+            $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+
+            if ($AllowedTenants -notcontains 'AllTenants') {
+                Write-Warning 'Limiting tenant access'
+                $script:AllowedTenants = $AllowedTenants
+            }
+            if ($AllowedGroups -notcontains 'AllGroups') {
+                Write-Warning 'Limiting group access'
+                $script:AllowedGroups = $AllowedGroups
             }
 
             try {

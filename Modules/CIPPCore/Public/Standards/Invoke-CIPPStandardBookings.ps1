@@ -44,10 +44,9 @@ function Invoke-CIPPStandardBookings {
 
     try {
         $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
-    }
-    catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Bookings state for $Tenant. Error: $ErrorMessage" -Sev Error
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Bookings state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
     $WantedState = if ($state -eq 'true') { $true } else { $false }
@@ -63,7 +62,7 @@ function Invoke-CIPPStandardBookings {
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'BookingsEnabled: Invalid state parameter set' -sev Error
-        Return
+        return
     }
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

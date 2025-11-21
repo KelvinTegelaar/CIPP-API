@@ -4,6 +4,8 @@ function Invoke-CippGraphWebhookRenewal {
         'expirationDateTime' = "$RenewalDate"
     } | ConvertTo-Json
 
+    $Tenants = Get-Tenants -IncludeErrors
+
     $WebhookTable = Get-CIPPTable -TableName webhookTable
     try {
         $WebhookData = Get-AzDataTableEntity @WebhookTable | Where-Object { $null -ne $_.SubscriptionID -and $_.SubscriptionID -ne '' -and ((Get-Date($_.Expiration)) -le ((Get-Date).AddHours(2))) }
@@ -16,6 +18,12 @@ function Invoke-CippGraphWebhookRenewal {
         foreach ($UpdateSub in $WebhookData) {
             try {
                 $TenantFilter = $UpdateSub.PartitionKey
+                if ($Tenants.defaultDomainName -notcontains $TenantFilter -and $Tenants.customerId -notcontains $TenantFilter) {
+                    Write-LogMessage -API 'Renew_Graph_Subscriptions' -message "Removing Subscription Renewal for $($UpdateSub.SubscriptionID) as tenant $TenantFilter is not in the tenant list." -Sev 'Warning' -tenant $TenantFilter
+                    Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
+                    continue
+                }
+
                 try {
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($UpdateSub.SubscriptionID)" -tenantid $TenantFilter -type PATCH -body $body -Verbose
                     $UpdateSub.Expiration = $RenewalDate

@@ -21,7 +21,7 @@ function Test-CIPPAccessUserRole {
     )
     $Roles = @()
     $Table = Get-CippTable -TableName cacheAccessUserRoles
-    $Filter = "PartitionKey eq 'AccessRole' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToString('yyyy-MM-ddTHH:mm:ss'))'"
+    $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
     $UserRole = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if ($UserRole) {
         Write-Information "Found cached user role for $($User.userDetails)"
@@ -31,9 +31,9 @@ function Test-CIPPAccessUserRole {
             $uri = "https://graph.microsoft.com/beta/users/$($User.userDetails)/transitiveMemberOf"
             $Memberships = New-GraphGetRequest -uri $uri -NoAuthCheck $true | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }
             if ($Memberships) {
-                Write-Information "Found user roles for $($User.userDetails)"
+                Write-Information "Found group memberships for $($User.userDetails)"
             } else {
-                Write-Information "No user roles found for $($User.userDetails)"
+                Write-Information "No group memberships found for $($User.userDetails)"
             }
         } catch {
             Write-Information "Could not get user roles for $($User.userDetails). $($_.Exception.Message)"
@@ -41,17 +41,24 @@ function Test-CIPPAccessUserRole {
         }
 
         $AccessGroupsTable = Get-CippTable -TableName AccessRoleGroups
-        $AccessGroups = Get-CIPPAzDataTableEntity @AccessGroupsTable
+        $AccessGroups = Get-CIPPAzDataTableEntity @AccessGroupsTable -Filter "PartitionKey eq 'AccessRoleGroups'"
+        $CustomRolesTable = Get-CippTable -TableName CustomRoles
+        $CustomRoles = Get-CIPPAzDataTableEntity @CustomRolesTable -Filter "PartitionKey eq 'CustomRoles'"
+        $BaseRoles = @('superadmin', 'admin', 'editor', 'readonly')
 
         $Roles = foreach ($AccessGroup in $AccessGroups) {
-            if ($Memberships.id -contains $AccessGroup.GroupId) {
+            if ($Memberships.id -contains $AccessGroup.GroupId -and ($CustomRoles.RowKey -contains $AccessGroup.RowKey -or $BaseRoles -contains $AccessGroup.RowKey)) {
                 $AccessGroup.RowKey
             }
         }
 
         $Roles = @($Roles) + @($User.userRoles)
 
-        if (($Roles | Measure-Object).Count -gt 0) {
+        if ($Roles) {
+            Write-Information "Roles determined for $($User.userDetails): $($Roles -join ', ')"
+        }
+
+        if (($Roles | Measure-Object).Count -gt 2) {
             $UserRole = [PSCustomObject]@{
                 PartitionKey = 'AccessUser'
                 RowKey       = [string]$User.userDetails

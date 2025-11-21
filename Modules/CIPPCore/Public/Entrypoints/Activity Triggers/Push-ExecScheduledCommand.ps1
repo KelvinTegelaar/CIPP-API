@@ -18,6 +18,16 @@ function Push-ExecScheduledCommand {
     # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
 
+    $CurrentTask = Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($task.PartitionKey)' and RowKey eq '$($task.RowKey)'"
+    if (!$CurrentTask) {
+        Write-Information "The task $($task.Name) for tenant $($task.Tenant) does not exist in the ScheduledTasks table. Exiting."
+        return
+    }
+    if ($CurrentTask.TaskState -eq 'Completed') {
+        Write-Information "The task $($task.Name) for tenant $($task.Tenant) is already completed. Skipping execution."
+        return
+    }
+
     if ($task.Trigger) {
         # Extract trigger data from the task and process
         $Trigger = if (Test-Json -Json $task.Trigger) { $task.Trigger | ConvertFrom-Json } else { $task.Trigger }
@@ -276,7 +286,7 @@ function Push-ExecScheduledCommand {
     Write-Information 'Sent the results to the target. Updating the task state.'
 
     try {
-        if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once') {
+        if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once' -or $Trigger.ExecutionMode -eq 'once') {
             Write-Information 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey = $task.PartitionKey
