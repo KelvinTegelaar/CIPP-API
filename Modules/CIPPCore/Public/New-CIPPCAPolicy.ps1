@@ -40,7 +40,7 @@ function New-CIPPCAPolicy {
     }
     # Helper function to replace group display names with GUIDs
     function Replace-GroupNameWithId {
-        param($TenantFilter, $groupNames, $CreateGroups)
+        param($TenantFilter, $groupNames, $CreateGroups, $GroupTemplates)
 
         $GroupIds = [System.Collections.Generic.List[string]]::new()
         $groupNames | ForEach-Object {
@@ -57,18 +57,26 @@ function New-CIPPCAPolicy {
                     }
                 } elseif ($CreateGroups) {
                     Write-Warning "Creating group $_ as it does not exist in the tenant"
-                    $username = $_ -replace '[^a-zA-Z0-9]', ''
-                    if ($username.Length -gt 64) {
-                        $username = $username.Substring(0, 64)
+                    if ($GroupTemplates.displayName -eq $_) {
+                        Write-Information "Creating group from template for $_"
+                        $GroupTemplate = $GroupTemplates | Where-Object -Property displayName -EQ $_
+                        $NewGroup = New-CIPPGroup -GroupObject $GroupTemplate -TenantFilter $TenantFilter -APIName 'New-CIPPCAPolicy'
+                        $GroupIds.Add($NewGroup.GroupId)
+                    } else {
+                        Write-Information "No template found, creating security group for $_"
+                        $username = $_ -replace '[^a-zA-Z0-9]', ''
+                        if ($username.Length -gt 64) {
+                            $username = $username.Substring(0, 64)
+                        }
+                        $GroupObject = @{
+                            groupType       = 'generic'
+                            displayName     = $_
+                            username        = $username
+                            securityEnabled = $true
+                        }
+                        $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName 'New-CIPPCAPolicy'
+                        $GroupIds.Add($NewGroup.GroupId)
                     }
-                    $GroupObject = @{
-                        groupType       = 'generic'
-                        displayName     = $_
-                        username        = $username
-                        securityEnabled = $true
-                    }
-                    $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName 'New-CIPPCAPolicy'
-                    $GroupIds.Add($NewGroup.GroupId)
                 } else {
                     Write-Warning "Group $_ not found in the tenant"
                 }
@@ -200,6 +208,13 @@ function New-CIPPCAPolicy {
             if ($JSONobj.conditions.users.excludeGroups) { $JSONobj.conditions.users.excludeGroups = @() }
         }
         'displayName' {
+            $TemplatesTable = Get-CIPPTable -tablename 'templates'
+            $GroupTemplates = Get-CIPPAzDataTableEntity @TemplatesTable -filter "PartitionKey eq 'GroupTemplate'" | ForEach-Object {
+                if ($_.JSON -and (Test-Json -Json $_.JSON -ErrorAction SilentlyContinue)) {
+                    $Group = $_.JSON | ConvertFrom-Json
+                    $Group
+                }
+            }
             try {
                 Write-Information 'Replacement pattern for inclusions and exclusions is displayName.'
                 $Requests = @(
@@ -228,7 +243,7 @@ function New-CIPPCAPolicy {
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
                     if ($JSONobj.conditions.users.PSObject.Properties.Name -contains $groupType) {
-                        $JSONobj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONobj.conditions.users.$groupType -CreateGroups $CreateGroups -TenantFilter $TenantFilter)
+                        $JSONobj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONobj.conditions.users.$groupType -CreateGroups $CreateGroups -TenantFilter $TenantFilter -GroupTemplates $GroupTemplates)
                     }
                 }
             } catch {
