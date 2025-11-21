@@ -15,20 +15,21 @@ function Invoke-ListCheckExtAlerts {
     $Table = Get-CIPPTable -tablename CheckExtensionAlerts
 
     if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
-        $Filter = "PartitionKey eq '$TenantFilter'"
+        $Filter = "PartitionKey eq 'CheckAlert' and tenantFilter eq '$TenantFilter'"
     } else {
-        $Filter = $null
+        $Filter = "PartitionKey eq 'CheckAlert'"
     }
 
     try {
-        $Alerts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        $Tenants = Get-Tenants -IncludeErrors
+        $Alerts = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $Tenants.defaultDomainName -contains $_.tenantFilter } ?? @()
     } catch {
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve check extension alerts: $($_.Exception.Message)" -Sev 'Error'
         $Alerts = @()
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($Alerts | Sort-Object -Property Timestamp -Descending)
-        }
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Alerts | Sort-Object -Property Timestamp -Descending)
+    }
 }

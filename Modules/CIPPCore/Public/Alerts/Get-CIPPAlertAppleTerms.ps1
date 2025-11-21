@@ -4,7 +4,7 @@ function Get-CIPPAlertAppleTerms {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -18,13 +18,23 @@ function Get-CIPPAlertAppleTerms {
     # 4 = Warning
 
     try {
-        $appleterms = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings" -tenantid $TenantFilter
+        Write-Host "Checking Apple Terms for $($TenantFilter)"
+        $AppleTerms = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $TenantFilter
     } catch {
         return
     }
 
-    if ($appleterms.lastSyncErrorCode -eq 3) {
-        $AlertData = "New Apple Business Manager terms are ready to accept."
+    if ($AppleTerms.lastSyncErrorCode -eq 3) {
+        $AlertData = [PSCustomObject]@{
+            Message                    = 'New Apple Business Manager terms are ready to accept.'
+            AppleIdentifier            = $AppleTerms.appleIdentifier
+            TokenName                  = $AppleTerms.tokenName
+            TokenExpirationDateTime    = $AppleTerms.tokenExpirationDateTime
+            LastSyncErrorCode          = $AppleTerms.lastSyncErrorCode
+            LastSuccessfulSyncDateTime = $AppleTerms.lastSuccessfulSyncDateTime
+            LastSyncTriggeredDateTime  = $AppleTerms.lastSyncTriggeredDateTime
+            Tenant                     = $TenantFilter
+        }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     }
 }
