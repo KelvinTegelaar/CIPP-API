@@ -67,7 +67,7 @@ $CSS = @"
 }
 
 .ext-sign-in-box::before {
-    content: '⚠ Prospector Security: This Login Page May Be a Fraudulent Clone ⚠';
+    content: '⚠ DO NOT ENTER CREDENTIALS: This Login Page May Be a Fraudulent Clone ⚠';
     position: absolute;
     top: 0;
     left: 0;
