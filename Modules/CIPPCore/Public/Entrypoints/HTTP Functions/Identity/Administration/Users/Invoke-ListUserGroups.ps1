@@ -1,4 +1,4 @@
-Function Invoke-ListUserGroups {
+function Invoke-ListUserGroups {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,10 +22,10 @@ Function Invoke-ListUserGroups {
     @{ Name = 'OnPremisesSync'; Expression = { $_.onPremisesSyncEnabled } },
     @{ Name = 'IsAssignableToRole'; Expression = { $_.isAssignableToRole } },
     @{ Name = 'calculatedGroupType'; Expression = {
-            if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-            if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
             if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-            if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+            elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+            elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
+            elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
         }
     }
 

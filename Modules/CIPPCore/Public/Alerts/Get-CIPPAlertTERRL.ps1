@@ -4,7 +4,7 @@ function Get-CIPPAlertTERRL {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -29,6 +29,7 @@ function Get-CIPPAlertTERRL {
                     EnforcementEnabled = $TerrlStatus.EnforcementEnabled
                     Verdict            = $TerrlStatus.Verdict
                     Message            = 'Tenant is at {0}% of their TERRL limit (using {1} of {2} messages). Tenant Enforcement Status: {3}' -f $UsagePercentage, $TerrlStatus.ObservedValue, $TerrlStatus.Threshold, $TerrlStatus.Verdict
+                    Tenant             = $TenantFilter
                 }
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }

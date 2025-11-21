@@ -1,4 +1,4 @@
-Function Invoke-ListConnectionFilter {
+function Invoke-ListConnectionFilter {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -7,10 +7,10 @@ Function Invoke-ListConnectionFilter {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Tenantfilter = $request.Query.tenantfilter
+    $TenantFilter = $request.Query.tenantFilter
 
     try {
-        $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedConnectionFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
+        $Policies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-HostedConnectionFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

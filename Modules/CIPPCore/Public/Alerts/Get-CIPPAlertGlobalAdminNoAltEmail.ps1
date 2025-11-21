@@ -4,7 +4,7 @@ function Get-CIPPAlertGlobalAdminNoAltEmail {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -22,7 +22,14 @@ function Get-CIPPAlertGlobalAdminNoAltEmail {
         }
 
         if ($adminsWithoutAltEmail.Count -gt 0) {
-            $AlertData = "The following Global Admin accounts do not have an alternate email address set: $($adminsWithoutAltEmail.userPrincipalName -join ', ')"
+            $AlertData = foreach ($admin in $adminsWithoutAltEmail) {
+                [PSCustomObject]@{
+                    DisplayName       = $admin.displayName
+                    UserPrincipalName = $admin.userPrincipalName
+                    Id                = $admin.id
+                    Tenant            = $TenantFilter
+                }
+            }
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {

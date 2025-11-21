@@ -185,6 +185,9 @@ function Test-CIPPAuditLogRules {
             throw $_
         }
 
+        $AuditLogUserExclusions = Get-CIPPTable -TableName 'AuditLogUserExclusions'
+        $ExcludedUsers = Get-CIPPAzDataTableEntity @AuditLogUserExclusions -Filter "PartitionKey eq '$TenantFilter'"
+
         if ($LogCount -gt 0) {
             $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
             $ProcessedData = foreach ($AuditRecord in $SearchResults) {
@@ -341,6 +344,13 @@ function Test-CIPPAuditLogRules {
                         if ($condition.Property.label -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
                             $conditionStrings.Add("`$_.HasLocationData -eq `$true")
                             $CIPPClause.Add('HasLocationData is true')
+                            $ExcludedUsers = $ExcludedUsers | Where-Object { $_.Type -eq 'Location' }
+                            # Build single -notin condition against all excluded user keys
+                            $ExcludedUserKeys = @($ExcludedUsers.RowKey)
+                            if ($ExcludedUserKeys.Count -gt 0) {
+                                $conditionStrings.Add("`$(`$_.CIPPUserKey) -notin @('$($ExcludedUserKeys -join "', '")')")
+                                $CIPPClause.Add("CIPPUserKey not in [$($ExcludedUserKeys -join ', ')]")
+                            }
                             $AddedLocationCondition = $true
                         }
                         $value = if ($condition.Input.value -is [array]) {

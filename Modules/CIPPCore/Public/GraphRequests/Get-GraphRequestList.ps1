@@ -192,7 +192,8 @@ function Get-GraphRequestList {
                 } else {
                     $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}') and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
                 }
-                $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+                $Tenants = Get-Tenants -IncludeErrors
+                $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.OriginalEntityId -in $Tenants.defaultDomainName -or $_.RowKey -in $Tenants.defaultDomainName }
                 $Type = 'Cache'
                 Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey

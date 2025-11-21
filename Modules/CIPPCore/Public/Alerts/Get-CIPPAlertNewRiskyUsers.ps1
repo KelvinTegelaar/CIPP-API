@@ -33,10 +33,8 @@ function Get-CIPPAlertNewRiskyUsers {
         Add-CIPPAzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
 
         if ($RiskyUsersDelta) {
-            $AlertData = $NewDelta | Where-Object {
-                $_.userPrincipalName -notin $RiskyUsersDelta.userPrincipalName
-            } | ForEach-Object {
-                $riskHistory = if ($_.history) {
+            $AlertData = $NewDelta | Where-Object { $_.userPrincipalName -notin $RiskyUsersDelta.userPrincipalName } | ForEach-Object {
+                $RiskHistory = if ($_.history) {
                     $latestHistory = $_.history | Sort-Object -Property riskLastUpdatedDateTime -Descending | Select-Object -First 1
                     "Previous Risk Level: $($latestHistory.riskLevel), Last Updated: $($latestHistory.riskLastUpdatedDateTime)"
                 } else {
@@ -44,14 +42,14 @@ function Get-CIPPAlertNewRiskyUsers {
                 }
 
                 # Map risk level to severity
-                $severity = switch ($_.riskLevel) {
+                $Severity = switch ($_.riskLevel) {
                     'high' { 'Critical' }
                     'medium' { 'Warning' }
                     'low' { 'Info' }
                     default { 'Info' }
                 }
 
-                @{
+                [PSCustomObject]@{
                     Message = "New risky user detected: $($_.userPrincipalName)"
                     Details = @{
                         RiskLevel    = $_.riskLevel
@@ -59,9 +57,10 @@ function Get-CIPPAlertNewRiskyUsers {
                         RiskDetail   = $_.riskDetail
                         LastUpdated  = $_.riskLastUpdatedDateTime
                         IsProcessing = $_.isProcessing
-                        RiskHistory  = $riskHistory
-                        Severity     = $severity
+                        RiskHistory  = $RiskHistory
+                        Severity     = $Severity
                     }
+                    Tenant  = $TenantFilter
                 }
             }
 

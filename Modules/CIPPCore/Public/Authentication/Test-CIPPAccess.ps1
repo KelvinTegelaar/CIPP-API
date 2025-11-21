@@ -1,7 +1,8 @@
 function Test-CIPPAccess {
     param(
         $Request,
-        [switch]$TenantList
+        [switch]$TenantList,
+        [switch]$GroupList
     )
     if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
 
@@ -239,7 +240,21 @@ function Test-CIPPAccess {
                             $ExpandedAllowedTenants | Where-Object { $ExpandedBlockedTenants -notcontains $_ }
                         }
                     }
-                    return $LimitedTenantList
+                    return @($LimitedTenantList | Sort-Object -Unique)
+                } elseif ($GroupList.IsPresent) {
+                    Write-Information "Getting allowed groups for roles: $($CustomRoles -join ', ')"
+                    $LimitedGroupList = foreach ($Permission in $PermissionSet) {
+                        if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
+                            @('AllGroups')
+                        } else {
+                            foreach ($AllowedItem in $Permission.AllowedTenants) {
+                                if ($AllowedItem -is [PSCustomObject] -and $AllowedItem.type -eq 'Group') {
+                                    $AllowedItem.value
+                                }
+                            }
+                        }
+                    }
+                    return @($LimitedGroupList | Sort-Object -Unique)
                 }
 
                 $TenantAllowed = $false
@@ -256,12 +271,14 @@ function Test-CIPPAccess {
                     }
 
                     if ($APIAllowed) {
-                        $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Query.tenantId ?? $Request.Body.tenantId ?? $Request.Body.tenantId.value ?? $env:TenantID
+                        $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId ?? $env:TenantID
                         # Check tenant level access
                         if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
                             $TenantAllowed = $true
-                        } elseif ($TenantFilter -eq 'AllTenants') {
+                        } elseif ($TenantFilter -eq 'AllTenants' -and $ApiRole -match 'Write$') {
                             $TenantAllowed = $false
+                        } elseif ($TenantFilter -eq 'AllTenants' -and $ApiRole -match 'Read$') {
+                            $TenantAllowed = $true
                         } else {
                             $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
 
@@ -328,12 +345,11 @@ function Test-CIPPAccess {
                 }
                 return $true
                 if ($APIAllowed) {
-                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId ?? $env:TenantID
+                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId ?? $env:TenantID
                     # Check tenant level access
                     if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
                         $TenantAllowed = $true
                     } elseif ($TenantFilter -eq 'AllTenants') {
-
                         $TenantAllowed = $false
                     } else {
                         $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId

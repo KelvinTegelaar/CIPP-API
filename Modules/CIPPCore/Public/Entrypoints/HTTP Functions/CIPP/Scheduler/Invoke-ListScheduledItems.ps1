@@ -19,6 +19,7 @@ function Invoke-ListScheduledItems {
         $ShowHidden = $Request.Query.ShowHidden ?? $Request.Body.ShowHidden
         $Name = $Request.Query.Name ?? $Request.Body.Name
         $Type = $Request.Query.Type ?? $Request.Body.Type
+        $SearchTitle = $Request.query.SearchTitle ?? $Request.body.SearchTitle
 
         if ($ShowHidden -eq $true) {
             $ScheduledItemFilter.Add('Hidden eq true')
@@ -44,6 +45,10 @@ function Invoke-ListScheduledItems {
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if ($Type) {
         $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
+    }
+
+    if ($SearchTitle) {
+        $Tasks = $Tasks | Where-Object { $_.Name -like $SearchTitle }
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
