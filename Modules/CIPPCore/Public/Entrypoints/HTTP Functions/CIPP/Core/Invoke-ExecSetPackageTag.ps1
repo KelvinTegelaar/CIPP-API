@@ -32,13 +32,17 @@ function Invoke-ExecSetPackageTag {
         foreach ($GUID in $GUIDS) {
             $Filter = "RowKey eq '$GUID'"
             $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-            Add-CIPPAzDataTableEntity @Table -Entity @{
+            $Entity = @{
                 JSON         = $Template.JSON
                 RowKey       = "$GUID"
                 PartitionKey = $Template.PartitionKey
                 GUID         = "$GUID"
                 Package      = $PackageValue
-            } -Force
+                SHA          = $Template.SHA ?? $null
+            }
+
+
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
             if ($Remove -eq $true) {
                 Write-LogMessage -headers $Headers -API $APIName -message "$LogMessage $GUID" -Sev 'Info'

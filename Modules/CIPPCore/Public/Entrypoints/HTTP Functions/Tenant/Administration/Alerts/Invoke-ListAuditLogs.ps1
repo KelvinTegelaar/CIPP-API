@@ -64,7 +64,10 @@ function Invoke-ListAuditLogs {
     if ($FilterConditions) {
         $Table.Filter = $FilterConditions -join ' and '
     }
-    $AuditLogs = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
+
+    $Tenants = Get-Tenants -IncludeErrors
+
+    $AuditLogs = Get-CIPPAzDataTableEntity @Table | Where-Object { $Tenants.defaultDomainName -contains $_.Tenant } | ForEach-Object {
         $_.Data = try { $_.Data | ConvertFrom-Json } catch { $_.AuditData }
         $_ | Select-Object @{n = 'LogId'; exp = { $_.RowKey } }, @{ n = 'Timestamp'; exp = { $_.Data.RawData.CreationTime } }, Tenant, Title, Data
     }
