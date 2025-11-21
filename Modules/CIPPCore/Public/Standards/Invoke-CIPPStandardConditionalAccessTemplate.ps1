@@ -66,7 +66,19 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                         continue
                     }
                 }
-                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers -DisableSD $Setting.DisableSD
+                $NewCAPolicy = @{
+                    replacePattern = 'displayName'
+                    TenantFilter   = $Tenant
+                    state          = $Setting.state
+                    RawJSON        = $JSONObj
+                    Overwrite      = $true
+                    APIName        = 'Standards'
+                    Headers        = $Request.Headers
+                    DisableSD      = $Setting.DisableSD
+                    CreateGroups   = $Setting.CreateGroups ?? $false
+                }
+
+                $null = New-CIPPCAPolicy @NewCAPolicy
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
