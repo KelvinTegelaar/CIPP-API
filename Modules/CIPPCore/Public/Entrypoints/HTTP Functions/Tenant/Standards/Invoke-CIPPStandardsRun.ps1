@@ -2,9 +2,9 @@
 function Invoke-CIPPStandardsRun {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint
     .ROLE
-        CIPP.Standards.ReadWrite
+        Tenant.Standards.ReadWrite
     #>
     [CmdletBinding()]
     param(

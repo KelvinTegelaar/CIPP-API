@@ -1,7 +1,7 @@
 using namespace System.Collections.Generic
 using namespace System.Text.RegularExpressions
 
-Function Invoke-ListContacts {
+function Invoke-ListContacts {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -18,10 +18,9 @@ Function Invoke-ListContacts {
     # Early validation and exit
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::BadRequest
-            Body       = 'tenantFilter is required'
-        })
-        return
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'tenantFilter is required'
+            })
     }
 
     # Pre-compiled regex for MailTip cleaning
@@ -52,35 +51,35 @@ Function Invoke-ListContacts {
         $phones = if ($phoneCapacity -gt 0) {
             $phoneList = [List[hashtable]]::new($phoneCapacity)
             if ($Contact.Phone) {
-                $phoneList.Add(@{ type = "business"; number = $Contact.Phone })
+                $phoneList.Add(@{ type = 'business'; number = $Contact.Phone })
             }
             if ($Contact.MobilePhone) {
-                $phoneList.Add(@{ type = "mobile"; number = $Contact.MobilePhone })
+                $phoneList.Add(@{ type = 'mobile'; number = $Contact.MobilePhone })
             }
             $phoneList.ToArray()
         } else { @() }
 
         return @{
-            id = $Contact.Id
-            displayName = $Contact.DisplayName
-            givenName = $Contact.FirstName
-            surname = $Contact.LastName
-            mail = $mailAddress
-            companyName = $Contact.Company
-            jobTitle = $Contact.Title
-            website = $Contact.WebPage
-            notes = $Contact.Notes
-            hidefromGAL = $MailContact.HiddenFromAddressListsEnabled
-            mailTip = $cleanMailTip
+            id                    = $Contact.Id
+            displayName           = $Contact.DisplayName
+            givenName             = $Contact.FirstName
+            surname               = $Contact.LastName
+            mail                  = $mailAddress
+            companyName           = $Contact.Company
+            jobTitle              = $Contact.Title
+            website               = $Contact.WebPage
+            notes                 = $Contact.Notes
+            hidefromGAL           = $MailContact.HiddenFromAddressListsEnabled
+            mailTip               = $cleanMailTip
             onPremisesSyncEnabled = $Contact.IsDirSynced
-            addresses = @(@{
-                street = $Contact.StreetAddress
-                city = $Contact.City
-                state = $Contact.StateOrProvince
-                countryOrRegion = $Contact.CountryOrRegion
-                postalCode = $Contact.PostalCode
-            })
-            phones = $phones
+            addresses             = @(@{
+                    street          = $Contact.StreetAddress
+                    city            = $Contact.City
+                    state           = $Contact.StateOrProvince
+                    countryOrRegion = $Contact.CountryOrRegion
+                    postalCode      = $Contact.PostalCode
+                })
+            phones                = $phones
         }
     }
 
@@ -98,19 +97,28 @@ Function Invoke-ListContacts {
             }
 
             if (!$Contact -or !$MailContact) {
-                throw "Contact not found or insufficient permissions"
+                throw 'Contact not found or insufficient permissions'
             }
 
             $ContactResponse = ConvertTo-ContactObject -Contact $Contact -MailContact $MailContact
 
         } else {
             # Get all contacts - simplified approach
-            Write-Host "Getting all contacts"
+            Write-Host 'Getting all contacts'
 
             $ContactResponse = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
-                Filter = "RecipientTypeDetails -eq 'MailContact'"
+                Filter     = "RecipientTypeDetails -eq 'MailContact'"
                 ResultSize = 'Unlimited'
             } | Select-Object -Property City, Company, Department, DisplayName, FirstName, LastName, IsDirSynced, Guid, WindowsEmailAddress
+
+            # Add Graph ID to each contact based on email match
+            $GraphContacts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/contacts' -tenantid $TenantFilter
+            foreach ($contact in $ContactResponse) {
+                $GraphMatch = $GraphContacts | Where-Object { $_.mail -eq $contact.WindowsEmailAddress }
+                if ($GraphMatch) {
+                    $contact | Add-Member -MemberType NoteProperty -Name 'graphId' -Value $GraphMatch.id -Force
+                }
+            }
 
             # Return empty array if no contacts found
             if (!$ContactResponse) {
@@ -128,7 +136,7 @@ Function Invoke-ListContacts {
     }
 
     return ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = $ContactResponse
-    })
+            StatusCode = $StatusCode
+            Body       = $ContactResponse
+        })
 }

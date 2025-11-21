@@ -9,16 +9,16 @@ function Invoke-AddAssignmentFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $SelectedTenants = if ('AllTenants' -in $Request.body.tenantFilter) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev Debug
+    $Headers = $Request.Headers
 
+    $SelectedTenants = if ('AllTenants' -in $Request.body.tenantFilter) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
 
     $FilterObject = $Request.body
 
     $Results = foreach ($tenant in $SelectedTenants) {
         try {
             # Use the centralized New-CIPPAssignmentFilter function
-            $Result = New-CIPPAssignmentFilter -FilterObject $FilterObject -TenantFilter $tenant -APIName $APIName -ExecutingUser $Request.Headers.'x-ms-client-principal-name'
+            $Result = New-CIPPAssignmentFilter -FilterObject $FilterObject -TenantFilter $tenant -APIName $APIName -ExecutingUser $Headers.'x-ms-client-principal-name'
 
             if ($Result.Success) {
                 "Successfully created assignment filter $($FilterObject.displayName) for $($tenant)"
@@ -28,13 +28,12 @@ function Invoke-AddAssignmentFilter {
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Assignment filter creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Assignment filter creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             "Failed to create assignment filter $($FilterObject.displayName) for $($tenant): $($ErrorMessage.NormalizedError)"
             $StatusCode = [HttpStatusCode]::InternalServerError
         }
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{'Results' = @($Results) }

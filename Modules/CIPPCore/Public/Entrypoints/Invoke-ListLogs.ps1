@@ -9,6 +9,9 @@ function Invoke-ListLogs {
     param($Request, $TriggerMetadata)
     $Table = Get-CIPPTable
 
+    $TemplatesTable = Get-CIPPTable -tablename 'templates'
+    $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
+
     $ReturnedLog = if ($Request.Query.ListLogs) {
         Get-AzDataTableEntity @Table -Property PartitionKey | Sort-Object -Unique PartitionKey | Select-Object PartitionKey | ForEach-Object {
             @{
@@ -30,6 +33,28 @@ function Invoke-ListLogs {
             }
 
             if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
+
+                if ($Row.StandardTemplateId) {
+                    $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+
+                    $StandardInfo = @{
+                        Template = $Standard.templateName
+                        Standard = $Row.Standard
+                    }
+
+                    if ($Row.IntuneTemplateId) {
+                        $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                    }
+                    if ($Row.ConditionalAccessTemplateId) {
+                        $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                    }
+
+                } else {
+                    $StandardInfo = @{}
+                }
+
                 $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
                     $Row.LogData | ConvertFrom-Json
                 } else { $Row.LogData }
@@ -49,6 +74,7 @@ function Invoke-ListLogs {
                     AppId    = $Row.AppId
                     IP       = $Row.IP
                     RowKey   = $Row.RowKey
+                    Standard = $StandardInfo
                 }
             }
         }
@@ -59,6 +85,7 @@ function Invoke-ListLogs {
             $username = $Request.Query.User ?? '*'
             $TenantFilter = $Request.Query.Tenant
             $ApiFilter = $Request.Query.API
+            $StandardFilter = $Request.Query.StandardTemplateId
 
             $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
             $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
@@ -89,7 +116,8 @@ function Invoke-ListLogs {
             $_.Severity -in $LogLevel -and
             $_.Username -like $username -and
             ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
-            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter")
+            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter") -and
+            ($StandardFilter -eq $null -or $_.StandardTemplateId -eq $StandardFilter)
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
@@ -98,26 +126,46 @@ function Invoke-ListLogs {
 
         foreach ($Row in $Rows) {
             if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
+                if ($Row.StandardTemplateId) {
+                    $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+
+                    $StandardInfo = @{
+                        Template = $Standard.templateName
+                        Standard = $Row.Standard
+                    }
+
+                    if ($Row.IntuneTemplateId) {
+                        $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                    }
+                    if ($Row.ConditionalAccessTemplateId) {
+                        $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                    }
+                } else {
+                    $StandardInfo = @{}
+                }
 
                 $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
                     $Row.LogData | ConvertFrom-Json
                 } else { $Row.LogData }
                 [PSCustomObject]@{
-                    DateTime = $Row.Timestamp
-                    Tenant   = $Row.Tenant
-                    API      = $Row.API
-                    Message  = $Row.Message
-                    User     = $Row.Username
-                    Severity = $Row.Severity
-                    LogData  = $LogData
-                    TenantID = if ($Row.TenantID -ne $null) {
+                    DateTime     = $Row.Timestamp
+                    Tenant       = $Row.Tenant
+                    API          = $Row.API
+                    Message      = $Row.Message
+                    User         = $Row.Username
+                    Severity     = $Row.Severity
+                    LogData      = $LogData
+                    TenantID     = if ($Row.TenantID -ne $null) {
                         $Row.TenantID
                     } else {
                         'None'
                     }
-                    AppId    = $Row.AppId
-                    IP       = $Row.IP
-                    RowKey   = $Row.RowKey
+                    AppId        = $Row.AppId
+                    IP           = $Row.IP
+                    RowKey       = $Row.RowKey
+                    StandardInfo = $StandardInfo
                 }
             }
         }

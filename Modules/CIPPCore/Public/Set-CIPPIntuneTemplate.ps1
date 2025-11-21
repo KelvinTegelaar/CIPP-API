@@ -6,6 +6,7 @@ function Set-CIPPIntuneTemplate {
         $DisplayName,
         $Description,
         $templateType,
+        $Package,
         $Headers
     )
     Write-Host "Received $DisplayName, $Description, $RawJSON, $templateType"
@@ -25,6 +26,7 @@ function Set-CIPPIntuneTemplate {
         JSON         = "$object"
         RowKey       = "$GUID"
         GUID         = "$GUID"
+        Package      = "$Package"
         PartitionKey = 'IntuneTemplate'
     }
     Write-LogMessage -Headers $Headers -API $APINAME -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'

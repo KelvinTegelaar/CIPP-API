@@ -1,4 +1,4 @@
-Function Invoke-ListSites {
+function Invoke-ListSites {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -11,15 +11,14 @@ Function Invoke-ListSites {
 
 
     $TenantFilter = $Request.Query.TenantFilter
-    $Type = $request.query.Type
-    $UserUPN = $request.query.UserUPN
+    $Type = $Request.Query.Type
+    $UserUPN = $Request.Query.UserUPN
 
     if (!$TenantFilter) {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'TenantFilter is required'
             })
-        return
     }
 
     if (!$Type) {
@@ -27,7 +26,6 @@ Function Invoke-ListSites {
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'Type is required'
             })
-        return
     }
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter

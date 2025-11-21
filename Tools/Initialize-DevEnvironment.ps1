@@ -15,6 +15,14 @@ if ((Test-Path $PowerShellWorkerRoot) -and !('Microsoft.Azure.Functions.PowerShe
     Add-Type -Path $PowerShellWorkerRoot
 }
 
+# Remove previously loaded modules to force reloading if new code changes were made
+$LoadedModules = Get-Module | Select-Object -ExpandProperty Name
+switch ($LoadedModules) {
+    'CIPPCore' { Remove-Module CIPPCore -Force }
+    'CippExtensions' { Remove-Module CippExtensions -Force }
+    'MicrosoftTeams' { Remove-Module MicrosoftTeams -Force }
+}
+
 Import-Module ( Join-Path $CippRoot 'Modules\AzBobbyTables' )
 Import-Module ( Join-Path $CippRoot 'Modules\DNSHealth' )
 Import-Module ( Join-Path $CippRoot 'Modules\CIPPCore' )

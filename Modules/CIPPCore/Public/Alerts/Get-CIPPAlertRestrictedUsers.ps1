@@ -31,6 +31,7 @@
                     ExternalCount   = $ExternalCount
                     CreatedDatetime = $User.CreatedDatetime
                     Reason          = $User.Reason
+                    Tenant          = $TenantFilter
                 }
             }
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData

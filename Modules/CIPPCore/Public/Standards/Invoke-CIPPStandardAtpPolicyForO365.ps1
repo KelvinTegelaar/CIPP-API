@@ -65,8 +65,8 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AtpPolicyForO365' -cmdParams $cmdParams -UseSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Atp Policy For O365' -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }

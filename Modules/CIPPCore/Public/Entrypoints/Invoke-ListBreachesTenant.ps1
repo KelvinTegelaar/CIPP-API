@@ -16,7 +16,9 @@ function Invoke-ListBreachesTenant {
         $filter = $null
     }
     try {
-        $usersResults = (Get-CIPPAzDataTableEntity @Table -Filter $filter).breaches | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $Tenants = Get-Tenants -IncludeErrors
+        $Rows = Get-CIPPAzDataTableEntity @Table -Filter $filter | Where-Object { $Tenants.defaultDomainName -contains $_.PartitionKey }
+        $usersResults = $Rows.breaches | ConvertFrom-Json -ErrorAction SilentlyContinue
     } catch {
         $usersResults = $null
     }

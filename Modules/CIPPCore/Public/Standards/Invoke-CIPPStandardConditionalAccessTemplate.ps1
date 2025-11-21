@@ -66,7 +66,19 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                         continue
                     }
                 }
-                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers -DisableSD $Setting.DisableSD
+                $NewCAPolicy = @{
+                    replacePattern = 'displayName'
+                    TenantFilter   = $Tenant
+                    state          = $Setting.state
+                    RawJSON        = $JSONObj
+                    Overwrite      = $true
+                    APIName        = 'Standards'
+                    Headers        = $Request.Headers
+                    DisableSD      = $Setting.DisableSD
+                    CreateGroups   = $Setting.CreateGroups ?? $false
+                }
+
+                $null = New-CIPPCAPolicy @NewCAPolicy
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
@@ -76,6 +88,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     if ($Settings.report -eq $true -or $Settings.remediate -eq $true) {
         $Filter = "PartitionKey eq 'CATemplate'"
         $Policies = (Get-CippAzDataTableEntity @Table -Filter $Filter | Where-Object RowKey -In $Settings.TemplateList.value).JSON | ConvertFrom-Json -Depth 10
+        $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant -asApp $true
         #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
         $MissingPolicies = foreach ($Setting in $Settings.TemplateList) {
             $policy = $Policies | Where-Object { $_.displayName -eq $Setting.label }

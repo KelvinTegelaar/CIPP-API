@@ -228,6 +228,15 @@ function Sync-CippExtensionData {
                     $Data = $Data.Value
                 }
 
+                # Filter out excluded licenses to respect the ExcludedLicenses table
+                if ($_.id -eq 'Licenses') {
+                    $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
+                    $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
+                    if ($ExcludedSkuList) {
+                        $Data = $Data | Where-Object { $_.skuId -notin $ExcludedSkuList.GUID }
+                    }
+                }
+
                 $Entity = @{
                     PartitionKey = $TenantFilter
                     RowKey       = $_.id

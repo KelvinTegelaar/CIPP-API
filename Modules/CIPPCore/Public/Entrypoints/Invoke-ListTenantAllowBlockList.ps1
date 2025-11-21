@@ -55,6 +55,8 @@ function Invoke-ListTenantAllowBlockList {
                 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
                 $Results = @()
             } else {
+                $TenantList = Get-Tenants -IncludeErrors
+                $Rows = $Rows | Where-Object { $TenantList.defaultDomainName -contains $_.Tenant }
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
                 }

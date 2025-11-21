@@ -65,6 +65,7 @@ Common Data Service Log Capacity,CDS_LOG_CAPACITY,448b063f-9cc6-42fc-a0e6-40e087
 Communications Credits,MCOPSTNC,47794cd0-f0e5-45c5-9033-2eb6b5fc84e0,MCOPSTNC,505e180f-f7e0-4b65-91d4-00d670bbd18c,COMMUNICATIONS CREDITS
 Compliance Manager Premium Assessment Add-On,CMPA_addon,8a5fbbed-8b8c-41e5-907e-c50c471340fd,COMPLIANCE_MANAGER_PREMIUM_ASSESSMENT_ADDON,3a117d30-cfac-4f00-84ac-54f8b6a18d78,Compliance Manager Premium Assessment Add-On
 Compliance Manager Premium Assessment Add-On for GCC,CMPA_addon_GCC,a9d7ef53-9bea-4a2a-9650-fa7df58fe094,COMPLIANCE_MANAGER_PREMIUM_ASSESSMENT_ADDON,3a117d30-cfac-4f00-84ac-54f8b6a18d78,Compliance Manager Premium Assessment Add-On
+Compliance Program for Microsoft Cloud,Compliance_Program_for_Microsoft_Cloud,10dd46b2-c5ad-4de3-865c-a6fa1363fb51,CPMC,1265e154-5544-4197-bba1-03ef69c3b180,Compliance Program for Microsoft Cloud
 Defender Threat Intelligence,Defender_Threat_Intelligence,a9c51c15-ffad-4c66-88c0-8771455c832d,THREAT_INTELLIGENCE_APP,fbdb91e6-7bfd-4a1f-8f7a-d27f4ef39702,Defender Threat Intelligence
 Digital Messaging for GCC Test SKU,MESSAGING_GCC_TEST,064a9707-9dba-4cc1-9902-38bfcfda6328,DYN365_CS_CHAT_FPA_GOV,b9f7ce72-67ff-4695-a9d9-5ff620232024,Dynamics 365 Customer Service Chat Application Integration for Government
 Digital Messaging for GCC Test SKU,MESSAGING_GCC_TEST,064a9707-9dba-4cc1-9902-38bfcfda6328,DYN365_CS_MESSAGING_TPS_GOV,9d37aa61-3cc3-457c-8b54-e6f3853aa6b6,Dynamics 365 Customer Service Digital Messaging add-on for Government
@@ -3770,6 +3771,7 @@ Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Ste
 Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Entra_Premium_Private_Access,f057aab1-b184-49b2-85c0-881b02a405c5,Microsoft Entra Private Access
 Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Verifiable_Credentials_Service_Request,aae826b7-14cd-4691-8178-2b312f7072ea,Verifiable Credentials Service Request
 Microsoft Entra Suite Add-on for Microsoft Entra ID P2,Microsoft_Entra_Suite_Step_Up_for_Microsoft_Entra_ID_P2,2ef3064c-c95c-426c-96dd-9ffeaa2f2c37,Entra_Identity_Governance,e866a266-3cff-43a3-acca-0c90a7e00c8b,Entra Identity Governance
+Microsoft Entra Workload ID,Workload_Identities_P2,52cdf00e-8303-4223-a749-ff69a13e2dd0,AAD_WRKLDID_P2,7dc0e92d-bf15-401d-907e-0884efe7c760,Microsoft Entra Workload ID
 Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,BI_AZURE_P0,2049e525-b859-401b-b2a0-e0a31c4b1fe4,Power BI (free)
 Microsoft Fabric (Free),POWER_BI_STANDARD,a403ebcc-fae0-4ca2-8c8c-7a907fd6c235,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
@@ -4421,6 +4423,44 @@ Office 365 E1,STANDARDPACK,18181a46-0d4e-45cd-891e-60aabd171b4e,STREAM_O365_E1,7
 Office 365 E1,STANDARDPACK,18181a46-0d4e-45cd-891e-60aabd171b4e,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
 Office 365 E1,STANDARDPACK,18181a46-0d4e-45cd-891e-60aabd171b4e,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
 Office 365 E1,STANDARDPACK,18181a46-0d4e-45cd-891e-60aabd171b4e,POWER_VIRTUAL_AGENTS_O365_P1,0683001c-0492-4d59-9515-d9a6426b5813,Power Virtual Agents for Office 365
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MESH_AVATARS_FOR_TEAMS,dcf9d2f4-772e-4434-b757-77a453cfbc02,Avatars for Teams
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MESH_AVATARS_ADDITIONAL_FOR_TEAMS,3efbd4ed-8958-4824-8389-1321f8730af8,Avatars for Teams (additional)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,CDS_O365_P1,bed136c6-b799-4462-824d-fc045d3a9d25,Common Data Service for Teams
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MICROSOFT_MYANALYTICS_FULL,0403bb98-9d17-4f94-b53e-eca56a7698a6,DO NOT USE - Microsoft MyAnalytics (Full)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MESH_IMMERSIVE_FOR_TEAMS,f0ff6ac6-297d-49cd-be34-6dfef97f0c28,Immersive spaces for Teams
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,INSIGHTS_BY_MYANALYTICS,b088306e-925b-44ab-baa0-63291c629a91,Insights by MyAnalytics Backend
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,FORMS_PLAN_E1,159f4cd6-e380-449f-a816-af1a9ef76344,Microsoft Forms (Plan E1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,OFFICEMOBILE_SUBSCRIPTION,c63d4d19-e8cb-460e-b37c-4d6c34603745,Office Mobile Apps for Office 365
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,PEOPLE_SKILLS_FOUNDATION,13b6da2c-0d84-450e-9f69-a33e221387ca,People Skills - Foundation
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,PROJECT_O365_P1,a55dfd10-0864-46d9-a3cd-da5991a3e0e2,Project for Office (Plan E1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,PLACES_CORE,1fe6227d-3e01-46d0-9510-0acad4ff6e94,RETIRED - Places Core
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,SHAREPOINTSTANDARD,c7699d2e-19aa-44de-8edf-1736da088ca1,SharePoint (Plan 1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,BPOS_S_TODO_1,5e62787c-c316-451f-b873-1d05acd4d12c,To-Do (Plan 1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,YAMMER_ENTERPRISE,7547a3fe-08ee-4ccb-b430-5077c5041653,Yammer Enterprise
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,RMS_S_BASIC,31cf2cfc-6b0d-4adc-a336-88b724ed8122,Microsoft Azure Rights Management Service
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,STREAM_O365_E1,743dd19e-1ce3-4c62-a3ad-49ba8f63a2f6,Microsoft Stream for Office 365 E1
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
+Office 365 E1 (no Teams),Office_365_E1_(no_Teams),f8ced641-8e17-4dc5-b014-f5a2d53f6ac8,POWER_VIRTUAL_AGENTS_O365_P1,0683001c-0492-4d59-9515-d9a6426b5813,Power Virtual Agents for Office 365
 Office 365 E1 EEA (no Teams),Office_365_w/o_Teams_Bundle_E1,b57282e3-65bd-4252-9502-c0eae1e5ab7f,CDS_O365_P1,bed136c6-b799-4462-824d-fc045d3a9d25,Common Data Service for Teams
 Office 365 E1 EEA (no Teams),Office_365_w/o_Teams_Bundle_E1,b57282e3-65bd-4252-9502-c0eae1e5ab7f,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
 Office 365 E1 EEA (no Teams),Office_365_w/o_Teams_Bundle_E1,b57282e3-65bd-4252-9502-c0eae1e5ab7f,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics

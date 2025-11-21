@@ -26,6 +26,13 @@ function Invoke-ListCustomVariables {
                 Category    = 'tenant'
             },
             @{
+                Name        = 'organizationid'
+                Variable    = '%organizationid%'
+                Description = 'The tenant customer ID'
+                Type        = 'reserved'
+                Category    = 'tenant'
+            },
+            @{
                 Name        = 'tenantfilter'
                 Variable    = '%tenantfilter%'
                 Description = 'The tenant default domain name'
@@ -165,6 +172,14 @@ function Invoke-ListCustomVariables {
 
         if ($Request.Query.includeSystem -and $Request.Query.includeSystem -ne 'true') {
             $ReservedVariables = $ReservedVariables | Where-Object { $_.Category -ne 'system' }
+        }
+
+        # Filter out global reserved variables if requested (for tenant group rules)
+        # These variables are the same for all tenants so they're not useful for grouping
+        if ($Request.Query.excludeGlobalReserved -eq 'true') {
+            $ReservedVariables = $ReservedVariables | Where-Object {
+                $_.Category -notin @('partner', 'cipp', 'system')
+            }
         }
 
         # Add reserved variables first

@@ -13,19 +13,21 @@ function Get-CIPPDomainAnalyser {
     Get-CIPPDomainAnalyser -TenantFilter 'AllTenants'
     #>
     [CmdletBinding()]
-    Param([string]$TenantFilter)
+    param([string]$TenantFilter)
     $DomainTable = Get-CIPPTable -Table 'Domains'
 
     # Get all the things
     #Transform the tenantFilter to the GUID.
-    $TenantFilter = (Get-Tenants -TenantFilter $tenantFilter).customerId
     if ($TenantFilter -ne 'AllTenants' -and ![string]::IsNullOrEmpty($TenantFilter)) {
+        $TenantFilter = (Get-Tenants -TenantFilter $tenantFilter).customerId
         $DomainTable.Filter = "TenantGUID eq '{0}'" -f $TenantFilter
+    } else {
+        $Tenants = Get-Tenants -IncludeErrors
     }
-
+    $Domains = Get-CIPPAzDataTableEntity @DomainTable | Where-Object { $_.TenantGUID -in $Tenants.customerId -or $TenantFilter -eq $_.TenantGUID }
     try {
         # Extract json from table results
-        $Results = foreach ($DomainAnalyserResult in (Get-CIPPAzDataTableEntity @DomainTable).DomainAnalyser) {
+        $Results = foreach ($DomainAnalyserResult in ($Domains).DomainAnalyser) {
             try {
                 if (![string]::IsNullOrEmpty($DomainAnalyserResult)) {
                     $Object = $DomainAnalyserResult | ConvertFrom-Json -ErrorAction SilentlyContinue

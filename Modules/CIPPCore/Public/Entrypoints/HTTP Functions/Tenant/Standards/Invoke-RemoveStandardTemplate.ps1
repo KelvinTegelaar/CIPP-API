@@ -1,7 +1,7 @@
 function Invoke-RemoveStandardTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint
     .ROLE
         Tenant.Standards.ReadWrite
     #>

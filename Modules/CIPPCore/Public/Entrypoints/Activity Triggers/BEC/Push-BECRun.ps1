@@ -159,7 +159,7 @@ function Push-BECRun {
             NewUsers                 = @($NewUsers)
             MFADevices               = @($MFADevices)
             ChangedPasswords         = @($PasswordChanges)
-            ExtractedAt              = (Get-Date).ToString('s')
+            ExtractedAt              = (Get-Date)
             ExtractResult            = $ExtractResult
         }
 
