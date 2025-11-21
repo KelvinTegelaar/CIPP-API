@@ -13,7 +13,18 @@ function Get-CIPPAlertDefenderStatus {
     try {
         $TenantId = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter).customerId
         $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$($TenantId)'" | Where-Object { $_.realTimeProtectionEnabled -eq $false -or $_.MalwareprotectionEnabled -eq $false } | ForEach-Object {
-            "$($_.managedDeviceName) - Real Time Protection: $($_.realTimeProtectionEnabled) & Malware Protection: $($_.MalwareprotectionEnabled)"
+            [PSCustomObject]@{
+                ManagedDeviceName              = $_.managedDeviceName
+                RealTimeProtectionEnabled      = $_.realTimeProtectionEnabled
+                MalwareProtectionEnabled       = $_.malwareProtectionEnabled
+                NetworkInspectionSystemEnabled = $_.networkInspectionSystemEnabled
+                ManagedDeviceHealthState       = $_.managedDeviceHealthState
+                AttentionRequired              = $_.attentionRequired
+                LastSyncDateTime               = $_.lastSyncDateTime
+                OsVersion                      = $_.osVersion
+                Tenant                         = $TenantFilter
+                TenantId                       = $_.tenantId
+            }
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 

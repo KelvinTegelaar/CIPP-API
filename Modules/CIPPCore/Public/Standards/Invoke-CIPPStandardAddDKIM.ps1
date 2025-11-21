@@ -76,6 +76,7 @@ function Invoke-CIPPStandardAddDKIM {
     # Same exclusions also found in Push-DomainAnalyserTenant
     $ExclusionDomains = @(
         '*.microsoftonline.com'
+        '*.mail.onmicrosoft.com'
         '*.exclaimer.cloud'
         '*.excl.cloud'
         '*.codetwo.online'
@@ -85,6 +86,7 @@ function Invoke-CIPPStandardAddDKIM {
         '*.teams.dstny.com'
         '*.msteams.8x8.com'
         '*.ucconnect.co.uk'
+        '*.teams-sbc.dk'
     )
 
     $AllDomains = ($BatchResults | Where-Object { $_.DomainName }).DomainName | ForEach-Object {

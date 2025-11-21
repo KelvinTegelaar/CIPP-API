@@ -63,8 +63,8 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $Settings.AllowReset) -and
         ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $Settings.AllowFail)
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $ErrorMessage" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $StateIsCorrect = $false
     }
 
@@ -86,8 +86,6 @@ function Invoke-CIPPStandardAutopilotStatusPage {
 
             Set-CIPPDefaultAPEnrollment @Parameters
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            throw $ErrorMessage
         }
     }
 
