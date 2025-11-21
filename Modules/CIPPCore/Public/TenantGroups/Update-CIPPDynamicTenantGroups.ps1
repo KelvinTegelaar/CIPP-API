@@ -161,7 +161,7 @@ function Update-CIPPDynamicTenantGroups {
                                 }
                                 Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
                             } catch {
-                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippExeception -Exception $_)
+                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                             }
                         }
                     }
