@@ -90,12 +90,13 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         # Check if match is true and there is only one DMARC record for the domain
         $StateIsCorrect = $false -notin $CurrentInfo.Match -and $CurrentInfo.Count -eq 1
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
         if ($_.Exception.Message -like '*403*') {
-            $Message = "AddDMARCToMOERA: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Domain Name Administrator' role: $(Get-NormalizedError -message $_.Exception.message)"
+            $Message = "AddDMARCToMOERA: Insufficient permissions. Please ensure the tenant GDAP relationship includes the 'Domain Name Administrator' role: $($ErrorMessage.NormalizedError)"
         } else {
-            $Message = "Failed to get dns records for MOERA domains: $(Get-NormalizedError -message $_.Exception.message)"
+            $Message = "Failed to get dns records for MOERA domains: $($ErrorMessage.NormalizedError)"
         }
-        Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error
+        Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error -LogData $ErrorMessage
         return $Message
     }
 
@@ -115,7 +116,8 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Set DMARC record for domain $($Domain.DomainName)" -sev Info
                     }
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DMARC record for domain $($Domain.DomainName): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DMARC record for domain $($Domain.DomainName): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
         }

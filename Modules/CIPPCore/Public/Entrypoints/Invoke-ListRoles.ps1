@@ -1,4 +1,4 @@
-Function Invoke-ListRoles {
+function Invoke-ListRoles {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,23 +9,34 @@ Function Invoke-ListRoles {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $SelectList = 'id', 'displayName', 'userPrincipalName'
 
-    [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
-    $GraphRequest = foreach ($Role in $Roles) {
-
-        #[System.Collections.Generic.List[PSCustomObject]]$Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?`$select=$($SelectList -join ',')" -tenantid $TenantFilter | Select-Object $SelectList
-        $Members = if ($Role.members) { $role.members | ForEach-Object { " $($_.displayName) ($($_.userPrincipalName))" } } else { 'none' }
-        [PSCustomObject]@{
-            DisplayName = $Role.displayName
-            Description = $Role.description
-            Members     = $Members -join ','
+    try {
+        [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
+        $GraphRequest = foreach ($Role in $Roles) {
+            $Members = if ($Role.members) {
+                $Role.members | ForEach-Object { [PSCustomObject]@{
+                        displayName       = $_.displayName
+                        userPrincipalName = $_.userPrincipalName
+                        id                = $_.id
+                    } }
+            }
+            [PSCustomObject]@{
+                Id             = $Role.id
+                roleTemplateId = $Role.roleTemplateId
+                DisplayName    = $Role.displayName
+                Description    = $Role.description
+                Members        = @($Members)
+            }
         }
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        "Failed to list roles for tenant $TenantFilter. $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $GraphRequest
-        }
-
+        StatusCode = $StatusCode
+        Body       = $GraphRequest
+    }
 }
