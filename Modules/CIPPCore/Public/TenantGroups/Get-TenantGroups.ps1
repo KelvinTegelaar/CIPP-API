@@ -19,6 +19,13 @@ function Get-TenantGroups {
     $GroupTable = Get-CippTable -tablename 'TenantGroups'
     $MembersTable = Get-CippTable -tablename 'TenantGroupMembers'
 
+    # Early exit if specific GroupId requested but not allowed
+    if ($GroupId -and $script:AllowedGroups) {
+        if ($script:AllowedGroups -notcontains $GroupId) {
+            return @()
+        }
+    }
+
     if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
         $TenantParams = @{
             TenantFilter  = $TenantFilter
@@ -43,6 +50,11 @@ function Get-TenantGroups {
     } else {
         $Groups = Get-CIPPAzDataTableEntity @GroupTable
         $AllMembers = Get-CIPPAzDataTableEntity @MembersTable
+
+        # Filter to allowed groups if restrictions apply
+        if ($script:AllowedGroups) {
+            $Groups = $Groups | Where-Object { $script:AllowedGroups -contains $_.RowKey }
+        }
     }
 
     if (!$Groups) {
