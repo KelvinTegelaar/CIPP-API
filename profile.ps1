@@ -58,6 +58,10 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     } catch {
         Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
     }
+
+    $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
+    Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
+    Write-Host 'Cleared GitHub release notes cache to force refresh on version update.'
 }
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias

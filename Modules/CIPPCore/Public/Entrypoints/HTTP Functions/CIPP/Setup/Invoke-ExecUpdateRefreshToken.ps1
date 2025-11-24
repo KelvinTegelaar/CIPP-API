@@ -1,4 +1,4 @@
-Function Invoke-ExecUpdateRefreshToken {
+function Invoke-ExecUpdateRefreshToken {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -49,16 +49,21 @@ Function Invoke-ExecUpdateRefreshToken {
             $TenantName = $request.body.tenantId
         }
         $Results = @{
-            'message'  = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
-            'severity' = 'success'
+            'resultText' = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
+            'state'      = 'success'
         }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"; severity = 'failed' }
+        $Results = [pscustomobject]@{
+            'Results' = @{
+                resultText = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"
+                state      = 'failed'
+            }
+        }
+
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Results
+            })
+
     }
-
-    return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
 }

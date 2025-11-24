@@ -56,5 +56,7 @@ function Push-CIPPStandard {
         Write-Warning "Error running standard $($Standard) for tenant $($Tenant) - $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
         throw $_.Exception.Message
+    } finally {
+        Remove-Variable -Name StandardInfo -Scope Script -ErrorAction SilentlyContinue
     }
 }
