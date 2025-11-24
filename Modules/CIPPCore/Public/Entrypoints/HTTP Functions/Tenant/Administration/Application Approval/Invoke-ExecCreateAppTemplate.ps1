@@ -11,7 +11,7 @@ function Invoke-ExecCreateAppTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $TenantFilter = $Request.Body.TenantFilter
@@ -47,7 +47,7 @@ function Invoke-ExecCreateAppTemplate {
                     $RequiredResourceAccess = @()
                 }
             } catch {
-                Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Could not retrieve app registration for $AppId - will extract from service principal" -Sev 'Warning'
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Could not retrieve app registration for $AppId - will extract from service principal" -Sev 'Warning'
                 $RequiredResourceAccess = @()
             }
 
@@ -56,16 +56,91 @@ function Invoke-ExecCreateAppTemplate {
                 $Permissions = $RequiredResourceAccess
             } else {
                 # No permissions found - warn the user
-                Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "No permissions found for $AppId. The app registration may not have configured API permissions." -Sev 'Warning'
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId. The app registration may not have configured API permissions." -Sev 'Warning'
                 $Permissions = @()
             }
         } else {
             # For app registrations (applications)
-            $AppDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$filter=appId eq '$AppId'&`$select=id,appId,displayName,requiredResourceAccess" -tenantid $TenantFilter
-            if (-not $AppDetails -or $AppDetails.Count -eq 0) {
-                throw "Application not found for AppId: $AppId"
+            $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')" -tenantid $TenantFilter
+            if (-not $App -or $App.Count -eq 0) {
+                throw "App registration not found for AppId: $AppId"
             }
-            $App = $AppDetails[0]
+
+            $Tenant = Get-Tenants -TenantFilter $TenantFilter
+            if ($Tenant.customerId -ne $env:TenantID) {
+                $ExistingApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq '$DisplayName'" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+
+                if ($ExistingApp) {
+                    Write-Information "App Registration $AppId already exists in partner tenant"
+                    $AppId = $ExistingApp.appId
+                    $App = $ExistingApp
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($AppDetails.displayName) already exists in partner tenant" -Sev 'Info'
+                } else {
+                    Write-Information "Copying App Registration $AppId from customer tenant $TenantFilter to partner tenant"
+                    $PropertiesToRemove = @(
+                        'appId'
+                        'id'
+                        'createdDateTime'
+                        'deletedDateTime'
+                        'publisherDomain'
+                        'servicePrincipalLockConfiguration'
+                        'identifierUris'
+                        'applicationIdUris'
+                        'keyCredentials'
+                        'passwordCredentials'
+                        'isDisabled'
+                    )
+                    $AppCopyBody = $App | Select-Object -Property * -ExcludeProperty $PropertiesToRemove
+                    # Remove any null properties
+                    $NullProperties = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Property in $AppCopyBody.PSObject.Properties.Name) {
+                        if ($null -eq $AppCopyBody.$Property -or $AppCopyBody.$Property -eq '' -or !$AppCopyBody.$Property) {
+                            Write-Information "Removing null property $Property from app copy body"
+                            $NullProperties.Add($Property)
+                        }
+                    }
+                    $AppCopyBody = $AppCopyBody | Select-Object -Property * -ExcludeProperty $NullProperties
+                    if ($AppCopyBody.signInAudience -eq 'AzureADMyOrg') {
+                        # Enterprise apps cannot be copied to another tenant
+                        $AppCopyBody.signInAudience = 'AzureADMultipleOrgs'
+                    }
+                    if ($AppCopyBody.web -and $AppCopyBody.web.redirectUris) {
+                        # Remove redirect URI settings if property exists
+                        $AppCopyBody.web.PSObject.Properties.Remove('redirectUriSettings')
+                    }
+                    if ($AppCopyBody.api.oauth2PermissionScopes) {
+                        $AppCopyBody.api.oauth2PermissionScopes = @(foreach ($Scope in $AppCopyBody.api.oauth2PermissionScopes) {
+                                $Scope | Select-Object * -ExcludeProperty 'isPrivate'
+                            })
+                    }
+                    if ($AppCopyBody.appRoles) {
+                        $AppCopyBody.appRoles = @(foreach ($Role in $AppCopyBody.api.appRoles) {
+                                $Role | Select-Object * -ExcludeProperty 'isPreAuthorizationRequired', 'isPrivate'
+                            })
+                    }
+                    if ($AppCopyBody.api -and $AppCopyBody.api.tokenEncryptionSetting) {
+                        # Remove token encryption settings if property exists
+                        $AppCopyBody.api.PSObject.Properties.Remove('tokenEncryptionSetting')
+                    }
+
+                    $NewApp = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/applications' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -type POST -body ($AppCopyBody | ConvertTo-Json -Depth 10)
+
+                    if (-not $NewApp) {
+                        throw 'Failed to copy app registration to partner tenant'
+                    }
+
+                    Write-Information "App Registration copied. New AppId: $($NewApp.appId)"
+                    $App = $NewApp
+                    $AppId = $NewApp.appId
+                    Write-Information "Creating service principal for AppId: $AppId in partner tenant"
+                    $Body = @{
+                        appId = $AppId
+                    }
+                    $NewSP = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -type POST -body ($Body | ConvertTo-Json -Depth 10)
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($AppDetails.displayName) copied to partner tenant" -Sev 'Info'
+                }
+            }
+
             $Permissions = if ($App.requiredResourceAccess) { $App.requiredResourceAccess } else { @() }
         }
 
@@ -114,7 +189,7 @@ function Invoke-ExecCreateAppTemplate {
             }
 
             Add-CIPPAzDataTableEntity @PermissionsTable -Entity $PermissionEntity -Force
-            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Permission set created with ID: $PermissionSetId for $($Permissions.Count) resource(s)" -Sev 'Info'
+            Write-LogMessage -headers $Request.headers -API $APINAME -message "Permission set created with ID: $PermissionSetId for $($Permissions.Count) resource(s)" -Sev 'Info'
         }
 
         # Create the template
@@ -156,24 +231,33 @@ function Invoke-ExecCreateAppTemplate {
         }
 
         $Message = "Template created: $DisplayName with $PermissionCount permission(s)"
-        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Info'
+        Write-LogMessage -headers $Request.headers -API $APINAME -message $Message -Sev 'Info'
 
         $Body = @{
-            Results    = $Message
-            TemplateId = $TemplateId
+            Results  = @{'resultText' = $Message; 'state' = 'success' }
+            Metadata = @{
+                TemplateId   = $TemplateId
+                SourceTenant = $TenantFilter
+            }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create template: $ErrorMessage" -Sev 'Error'
+        Write-LogMessage -headers $Request.headers -API $APINAME -message "Failed to create template: $ErrorMessage" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        Write-Warning "Failed to create template: $ErrorMessage"
+        Write-Information $_.InvocationInfo.PositionMessage
 
         $Body = @{
-            Results = "Failed to create template: $ErrorMessage"
+            Results = @(@{
+                    resultText = "Failed to create template: $ErrorMessage"
+                    state      = 'error'
+                    details    = Get-CippException -Exception $_
+                })
         }
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = ($Body | ConvertTo-Json -Depth 10)
         })
