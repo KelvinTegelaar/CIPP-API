@@ -128,7 +128,7 @@ function Invoke-ListLogs {
 
         foreach ($Row in $Rows) {
             if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
-                if ($Row.StandardTemplateId) {
+                if ($StandardTaskFilter -and $Row.StandardTemplateId) {
                     $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
 
                     $StandardInfo = @{
