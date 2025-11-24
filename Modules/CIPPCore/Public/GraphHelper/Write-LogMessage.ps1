@@ -76,6 +76,9 @@ function Write-LogMessage {
             $TableRow.ConditionalAccessTemplateId = [string]$script:StandardInfo.ConditionalAccessTemplateId
         }
     }
+    if ($script:ScheduledTaskId) {
+        $TableRow.ScheduledTaskId = [string]$script:ScheduledTaskId
+    }
 
     $Table.Entity = $TableRow
     Add-CIPPAzDataTableEntity @Table | Out-Null
