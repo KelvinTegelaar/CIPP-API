@@ -16,7 +16,7 @@
         "distributedTracingEnabled": false,
         "version": "None"
       },
-      "defaultVersion": "8.7.0",
+      "defaultVersion": "8.7.1",
       "versionMatchStrategy": "Strict",
       "versionFailureStrategy": "Fail"
     }
