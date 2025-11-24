@@ -198,6 +198,7 @@ function Update-CIPPDynamicTenantGroups {
                 $LogicOperator = if ($Group.RuleLogic -eq 'or') { ' -or ' } else { ' -and ' }
                 $WhereString = $WhereConditions -join $LogicOperator
                 Write-Information "Evaluating tenants with condition: $WhereString"
+                Write-LogMessage -API 'TenantGroups' -message "Evaluating tenants for group '$($Group.Name)' with condition: $WhereString" -sev Info
 
                 $ScriptBlock = [ScriptBlock]::Create($WhereString)
                 $MatchingTenants = $TenantObj | Where-Object $ScriptBlock
