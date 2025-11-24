@@ -173,11 +173,17 @@ function Update-CIPPDynamicTenantGroups {
                             $TenantVariables = Get-CIPPTenantVariables -TenantFilter $_.customerId -IncludeGlobal
                         } catch {
                             Write-Information "Error fetching custom variables for tenant $($_.defaultDomainName): $($_.Exception.Message)"
+                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                         }
                     }
 
-                    $SKUId = $LicenseInfo.SKUId ?? @()
-                    $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
+                    try {
+                        $SKUId = $LicenseInfo.SKUId ?? @()
+                        $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
+                    } catch {
+                        Write-Information "Error fetching capabilities for tenant $($_.defaultDomainName): $($_.Exception.Message)"
+                        Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                    }
                     [pscustomobject]@{
                         customerId               = $_.customerId
                         defaultDomainName        = $_.defaultDomainName
@@ -192,6 +198,7 @@ function Update-CIPPDynamicTenantGroups {
                 $LogicOperator = if ($Group.RuleLogic -eq 'or') { ' -or ' } else { ' -and ' }
                 $WhereString = $WhereConditions -join $LogicOperator
                 Write-Information "Evaluating tenants with condition: $WhereString"
+                Write-LogMessage -API 'TenantGroups' -message "Evaluating tenants for group '$($Group.Name)' with condition: $WhereString" -sev Info
 
                 $ScriptBlock = [ScriptBlock]::Create($WhereString)
                 $MatchingTenants = $TenantObj | Where-Object $ScriptBlock
