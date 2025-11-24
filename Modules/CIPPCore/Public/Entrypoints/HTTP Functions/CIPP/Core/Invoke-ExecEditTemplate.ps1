@@ -20,6 +20,9 @@ function Invoke-ExecEditTemplate {
             $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
             $OriginalJSON = $Template.JSON
 
+            $TemplateData = $Template.JSON | ConvertFrom-Json
+            $TemplateType = $TemplateData.Type
+
             if ($Template.SHA) {
                 $NewGuid = [guid]::NewGuid().ToString()
             } else {
@@ -36,7 +39,7 @@ function Invoke-ExecEditTemplate {
                 RawJson      = $RawJSON
                 DisplayName  = $Request.Body.displayName
                 Description  = $Request.Body.description
-                templateType = $Template.Type
+                templateType = $TemplateType
                 Package      = $Template.Package
                 Headers      = $Request.Headers
             }

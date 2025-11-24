@@ -20,9 +20,15 @@ function Test-CIPPAccessUserRole {
         $User
     )
     $Roles = @()
-    $Table = Get-CippTable -TableName cacheAccessUserRoles
-    $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
-    $UserRole = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
+    try {
+        $Table = Get-CippTable -TableName cacheAccessUserRoles
+        $Filter = "PartitionKey eq 'AccessUser' and RowKey eq '$($User.userDetails)' and Timestamp ge datetime'$((Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))'"
+        $UserRole = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    } catch {
+        Write-Information "Could not access cached user roles table. $($_.Exception.Message)"
+        $UserRole = $null
+    }
     if ($UserRole) {
         Write-Information "Found cached user role for $($User.userDetails)"
         $Roles = $UserRole.Role | ConvertFrom-Json
@@ -59,12 +65,16 @@ function Test-CIPPAccessUserRole {
         }
 
         if (($Roles | Measure-Object).Count -gt 2) {
-            $UserRole = [PSCustomObject]@{
-                PartitionKey = 'AccessUser'
-                RowKey       = [string]$User.userDetails
-                Role         = [string](ConvertTo-Json -Compress -InputObject $Roles)
+            try {
+                $UserRole = [PSCustomObject]@{
+                    PartitionKey = 'AccessUser'
+                    RowKey       = [string]$User.userDetails
+                    Role         = [string](ConvertTo-Json -Compress -InputObject $Roles)
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $UserRole -Force
+            } catch {
+                Write-Information "Could not cache user roles for $($User.userDetails). $($_.Exception.Message)"
             }
-            Add-CIPPAzDataTableEntity @Table -Entity $UserRole -Force
         }
     }
     $User.userRoles = $Roles

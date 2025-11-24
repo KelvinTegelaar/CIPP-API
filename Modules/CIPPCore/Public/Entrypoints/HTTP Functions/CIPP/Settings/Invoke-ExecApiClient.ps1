@@ -148,7 +148,7 @@ function Invoke-ExecApiClient {
             if (!$Client) {
                 $Results = @{
                     resultText = 'API client not found'
-                    severity   = 'error'
+                    state      = 'error'
                 }
             } else {
                 $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId -Headers $Request.Headers

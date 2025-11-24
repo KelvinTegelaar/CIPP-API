@@ -7,6 +7,8 @@ function Push-ExecScheduledCommand {
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
+    $script:ScheduledTaskId = $Item.TaskInfo.RowKey
+
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
@@ -21,10 +23,12 @@ function Push-ExecScheduledCommand {
     $CurrentTask = Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($task.PartitionKey)' and RowKey eq '$($task.RowKey)'"
     if (!$CurrentTask) {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) does not exist in the ScheduledTasks table. Exiting."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
     if ($CurrentTask.TaskState -eq 'Completed') {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) is already completed. Skipping execution."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
 
@@ -69,6 +73,7 @@ function Push-ExecScheduledCommand {
                     TaskState     = 'Planned'
                     ScheduledTime = [string]$nextRunUnixTime
                 }
+                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
                 return
             }
         }
@@ -94,6 +99,7 @@ function Push-ExecScheduledCommand {
         }
 
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): The command $($Item.Command) does not exist." -sev Error
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
 
@@ -330,4 +336,5 @@ function Push-ExecScheduledCommand {
     if ($TaskType -ne 'Alert') {
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Successfully executed task: $($task.Name)" -sev Info
     }
+    Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
 }
