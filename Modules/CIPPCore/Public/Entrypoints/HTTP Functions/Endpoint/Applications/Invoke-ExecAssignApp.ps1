@@ -20,7 +20,7 @@ function Invoke-ExecAssignApp {
     $AppType = $Request.Query.AppType ?? $Request.Body.AppType
     $GroupNamesRaw = $Request.Query.GroupNames ?? $Request.Body.GroupNames
     $GroupIdsRaw = $Request.Query.GroupIds ?? $Request.Body.GroupIds
-    $AssignmentMode = $Request.Query.AssignmentMode ?? $Request.Body.AssignmentMode
+    $AssignmentMode = $Request.Body.assignmentMode
 
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
 
@@ -58,7 +58,7 @@ function Invoke-ExecAssignApp {
     # Try to get the application type if not provided. Mostly just useful for ppl using the API that dont know the application type.
     if (-not $AppType) {
         try {
-            $AppMetadata = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter?`$select=id,@odata.type" -tenantid $TenantFilter
+            $AppMetadata = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter" -tenantid $TenantFilter
             $odataType = $AppMetadata.'@odata.type'
             if ($odataType) {
                 $AppType = ($odataType -replace '#microsoft.graph.', '') -replace 'App$'

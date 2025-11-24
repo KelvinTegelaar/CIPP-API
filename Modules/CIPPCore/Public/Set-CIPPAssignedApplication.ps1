@@ -128,8 +128,18 @@ function Set-CIPPAssignedApplication {
         # Deduplicate current assignments so the new ones override existing ones
         if ($ExistingAssignments) {
             $ExistingAssignments = $ExistingAssignments | ForEach-Object {
-                if ($_.target.groupId -notin $MobileAppAssignment.target.groupId) {
-                    $_
+                $ExistingAssignment = $_
+                switch ($ExistingAssignment.target.'@odata.type') {
+                    '#microsoft.graph.groupAssignmentTarget' {
+                        if ($ExistingAssignment.target.groupId -notin $MobileAppAssignment.target.groupId) {
+                            $ExistingAssignment
+                        }
+                    }
+                    default {
+                        if ($ExistingAssignment.target.'@odata.type' -notin $MobileAppAssignment.target.'@odata.type') {
+                            $ExistingAssignment
+                        }
+                    }
                 }
             }
         }
@@ -164,6 +174,7 @@ function Set-CIPPAssignedApplication {
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
             Start-Sleep -Seconds 1
+            # Write-Information (ConvertTo-Json $DefaultAssignmentObject -Depth 10)
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
             Write-LogMessage -headers $Headers -API $APIName -message "Assigned Application $ApplicationId to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }
