@@ -16,7 +16,7 @@ function Remove-CIPPMailboxPermissions {
                 Import-Module '.\Modules\AzBobbyTables'
                 Import-Module '.\Modules\CIPPCore'
                 Write-Host "Removing permissions from mailbox $($_.UserPrincipalName)"
-                Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid $_.UserPrincipalName -AccessUser $using:AccessUser -TenantFilter $using:TenantFilter -APIName $using:APINAME -Headers $using:Headers
+                Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid $_.UserPrincipalName -AccessUser $using:AccessUser -TenantFilter $using:TenantFilter -APIName $using:APIName -Headers $using:Headers
             } -ThrottleLimit 10
         }
         else {
