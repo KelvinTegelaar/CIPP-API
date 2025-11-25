@@ -20,7 +20,7 @@ function Invoke-AddPolicy {
     $Request.Body.customGroup ? ($AssignTo = $Request.Body.customGroup) : $null
     $RawJSON = $Request.Body.RAWJson
 
-    $results = foreach ($Tenant in $Tenants) {
+    $Results = foreach ($Tenant in $Tenants) {
         if ($Request.Body.replacemap.$Tenant) {
             ([pscustomobject]$Request.Body.replacemap.$Tenant).PSObject.Properties | ForEach-Object { $RawJSON = $RawJSON -replace $_.name, $_.value }
         }
@@ -35,22 +35,17 @@ function Invoke-AddPolicy {
                 ExcludeGroup = $ExcludeGroup
                 tenantFilter = $Tenant
                 Headers      = $Headers
+                APIName      = $APIName
             }
             Set-CIPPIntunePolicy @params
-            Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Added policy $($DisplayName)" -Sev 'Info'
         } catch {
             "$($_.Exception.Message)"
-            Write-LogMessage -headers $Headers -API $APIName -tenant $($Tenant) -message "Failed adding policy $($DisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
-
     }
-
-    $body = [pscustomobject]@{'Results' = @($results) }
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = @($Results) }
         })
-
 }
