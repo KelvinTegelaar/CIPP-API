@@ -1,4 +1,4 @@
-Function Invoke-ExecAssignPolicy {
+function Invoke-ExecAssignPolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,22 +10,35 @@ Function Invoke-ExecAssignPolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with the body of the request
     $TenantFilter = $Request.Body.tenantFilter
     $ID = $request.Body.ID
     $Type = $Request.Body.Type
     $AssignTo = $Request.Body.AssignTo
+    $PlatformType = $Request.Body.platformType
 
     $AssignTo = if ($AssignTo -ne 'on') { $AssignTo }
 
     $results = try {
         if ($AssignTo) {
-            $AssignmentResult = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $TenantFilter -GroupName $AssignTo -Type $Type -Headers $Headers
+
+            $params = @{
+                PolicyId     = $ID
+                TenantFilter = $TenantFilter
+                GroupName    = $AssignTo
+                Type         = $Type
+                Headers      = $Headers
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($PlatformType)) {
+                $params.PlatformType = $PlatformType
+            }
+
+            $AssignmentResult = Set-CIPPAssignedPolicy @params
             if ($AssignmentResult) {
                 # Check if it's a warning message (no groups found)
-                if ($AssignmentResult -like "*No groups found*") {
+                if ($AssignmentResult -like '*No groups found*') {
                     $StatusCode = [HttpStatusCode]::BadRequest
                 } else {
                     $StatusCode = [HttpStatusCode]::OK

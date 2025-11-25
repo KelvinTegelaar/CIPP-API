@@ -22,7 +22,7 @@ function Set-CIPPAssignedPolicy {
             Write-Host "Looking up assignment filter by name: $AssignmentFilterName"
             $AllFilters = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $TenantFilter
             $MatchingFilter = $AllFilters | Where-Object { $_.displayName -like $AssignmentFilterName } | Select-Object -First 1
-            
+
             if ($MatchingFilter) {
                 $ResolvedFilterId = $MatchingFilter.id
                 Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
@@ -79,13 +79,13 @@ function Set-CIPPAssignedPolicy {
                             }
                         }
                     }
-                
+
                 if (-not $GroupIds -or $GroupIds.Count -eq 0) {
                     $ErrorMessage = "No groups found matching the specified name(s): $GroupName. Policy not assigned."
                     Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Warning' -tenant $TenantFilter
                     return $ErrorMessage
                 }
-                
+
                 foreach ($gid in $GroupIds) {
                     $assignmentsList.Add(
                         @{
