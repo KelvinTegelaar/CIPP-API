@@ -126,6 +126,11 @@ function Get-CIPPStandards {
                     foreach ($Item in $Value) {
                         $CurrentStandard = $Item.PSObject.Copy()
 
+                        # Inherit runInterval from template if not set on the standard
+                        if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                            $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                        }
+
                         # Add Remediate if autoRemediate is true
                         if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {
                             $CurrentStandard.action = @($CurrentStandard.action) + [pscustomobject]@{
@@ -157,6 +162,11 @@ function Get-CIPPStandards {
                 } else {
                     # Single object
                     $CurrentStandard = $Value.PSObject.Copy()
+
+                    # Inherit runInterval from template if not set on the standard
+                    if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                        $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                    }
 
                     # Add Remediate if autoRemediate is true
                     if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {
@@ -264,6 +274,11 @@ function Get-CIPPStandards {
                             $CurrentStandard = $Item.PSObject.Copy()
                             $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
 
+                            # Inherit runInterval from template if not set on the standard
+                            if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                                $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                            }
+
                             # Add Remediate if autoRemediate is true
                             if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {
                                 $CurrentStandard.action = @($CurrentStandard.action) + [pscustomobject]@{
@@ -292,6 +307,11 @@ function Get-CIPPStandards {
                     } else {
                         $CurrentStandard = $Value.PSObject.Copy()
                         $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                        # Inherit runInterval from template if not set on the standard
+                        if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                            $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                        }
 
                         # Add Remediate if autoRemediate is true
                         if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {
@@ -333,6 +353,11 @@ function Get-CIPPStandards {
                             $CurrentStandard = $Item.PSObject.Copy()
                             $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
 
+                            # Inherit runInterval from template if not set on the standard
+                            if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                                $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                            }
+
                             # Add Remediate if autoRemediate is true
                             if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {
                                 $CurrentStandard.action = @($CurrentStandard.action) + [pscustomobject]@{
@@ -366,6 +391,11 @@ function Get-CIPPStandards {
                     } else {
                         $CurrentStandard = $Value.PSObject.Copy()
                         $CurrentStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $Template.GUID -Force
+
+                        # Inherit runInterval from template if not set on the standard
+                        if (-not $CurrentStandard.runInterval -and $Template.runInterval) {
+                            $CurrentStandard | Add-Member -NotePropertyName 'runInterval' -NotePropertyValue $Template.runInterval -Force
+                        }
 
                         # Add Remediate if autoRemediate is true
                         if ($CurrentStandard.autoRemediate -eq $true -and -not ($CurrentStandard.action.value -contains 'Remediate')) {

@@ -19,12 +19,23 @@ function Push-CIPPStandard {
         $API = "$Standard_$($Item.templateId)"
     }
 
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
+    # Get the run interval from settings (in hours), default to 0 (use default interval)
+    $RunIntervalHours = 0
+    if ($Item.Settings.runInterval) {
+        try {
+            $RunIntervalHours = [int]$Item.Settings.runInterval
+        } catch {
+            Write-Information "Invalid runInterval value '$($Item.Settings.runInterval)', using default"
+            $RunIntervalHours = 0
+        }
+    }
+    
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API -RunIntervalHours $RunIntervalHours
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
         exit 0
     } else {
-        Write-Information "Rerun is set to false. We'll be running $FunctionName"
+        Write-Information "Rerun is set to false. We'll be running $FunctionName (Run interval: $RunIntervalHours hours)"
     }
 
     $StandardInfo = @{

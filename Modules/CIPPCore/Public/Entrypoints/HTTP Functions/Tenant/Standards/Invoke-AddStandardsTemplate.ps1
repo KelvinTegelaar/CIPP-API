@@ -14,6 +14,21 @@ function Invoke-AddStandardsTemplate {
         throw 'Invalid Tenant Selection. A standard must be assigned to at least 1 tenant.'
     }
 
+    # Validate runInterval if provided (must be a multiple of 3 hours, minimum 3)
+    if ($Request.Body.runInterval) {
+        try {
+            $runIntervalInt = [int]$Request.Body.runInterval
+            if ($runIntervalInt -lt 3) {
+                throw 'Invalid runInterval value. Minimum allowed interval is 3 hours.'
+            }
+            if ($runIntervalInt % 3 -ne 0) {
+                throw 'Invalid runInterval value. Interval must be a multiple of 3 hours (e.g., 3, 6, 12, 24).'
+            }
+        } catch [System.Management.Automation.RuntimeException] {
+            throw 'Invalid runInterval value. Must be a positive integer representing hours.'
+        }
+    }
+
     $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
     #updatedAt    = (Get-Date).ToUniversalTime()

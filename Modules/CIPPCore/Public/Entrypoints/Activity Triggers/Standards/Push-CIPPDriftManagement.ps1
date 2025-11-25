@@ -10,11 +10,38 @@ function Push-CippDriftManagement {
     Write-Information "Received drift standard item for $($Item.Tenant)"
 
     try {
+        # Get drift settings including run interval
+        $DriftSettings = Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift' | Select-Object -First 1
+        
+        if (-not $DriftSettings) {
+            Write-LogMessage -API 'DriftStandards' -tenant $Item.Tenant -message "No drift settings found for tenant $($Item.Tenant)" -sev Info
+            return $true
+        }
+        
+        # Check for rerun using template's run interval (if configured)
+        $RunIntervalHours = 0
+        if ($DriftSettings.standardSettings.runInterval) {
+            try {
+                $RunIntervalHours = [int]$DriftSettings.standardSettings.runInterval
+            } catch {
+                Write-Information "Invalid runInterval value '$($DriftSettings.standardSettings.runInterval)', using default"
+                $RunIntervalHours = 0
+            }
+        }
+        $API = "DriftStandards_$($DriftSettings.StandardId)"
+        
+        $Rerun = Test-CIPPRerun -Type Standard -Tenant $Item.Tenant -API $API -RunIntervalHours $RunIntervalHours
+        if ($Rerun) {
+            Write-Information "Detected rerun for drift standards on $($Item.Tenant). Exiting cleanly"
+            return $true
+        } else {
+            Write-Information "Processing drift for tenant $($Item.Tenant) (Run interval: $RunIntervalHours hours)"
+        }
+        
         $Drift = Get-CIPPDrift -TenantFilter $Item.Tenant
         if ($Drift.newDeviationsCount -gt 0) {
-            $Settings = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift')
-            $email = $Settings.driftAlertEmail
-            $webhook = $Settings.driftAlertWebhook
+            $email = $DriftSettings.driftAlertEmail
+            $webhook = $DriftSettings.driftAlertWebhook
             $CippConfigTable = Get-CippTable -tablename Config
             $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
             $CIPPURL = 'https://{0}' -f $CippConfig.Value

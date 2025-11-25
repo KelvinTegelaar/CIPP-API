@@ -283,7 +283,10 @@ function Get-CIPPTenantAlignment {
                     StandardName             = $Template.templateName
                     StandardId               = $Template.GUID
                     standardType             = $Template.type
-                    standardSettings         = $Template.Standards
+                    standardSettings         = [PSCustomObject]@{
+                        standards   = $Template.Standards
+                        runInterval = if ($Template.runInterval) { $Template.runInterval } else { $null }
+                    }
                     driftAlertEmail          = $Template.driftAlertEmail
                     driftAlertWebhook        = $Template.driftAlertWebhook
                     AlignmentScore           = $AlignmentPercentage

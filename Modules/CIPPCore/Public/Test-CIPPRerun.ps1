@@ -6,14 +6,29 @@ function Test-CIPPRerun {
         $API,
         $Settings,
         $Headers,
+        [int]$RunIntervalHours,
         [switch]$Clear,
         [switch]$ClearAll
     )
+    
+    # Default rerun intervals in seconds (slightly under full hours to account for Azure timer drift)
+    $StandardDefaultSeconds = 9800              # ~2 hours 43 minutes (slightly under 3 hour timer)
+    $BPADefaultSeconds = 85000                  # ~23 hours 36 minutes (slightly under 24 hour timer)
+    $MinimumIntervalHours = 3                   # Minimum allowed custom interval (must be multiple of 3)
+    $TimerDriftCompensationSeconds = 900        # ~15 minutes subtracted once for Azure timer drift
+    
     $RerunTable = Get-CIPPTable -tablename 'RerunCache'
-    $EstimatedDifference = switch ($Type) {
-        'Standard' { 9800 } # 2 hours 45 minutes ish.
-        'BPA' { 85000 } # 24 hours ish.
-        default { throw "Unknown type: $Type" }
+    # Check if a custom run interval is provided (in hours)
+    # Enforce minimum interval of 3 hours (must be multiple of 3), calculate seconds slightly under the full interval
+    if ($RunIntervalHours -ge $MinimumIntervalHours) {
+        # Subtract timer drift compensation once to account for Azure timer drift
+        $EstimatedDifference = ($RunIntervalHours * 3600) - $TimerDriftCompensationSeconds
+    } else {
+        $EstimatedDifference = switch ($Type) {
+            'Standard' { $StandardDefaultSeconds }
+            'BPA' { $BPADefaultSeconds }
+            default { throw "Unknown type: $Type" }
+        }
     }
     $CurrentUnixTime = [int][double]::Parse((Get-Date -UFormat %s))
     $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference

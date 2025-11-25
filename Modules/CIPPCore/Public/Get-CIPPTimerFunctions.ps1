@@ -41,14 +41,14 @@ function Get-CIPPTimerFunctions {
 
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
     $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
-    if ($ListAllTasks) {
+    if ($ListAllTasks -or $ResetToDefault) {
         $Orchestrators = $CippTimers | ConvertFrom-Json | Sort-Object -Property Priority
     } else {
         $Orchestrators = $CippTimers | ConvertFrom-Json | Where-Object { $_.RunOnProcessor -eq $RunOnProcessor } | Sort-Object -Property Priority
     }
     $Table = Get-CIPPTable -TableName 'CIPPTimers'
     $RunOnProcessorTxt = if ($RunOnProcessor) { 'true' } else { 'false' }
-    if ($ListAllTasks.IsPresent) {
+    if ($ListAllTasks.IsPresent -or $ResetToDefault.IsPresent) {
         $OrchestratorStatus = Get-CIPPAzDataTableEntity @Table
     } else {
         $OrchestratorStatus = Get-CIPPAzDataTableEntity @Table -Filter "RunOnProcessor eq $RunOnProcessorTxt"
@@ -60,7 +60,10 @@ function Get-CIPPTimerFunctions {
 
     foreach ($Orchestrator in $Orchestrators) {
         $Status = $OrchestratorStatus | Where-Object { $_.RowKey -eq $Orchestrator.Id }
-        if ($Status.Cron) {
+        if ($ResetToDefault.IsPresent) {
+            # When resetting to default, always use the cron from the JSON file
+            $CronString = $Orchestrator.Cron
+        } elseif ($Status.Cron) {
             $CronString = $Status.Cron
         } else {
             $CronString = $Orchestrator.Cron
@@ -75,7 +78,7 @@ function Get-CIPPTimerFunctions {
             continue
         }
 
-        if (!$ListAllTasks.IsPresent) {
+        if (!$ListAllTasks.IsPresent -and !$ResetToDefault.IsPresent) {
             if ($Orchestrator.PreferredProcessor -and $AvailableNodes -contains $Orchestrator.PreferredProcessor -and $Node -ne $Orchestrator.PreferredProcessor) {
                 # only run on preferred processor when available
                 continue
@@ -86,7 +89,7 @@ function Get-CIPPTimerFunctions {
         }
 
         $Now = Get-Date
-        if ($ListAllTasks.IsPresent) {
+        if ($ListAllTasks.IsPresent -or $ResetToDefault.IsPresent) {
             $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
         } else {
             $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
@@ -98,7 +101,7 @@ function Get-CIPPTimerFunctions {
         }
 
         if (Get-Command -Name $Orchestrator.Command -Module CIPPCore -ErrorAction SilentlyContinue) {
-            if ($NextOccurrence -or $ListAllTasks.IsPresent) {
+            if ($NextOccurrence -or $ListAllTasks.IsPresent -or $ResetToDefault.IsPresent) {
                 if (!$Status) {
                     $Status = [pscustomobject]@{
                         PartitionKey       = 'Timer'
@@ -120,7 +123,7 @@ function Get-CIPPTimerFunctions {
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
                     $PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
-                    if ($Status.PSObject.Properites.Name -notcontains 'PreferredProcessor') {
+                    if ($Status.PSObject.Properties.Name -notcontains 'PreferredProcessor') {
                         $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $PreferredProcessor -Force
                     } else {
                         $Status.PreferredProcessor = $PreferredProcessor
