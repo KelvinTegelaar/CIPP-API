@@ -21,6 +21,8 @@ function Invoke-ExecAssignPolicy {
     $GroupIdsRaw = $Request.Body.GroupIds
     $GroupNamesRaw = $Request.Body.GroupNames
     $AssignmentMode = $Request.Body.assignmentMode
+    $AssignmentFilterName = $Request.Body.AssignmentFilterName
+    $AssignmentFilterType = $Request.Body.AssignmentFilterType
 
     # Standardize GroupIds input (can be array or comma-separated string)
     function Get-StandardizedList {
@@ -72,6 +74,14 @@ function Invoke-ExecAssignPolicy {
 
             if (-not [string]::IsNullOrWhiteSpace($ExcludeGroup)) {
                 $params.ExcludeGroup = $ExcludeGroup
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterName)) {
+                $params.AssignmentFilterName = $AssignmentFilterName
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterType)) {
+                $params.AssignmentFilterType = $AssignmentFilterType
             }
 
             Set-CIPPAssignedPolicy @params
