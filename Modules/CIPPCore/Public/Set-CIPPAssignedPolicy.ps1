@@ -195,12 +195,17 @@ function Set-CIPPAssignedPolicy {
             $FinalAssignments.Add($newAssignment)
         }
 
-        $assignmentsObject = [PSCustomObject]@{
-            # assignments = @($FinalAssignments.ToArray())
-            assignments = @($FinalAssignments)
+        # Determine the assignment property name based on type
+        $AssignmentPropertyName = switch ($Type) {
+            'deviceHealthScripts' { 'deviceHealthScriptAssignments' }
+            'deviceManagementScripts' { 'deviceManagementScriptAssignments' }
+            'deviceShellScripts' { 'deviceManagementScriptAssignments' }
+            default { 'assignments' }
         }
 
-        $AssignJSON = $assignmentsObject | ConvertTo-Json -Depth 10 -Compress
+        $assignmentsObject = @{ $AssignmentPropertyName = @($FinalAssignments) }
+
+        $AssignJSON = ConvertTo-Json -InputObject $assignmentsObject -Depth 10 -Compress
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
             $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
             $null = New-GraphPOSTRequest -uri $uri -tenantid $TenantFilter -type POST -body $AssignJSON
