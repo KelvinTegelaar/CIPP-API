@@ -14,9 +14,9 @@ function Push-CIPPStandard {
     Write-Information "We'll be running $FunctionName"
 
     if ($Standard -in @('IntuneTemplate', 'ConditionalAccessTemplate')) {
-        $API = "$Standard_$($Item.templateId)_$($Item.Settings.TemplateList.value)"
+        $API = "$($Standard)_$($Item.templateId)_$($Item.Settings.TemplateList.value)"
     } else {
-        $API = "$Standard_$($Item.templateId)"
+        $API = "$($Standard)_$($Item.templateId)"
     }
 
     $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
@@ -56,5 +56,7 @@ function Push-CIPPStandard {
         Write-Warning "Error running standard $($Standard) for tenant $($Tenant) - $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
         throw $_.Exception.Message
+    } finally {
+        Remove-Variable -Name StandardInfo -Scope Script -ErrorAction SilentlyContinue
     }
 }
