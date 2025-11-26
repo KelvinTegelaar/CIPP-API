@@ -17,50 +17,78 @@ function Invoke-ExecAssignPolicy {
     $Type = $Request.Body.Type
     $AssignTo = $Request.Body.AssignTo
     $PlatformType = $Request.Body.platformType
+    $ExcludeGroup = $Request.Body.excludeGroup
+    $GroupIdsRaw = $Request.Body.GroupIds
+    $GroupNamesRaw = $Request.Body.GroupNames
+    $AssignmentMode = $Request.Body.assignmentMode
+
+    # Standardize GroupIds input (can be array or comma-separated string)
+    function Get-StandardizedList {
+        param($InputObject)
+        if ($null -eq $InputObject -or ($InputObject -is [string] -and [string]::IsNullOrWhiteSpace($InputObject))) {
+            return @()
+        }
+        if ($InputObject -is [string]) {
+            return ($InputObject -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        }
+        if ($InputObject -is [System.Collections.IEnumerable]) {
+            return @($InputObject | Where-Object { $_ })
+        }
+        return @($InputObject)
+    }
+
+    $GroupIds = Get-StandardizedList -InputObject $GroupIdsRaw
+    $GroupNames = Get-StandardizedList -InputObject $GroupNamesRaw
+
+    # Validate and default AssignmentMode
+    if ([string]::IsNullOrWhiteSpace($AssignmentMode)) {
+        $AssignmentMode = 'replace'
+    }
 
     $AssignTo = if ($AssignTo -ne 'on') { $AssignTo }
 
-    $results = try {
-        if ($AssignTo) {
-
+    $Results = try {
+        if ($AssignTo -or @($GroupIds).Count -gt 0) {
             $params = @{
-                PolicyId     = $ID
-                TenantFilter = $TenantFilter
-                GroupName    = $AssignTo
-                Type         = $Type
-                Headers      = $Headers
+                PolicyId       = $ID
+                TenantFilter   = $TenantFilter
+                GroupName      = $AssignTo
+                Type           = $Type
+                Headers        = $Headers
+                AssignmentMode = $AssignmentMode
+            }
+
+            if (@($GroupIds).Count -gt 0) {
+                $params.GroupIds = @($GroupIds)
+            }
+
+            if (@($GroupNames).Count -gt 0) {
+                $params.GroupNames = @($GroupNames)
             }
 
             if (-not [string]::IsNullOrWhiteSpace($PlatformType)) {
                 $params.PlatformType = $PlatformType
             }
 
-            $AssignmentResult = Set-CIPPAssignedPolicy @params
-            if ($AssignmentResult) {
-                # Check if it's a warning message (no groups found)
-                if ($AssignmentResult -like '*No groups found*') {
-                    $StatusCode = [HttpStatusCode]::BadRequest
-                } else {
-                    $StatusCode = [HttpStatusCode]::OK
-                }
-                $AssignmentResult
-            } else {
-                $StatusCode = [HttpStatusCode]::OK
-                "Successfully edited policy for $($TenantFilter)"
+            if (-not [string]::IsNullOrWhiteSpace($ExcludeGroup)) {
+                $params.ExcludeGroup = $ExcludeGroup
             }
-        } else {
+
+            Set-CIPPAssignedPolicy @params
             $StatusCode = [HttpStatusCode]::OK
-            "Successfully edited policy for $($TenantFilter)"
+        } else {
+            'No assignments specified. No action taken.'
+            $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
+        "$($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::InternalServerError
-        "Failed to add policy for $($TenantFilter): $($_.Exception.Message)"
     }
 
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{Results = $results }
+            Body       = @{Results = $Results }
         })
 
 }
