@@ -19,10 +19,11 @@ function Test-CIPPRerun {
     $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
 
     try {
-        $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
+        $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)'" | Where-Object { $_.RowKey -match "^$($Type)_$($API)" }
         if ($ClearAll.IsPresent) {
             $AllRerunData = Get-CIPPAzDataTableEntity @RerunTable
             if ($AllRerunData) {
+                Write-Information "Clearing all rerun cache entries for $($Type)_$($API)"
                 Remove-AzDataTableEntity @RerunTable -Entity $AllRerunData -Force
             }
             return $false
