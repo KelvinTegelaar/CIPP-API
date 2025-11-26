@@ -180,6 +180,7 @@ function Receive-CippOrchestrationTrigger {
         }
         Write-Information "Orchestrator started $($OrchestratorInput.OrchestratorName)"
         Write-Warning "Receive-CippOrchestrationTrigger - $($OrchestratorInput.OrchestratorName)"
+        Set-DurableCustomStatus -CustomStatus $OrchestratorInput.OrchestratorName
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
             MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
@@ -203,20 +204,15 @@ function Receive-CippOrchestrationTrigger {
         Write-Information "Durable Mode: $DurableMode"
 
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
-
-        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
-            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
-        }
-
         if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
-            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop) | Where-Object { $null -ne $_.FunctionName }
         } else {
-            $Batch = $OrchestratorInput.Batch
+            $Batch = $OrchestratorInput.Batch | Where-Object { $null -ne $_.FunctionName }
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
             Write-Information "Batch Count: $($Batch.Count)"
-            $Tasks = foreach ($Item in $Batch) {
+            $Output = foreach ($Item in $Batch) {
                 $DurableActivity = @{
                     FunctionName = 'CIPPActivityFunction'
                     Input        = $Item
@@ -226,13 +222,34 @@ function Receive-CippOrchestrationTrigger {
                 }
                 Invoke-DurableActivity @DurableActivity
             }
-            if ($NoWait -and $Tasks) {
-                $null = Wait-ActivityFunction -Task $Tasks
+
+            if ($NoWait -and $Output) {
+                $Output = $Output | Where-Object { $_.GetType().Name -eq 'ActivityInvocationTask' }
+                if (($Output | Measure-Object).Count -gt 0) {
+                    Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
+                    $Results = Wait-ActivityFunction -Task @($Output)
+                } else {
+                    $Results = @()
+                }
+            } else {
+                $Results = $Output
             }
         }
 
-        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
-            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
+        if ($Results -and $OrchestratorInput.PostExecution) {
+            Write-Information "Running post execution function $($OrchestratorInput.PostExecution.FunctionName)"
+            $PostExecParams = @{
+                FunctionName = $OrchestratorInput.PostExecution.FunctionName
+                Parameters   = $OrchestratorInput.PostExecution.Parameters
+                Results      = @($Results)
+            }
+            if ($null -ne $PostExecParams.FunctionName) {
+                $null = Invoke-ActivityFunction -FunctionName CIPPActivityFunction -Input $PostExecParams
+                Write-Information "Post execution function $($OrchestratorInput.PostExecution.FunctionName) completed"
+            } else {
+                Write-Information 'No post execution function name provided'
+                Write-Information ($PostExecParams | ConvertTo-Json -Depth 10)
+            }
         }
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
@@ -322,11 +339,11 @@ function Receive-CippActivityTrigger {
         }
     }
 
-    # Return the captured output if it exists and is not null, otherwise return $true
+    # Return the captured output if it exists and is not null
     if ($null -ne $Output -and $Output -ne '') {
         return $Output
     } else {
-        return $true
+        return
     }
 }
 
