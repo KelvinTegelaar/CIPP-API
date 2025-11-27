@@ -191,7 +191,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             } elseif ($User.onPremisesSyncEnabled -eq $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
                 Write-LogMessage -Message "User $Username is synced from on-premises. Scheduling an Immutable ID clear for when the user account has been soft deleted." -TenantFilter $TenantFilter -Severity 'Error' -APIName $APIName -Headers $Headers
-
+                'Scheduling Immutable ID clear task for when the user account is no longer synced in the on-premises directory.'
                 $ScheduledTask = @{
                     TenantFilter  = $TenantFilter
                     Name          = "Clear Immutable ID: $Username"

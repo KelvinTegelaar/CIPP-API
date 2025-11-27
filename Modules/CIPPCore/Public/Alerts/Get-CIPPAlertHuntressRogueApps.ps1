@@ -10,7 +10,7 @@ function Get-CIPPAlertHuntressRogueApps {
         https://huntresslabs.github.io/rogueapps/
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,

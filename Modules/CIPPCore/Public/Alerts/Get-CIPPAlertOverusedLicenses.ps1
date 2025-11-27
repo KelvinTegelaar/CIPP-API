@@ -4,7 +4,7 @@ function Get-CIPPAlertOverusedLicenses {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -19,15 +19,24 @@ function Get-CIPPAlertOverusedLicenses {
             $skuid = $_
             foreach ($sku in $skuid) {
                 if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-                $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+                $PrettyName = Convert-SKUname -SkuID $sku.skuId
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
                 if ($sku.prepaidUnits.enabled - $sku.consumedUnits -lt 0) {
-                    "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
+                    [PSCustomObject]@{
+                        Message       = "$PrettyName has Overused licenses. Using $($sku.consumedUnits) of $($sku.prepaidUnits.enabled)."
+                        LicenseName   = $PrettyName
+                        SkuId         = $sku.skuId
+                        SkuPartNumber = $sku.skuPartNumber
+                        ConsumedUnits = $sku.consumedUnits
+                        EnabledUnits  = $sku.prepaidUnits.enabled
+                        Tenant        = $TenantFilter
+                    }
                 }
             }
-
         }
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
 
     } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Overused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"

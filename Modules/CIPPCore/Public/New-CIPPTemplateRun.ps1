@@ -39,9 +39,15 @@ function New-CIPPTemplateRun {
             if ($MigrationTable) {
                 $MigrationTable = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $MigrationTable.path).content | ConvertFrom-Json
             }
+            $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
+            $LocationData = foreach ($Location in $NamedLocations) {
+                (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $Location.path).content | ConvertFrom-Json
+            }
+
             foreach ($File in $Files) {
-                if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
-                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) -and ![string]::IsNullOrEmpty($_.SHA) } | Select-Object -First 1
+                if ($File.name -eq 'MigrationTable' -or $file.name -match 'ALLOWED COUNTRIES') { continue }
+                Write-Information "Processing template file $($File.name) - Sanitized as $(Get-SanitizedFilename -filename $File.name)"
+                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq (Get-SanitizedFilename -filename $File.name)) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq (Get-SanitizedFilename -filename $File.name) ) -and ![string]::IsNullOrEmpty($_.SHA) } | Select-Object -First 1
 
                 $UpdateNeeded = $false
                 if ($ExistingTemplate -and $ExistingTemplate.SHA -ne $File.sha) {
@@ -49,14 +55,14 @@ function New-CIPPTemplateRun {
                     Write-Information "Existing template $($Name) found, but SHA is different. Updating template."
                     $UpdateNeeded = $true
                     "Template $($Name) needs to be updated as the SHA is different"
-                } else {
+                } elseif ($ExistingTemplate -and $ExistingTemplate.SHA -eq $File.sha) {
                     Write-Information "Existing template $($File.name) found, but SHA is the same. No update needed."
                     "Template $($File.name) found, but SHA is the same. No update needed."
                 }
 
                 if (!$ExistingTemplate -or $UpdateNeeded) {
                     $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
-                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
+                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData
                     if ($UpdateNeeded) {
                         Write-Information "Template $($File.name) needs to be updated as the SHA is different"
                         "Template $($File.name) updated"
@@ -69,6 +75,7 @@ function New-CIPPTemplateRun {
         } catch {
             $Message = "Failed to get data from community repo $($TemplateSettings.templateRepo.value). Error: $($_.Exception.Message)"
             Write-LogMessage -API 'Community Repo' -tenant $TenantFilter -message $Message -sev Error
+            Write-Information $_.InvocationInfo.PositionMessage
             return "Failed to get data from community repo $($TemplateSettings.templateRepo.value). Error: $($_.Exception.Message)"
         }
     } else {
