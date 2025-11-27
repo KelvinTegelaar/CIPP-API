@@ -1,5 +1,5 @@
 
-Function Invoke-ListIntunePolicy {
+function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,9 +16,12 @@ Function Invoke-ListIntunePolicy {
         if ($ID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
         } else {
-            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter | Select-Object -Property id, displayName
-
             $BulkRequests = [PSCustomObject]@(
+                @{
+                    id     = 'Groups'
+                    method = 'GET'
+                    url    = '/groups?$top=999&$select=id,displayName'
+                }
                 @{
                     id     = 'DeviceConfigurations'
                     method = 'GET'
@@ -63,7 +66,10 @@ Function Invoke-ListIntunePolicy {
 
             $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-            $GraphRequest = $BulkResults | ForEach-Object {
+            # Extract groups for resolving assignment names
+            $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
+
+            $GraphRequest = $BulkResults | Where-Object { $_.id -ne 'Groups' } | ForEach-Object {
                 $URLName = $_.Id
                 $_.body.Value | ForEach-Object {
                     $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
@@ -89,7 +95,7 @@ Function Invoke-ListIntunePolicy {
                     $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
                     $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
                     $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                    ForEach ($target in $Assignments) {
+                    foreach ($target in $Assignments) {
                         switch ($target.'@odata.type') {
                             '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
                             '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }
