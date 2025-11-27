@@ -23,7 +23,8 @@ function Set-ExtensionAPIKey {
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
-            $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            # $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $keyvaultname = $env:KEY_VAULT_NAME
             $null = Connect-AzAccount -Identity
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $Context = Get-AzContext

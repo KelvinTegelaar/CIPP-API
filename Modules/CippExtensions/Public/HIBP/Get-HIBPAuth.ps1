@@ -13,7 +13,8 @@ function Get-HIBPAuth {
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $null = Set-AzContext -SubscriptionId $SubscriptionId
 
-            $VaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            # $VaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $VaultName = $env:KEY_VAULT_NAME
             try {
                 $Secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText -ErrorAction Stop
             } catch {

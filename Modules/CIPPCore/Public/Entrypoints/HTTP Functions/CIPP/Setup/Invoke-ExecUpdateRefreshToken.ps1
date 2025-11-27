@@ -9,7 +9,8 @@ function Invoke-ExecUpdateRefreshToken {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $KV = $env:WEBSITE_DEPLOYMENT_ID
+    # $KV = $env:WEBSITE_DEPLOYMENT_ID
+    $KV = $env:KEY_VAULT_NAME
 
     try {
         # Handle refresh token update

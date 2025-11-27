@@ -63,7 +63,8 @@ function Invoke-ExecCombinedSetup {
             $Results.add($notificationResults)
         }
         if ($Request.Body.selectedOption -eq 'Manual') {
-            $KV = $env:WEBSITE_DEPLOYMENT_ID
+            # $KV = $env:WEBSITE_DEPLOYMENT_ID
+            $KV = $env:KEY_VAULT_NAME
 
             if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                 $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'

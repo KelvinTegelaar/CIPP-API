@@ -6,7 +6,8 @@ function Get-GradientToken {
         $null = Connect-AzAccount -Identity
         $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
         $null = Set-AzContext -SubscriptionId $SubscriptionId
-        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        # $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        $keyvaultname = $env:KEY_VAULT_NAME
         $partnerApiKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'Gradient' -AsPlainText)
         $authorizationToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($configuration.vendorKey):$($partnerApiKey)"))
 

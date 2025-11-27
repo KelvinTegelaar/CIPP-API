@@ -38,7 +38,8 @@ function Test-CIPPAccessPermissions {
                 $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
                 $null = Set-AzContext -SubscriptionId $SubscriptionId
 
-                $KV = $env:WEBSITE_DEPLOYMENT_ID
+                # $KV = $env:WEBSITE_DEPLOYMENT_ID
+                $KV = $env:KEY_VAULT_NAME
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
                 if ($env:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false

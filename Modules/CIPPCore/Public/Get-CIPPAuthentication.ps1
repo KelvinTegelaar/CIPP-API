@@ -50,7 +50,8 @@ function Get-CIPPAuthentication {
                 Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
             }
 
-            $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            # $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $keyvaultname = $env:KEY_VAULT_NAME
             #Get list of tenants that have 'directTenant' set to true
             $TenantsTable = Get-CippTable -tablename 'Tenants'
             $Filter = "PartitionKey eq 'Tenants' and delegatedPrivilegeStatus eq 'directTenant'"

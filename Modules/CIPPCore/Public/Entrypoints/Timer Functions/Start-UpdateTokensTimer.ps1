@@ -29,7 +29,8 @@ function Start-UpdateTokensTimer {
                     $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
                     $null = Set-AzContext -SubscriptionId $SubscriptionId
                 }
-                $KV = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+                # $KV = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+                $KV = $env:KEY_VAULT_NAME
                 if ($Refreshtoken) {
                     Set-AzKeyVaultSecret -VaultName $KV -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
                 } else {

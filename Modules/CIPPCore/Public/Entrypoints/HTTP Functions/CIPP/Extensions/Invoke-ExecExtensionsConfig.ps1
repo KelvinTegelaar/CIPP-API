@@ -43,6 +43,7 @@ function Invoke-ExecExtensionsConfig {
             } else {
                 Write-Information 'writing API Key to keyvault, and clearing.'
                 Write-Information "$env:WEBSITE_DEPLOYMENT_ID"
+                Write-Information "$env:KEY_VAULT_NAME"
                 if ($Body.$APIKey.APIKey) {
                     Set-ExtensionAPIKey -Extension $APIKey -APIKey $Body.$APIKey.APIKey
                 }

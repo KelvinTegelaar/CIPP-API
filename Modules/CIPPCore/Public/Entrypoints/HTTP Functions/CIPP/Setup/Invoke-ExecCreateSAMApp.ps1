@@ -9,7 +9,8 @@ function Invoke-ExecCreateSAMApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $KV = $env:WEBSITE_DEPLOYMENT_ID
+    # $KV = $env:WEBSITE_DEPLOYMENT_ID
+    $KV = $env:KEY_VAULT_NAME
 
     try {
         $Token = $Request.body

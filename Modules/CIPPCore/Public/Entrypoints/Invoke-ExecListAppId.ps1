@@ -32,7 +32,8 @@ Function Invoke-ExecListAppId {
             Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
         }
 
-        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        # $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        $keyvaultname = $env:KEY_VAULT_NAME
         try {
             $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
             $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
