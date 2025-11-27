@@ -69,7 +69,16 @@ function Get-CIPPMFAState {
     }
 
     if ($CAState.count -eq 0) { $CAState.Add('None') | Out-Null }
+    
+    $assignments = New-GraphGetRequest -uri  "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$expand=principal" -tenantid $TenantFilter -ErrorAction SilentlyContinue
 
+    $adminObjectIds = $assignments |
+    Where-Object {
+        $_.principal.'@odata.type' -eq '#microsoft.graph.user'
+    } |
+    ForEach-Object {
+        $_.principal.id
+    }
 
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
@@ -98,6 +107,7 @@ function Get-CIPPMFAState {
                 $CoveredByCA = 'Not Enforced'
             }
         }
+        $IsAdmin = if ($adminObjectIds -contains $_.ObjectId) { $true } else { $false }
 
         $PerUser = $_.PerUserMFAState
 
@@ -117,6 +127,7 @@ function Get-CIPPMFAState {
             CoveredByCA     = $CoveredByCA
             CAPolicies      = $UserCAState
             CoveredBySD     = $SecureDefaultsState
+            IsAdmin         = $IsAdmin
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
