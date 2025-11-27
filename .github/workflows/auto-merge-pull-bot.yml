@@ -1,0 +1,52 @@
+name: Auto-merge Pull Bot PRs
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC (adjust to your preference)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and merge old Pull bot PRs
+        run: |
+          # Get all open PRs from pull[bot]
+          prs=$(gh pr list --author "pull[bot]" --state open --json number,createdAt,title)
+
+          # Current time in seconds since epoch
+          current_time=$(date +%s)
+
+          # 24 hours in seconds
+          delay=$((24 * 60 * 60))
+
+          # Loop through each PR
+          echo "$prs" | jq -c '.[]' | while read pr; do
+            pr_number=$(echo "$pr" | jq -r '.number')
+            pr_title=$(echo "$pr" | jq -r '.title')
+            created_at=$(echo "$pr" | jq -r '.createdAt')
+
+            # Convert PR creation time to seconds since epoch
+            pr_time=$(date -d "$created_at" +%s)
+
+            # Calculate age in seconds
+            age=$((current_time - pr_time))
+
+            # If PR is older than 24 hours, merge it
+            if [ $age -gt $delay ]; then
+              echo "Merging PR #$pr_number ($pr_title) - age: $((age / 3600)) hours"
+              gh pr merge $pr_number --merge
+            else
+              hours_remaining=$(( (delay - age) / 3600 ))
+              echo "Skipping PR #$pr_number ($pr_title) - needs $hours_remaining more hours"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
