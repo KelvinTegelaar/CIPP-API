@@ -12,13 +12,14 @@ function Remove-CIPPMailboxPermissions {
     try {
         if ($userid -eq 'AllUsers') {
             $Mailboxes = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -Select UserPrincipalName
-            $Mailboxes | ForEach-Object -Parallel {
+            $Results = $Mailboxes | ForEach-Object -Parallel {
                 Import-Module '.\Modules\AzBobbyTables'
                 Import-Module '.\Modules\CIPPCore'
                 Write-Host "Removing permissions from mailbox $($_.UserPrincipalName)"
-                Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid $_.UserPrincipalName -AccessUser $using:AccessUser -TenantFilter $using:TenantFilter -APIName $using:APINAME -Headers $using:Headers
+                Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid $_.UserPrincipalName -AccessUser $using:AccessUser -TenantFilter $using:TenantFilter -APIName $using:APIName -Headers $using:Headers
             } -ThrottleLimit 10
-        } else {
+        }
+        else {
             $Results = $PermissionsLevel | ForEach-Object {
                 switch ($_) {
                     'SendOnBehalf' {
@@ -58,7 +59,8 @@ function Remove-CIPPMailboxPermissions {
             }
         }
         return $Results
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Could not remove mailbox permissions for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not remove mailbox permissions for $($userid). Error: $($ErrorMessage.NormalizedError)"
