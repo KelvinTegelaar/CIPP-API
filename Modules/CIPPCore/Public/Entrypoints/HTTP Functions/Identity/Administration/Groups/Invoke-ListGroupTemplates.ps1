@@ -13,11 +13,10 @@ function Invoke-ListGroupTemplates {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'GroupTemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json
-
+        $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
         # Normalize groupType to camelCase for consistent frontend handling
         # Handle both stored normalized values and legacy values
-        $normalizedGroupType = switch -Wildcard ($data.groupType.ToLower()) {
+        $normalizedGroupType = switch -Wildcard ($data.groupType) {
             # Already normalized values (most common)
             'dynamicdistribution' { 'dynamicDistribution'; break }
             'azurerole' { 'azureRole'; break }
