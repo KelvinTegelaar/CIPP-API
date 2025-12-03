@@ -57,7 +57,7 @@ function Push-CIPPStandard {
             FunctionName   = $FunctionName
             TriggerType    = 'Standard'
         }
-        
+
         # Add template-specific metadata
         if ($Standard -eq 'IntuneTemplate' -and $Item.Settings.TemplateList.value) {
             $metadata['IntuneTemplateId'] = $Item.Settings.TemplateList.value
@@ -70,7 +70,7 @@ function Push-CIPPStandard {
         Measure-CippTask -TaskName $Standard -EventName 'CIPP.StandardCompleted' -Metadata $metadata -Script {
             & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
         }
-        
+
         Write-Information "Standard $($Standard) completed for tenant $($Tenant)"
     } catch {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error running standard $($Standard) for tenant $($Tenant) - $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
