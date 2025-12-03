@@ -10,6 +10,8 @@ function Measure-CippTask {
         The scriptblock to execute and measure
     .PARAMETER Metadata
         Optional hashtable of metadata to include in telemetry (e.g., Command, Tenant, TaskInfo)
+    .PARAMETER EventName
+        Optional custom event name (default: "CIPP.TaskCompleted")
     .FUNCTIONALITY
         Internal
     .EXAMPLE
@@ -17,6 +19,13 @@ function Measure-CippTask {
             # Task logic here
         } -Metadata @{
             Command = "New-CIPPTemplateRun"
+            Tenant = "contoso.onmicrosoft.com"
+        }
+    .EXAMPLE
+        Measure-CippTask -TaskName "DisableGuests" -EventName "CIPP.StandardCompleted" -Script {
+            # Standard logic here
+        } -Metadata @{
+            Standard = "DisableGuests"
             Tenant = "contoso.onmicrosoft.com"
         }
     #>
@@ -29,7 +38,10 @@ function Measure-CippTask {
         [scriptblock]$Script,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$Metadata
+        [hashtable]$Metadata,
+
+        [Parameter(Mandatory = $false)]
+        [string]$EventName = 'CIPP.TaskCompleted'
     )
 
     # Initialize tracking variables
@@ -81,10 +93,10 @@ function Measure-CippTask {
                 $metrics['DurationMs'] = [double]$durationMs
 
                 # Send custom event to Application Insights
-                $global:TelemetryClient.TrackEvent('CIPP.TaskCompleted', $props, $metrics)
+                $global:TelemetryClient.TrackEvent($EventName, $props, $metrics)
                 $global:TelemetryClient.Flush()
 
-                Write-Verbose "Telemetry sent for task '$TaskName' (${durationMs}ms)"
+                Write-Verbose "Telemetry sent for task '$TaskName' to event '$EventName' (${durationMs}ms)"
             } catch {
                 Write-Warning "Failed to send telemetry for task '${TaskName}': $($_.Exception.Message)"
             }
