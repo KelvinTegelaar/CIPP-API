@@ -1654,7 +1654,7 @@ function Invoke-NinjaOneTenantSync {
             $ParsedAdmins = [PSCustomObject]@{}
 
             $AdminUsers | Select-Object displayname, userPrincipalName -Unique | ForEach-Object {
-                $ParsedAdmins | Add-Member -NotePropertyName $_.displayname -NotePropertyValue $_.userPrincipalName
+                $ParsedAdmins | Add-Member -NotePropertyName $_.displayname -NotePropertyValue $_.userPrincipalName -Force
             }
 
             $TenantDetailsItems = [PSCustomObject]@{
