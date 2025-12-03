@@ -69,7 +69,31 @@ function New-CippCoreRequest {
                 Write-Information "Access: $Access"
                 Write-LogMessage -headers $Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
                 if ($Access) {
-                    $Response = & $FunctionName @HttpTrigger
+                    # Prepare telemetry metadata for HTTP API call
+                    $metadata = @{
+                        Endpoint     = $Request.Params.CIPPEndpoint
+                        FunctionName = $FunctionName
+                        Method       = $Request.Method
+                        TriggerType  = 'HTTP'
+                    }
+                    
+                    # Add tenant filter if present
+                    if ($Request.Query.TenantFilter) {
+                        $metadata['Tenant'] = $Request.Query.TenantFilter
+                    } elseif ($Request.Body.TenantFilter) {
+                        $metadata['Tenant'] = $Request.Body.TenantFilter
+                    }
+                    
+                    # Add user info if available
+                    if ($Request.Headers.'x-ms-client-principal-name') {
+                        $metadata['User'] = $Request.Headers.'x-ms-client-principal-name'
+                    }
+                    
+                    # Wrap the API call execution with telemetry
+                    $Response = Measure-CippTask -TaskName $Request.Params.CIPPEndpoint -Metadata $metadata -Script {
+                        & $FunctionName @HttpTrigger
+                    }
+                    
                     # Filter to only return HttpResponseContext objects
                     $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }
                     if ($HttpResponse) {

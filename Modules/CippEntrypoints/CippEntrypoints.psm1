@@ -294,9 +294,52 @@ function Receive-CippActivityTrigger {
 
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
+            
+            # Prepare telemetry metadata
+            $taskName = if ($Item.Command) { $Item.Command } else { $FunctionName }
+            $metadata = @{
+                Command      = if ($Item.Command) { $Item.Command } else { $FunctionName }
+                FunctionName = $FunctionName
+            }
+            
+            # Add tenant information if available
+            if ($Item.TaskInfo) {
+                if ($Item.TaskInfo.Tenant) {
+                    $metadata['Tenant'] = $Item.TaskInfo.Tenant
+                }
+                if ($Item.TaskInfo.Name) {
+                    $metadata['JobName'] = $Item.TaskInfo.Name
+                }
+                if ($Item.TaskInfo.Recurrence) {
+                    $metadata['Recurrence'] = $Item.TaskInfo.Recurrence
+                }
+            }
+            
+            # Add tenant from other common fields
+            if (-not $metadata['Tenant']) {
+                if ($Item.TenantFilter) {
+                    $metadata['Tenant'] = $Item.TenantFilter
+                } elseif ($Item.Tenant) {
+                    $metadata['Tenant'] = $Item.Tenant
+                }
+            }
+            
+            # Add queue information
+            if ($Item.QueueId) {
+                $metadata['QueueId'] = $Item.QueueId
+            }
+            if ($Item.QueueName) {
+                $metadata['QueueName'] = $Item.QueueName
+            }
+            
             try {
                 Write-Warning "Activity starting Function: $FunctionName."
-                $Output = Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
+                
+                # Wrap the function execution with telemetry
+                $Output = Measure-CippTask -TaskName $taskName -Metadata $metadata -Script {
+                    Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
+                }
+                
                 Write-Warning "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
@@ -389,7 +432,31 @@ function Receive-CIPPTimerTrigger {
                 $Parameters = $Function.Parameters | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             }
 
-            $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
+            # Prepare telemetry metadata
+            $metadata = @{
+                Command    = $Function.Command
+                Cron       = $Function.Cron
+                FunctionId = $Function.Id
+                TriggerType = 'Timer'
+            }
+            
+            # Add parameters if available
+            if ($Parameters.Count -gt 0) {
+                $metadata['ParameterCount'] = $Parameters.Count
+                # Add specific known parameters
+                if ($Parameters.Tenant) {
+                    $metadata['Tenant'] = $Parameters.Tenant
+                }
+                if ($Parameters.TenantFilter) {
+                    $metadata['Tenant'] = $Parameters.TenantFilter
+                }
+            }
+
+            # Wrap the timer function execution with telemetry
+            $Results = Measure-CippTask -TaskName $Function.Command -Metadata $metadata -Script {
+                Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
+            }
+            
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results -join ','
                 $Status = 'Started'
