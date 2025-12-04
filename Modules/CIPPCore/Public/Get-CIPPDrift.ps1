@@ -35,8 +35,8 @@ function Get-CIPPDrift {
     $RawIntuneTemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter)
     $AllIntuneTemplates = $RawIntuneTemplates | ForEach-Object {
         try {
-            $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+            $JSONData = $_.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
             $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
             $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
             $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
@@ -277,7 +277,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Intune - $TenantPolicyName"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = ($TenantPolicy.Policy | ConvertTo-Json -Depth 10 -Compress)
+                        receivedValue       = $TenantPolicy.Policy | Out-String
                         state               = 'current'
                         Status              = $Status
                     }
@@ -307,7 +307,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = ($TenantCAPolicy | ConvertTo-Json -Depth 10 -Compress)
+                        receivedValue       = $TenantCAPolicy | Out-String
                         state               = 'current'
                         Status              = $Status
                     }
