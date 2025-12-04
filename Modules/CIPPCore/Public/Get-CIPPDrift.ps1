@@ -277,7 +277,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Intune - $TenantPolicyName"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = $TenantPolicy.Policy | Out-String
+                        receivedValue       = $TenantPolicy.Policy
                         state               = 'current'
                         Status              = $Status
                     }
@@ -307,7 +307,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = $TenantCAPolicy | Out-String
+                        receivedValue       = $TenantCAPolicy
                         state               = 'current'
                         Status              = $Status
                     }
