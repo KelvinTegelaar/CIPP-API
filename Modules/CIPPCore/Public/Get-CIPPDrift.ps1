@@ -347,6 +347,7 @@ function Get-CIPPDrift {
                 deniedDeviations                = @($DeniedDeviations)
                 allDeviations                   = @($AllDeviations)
                 latestDataCollection            = $Alignment.LatestDataCollection
+                driftSettings                   = $AlignmentData
             }
 
             $Results.Add($Result)

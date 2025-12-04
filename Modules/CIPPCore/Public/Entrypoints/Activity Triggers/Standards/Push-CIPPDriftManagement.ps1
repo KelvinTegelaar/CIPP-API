@@ -12,7 +12,7 @@ function Push-CippDriftManagement {
     try {
         $Drift = Get-CIPPDrift -TenantFilter $Item.Tenant
         if ($Drift.newDeviationsCount -gt 0) {
-            $Settings = (Get-CIPPTenantAlignment -TenantFilter $Item.Tenant | Where-Object -Property standardType -EQ 'drift')
+            $Settings = $Drift.driftSettings
             $email = $Settings.driftAlertEmail
             $webhook = $Settings.driftAlertWebhook
             $CippConfigTable = Get-CippTable -tablename Config
