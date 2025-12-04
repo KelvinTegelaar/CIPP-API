@@ -1852,7 +1852,7 @@ function Invoke-NinjaOneTenantSync {
                 $StandardsDefinitions = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/refs/heads/main/src/data/standards.json'
                 $AppliedStandards = Get-CIPPStandards -TenantFilter $Customer.defaultDomainName
                 $Templates = Get-CIPPTable 'templates'
-                $StandardTemplates = Get-CIPPAzDataTableEntity @Templates | Where-Object { $_.PartitionKey -eq 'StandardsTemplateV2' }
+                $StandardTemplates = Get-CIPPAzDataTableEntity @Templates -Filter "PartitionKey eq 'StandardsTemplateV2'"
 
                 $ParsedStandards = foreach ($Standard in $AppliedStandards) {
                     Write-Information "Processing Standard: $($Standard | ConvertTo-Json -Depth 10)"
