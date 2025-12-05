@@ -1,3 +1,12 @@
+# Define log level enum at script scope
+enum CippConsoleLogLevel {
+    Debug = 0
+    Verbose = 1
+    Information = 2
+    Warning = 3
+    Error = 4
+}
+
 function Enable-CippConsoleLogging {
     <#
     .SYNOPSIS
@@ -17,50 +26,38 @@ function Enable-CippConsoleLogging {
     [CmdletBinding()]
     param()
 
-    # Store the original functions
-    if (-not $global:CippOriginalWriteFunctions) {
-        $global:CippOriginalWriteFunctions = @{
-            Information = Get-Command Write-Information -CommandType Cmdlet
-            Warning     = Get-Command Write-Warning -CommandType Cmdlet
-            Error       = Get-Command Write-Error -CommandType Cmdlet
-            Verbose     = Get-Command Write-Verbose -CommandType Cmdlet
-            Debug       = Get-Command Write-Debug -CommandType Cmdlet
-            Host        = Get-Command Write-Host -CommandType Cmdlet
-        }
-    }
-
-    # Define log level enum
-    enum CippConsoleLogLevel {
-        Debug = 0
-        Verbose = 1
-        Information = 2
-        Warning = 3
-        Error = 4
-    }
-
     # Set minimum log level from environment variable (default: Information)
+    $validLevels = @('Debug', 'Verbose', 'Information', 'Warning', 'Error')
     $configuredLevel = $env:CIPP_CONSOLE_LOG_LEVEL
-    $global:CippConsoleLogMinLevel = if ($configuredLevel) {
-        try {
-            [CippConsoleLogLevel]$configuredLevel
-        } catch {
-            [CippConsoleLogLevel]::Information
-        }
+    $global:CippConsoleLogMinLevel = if ($configuredLevel -and $configuredLevel -in $validLevels) {
+        $configuredLevel
     } else {
-        [CippConsoleLogLevel]::Information
+        'Information'
     }
 
     # Helper function to send log to Application Insights
     $global:SendCippConsoleLog = {
-        param([string]$Message, [CippConsoleLogLevel]$Level)
+        param([string]$Message, [string]$Level)
 
         if ($global:TelemetryClient) {
             try {
+                # Map level names to numeric values for comparison
+                $levelMap = @{
+                    'Debug'       = 0
+                    'Verbose'     = 1
+                    'Information' = 2
+                    'Warning'     = 3
+                    'Error'       = 4
+                }
+
+                $currentLevelValue = $levelMap[$Level]
+                $minLevelValue = $levelMap[$global:CippConsoleLogMinLevel]
+
                 # Check if this level should be logged
-                if ($Level -ge $global:CippConsoleLogMinLevel) {
+                if ($currentLevelValue -ge $minLevelValue) {
                     $props = New-Object 'System.Collections.Generic.Dictionary[string,string]'
                     $props['Message'] = $Message
-                    $props['Level'] = $Level.ToString()
+                    $props['Level'] = $Level
                     $props['Timestamp'] = (Get-Date).ToString('o')
 
                     $global:TelemetryClient.TrackEvent('CIPP.ConsoleLog', $props, $null)
@@ -81,7 +78,7 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level ([CippConsoleLogLevel]::Information)
+        & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Information @PSBoundParameters
@@ -96,7 +93,7 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Warning)
+        & $global:SendCippConsoleLog -Message $Message -Level 'Warning'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Warning @PSBoundParameters
@@ -125,7 +122,7 @@ function Enable-CippConsoleLogging {
         elseif ($Exception) { $Exception.Message }
         elseif ($ErrorRecord) { $ErrorRecord.Exception.Message }
         else { 'Unknown error' }
-        & $global:SendCippConsoleLog -Message $errorMessage -Level ([CippConsoleLogLevel]::Error)
+        & $global:SendCippConsoleLog -Message $errorMessage -Level 'Error'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Error @PSBoundParameters
@@ -140,7 +137,7 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Verbose)
+        & $global:SendCippConsoleLog -Message $Message -Level 'Verbose'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Verbose @PSBoundParameters
@@ -155,7 +152,7 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Debug)
+        & $global:SendCippConsoleLog -Message $Message -Level 'Debug'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Debug @PSBoundParameters
@@ -175,7 +172,7 @@ function Enable-CippConsoleLogging {
 
         # Send to telemetry
         $message = if ($Object) { ($Object | Out-String).Trim() } else { '' }
-        & $global:SendCippConsoleLog -Message $message -Level ([CippConsoleLogLevel]::Information)
+        & $global:SendCippConsoleLog -Message $message -Level 'Information'
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Host @PSBoundParameters
