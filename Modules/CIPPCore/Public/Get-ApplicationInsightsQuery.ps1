@@ -5,8 +5,8 @@ function Get-ApplicationInsightsQuery {
         [string]$Query
     )
 
-    if (!$env:APPLICATIONINSIGHTS_CONNECTION_STRING) {
-        throw 'Application Insights not enabled for this environment.'
+    if (!$global:TelemetryClient) {
+        throw 'Application Insights is not enabled for this instance.'
     }
 
     if ($env:MSI_SECRET) {
