@@ -115,7 +115,12 @@ function Get-CIPPTenantAlignment {
             }
 
             # Check if template has tenant assignments (scope)
-            $TemplateAssignedTenants = @()
+            $TemplateAssignedTenants = Measure-CippTask -TaskName 'ResolveTenantScope' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                Tenant       = $TenantFilter
+                TemplateGUID = $Template.GUID
+                TemplateName = $Template.templateName
+            } -Script {
+            $Tenants = @()
             $AppliestoAllTenants = $false
 
             if ($Template.tenantFilter -and $Template.tenantFilter.Count -gt 0) {
@@ -131,13 +136,25 @@ function Get-CIPPTenantAlignment {
                 if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
                 } else {
-                    $TemplateAssignedTenants = $TenantValues
+                    $Tenants = $TenantValues
                 }
             } else {
                 $AppliestoAllTenants = $true
             }
+            return @{
+                Tenants             = $Tenants
+                AppliestoAllTenants = $AppliestoAllTenants
+            }
+            }
+            $AppliestoAllTenants = $TemplateAssignedTenants.AppliestoAllTenants
+            $TemplateAssignedTenants = $TemplateAssignedTenants.Tenants
 
-            $StandardsData = foreach ($StandardKey in $TemplateStandards.PSObject.Properties.Name) {
+            $StandardsData = Measure-CippTask -TaskName 'BuildStandardsData' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                Tenant       = $TenantFilter
+                TemplateGUID = $Template.GUID
+                TemplateName = $Template.templateName
+            } -Script {
+            foreach ($StandardKey in $TemplateStandards.PSObject.Properties.Name) {
                 $StandardConfig = $TemplateStandards.$StandardKey
                 $StandardId = "standards.$StandardKey"
 
@@ -207,9 +224,16 @@ function Get-CIPPTenantAlignment {
                     }
                 }
             }
+            }
 
             $AllStandards = $StandardsData.StandardId
-            $ReportingEnabledStandards = ($StandardsData | Where-Object { $_.ReportingEnabled }).StandardId
+            $ReportingEnabledStandards = Measure-CippTask -TaskName 'FilterStandardsLists' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                Tenant       = $TenantFilter
+                TemplateGUID = $Template.GUID
+                TemplateName = $Template.templateName
+            } -Script {
+            ($StandardsData | Where-Object { $_.ReportingEnabled }).StandardId
+            }
             $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
 
             foreach ($TenantName in $TenantStandards.Keys) {
@@ -220,7 +244,12 @@ function Get-CIPPTenantAlignment {
                 $AllCount = $AllStandards.Count
                 $LatestDataCollection = $null
 
-                $ComparisonTable = foreach ($StandardKey in $AllStandards) {
+                $ComparisonTable = Measure-CippTask -TaskName 'BuildComparisonTable' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                    Tenant       = $TenantName
+                    TemplateGUID = $Template.GUID
+                    TemplateName = $Template.templateName
+                } -Script {
+                foreach ($StandardKey in $AllStandards) {
                     $IsReportingDisabled = $ReportingDisabledStandards -contains $StandardKey
 
                     if ($TenantStandards[$TenantName].ContainsKey($StandardKey)) {
@@ -270,9 +299,15 @@ function Get-CIPPTenantAlignment {
                         }
                     }
                 }
+                }
 
-                $CompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Compliant' }).Count
-                $NonCompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' }).Count
+                $CompliantStandards = Measure-CippTask -TaskName 'CalculateMetrics' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                    Tenant       = $TenantName
+                    TemplateGUID = $Template.GUID
+                    TemplateName = $Template.templateName
+                } -Script {
+                ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Compliant' }).Count
+                }).Count
                 $LicenseMissingStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'License Missing' }).Count
                 $ReportingDisabledStandardsCount = ($ComparisonTable | Where-Object { $_.ReportingDisabled }).Count
 
@@ -288,7 +323,12 @@ function Get-CIPPTenantAlignment {
                     0
                 }
 
-                $Result = [PSCustomObject]@{
+                $Result = Measure-CippTask -TaskName 'BuildResultObject' -EventName 'CIPP.AlignmentStatus' -Metadata @{
+                    Tenant       = $TenantName
+                    TemplateGUID = $Template.GUID
+                    TemplateName = $Template.templateName
+                } -Script {
+                [PSCustomObject]@{
                     TenantFilter             = $TenantName
                     StandardName             = $Template.templateName
                     StandardId               = $Template.GUID
@@ -306,6 +346,7 @@ function Get-CIPPTenantAlignment {
                     ReportingDisabledCount   = $ReportingDisabledStandardsCount
                     LatestDataCollection     = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
                     ComparisonDetails        = $ComparisonTable
+                }
                 }
 
                 $Results.Add($Result)
