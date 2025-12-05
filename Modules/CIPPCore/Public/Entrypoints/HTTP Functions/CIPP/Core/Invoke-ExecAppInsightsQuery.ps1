@@ -40,7 +40,7 @@ function Invoke-ExecAppInsightsQuery {
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::InternalServerError
             Body       = @{
-                Results  = "Failed to execute Application Insights query: $($_.Exception.Message)"
+                Results  = "$($_.Exception.Message)"
                 Metadata = @{
                     Query     = $Query
                     Exception = Get-CippException -Exception $_
