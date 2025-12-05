@@ -1,86 +1,195 @@
 function Invoke-CIPPStandardIntuneTemplate {
-  <#
+    <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) IntuneTemplate
+    .SYNOPSIS
+        (Label) Intune Template
+    .DESCRIPTION
+        (Helptext) Deploy and manage Intune templates across devices.
+        (DocsDescription) Deploy and manage Intune templates across devices.
+    .NOTES
+        CAT
+            Templates
+        MULTIPLE
+            True
+        DISABLEDFEATURES
+            {"report":false,"warn":false,"remediate":false}
+        IMPACT
+            High Impact
+        ADDEDDATE
+            2023-12-30
+        EXECUTIVETEXT
+            Deploys standardized device management configurations across all corporate devices, ensuring consistent security policies, application settings, and compliance requirements. This template-based approach streamlines device management while maintaining uniform security standards across the organization.
+        ADDEDCOMPONENT
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"TemplateList","label":"Select Intune Template","api":{"queryKey":"ListIntuneTemplates-autcomplete","url":"/api/ListIntuneTemplates","labelField":"Displayname","valueField":"GUID"}}
+            {"type":"autoComplete","multiple":false,"required":false,"creatable":false,"name":"TemplateList-Tags","label":"Or select a package of Intune Templates","api":{"queryKey":"ListIntuneTemplates-tag-autcomplete","url":"/api/ListIntuneTemplates?mode=Tag","labelField":"label","valueField":"value","addedField":{"templates":"templates"}}}
+            {"name":"AssignTo","label":"Who should this template be assigned to?","type":"radio","options":[{"label":"Do not assign","value":"On"},{"label":"Assign to all users","value":"allLicensedUsers"},{"label":"Assign to all devices","value":"AllDevices"},{"label":"Assign to all users and devices","value":"AllDevicesAndUsers"},{"label":"Assign to Custom Group","value":"customGroup"}]}
+            {"type":"textField","required":false,"name":"customGroup","label":"Enter the custom group name if you selected 'Assign to Custom Group'. Wildcards are allowed."}
+            {"name":"excludeGroup","label":"Exclude Groups","type":"textField","required":false,"helpText":"Enter the group name(s) to exclude from the assignment. Wildcards are allowed. Multiple group names are comma-seperated."}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-  param($Tenant, $Settings)
-  If ($Settings.remediate) {
-        
-    Write-Host 'starting template deploy'
-    $APINAME = 'Standards'
-    foreach ($Template in $Settings.TemplateList) {
-      Write-Host 'working on template deploy'
-      try {
-        $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'IntuneTemplate'" 
-        $Request = @{body = $null }
-        $Request.body = (Get-AzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($template.value)*").JSON | ConvertFrom-Json
+    param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
+
+    if ($TestResult -eq $false) {
+        #writing to each item that the license is not present.
+        $settings.TemplateList | ForEach-Object {
+            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$($_.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        }
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+    $Table = Get-CippTable -tablename 'templates'
+    $Filter = "PartitionKey eq 'IntuneTemplate'"
+    $Request = @{body = $null }
+    Write-Host "IntuneTemplate: Starting process. Settings are: $($Settings | ConvertTo-Json -Compress)"
+    $CompareList = foreach ($Template in $Settings) {
+        Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Trying to find template"
+        $Request.body = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Template.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($null -eq $Request.body) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Template.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
+            continue
+        }
+        Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Got template."
+
         $displayname = $request.body.Displayname
         $description = $request.body.Description
         $RawJSON = $Request.body.RawJSON
-
-        switch ($Request.body.Type) {
-          'Admin' {
-            $TemplateTypeURL = 'groupPolicyConfigurations'
-            $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
-            $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
-            if ($displayname -in $CheckExististing.displayName) {
-              $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
-              $ExistingData = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/definitionValues" -tenantid $tenant
-              $DeleteJson = $RawJSON | ConvertFrom-Json -Depth 10
-              $DeleteJson.deletedIds = @($ExistingData.id)
-              $DeleteJson.added = @()
-              $DeleteJson = ConvertTo-Json -Depth 10 -InputObject $DeleteJson
-              $DeleteRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $DeleteJson
-              $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
-              Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated policy $($Displayname) to template defaults" -Sev 'info'
-
-            } else {
-              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $CreateBody
-              $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
-              Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname) to template defaults" -Sev 'info'
-
-            }
-          }
-          'Device' {
-            $TemplateTypeURL = 'deviceConfigurations'
-            $PolicyName = ($RawJSON | ConvertFrom-Json).displayName
-            $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
-            if ($PolicyName -in $CheckExististing.displayName) {
-              $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $PolicyName
-              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenant -type PATCH -body $RawJSON
-              Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated policy $($PolicyName) to template defaults" -Sev 'info'
-
-            } else { 
-              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
-              Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($PolicyName) via template" -Sev 'info'
-
-            }
-          }
-          'Catalog' {
-            $TemplateTypeURL = 'configurationPolicies'
-            $PolicyName = ($RawJSON | ConvertFrom-Json).Name
-            $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
-            if ($PolicyName -in $CheckExististing.name) {
-              $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $PolicyName
-              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenant -type PUT -body $RawJSON
-
-            } else {
-              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
-              Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($PolicyName) via template" -Sev 'info'
-            }
-          }
-
+        try {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Grabbing existing Policy"
+            $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $Request.body.Type
+        } catch {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Failed to get existing."
         }
-
-        if ($Settings.AssignTo) {
-          Write-Host "Assigning Policy to $($Settings.AssignTo) the create ID is $($CreateRequest)"
-          Set-CIPPAssignedPolicy -PolicyId $CreateRequest.id -TenantFilter $tenant -GroupName $Settings.AssignTo -Type $TemplateTypeURL
+        if ($ExistingPolicy) {
+            try {
+                Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Found existing policy."
+                $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
+                Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Grabbing JSON existing."
+                $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
+                Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Got existing JSON. Converting RawJSON to Template"
+                $JSONTemplate = $RawJSON | ConvertFrom-Json
+                Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Converted RawJSON to Template."
+                Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Comparing JSON."
+                $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $Request.body.Type -ErrorAction SilentlyContinue
+            } catch {
+                Write-Host "The compare failed. The error was: $($_.Exception.Message)"
+            }
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compared JSON: $($Compare | ConvertTo-Json -Compress)"
+        } else {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No existing policy found."
+            $compare = [pscustomobject]@{
+                MatchFailed = $true
+                Difference  = 'This policy does not exist in Intune.'
+            }
         }
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully added Intune Template policy for $($Tenant)" -sev 'Info'
-      } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template: $($_.exception.message)" -sev 'Error'
-      }
+        if ($Compare) {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
+            [PSCustomObject]@{
+                MatchFailed            = $true
+                displayname            = $displayname
+                description            = $description
+                compare                = $Compare
+                rawJSON                = $RawJSON
+                body                   = $Request.body
+                assignTo               = $Template.AssignTo
+                excludeGroup           = $Template.excludeGroup
+                remediate              = $Template.remediate
+                alert                  = $Template.alert
+                report                 = $Template.report
+                existingPolicyId       = $ExistingPolicy.id
+                templateId             = $Template.TemplateList.value
+                customGroup            = $Template.customGroup
+                assignmentFilter       = $Template.assignmentFilter
+                assignmentFilterType   = $Template.assignmentFilterType
+            }
+        } else {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No differences found."
+            [PSCustomObject]@{
+                MatchFailed            = $false
+                displayname            = $displayname
+                description            = $description
+                compare                = $false
+                rawJSON                = $RawJSON
+                body                   = $Request.body
+                assignTo               = $Template.AssignTo
+                excludeGroup           = $Template.excludeGroup
+                remediate              = $Template.remediate
+                alert                  = $Template.alert
+                report                 = $Template.report
+                existingPolicyId       = $ExistingPolicy.id
+                templateId             = $Template.TemplateList.value
+                customGroup            = $Template.customGroup
+                assignmentFilter       = $Template.assignmentFilter
+                assignmentFilterType   = $Template.assignmentFilterType
+            }
+        }
     }
-  }
+
+    if ($true -in $Settings.remediate) {
+        Write-Host 'starting template deploy'
+        foreach ($TemplateFile in $CompareList | Where-Object -Property remediate -EQ $true) {
+            Write-Host "working on template deploy: $($TemplateFile.displayname)"
+            try {
+                $TemplateFile.customGroup ? ($TemplateFile.AssignTo = $TemplateFile.customGroup) : $null
+                
+                $PolicyParams = @{
+                    TemplateType  = $TemplateFile.body.Type
+                    Description   = $TemplateFile.description
+                    DisplayName   = $TemplateFile.displayname
+                    RawJSON       = $templateFile.rawJSON
+                    AssignTo      = $TemplateFile.AssignTo
+                    ExcludeGroup  = $TemplateFile.excludeGroup
+                    tenantFilter  = $Tenant
+                }
+
+                # Add assignment filter if specified
+                if ($TemplateFile.assignmentFilter) {
+                    $PolicyParams.AssignmentFilterName = $TemplateFile.assignmentFilter
+                    $PolicyParams.AssignmentFilterType = $TemplateFile.assignmentFilterType ?? 'include'
+                }
+
+                Set-CIPPIntunePolicy @PolicyParams
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($TemplateFile.displayname), Error: $ErrorMessage" -sev 'Error'
+            }
+        }
+
+    }
+
+    if ($true -in $Settings.alert) {
+        foreach ($Template in $CompareList | Where-Object -Property alert -EQ $true) {
+            Write-Host "working on template alert: $($Template.displayname)"
+            $AlertObj = $Template | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
+            if ($Template.compare) {
+                Write-StandardsAlert -message "Template $($Template.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) does not match the expected configuration. We've generated an alert" -sev info
+            } else {
+                if ($Template.ExistingPolicyId) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) has the correct configuration." -sev Info
+                } else {
+                    Write-StandardsAlert -message "Template $($Template.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) is missing." -sev info
+                }
+            }
+        }
+    }
+
+    if ($true -in $Settings.report) {
+        foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
+            Write-Host "working on template report: $($Template.displayname)"
+            $id = $Template.templateId
+            $CompareObj = $Template.compare
+            $state = $CompareObj ? $CompareObj : $true
+            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
+        }
+        #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
+    }
 }

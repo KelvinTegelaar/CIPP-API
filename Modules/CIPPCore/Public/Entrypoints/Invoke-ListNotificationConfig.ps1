@@ -1,16 +1,12 @@
-using namespace System.Net
-
 Function Invoke-ListNotificationConfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
     $Table = Get-CIPPTable -TableName SchedulerConfig
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
     $Config = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -31,10 +27,9 @@ Function Invoke-ListNotificationConfig {
     }
     $body = [PSCustomObject]$Config
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $body
-        })
+        }
 
 }

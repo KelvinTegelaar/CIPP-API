@@ -1,7 +1,6 @@
-$Public = @(Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue)
-$Private = @(Get-ChildItem -Path $PSScriptRoot\private\*.ps1 -ErrorAction SilentlyContinue)
-$NinjaOne = @(Get-ChildItem -Path $PSScriptRoot\NinjaOne\*.ps1 -ErrorAction SilentlyContinue)
-$Functions = $Public + $Private + $NinjaOne
+$Public = @(Get-ChildItem -Path (Join-Path $PSScriptRoot "Public\*.ps1") -Recurse -ErrorAction SilentlyContinue)
+$Private = @(Get-ChildItem -Path (Join-Path $PSScriptRoot "Private\*.ps1") -Recurse -ErrorAction SilentlyContinue)
+$Functions = $Public + $Private
 foreach ($import in @($Functions)) {
     try {
         . $import.FullName

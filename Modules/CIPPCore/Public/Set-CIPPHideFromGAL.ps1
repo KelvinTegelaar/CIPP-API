@@ -1,20 +1,22 @@
 function Set-CIPPHideFromGAL {
     [CmdletBinding()]
     param (
-        $userid,
-        $tenantFilter,
-        $APIName = "Hide From Address List",
+        $UserId,
+        $TenantFilter,
+        $APIName = 'Hide From Address List',
         [bool]$HideFromGAL,
-        $ExecutingUser
+        $Headers
     )
-    $Text = if ($HideFromGAL) { "hidden" } else { "unhidden" }
+    $Text = if ($HideFromGAL) { 'hidden' } else { 'unhidden' }
     try {
-        $Request = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid ; HiddenFromAddressListsEnabled = $HideFromGAL }
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantfilter) -message "$($userid) $Text from GAL" -Sev "Info"
-        return "Successfully $Text $($userid) from GAL."
-    }
-    catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not hide $($userid) from address list" -Sev "Error" -tenant $TenantFilter
-        return "Could not hide $($userid) from address list. Error: $($_.Exception.Message)"
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserId ; HiddenFromAddressListsEnabled = $HideFromGAL }
+        $Result = "Successfully $Text $($UserId) from GAL."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev Info
+        return $Result
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Message = "Failed to set $($UserId) to $Text in GAL. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Message
     }
 }

@@ -1,38 +1,91 @@
 function Invoke-CIPPStandardintuneDeviceRetirementDays {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) intuneDeviceRetirementDays
+    .SYNOPSIS
+        (Label) Set inactive device retirement days
+    .DESCRIPTION
+        (Helptext) A value between 31 and 365 is supported. retired devices are removed from Intune after the specified number of days.
+        (DocsDescription) A value between 31 and 365 is supported. retired devices are removed from Intune after the specified number of days.
+    .NOTES
+        CAT
+            Intune Standards
+        TAG
+        EXECUTIVETEXT
+            Automatically removes inactive devices from management after a specified period, helping maintain a clean device inventory and reducing security risks from abandoned or lost devices. This policy ensures that only actively used corporate devices remain in the management system.
+        ADDEDCOMPONENT
+            {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days"}
+        IMPACT
+            Low Impact
+        ADDEDDATE
+            2023-05-19
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+            "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
+
     param($Tenant, $Settings)
-    $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -tenantid $Tenant)
-    
-    If ($Settings.remediate) {
-        
+    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceRetirementDays' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneDeviceRetirementDays'
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupRules' -tenantid $Tenant)
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneDeviceRetirementDays state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    $StateIsCorrect = if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
+
+    if ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "DeviceInactivityBeforeRetirementInDays for $($Settings.days) days is already enabled." -sev Info
         } else {
+            if ($CurrentInfo) {
+                $Type = 'Patch'
+                $id = "('$($CurrentInfo.id)')"
+            } else {
+                $Type = 'Post'
+            }
             try {
-                $body = @{ DeviceInactivityBeforeRetirementInDays = $Settings.days } | ConvertTo-Json
-                (New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -Type PATCH -Body $body -ContentType 'application/json')
+                $body = '{"displayName":"Default Policy","description":"Default Policy","deviceCleanupRulePlatformType":"all","deviceInactivityBeforeRetirementInDays":' + $Settings.days + '}'
+                (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupRules$id" -Type $Type -Body $body -ContentType 'application/json')
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DeviceInactivityBeforeRetirementInDays for $($Settings.days) days." -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DeviceInactivityBeforeRetirementInDays. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DeviceInactivityBeforeRetirementInDays. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'DeviceInactivityBeforeRetirementInDays is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'intuneDeviceRetirementDays' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is not enabled.' -sev Info
         }
     }
 
-    if ($Settings.report) {
-        $UserQuota = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
-
-        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentInfo.DeviceInactivityBeforeRetirementInDays
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRetirementDays' -FieldValue $state -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

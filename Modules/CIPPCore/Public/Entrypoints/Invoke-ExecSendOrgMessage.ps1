@@ -1,20 +1,12 @@
-using namespace System.Net
-
 Function Invoke-ExecSendOrgMessage {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Directory.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $Device = $request.query.ID
@@ -81,7 +73,7 @@ Function Invoke-ExecSendOrgMessage {
                                         }
                                     })
                             })
-                    }) 
+                    })
             }
 
         }
@@ -113,10 +105,9 @@ Function Invoke-ExecSendOrgMessage {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return [HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest)
-        })
+        }
 
 }

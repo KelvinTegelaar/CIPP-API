@@ -1,21 +1,23 @@
 function Revoke-CIPPSessions {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
-        $userid,
-        $username,
-        $APIName = "Revoke Sessions",
+        $Headers,
+        $UserID,
+        $Username,
+        $APIName = 'Revoke Sessions',
         $TenantFilter
     )
 
     try {
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Revoked sessions for $($username)" -Sev "Info" -tenant $TenantFilter
-        return "Success. All sessions by $username have been revoked"
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserID)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}' -verbose
+        $Result = "Successfully revoked sessions for $($Username)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        return $Result
 
-    }
-    catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to revoke sessions for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
-        return "Revoke Session Failed: $($_.Exception.Message)" 
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to revoke sessions for $($Username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

@@ -1,0 +1,33 @@
+{
+  "name": "CIPP Tenant Feature Licensing",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "AssignedPlans",
+      "UseExistingInfo": false,
+      "ExtractFields": ["AADPremiumService", "exchange", "SharePoint"],
+      "FrontendFields": [
+        {
+          "name": "Entra ID Premium",
+          "value": "AssignedPlans.AADPremiumService",
+          "formatter": "bool"
+        },
+        {
+          "name": "Exchange",
+          "value": "AssignedPlans.exchange",
+          "formatter": "bool"
+        },
+        {
+          "name": "SharePoint",
+          "value": "AssignedPlans.SharePoint",
+          "formatter": "bool"
+        }
+      ],
+      "desc": "Entra ID Premium Status",
+      "StoreAs": "JSON",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPTenantCapabilities",
+      "Parameters": {}
+    }
+  ]
+}

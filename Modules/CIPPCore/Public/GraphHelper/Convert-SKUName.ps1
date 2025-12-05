@@ -1,10 +1,18 @@
-function Convert-SKUname($skuname, $skuID) {
+function Convert-SKUname {
     <#
     .FUNCTIONALITY
     Internal
     #>
-    $ConvertTable = Import-Csv Conversiontable.csv
-    if ($skuname) { $ReturnedName = ($ConvertTable | Where-Object { $_.String_Id -eq $skuname } | Select-Object -Last 1).'Product_Display_Name' }
-    if ($skuID) { $ReturnedName = ($ConvertTable | Where-Object { $_.guid -eq $skuid } | Select-Object -Last 1).'Product_Display_Name' }
-    if ($ReturnedName) { return $ReturnedName } else { return $skuname, $skuID }
+    param(
+        $SkuName,
+        $SkuID,
+        $ConvertTable
+    )
+    if (!$ConvertTable) {
+        Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+        $ConvertTable = Import-Csv ConversionTable.csv
+    }
+    if ($SkuName) { $ReturnedName = ($ConvertTable | Where-Object { $_.String_Id -eq $SkuName } | Select-Object -Last 1).'Product_Display_Name' }
+    if ($SkuID) { $ReturnedName = ($ConvertTable | Where-Object { $_.guid -eq $SkuID } | Select-Object -Last 1).'Product_Display_Name' }
+    if ($ReturnedName) { return $ReturnedName } else { return $SkuName, $SkuID }
 }

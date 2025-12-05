@@ -1,13 +1,60 @@
 function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableSharePointLegacyAuth
+    .SYNOPSIS
+        (Label) Disable legacy basic authentication for SharePoint
+    .DESCRIPTION
+        (Helptext) Disables the ability to authenticate with SharePoint using legacy authentication methods. Any applications that use legacy authentication will need to be updated to use modern authentication.
+        (DocsDescription) Disables the ability for users and applications to access SharePoint via legacy basic authentication. This will likely not have any user impact, but will block systems/applications depending on basic auth or the SharePointOnlineCredentials class.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "CIS M365 5.0 (6.5.1)"
+            "CIS M365 5.0 (7.2.1)"
+            "spo_legacy_auth"
+            "CISA (MS.AAD.3.1v1)"
+            "NIST CSF 2.0 (PR.IR-01)"
+        EXECUTIVETEXT
+            Disables outdated authentication methods for SharePoint access, forcing applications and users to use modern, more secure authentication protocols. This significantly improves security by eliminating vulnerable authentication pathways while requiring updates to older applications.
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        ADDEDDATE
+            2024-02-05
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -LegacyAuthProtocolsEnabled \$false
+        RECOMMENDEDBY
+            "CIS"
+            "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
+
     param($Tenant, $Settings)
-    
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled' -tenantid $Tenant -AsApp $true
-    
-    If ($Settings.remediate) {
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableSharePointLegacyAuth' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSharePointLegacyAuth'
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled' -tenantid $Tenant -AsApp $true
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharePointLegacyAuth state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    If ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isLegacyAuthProtocolsEnabled) {
             try {
@@ -16,22 +63,25 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled SharePoint basic authentication' -sev Info
                 $CurrentInfo.isLegacyAuthProtocolsEnabled = $false
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SharePoint basic authentication. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SharePoint basic authentication. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is already disabled' -sev Info
         }
     }
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isLegacyAuthProtocolsEnabled) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Alert
+            Write-StandardsAlert -message 'SharePoint basic authentication is enabled' -object $CurrentInfo -tenant $tenant -standardName 'DisableSharePointLegacyAuth' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is disabled' -sev Info
         }
     }
-    if ($Settings.report) {
-
-        Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue [bool]$CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        $state = $CurrentInfo.isLegacyAuthProtocolsEnabled ? ($CurrentInfo | Select-Object isLegacyAuthProtocolsEnabled) : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharePointLegacyAuth' -FieldValue $state -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue $CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
     }
 }

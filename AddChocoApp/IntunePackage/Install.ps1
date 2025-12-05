@@ -13,19 +13,23 @@ param (
     $CustomRepo,
 
     [Parameter()]
+    [string]
+    $CustomArguments,
+
+    [Parameter()]
     [switch]
     $Trace
 )
 
 try {
     if ($Trace) { Start-Transcript -Path (Join-Path $env:windir "\temp\choco-$Packagename-trace.log") }
-    $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
+    $chocoPath = "$($env:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
 
     if ($InstallChoco) {
         if (-not (Test-Path $chocoPath)) {
             try {
                 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-                $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
+                $chocoPath = "$($env:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
             }
             catch {
                 Write-Host "InstallChoco Error: $($_.Exception.Message)"
@@ -36,16 +40,26 @@ try {
     try {
         $localprograms = & "$chocoPath" list --localonly
         $CustomRepoString = if ($CustomRepo) { "--source $customrepo" } else { $null }
+        $CustomArgsArray = if ($CustomArguments) { $CustomArguments -split '\s+' } else { @() }
+        
         if ($localprograms -like "*$Packagename*" ) {
             Write-Host "Upgrading $packagename"
-            & "$chocoPath" upgrade $Packagename $CustomRepoString
+            if ($CustomArgsArray.Count -gt 0) {
+                & "$chocoPath" upgrade $Packagename $CustomRepoString $CustomArgsArray
+            } else {
+                & "$chocoPath" upgrade $Packagename $CustomRepoString
+            }
         }
         else {
             Write-Host "Installing $packagename"
-            & "$chocoPath" install $Packagename -y $CustomRepoString
+            if ($CustomArgsArray.Count -gt 0) {
+                & "$chocoPath" install $Packagename -y $CustomRepoString $CustomArgsArray
+            } else {
+                & "$chocoPath" install $Packagename -y $CustomRepoString
+            }
         }
         Write-Host 'Completed.'
-    }  
+    }
     catch {
         Write-Host "Install/upgrade error: $($_.Exception.Message)"
     }

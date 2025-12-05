@@ -8,3 +8,8 @@ Cache_*
 Logs
 ExcludedTenants
 SendNotifications/config.json
+.env
+
+
+# Cursor IDE
+.cursor/rules

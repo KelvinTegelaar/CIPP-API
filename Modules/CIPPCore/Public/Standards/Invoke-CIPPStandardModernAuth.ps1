@@ -4,7 +4,7 @@ function Invoke-CIPPStandardModernAuth {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Modern Authentication is enabled by default. This standard is no longer required.' -sev Info
     }
 }

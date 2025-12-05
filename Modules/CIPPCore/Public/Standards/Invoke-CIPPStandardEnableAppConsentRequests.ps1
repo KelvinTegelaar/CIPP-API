@@ -1,12 +1,58 @@
 function Invoke-CIPPStandardEnableAppConsentRequests {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) EnableAppConsentRequests
+    .SYNOPSIS
+        (Label) Enable App consent admin requests
+    .DESCRIPTION
+        (Helptext) Enables App consent admin requests for the tenant via the GA role. Does not overwrite existing reviewer settings
+        (DocsDescription) Enables the ability for users to request admin consent for applications. Should be used in conjunction with the "Require admin consent for applications" standards
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "CIS M365 5.0 (1.5.2)"
+            "CISA (MS.AAD.9.1v1)"
+            "EIDSCA.CP04"
+            "EIDSCA.CR01"
+            "EIDSCA.CR02"
+            "EIDSCA.CR03"
+            "EIDSCA.CR04"
+            "Essential 8 (1507)"
+            "NIST CSF 2.0 (PR.AA-05)"
+        EXECUTIVETEXT
+            Establishes a formal approval process where employees can request access to business applications that require administrative review. This balances security with productivity by allowing controlled access to necessary tools while preventing unauthorized application installations.
+        ADDEDCOMPONENT
+            {"type":"AdminRolesMultiSelect","label":"App Consent Reviewer Roles","name":"standards.EnableAppConsentRequests.ReviewerRoles"}
+        IMPACT
+            Low Impact
+        ADDEDDATE
+            2023-11-27
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAdminConsentRequestPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    param($Tenant, $Settings)
-    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
 
-    If ($Settings.remediate) {
+    param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableAppConsentRequests'
+
+    try {
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableAppConsentRequests state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    If ($Settings.remediate -eq $true) {
         try {
             # Get current state
 
@@ -61,18 +107,22 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled App consent admin requests for the following roles: $RoleNames" -sev Info
 
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable App consent admin requests. Error: $($_.exception.message)" -sev Error
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable App consent admin requests. Error: $ErrorMessage" -sev Error
         }
     }
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isEnabled -eq 'true') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are disabled' -sev Alert
+            Write-StandardsAlert -message 'App consent admin requests are disabled' -object $CurrentInfo -tenant $tenant -standardName 'EnableAppConsentRequests' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are disabled' -sev Info
         }
     }
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue [bool]$CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        $state = $CurrentInfo.isEnabled ? $true : $CurrentInfo
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -FieldValue $state -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,0 +1,30 @@
+function Push-UpdateTenants {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
+    Param($Item)
+    $QueueReference = 'UpdateTenants'
+    $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+
+    $Queue = New-CippQueueEntry -Name 'Update Tenants' -Reference $QueueReference -TotalTasks 1
+    try {
+        $QueueTask = @{
+            QueueId = $Queue.RowKey
+            Name    = 'Get tenant list'
+            Status  = 'Running'
+        }
+        $TaskStatus = Set-CippQueueTask @QueueTask
+        $QueueTask.TaskId = $TaskStatus.RowKey
+        Update-CippQueueEntry -RowKey $Queue.RowKey -Status 'Running'
+        Get-Tenants -IncludeAll -TriggerRefresh | Out-Null
+        Update-CippQueueEntry -RowKey $Queue.RowKey -Status 'Completed'
+        $QueueTask.Status = 'Completed'
+        Set-CippQueueTask @QueueTask
+    } catch {
+        Write-Host "Queue Error: $($_.Exception.Message)"
+        Update-CippQueueEntry -RowKey $Queue.RowKey -Status 'Failed'
+        $QueueTask.Status = 'Failed'
+        Set-CippQueueTask @QueueTask
+    }
+}

@@ -31,18 +31,18 @@
         },
         {
           "name": "Resharing by external users",
-          "value": "isResharingByExternalUsersEnabled",
-          "formatter": "reverseBool"
+          "value": "SharepointSettings.isResharingByExternalUsersEnabled",
+          "formatter": "bool"
         },
         {
           "name": "Allow users to sync from unmanaged devices",
           "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
-          "formatter": "bool"
+          "formatter": "reverseBool"
         },
         {
-          "name": "Site creation by standards users enabled",
+          "name": "Site creation by standard users enabled",
           "value": "SharepointSettings.isSiteCreationEnabled",
-          "formatter": "reverseBool"
+          "formatter": "bool"
         },
         {
           "name": "Deleted user data rention(days)",

@@ -1,40 +1,42 @@
-using namespace System.Net
-
-Function Invoke-ListRoles {
+function Invoke-ListRoles {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Role.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $SelectList = 'id', 'displayName', 'userPrincipalName'
+    $TenantFilter = $Request.Query.tenantFilter
 
-    [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
-    $GraphRequest = foreach ($Role in $Roles) {
-	
-        #[System.Collections.Generic.List[PSCustomObject]]$Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $SelectList
-        $Members = if ($Role.members) { $role.members | ForEach-Object { " $($_.displayName) ($($_.userPrincipalName))" } } else { 'none' }
-        [PSCustomObject]@{
-            DisplayName = $Role.displayName
-            Description = $Role.description
-            Members     = $Members -join ','
+    try {
+        [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
+        $GraphRequest = foreach ($Role in $Roles) {
+            $Members = if ($Role.members) {
+                $Role.members | ForEach-Object { [PSCustomObject]@{
+                        displayName       = $_.displayName
+                        userPrincipalName = $_.userPrincipalName
+                        id                = $_.id
+                    } }
+            }
+            [PSCustomObject]@{
+                Id             = $Role.id
+                roleTemplateId = $Role.roleTemplateId
+                DisplayName    = $Role.displayName
+                Description    = $Role.description
+                Members        = @($Members)
+            }
         }
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        "Failed to list roles for tenant $TenantFilter. $($ErrorMessage.NormalizedError)"
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $GraphRequest
-        })
-
+    return [HttpResponseContext]@{
+        StatusCode = $StatusCode
+        Body       = $GraphRequest
+    }
 }

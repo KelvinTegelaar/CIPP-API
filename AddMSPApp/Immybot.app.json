@@ -7,7 +7,7 @@
   "owner": " ",
   "informationUrl": " ",
   "privacyInformationUrl": " ",
-  "fileName": "ninjarmm.intunewin",
+  "fileName": "immybot.intunewin",
   "@odata.type": "#microsoft.graph.win32LobApp",
   "applicableArchitectures": "x86, x64",
 
@@ -19,7 +19,7 @@
   "detectionRules": [
     {
       "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-      "path": "%ProgramData%\\Immyboy\\Bin",
+      "path": "%ProgramData%\\Immybot\\Bin",
       "fileOrFolderName": "Immybot.exe",
       "check32BitOn64System": false,
       "detectionType": "exists"

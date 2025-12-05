@@ -1,35 +1,27 @@
-using namespace System.Net
-
 Function Invoke-ListIntuneIntents {
-        <#
+    <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.Read
     #>
-        [CmdletBinding()]
-        param($Request, $TriggerMetadata)
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
-        $APIName = $TriggerMetadata.FunctionName
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    try {
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/Intents?`$expand=settings,categories" -tenantid $TenantFilter
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::Forbidden
+        $GraphRequest = $ErrorMessage
+    }
 
-
-        # Write to the Azure Functions log stream.
-        Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-        # Interact with query parameters or the body of the request.
-        $TenantFilter = $Request.Query.TenantFilter
-        try {
-                $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/Intents?`$expand=settings,categories" -tenantid $TenantFilter
-                $StatusCode = [HttpStatusCode]::OK
-        } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                $StatusCode = [HttpStatusCode]::Forbidden
-                $GraphRequest = $ErrorMessage
+    return [HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
         }
-
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                        StatusCode = $StatusCode
-                        Body       = @($GraphRequest)
-                })
 
 }

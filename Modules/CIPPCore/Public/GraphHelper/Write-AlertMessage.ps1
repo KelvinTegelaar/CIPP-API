@@ -1,4 +1,4 @@
-function Write-AlertMessage($message, $tenant = 'None', $tenantId = $null) {
+function Write-AlertMessage($message, $tenant = 'None', $tenantId = $null, $LogData = @{}) {
     <#
     .FUNCTIONALITY
     Internal
@@ -10,7 +10,7 @@ function Write-AlertMessage($message, $tenant = 'None', $tenantId = $null) {
     $ExistingMessage = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if (!$ExistingMessage) {
         Write-Host 'No duplicate message found, writing to log'
-        Write-LogMessage -message $message -tenant $tenant -sev 'Alert' -tenantId $tenantId -user 'CIPP' -API 'Alerts'
+        Write-LogMessage -message $message -tenant $tenant -sev 'Alert' -tenantId $tenantId -API 'Alerts' -LogData $LogData
     } else {
         Write-Host 'Alerts: Duplicate entry found, not writing to log'
 

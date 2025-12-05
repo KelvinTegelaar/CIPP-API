@@ -1,0 +1,248 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">HuduAPI</S>
+      <S N="Version">2.4.9</S>
+      <S N="Type">Module</S>
+      <S N="Description">This module provides an interface to the Hudu Rest API further information can be found at https://github.com/lwhitelock/HuduAPI</S>
+      <S N="Author">Luke Whitelock</S>
+      <Obj N="CompanyName" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>mspp</S>
+          <S>homotechsual</S>
+          <S>johnduprey</S>
+        </LST>
+      </Obj>
+      <S N="Copyright">(c) 2021 Luke Whitelock. All rights reserved.</S>
+      <DT N="PublishedDate">2024-06-30T03:42:36-04:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <Nil N="LicenseUri" />
+      <Nil N="ProjectUri" />
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="2">
+        <TNRef RefId="1" />
+        <LST>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="3">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-HuduActivityLogs</S>
+                <S>Get-HuduApiKey</S>
+                <S>Get-HuduAppInfo</S>
+                <S>Get-HuduArticles</S>
+                <S>Get-HuduAssetLayoutFieldID</S>
+                <S>Get-HuduAssetLayouts</S>
+                <S>Get-HuduAssets</S>
+                <S>Get-HuduBaseURL</S>
+                <S>Get-HuduCard</S>
+                <S>Get-HuduCompanies</S>
+                <S>Get-HuduExpirations</S>
+                <S>Get-HuduFolderMap</S>
+                <S>Get-HuduFolders</S>
+                <S>Get-HuduIntegrationMatchers</S>
+                <S>Get-HuduMagicDashes</S>
+                <S>Get-HuduObjectByUrl</S>
+                <S>Get-HuduPasswordFolders</S>
+                <S>Get-HuduPasswords</S>
+                <S>Get-HuduProcesses</S>
+                <S>Get-HuduPublicPhotos</S>
+                <S>Get-HuduRelations</S>
+                <S>Get-HuduUploads</S>
+                <S>Get-HuduWebsites</S>
+                <S>Initialize-HuduFolder</S>
+                <S>Move-HuduAssetsToNewLayout</S>
+                <S>New-HuduAPIKey</S>
+                <S>New-HuduArticle</S>
+                <S>New-HuduAsset</S>
+                <S>New-HuduAssetLayout</S>
+                <S>New-HuduBaseURL</S>
+                <S>New-HuduCompany</S>
+                <S>New-HuduCustomHeaders</S>
+                <S>New-HuduFolder</S>
+                <S>New-HuduPassword</S>
+                <S>New-HuduPublicPhoto</S>
+                <S>New-HuduRelation</S>
+                <S>New-HuduUpload</S>
+                <S>New-HuduWebsite</S>
+                <S>Remove-HuduAPIKey</S>
+                <S>Remove-HuduArticle</S>
+                <S>Remove-HuduAsset</S>
+                <S>Remove-HuduBaseURL</S>
+                <S>Remove-HuduCompany</S>
+                <S>Remove-HuduCustomHeaders</S>
+                <S>Remove-HuduMagicDash</S>
+                <S>Remove-HuduPassword</S>
+                <S>Remove-HuduRelation</S>
+                <S>Remove-HuduUpload</S>
+                <S>Remove-HuduWebsite</S>
+                <S>Set-HuduArticle</S>
+                <S>Set-HuduArticleArchive</S>
+                <S>Set-HuduAsset</S>
+                <S>Set-HuduAssetArchive</S>
+                <S>Set-HuduAssetLayout</S>
+                <S>Set-HuduCompany</S>
+                <S>Set-HuduCompanyArchive</S>
+                <S>Set-HuduFolder</S>
+                <S>Set-HuduIntegrationMatcher</S>
+                <S>Set-HuduMagicDash</S>
+                <S>Set-HuduPassword</S>
+                <S>Set-HuduPasswordArchive</S>
+                <S>Set-HuduWebsite</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-HuduActivityLogs</S>
+                <S>Get-HuduApiKey</S>
+                <S>Get-HuduAppInfo</S>
+                <S>Get-HuduArticles</S>
+                <S>Get-HuduAssetLayoutFieldID</S>
+                <S>Get-HuduAssetLayouts</S>
+                <S>Get-HuduAssets</S>
+                <S>Get-HuduBaseURL</S>
+                <S>Get-HuduCard</S>
+                <S>Get-HuduCompanies</S>
+                <S>Get-HuduExpirations</S>
+                <S>Get-HuduFolderMap</S>
+                <S>Get-HuduFolders</S>
+                <S>Get-HuduIntegrationMatchers</S>
+                <S>Get-HuduMagicDashes</S>
+                <S>Get-HuduObjectByUrl</S>
+                <S>Get-HuduPasswordFolders</S>
+                <S>Get-HuduPasswords</S>
+                <S>Get-HuduProcesses</S>
+                <S>Get-HuduPublicPhotos</S>
+                <S>Get-HuduRelations</S>
+                <S>Get-HuduUploads</S>
+                <S>Get-HuduWebsites</S>
+                <S>Initialize-HuduFolder</S>
+                <S>Move-HuduAssetsToNewLayout</S>
+                <S>New-HuduAPIKey</S>
+                <S>New-HuduArticle</S>
+                <S>New-HuduAsset</S>
+                <S>New-HuduAssetLayout</S>
+                <S>New-HuduBaseURL</S>
+                <S>New-HuduCompany</S>
+                <S>New-HuduCustomHeaders</S>
+                <S>New-HuduFolder</S>
+                <S>New-HuduPassword</S>
+                <S>New-HuduPublicPhoto</S>
+                <S>New-HuduRelation</S>
+                <S>New-HuduUpload</S>
+                <S>New-HuduWebsite</S>
+                <S>Remove-HuduAPIKey</S>
+                <S>Remove-HuduArticle</S>
+                <S>Remove-HuduAsset</S>
+                <S>Remove-HuduBaseURL</S>
+                <S>Remove-HuduCompany</S>
+                <S>Remove-HuduCustomHeaders</S>
+                <S>Remove-HuduMagicDash</S>
+                <S>Remove-HuduPassword</S>
+                <S>Remove-HuduRelation</S>
+                <S>Remove-HuduUpload</S>
+                <S>Remove-HuduWebsite</S>
+                <S>Set-HuduArticle</S>
+                <S>Set-HuduArticleArchive</S>
+                <S>Set-HuduAsset</S>
+                <S>Set-HuduAssetArchive</S>
+                <S>Set-HuduAssetLayout</S>
+                <S>Set-HuduCompany</S>
+                <S>Set-HuduCompanyArchive</S>
+                <S>Set-HuduFolder</S>
+                <S>Set-HuduIntegrationMatcher</S>
+                <S>Set-HuduMagicDash</S>
+                <S>Set-HuduPassword</S>
+                <S>Set-HuduPasswordArchive</S>
+                <S>Set-HuduWebsite</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <Nil N="ReleaseNotes" />
+      <Obj N="Dependencies" RefId="7">
+        <TNRef RefId="1" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="8">
+        <TN RefId="3">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">(c) 2021 Luke Whitelock. All rights reserved.</S>
+          <S N="description">This module provides an interface to the Hudu Rest API further information can be found at https://github.com/lwhitelock/HuduAPI</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">2653</S>
+          <S N="downloadCount">1260331</S>
+          <S N="packageSize">24052</S>
+          <S N="published">6/30/2024 3:42:36 AM -04:00</S>
+          <S N="created">6/30/2024 3:42:36 AM -04:00</S>
+          <S N="lastUpdated">7/1/2024 8:11:32 PM -04:00</S>
+          <S N="tags">PSModule PSFunction_Get-HuduActivityLogs PSCommand_Get-HuduActivityLogs PSFunction_Get-HuduApiKey PSCommand_Get-HuduApiKey PSFunction_Get-HuduAppInfo PSCommand_Get-HuduAppInfo PSFunction_Get-HuduArticles PSCommand_Get-HuduArticles PSFunction_Get-HuduAssetLayoutFieldID PSCommand_Get-HuduAssetLayoutFieldID PSFunction_Get-HuduAssetLayouts PSCommand_Get-HuduAssetLayouts PSFunction_Get-HuduAssets PSCommand_Get-HuduAssets PSFunction_Get-HuduBaseURL PSCommand_Get-HuduBaseURL PSFunction_Get-HuduCard PSCommand_Get-HuduCard PSFunction_Get-HuduCompanies PSCommand_Get-HuduCompanies PSFunction_Get-HuduExpirations PSCommand_Get-HuduExpirations PSFunction_Get-HuduFolderMap PSCommand_Get-HuduFolderMap PSFunction_Get-HuduFolders PSCommand_Get-HuduFolders PSFunction_Get-HuduIntegrationMatchers PSCommand_Get-HuduIntegrationMatchers PSFunction_Get-HuduMagicDashes PSCommand_Get-HuduMagicDashes PSFunction_Get-HuduObjectByUrl PSCommand_Get-HuduObjectByUrl PSFunction_Get-HuduPasswordFolders PSCommand_Get-HuduPasswordFolders PSFunction_Get-HuduPasswords PSCommand_Get-HuduPasswords PSFunction_Get-HuduProcesses PSCommand_Get-HuduProcesses PSFunction_Get-HuduPublicPhotos PSCommand_Get-HuduPublicPhotos PSFunction_Get-HuduRelations PSCommand_Get-HuduRelations PSFunction_Get-HuduUploads PSCommand_Get-HuduUploads PSFunction_Get-HuduWebsites PSCommand_Get-HuduWebsites PSFunction_Initialize-HuduFolder PSCommand_Initialize-HuduFolder PSFunction_Move-HuduAssetsToNewLayout PSCommand_Move-HuduAssetsToNewLayout PSFunction_New-HuduAPIKey PSCommand_New-HuduAPIKey PSFunction_New-HuduArticle PSCommand_New-HuduArticle PSFunction_New-HuduAsset PSCommand_New-HuduAsset PSFunction_New-HuduAssetLayout PSCommand_New-HuduAssetLayout PSFunction_New-HuduBaseURL PSCommand_New-HuduBaseURL PSFunction_New-HuduCompany PSCommand_New-HuduCompany PSFunction_New-HuduCustomHeaders PSCommand_New-HuduCustomHeaders PSFunction_New-HuduFolder PSCommand_New-HuduFolder PSFunction_New-HuduPassword PSCommand_New-HuduPassword PSFunction_New-HuduPublicPhoto PSCommand_New-HuduPublicPhoto PSFunction_New-HuduRelation PSCommand_New-HuduRelation PSFunction_New-HuduUpload PSCommand_New-HuduUpload PSFunction_New-HuduWebsite PSCommand_New-HuduWebsite PSFunction_Remove-HuduAPIKey PSCommand_Remove-HuduAPIKey PSFunction_Remove-HuduArticle PSCommand_Remove-HuduArticle PSFunction_Remove-HuduAsset PSCommand_Remove-HuduAsset PSFunction_Remove-HuduBaseURL PSCommand_Remove-HuduBaseURL PSFunction_Remove-HuduCompany PSCommand_Remove-HuduCompany PSFunction_Remove-HuduCustomHeaders PSCommand_Remove-HuduCustomHeaders PSFunction_Remove-HuduMagicDash PSCommand_Remove-HuduMagicDash PSFunction_Remove-HuduPassword PSCommand_Remove-HuduPassword PSFunction_Remove-HuduRelation PSCommand_Remove-HuduRelation PSFunction_Remove-HuduUpload PSCommand_Remove-HuduUpload PSFunction_Remove-HuduWebsite PSCommand_Remove-HuduWebsite PSFunction_Set-HuduArticle PSCommand_Set-HuduArticle PSFunction_Set-HuduArticleArchive PSCommand_Set-HuduArticleArchive PSFunction_Set-HuduAsset PSCommand_Set-HuduAsset PSFunction_Set-HuduAssetArchive PSCommand_Set-HuduAssetArchive PSFunction_Set-HuduAssetLayout PSCommand_Set-HuduAssetLayout PSFunction_Set-HuduCompany PSCommand_Set-HuduCompany PSFunction_Set-HuduCompanyArchive PSCommand_Set-HuduCompanyArchive PSFunction_Set-HuduFolder PSCommand_Set-HuduFolder PSFunction_Set-HuduIntegrationMatcher PSCommand_Set-HuduIntegrationMatcher PSFunction_Set-HuduMagicDash PSCommand_Set-HuduMagicDash PSFunction_Set-HuduPassword PSCommand_Set-HuduPassword PSFunction_Set-HuduPasswordArchive PSCommand_Set-HuduPasswordArchive PSFunction_Set-HuduWebsite PSCommand_Set-HuduWebsite PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2024-07-01T20:11:32Z</S>
+          <S N="NormalizedVersion">2.4.9</S>
+          <S N="Authors">Luke Whitelock</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">HuduAPI.nuspec|HuduAPI.psm1|HuduAPI.psd1</S>
+          <S N="GUID">4e0a4feb-1658-416b-b854-ab9e913a56de</S>
+          <S N="PowerShellVersion">7.0</S>
+          <S N="CompanyName">MSPP</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\GitHub\CIPP Workspace\CIPP-API\Modules\HuduAPI\2.4.9</S>
+    </MS>
+  </Obj>
+</Objs>

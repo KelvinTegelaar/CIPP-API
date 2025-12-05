@@ -1,14 +1,62 @@
 function Invoke-CIPPStandardDisableBasicAuthSMTP {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableBasicAuthSMTP
+    .SYNOPSIS
+        (Label) Disable SMTP Basic Authentication
+    .DESCRIPTION
+        (Helptext) Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)
+        (DocsDescription) Disables tenant-wide SMTP basic authentication, including for all explicitly enabled users, impacting POP and IMAP clients that rely on SMTP for sending emails. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "CIS M365 5.0 (6.5.4)"
+            "NIST CSF 2.0 (PR.IR-01)"
+        EXECUTIVETEXT
+            Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        ADDEDDATE
+            2021-11-16
+        POWERSHELLEQUIVALENT
+            Set-TransportConfig -SmtpClientAuthenticationDisabled \$true
+        RECOMMENDEDBY
+            "CIS"
+            "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    param($Tenant, $Settings)
-    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
-    $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } | Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
 
-    If ($Settings.remediate) {
-        
+    param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableBasicAuthSMTP' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        Write-Host "We're exiting as the correct license is not present for this standard."
+        return $true
+    } #we're done.
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableBasicAuthSMTP'
+
+    try {
+        $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
+
+        $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } |
+        Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
+    }
+    catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableBasicAuthSMTP state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    If ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
+
         if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is already disabled' -sev Info
         } else {
@@ -17,41 +65,57 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportConfig' -cmdParams @{ SmtpClientAuthenticationDisabled = $true }
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled SMTP Basic Authentication' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication. Error: $ErrorMessage" -sev Error
             }
-    
+
             # Disable SMTP Basic Authentication for all users
             $SMTPusers | ForEach-Object {
                 try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Identity; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress)" -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress). Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress). Error: $ErrorMessage" -sev Error
                 }
             }
         }
     }
 
-    if ($Settings.alert) {
-        if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is disabled' -sev Info
-        } else {
-            
-            if ($CurrentInfo.SmtpClientAuthenticationDisabled) {
-                $LogMessage = 'SMTP Basic Authentication for tenant is disabled. '
-            } else {
-                $LogMessage = 'SMTP Basic Authentication for tenant is not disabled. '
-            }
-            if ($SMTPusers.Count -eq 0) {
-                $LogMessage += 'SMTP Basic Authentication for all users is disabled'
-            } else {
-                $LogMessage += "SMTP Basic Authentication for $($SMTPusers.Count) users is not disabled"
-            }
-            Write-LogMessage -API 'Standards' -tenant $tenant -message $LogMessage -sev Alert
-        }
-    }
+    $LogMessage = [System.Collections.Generic.List[string]]::new()
+    if ($Settings.alert -eq $true -or $Settings.report -eq $true) {
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue [bool]$CurrentInfo.SmtpClientAuthenticationDisabled -StoreAs bool -Tenant $tenant
+        # Build the log message for use in the alert and report
+        if ($CurrentInfo.SmtpClientAuthenticationDisabled) {
+            $LogMessage.add('SMTP Basic Authentication for tenant is disabled. ')
+        } else {
+            $LogMessage.add('SMTP Basic Authentication for tenant is not disabled. ')
+        }
+        if ($SMTPusers.Count -eq 0) {
+            $LogMessage.add('SMTP Basic Authentication for all users is disabled')
+        } else {
+            $LogMessage.add("SMTP Basic Authentication for the following $($SMTPusers.Count) users is not disabled: $($SMTPusers.PrimarySmtpAddress -join ', ')")
+        }
+
+        if ($Settings.alert -eq $true) {
+
+            if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is disabled' -sev Info
+            } else {
+                Write-StandardsAlert -message ($LogMessage -join '') -object @{TenantSMTPAuthDisabled = $CurrentInfo.SmtpClientAuthenticationDisabled; UsersWithSMTPAuthEnabled = $SMTPusers.Count } -tenant $tenant -standardName 'DisableBasicAuthSMTP' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $tenant -message ($LogMessage -join '') -sev Info
+            }
+        }
+
+        if ($Settings.report -eq $true) {
+            if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
+                Set-CIPPStandardsCompareField -FieldName 'standards.DisableBasicAuthSMTP' -FieldValue $true -TenantFilter $Tenant
+                Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $CurrentInfo.SmtpClientAuthenticationDisabled -StoreAs bool -Tenant $tenant
+            } else {
+                $Logs = $LogMessage | Select-Object @{n = 'Message'; e = { $_ } }
+                Set-CIPPStandardsCompareField -FieldName 'standards.DisableBasicAuthSMTP' -FieldValue $logs -TenantFilter $Tenant
+                Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $Logs -StoreAs json -Tenant $tenant
+            }
+        }
     }
 }

@@ -1,19 +1,25 @@
-using namespace System.Net
-
-Function Invoke-ExecExtensionNinjaOneQueue {
+function Invoke-ExecExtensionNinjaOneQueue {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Extension.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-        
-
-    Switch ($QueueItem.NinjaAction) {
+    switch ($QueueItem.NinjaAction) {
         'StartAutoMapping' { Invoke-NinjaOneOrgMapping }
-        'AutoMapTenant' { Invoke-NinjaOneOrgMappingTenant -QueueItem $QueueItem } 
+        'AutoMapTenant' { Invoke-NinjaOneOrgMappingTenant -QueueItem $QueueItem }
         'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $QueueItem }
     }
 
+    $Body = [PSCustomObject]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = 'Success'
+    }
+
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    }
 }

@@ -1,0 +1,16 @@
+﻿{
+  "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
+  "entryPoint": "Receive-CippActivityTrigger",
+  "bindings": [
+    {
+      "name": "Item",
+      "type": "activityTrigger",
+      "direction": "in"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
+    }
+  ]
+}
