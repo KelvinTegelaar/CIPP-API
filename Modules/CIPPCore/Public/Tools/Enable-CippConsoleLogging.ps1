@@ -72,7 +72,7 @@ function Enable-CippConsoleLogging {
     function global:Write-Information {
         [CmdletBinding()]
         param(
-            [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
+            [Parameter(Position = 0, ValueFromPipeline)]
             [object]$MessageData,
             [string[]]$Tags
         )
