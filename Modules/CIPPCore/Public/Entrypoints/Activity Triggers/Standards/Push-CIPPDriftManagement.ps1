@@ -36,58 +36,37 @@ function Push-CippDriftManagement {
                 }
 
                 $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.Tenant -InputObject 'driftStandard' -AuditLogLink $drift.standardId
-
-                # Measure email alert sending
-                Measure-CippTask -TaskName 'DriftEmailAlert' -EventName 'CIPP.DriftStatus' -Metadata @{
-                    Tenant  = $Item.Tenant
-                    Section = 'EmailAlert'
-                } -Script {
-                    $CIPPAlert = @{
-                        Type         = 'email'
-                        Title        = $GenerateEmail.title
-                        HTMLContent  = $GenerateEmail.htmlcontent
-                        TenantFilter = $Item.Tenant
-                    }
-                    Write-Host 'Going to send the mail'
-                    Send-CIPPAlert @CIPPAlert -altEmail $email
+                $CIPPAlert = @{
+                    Type         = 'email'
+                    Title        = $GenerateEmail.title
+                    HTMLContent  = $GenerateEmail.htmlcontent
+                    TenantFilter = $Item.Tenant
                 }
-
-                # Measure webhook alert sending
-                Measure-CippTask -TaskName 'DriftWebhookAlert' -EventName 'CIPP.DriftStatus' -Metadata @{
-                    Tenant  = $Item.Tenant
-                    Section = 'WebhookAlert'
-                } -Script {
-                    $WebhookData = @{
-                        Title      = $GenerateEmail.title
-                        ActionUrl  = $GenerateEmail.ButtonUrl
-                        ActionText = $GenerateEmail.ButtonText
-                        AlertData  = $Data
-                        Tenant     = $Item.Tenant
-                    } | ConvertTo-Json -Depth 15 -Compress
-                    $CippAlert = @{
-                        Type         = 'webhook'
-                        Title        = $GenerateEmail.title
-                        JSONContent  = $WebhookData
-                        TenantFilter = $Item.Tenant
-                    }
-                    Write-Host 'Sending Webhook Content'
-                    Send-CIPPAlert @CippAlert -altWebhook $webhook
+                Write-Host 'Going to send the mail'
+                Send-CIPPAlert @CIPPAlert -altEmail $email
+                $WebhookData = @{
+                    Title      = $GenerateEmail.title
+                    ActionUrl  = $GenerateEmail.ButtonUrl
+                    ActionText = $GenerateEmail.ButtonText
+                    AlertData  = $Data
+                    Tenant     = $Item.Tenant
+                } | ConvertTo-Json -Depth 15 -Compress
+                $CippAlert = @{
+                    Type         = 'webhook'
+                    Title        = $GenerateEmail.title
+                    JSONContent  = $WebhookData
+                    TenantFilter = $Item.Tenant
                 }
-
-                # Measure PSA alert sending
-                Measure-CippTask -TaskName 'DriftPSAAlert' -EventName 'CIPP.DriftStatus' -Metadata @{
-                    Tenant  = $Item.Tenant
-                    Section = 'PSAAlert'
-                } -Script {
-                    #Always do PSA.
-                    $CIPPAlert = @{
-                        Type         = 'psa'
-                        Title        = $GenerateEmail.title
-                        HTMLContent  = $GenerateEmail.htmlcontent
-                        TenantFilter = $Item.Tenant
-                    }
-                    Send-CIPPAlert @CIPPAlert
+                Write-Host 'Sending Webhook Content'
+                Send-CIPPAlert @CippAlert -altWebhook $webhook
+                #Always do PSA.
+                $CIPPAlert = @{
+                    Type         = 'psa'
+                    Title        = $GenerateEmail.title
+                    HTMLContent  = $GenerateEmail.htmlcontent
+                    TenantFilter = $Item.Tenant
                 }
+                Send-CIPPAlert @CIPPAlert
                 return $true
             } else {
                 Write-LogMessage -API 'DriftStandards' -tenant $Item.Tenant -message "No new drift deviations found for tenant $($Item.Tenant)" -sev Info
