@@ -16,7 +16,7 @@ function Invoke-ExecAppInsightsQuery {
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
             Body       = @{
-                Error = 'No query provided in request body.'
+                Results = 'No query provided in request body.'
             }
         }
     }
