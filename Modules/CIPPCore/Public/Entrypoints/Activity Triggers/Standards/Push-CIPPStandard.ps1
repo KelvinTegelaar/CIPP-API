@@ -38,7 +38,11 @@ function Push-CIPPStandard {
         $StandardInfo.ConditionalAccessTemplateId = $Item.Settings.TemplateList.value
     }
 
-    $Script:StandardInfo = $StandardInfo
+    # Initialize AsyncLocal storage for thread-safe per-invocation context
+    if (-not $script:CippStandardInfoStorage) {
+        $script:CippStandardInfoStorage = [System.Threading.AsyncLocal[object]]::new()
+    }
+    $script:CippStandardInfoStorage.Value = $StandardInfo
 
     try {
         # Convert settings to JSON, replace %variables%, then convert back to object
@@ -51,11 +55,11 @@ function Push-CIPPStandard {
 
         # Prepare telemetry metadata for standard execution
         $metadata = @{
-            Standard       = $Standard
-            Tenant         = $Tenant
-            TemplateId     = $Item.templateId
-            FunctionName   = $FunctionName
-            TriggerType    = 'Standard'
+            Standard     = $Standard
+            Tenant       = $Tenant
+            TemplateId   = $Item.templateId
+            FunctionName = $FunctionName
+            TriggerType  = 'Standard'
         }
 
         # Add template-specific metadata
@@ -78,6 +82,8 @@ function Push-CIPPStandard {
         Write-Information $_.InvocationInfo.PositionMessage
         throw $_.Exception.Message
     } finally {
-        Remove-Variable -Name StandardInfo -Scope Script -ErrorAction SilentlyContinue
+        if ($script:CippStandardInfoStorage) {
+            $script:CippStandardInfoStorage.Value = $null
+        }
     }
 }

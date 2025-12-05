@@ -7,7 +7,11 @@ function Push-ExecScheduledCommand {
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
-    $script:ScheduledTaskId = $Item.TaskInfo.RowKey
+    # Initialize AsyncLocal storage for thread-safe per-invocation context
+    if (-not $script:CippScheduledTaskIdStorage) {
+        $script:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    }
+    $script:CippScheduledTaskIdStorage.Value = $Item.TaskInfo.RowKey
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo

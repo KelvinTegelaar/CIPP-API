@@ -14,6 +14,17 @@ try {
     Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
 }
 
+# Import modules
+@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzBobbyTables') | ForEach-Object {
+    try {
+        $Module = $_
+        Import-Module -Name $_ -ErrorAction Stop
+    } catch {
+        Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
+        $_.Exception.Message
+    }
+}
+
 # Initialize global TelemetryClient
 if (-not $global:TelemetryClient) {
     try {
@@ -36,17 +47,6 @@ if (-not $global:TelemetryClient) {
         }
     } catch {
         Write-Warning "Failed to initialize TelemetryClient: $($_.Exception.Message)"
-    }
-}
-
-# Import modules
-@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzBobbyTables') | ForEach-Object {
-    try {
-        $Module = $_
-        Import-Module -Name $_ -ErrorAction Stop
-    } catch {
-        Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
-        $_.Exception.Message
     }
 }
 

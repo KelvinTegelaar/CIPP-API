@@ -26,6 +26,11 @@ function Enable-CippConsoleLogging {
     [CmdletBinding()]
     param()
 
+    # Initialize AsyncLocal storage for InvocationId (thread-safe)
+    if (-not $script:CippInvocationIdStorage) {
+        $script:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    }
+
     # Set minimum log level from environment variable (default: Information)
     $validLevels = @('Debug', 'Verbose', 'Information', 'Warning', 'Error')
     $configuredLevel = $env:CIPP_CONSOLE_LOG_LEVEL
