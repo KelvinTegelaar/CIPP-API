@@ -101,8 +101,8 @@ function Get-CIPPDrift {
                         #if the $ComparisonItem.StandardName contains *intuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
                         if ($ComparisonItem.StandardName -like '*intuneTemplate*') {
                             $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Index 2
-                            Write-Host "Extracted GUID: $CompareGuid"
-                            $Template = $AllIntuneTemplates | Where-Object { $_.GUID -like "*$CompareGuid*" }
+                            Write-Verbose "Extracted GUID: $CompareGuid"
+                            $Template = $AllIntuneTemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
                             if ($Template) {
                                 $displayName = $Template.displayName
                                 $standardDescription = $Template.description
@@ -111,8 +111,8 @@ function Get-CIPPDrift {
                         # Handle Conditional Access templates
                         if ($ComparisonItem.StandardName -like '*ConditionalAccessTemplate*') {
                             $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Index 2
-                            Write-Host "Extracted CA GUID: $CompareGuid"
-                            $Template = $AllCATemplates | Where-Object { $_.GUID -like "*$CompareGuid*" }
+                            Write-Verbose "Extracted CA GUID: $CompareGuid"
+                            $Template = $AllCATemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
                             if ($Template) {
                                 $displayName = $Template.displayName
                                 $standardDescription = $Template.description
@@ -307,7 +307,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = $TenantCAPolicy
+                        receivedValue       = $TenantCAPolicy | Out-String
                         state               = 'current'
                         Status              = $Status
                     }
