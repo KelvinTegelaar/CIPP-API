@@ -61,7 +61,13 @@ function Get-CIPPTenantAlignment {
             Section = 'LoadStandardsData'
         } -Script {
             $StandardsTable = Get-CippTable -TableName 'CippStandardsReports'
-            Get-CIPPAzDataTableEntity @StandardsTable -Filter "PartitionKey ne 'StandardReport' and PartitionKey ne ''"
+            #this if statement is to bring down performance when running scheduled checks, we have to revisit this to a better query due to the extreme size this can get.
+            if ($TenantFilter) {
+                $filter = "PartitionKey eq '$TenantFilter'"
+            } else {
+                $filter = "PartitionKey ne 'StandardReport' and PartitionKey ne ''"
+            }
+            Get-CIPPAzDataTableEntity @StandardsTable -Filter $filter
         }
 
         # Filter by tenant if specified
