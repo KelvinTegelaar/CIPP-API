@@ -24,15 +24,15 @@ function Get-CIPPTenantAlignment {
         [Parameter(Mandatory = $false)]
         [string]$TemplateId
     )
-
+            $TemplateTable = Get-CippTable -tablename 'templates'
+            $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
     try {
         # Get all standard templates
         $Templates = Measure-CippTask -TaskName 'LoadTemplates' -EventName 'CIPP.AlignmentStatus' -Metadata @{
             Tenant  = $TenantFilter
             Section = 'LoadTemplates'
         } -Script {
-            $TemplateTable = Get-CippTable -tablename 'templates'
-            $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
+
 
             (Get-CIPPAzDataTableEntity @TemplateTable -Filter $TemplateFilter) | ForEach-Object {
                 $JSON = $_.JSON -replace '"Action":', '"action":'
