@@ -11,7 +11,7 @@ function Invoke-ExecAppInsightsQuery {
         $TriggerMetadata
     )
 
-    $Query = $Request.Body.query
+    $Query = $Request.Body.query ?? $Request.Query.query
     if (-not $Query) {
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
@@ -22,17 +22,17 @@ function Invoke-ExecAppInsightsQuery {
     }
 
     try {
-    $LogData = Get-ApplicationInsightsQuery -Query $Query
+        $LogData = Get-ApplicationInsightsQuery -Query $Query
 
-    return [HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = @{
-            Results = @($LogData)
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{
+                Results = @($LogData)
+            }
+            Metadata   = @{
+                Query = $Query
+            }
         }
-        Metadata   = @{
-            Query = $Query
-        }
-    }
 
     } catch {
         return [HttpResponseContext]@{
