@@ -35,39 +35,6 @@ function Enable-CippConsoleLogging {
         'Information'
     }
 
-    # Helper function to send log to Application Insights
-    $global:SendCippConsoleLog = {
-        param([string]$Message, [string]$Level)
-
-        if ($global:TelemetryClient) {
-            try {
-                # Map level names to numeric values for comparison
-                $levelMap = @{
-                    'Debug'       = 0
-                    'Verbose'     = 1
-                    'Information' = 2
-                    'Warning'     = 3
-                    'Error'       = 4
-                }
-
-                $currentLevelValue = $levelMap[$Level]
-                $minLevelValue = $levelMap[$global:CippConsoleLogMinLevel]
-
-                # Check if this level should be logged
-                if ($currentLevelValue -ge $minLevelValue) {
-                    $props = New-Object 'System.Collections.Generic.Dictionary[string,string]'
-                    $props['Message'] = $Message
-                    $props['Level'] = $Level
-                    $props['Timestamp'] = (Get-Date).ToString('o')
-
-                    $global:TelemetryClient.TrackEvent('CIPP.ConsoleLog', $props, $null)
-                }
-            } catch {
-                # Silently fail to avoid infinite loops
-            }
-        }
-    }
-
     # Override Write-Information
     function global:Write-Information {
         [CmdletBinding()]
@@ -77,9 +44,9 @@ function Enable-CippConsoleLogging {
             [string[]]$Tags
         )
 
-        # Send to telemetry if MessageData is string or can be converted to string and is not empty, null, or whitespace
+        # Send to telemetry
         if ($MessageData -and -not [string]::IsNullOrWhiteSpace(($MessageData | Out-String).Trim())) {
-            & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
+            Send-CippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
         }
 
         # Call original function
@@ -94,9 +61,9 @@ function Enable-CippConsoleLogging {
             [string]$Message
         )
 
-        # Send to telemetry if Message is not empty, null, or whitespace
+        # Send to telemetry
         if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
-            & $global:SendCippConsoleLog -Message $Message -Level 'Warning'
+            Send-CippConsoleLog -Message $Message -Level 'Warning'
         }
 
         # Call original function
@@ -128,7 +95,7 @@ function Enable-CippConsoleLogging {
         else { 'Unknown error' }
 
         if ($errorMessage -and -not [string]::IsNullOrWhiteSpace($errorMessage)) {
-            & $global:SendCippConsoleLog -Message $errorMessage -Level 'Error'
+            Send-CippConsoleLog -Message $errorMessage -Level 'Error'
         }
 
         # Call original function
@@ -145,7 +112,7 @@ function Enable-CippConsoleLogging {
 
         # Send to telemetry
         if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
-            & $global:SendCippConsoleLog -Message $Message -Level 'Verbose'
+            Send-CippConsoleLog -Message $Message -Level 'Verbose'
         }
 
         # Call original function
@@ -162,7 +129,7 @@ function Enable-CippConsoleLogging {
 
         # Send to telemetry
         if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
-            & $global:SendCippConsoleLog -Message $Message -Level 'Debug'
+            Send-CippConsoleLog -Message $Message -Level 'Debug'
         }
 
         # Call original function
@@ -184,7 +151,7 @@ function Enable-CippConsoleLogging {
         # Send to telemetry
         $message = if ($Object) { ($Object | Out-String).Trim() } else { '' }
         if ($message -and -not [string]::IsNullOrWhiteSpace($message)) {
-            & $global:SendCippConsoleLog -Message $message -Level 'Information'
+            Send-CippConsoleLog -Message $message -Level 'Information'
         }
 
         # Call original function
