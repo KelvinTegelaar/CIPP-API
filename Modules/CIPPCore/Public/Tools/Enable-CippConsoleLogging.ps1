@@ -77,8 +77,10 @@ function Enable-CippConsoleLogging {
             [string[]]$Tags
         )
 
-        # Send to telemetry
-        & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
+        # Send to telemetry if MessageData is string or can be converted to string and is not empty, null, or whitespace
+        if ($MessageData -and -not [string]::IsNullOrWhiteSpace(($MessageData | Out-String).Trim())) {
+            & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Information @PSBoundParameters
@@ -92,8 +94,10 @@ function Enable-CippConsoleLogging {
             [string]$Message
         )
 
-        # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level 'Warning'
+        # Send to telemetry if Message is not empty, null, or whitespace
+        if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
+            & $global:SendCippConsoleLog -Message $Message -Level 'Warning'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Warning @PSBoundParameters
@@ -122,7 +126,10 @@ function Enable-CippConsoleLogging {
         elseif ($Exception) { $Exception.Message }
         elseif ($ErrorRecord) { $ErrorRecord.Exception.Message }
         else { 'Unknown error' }
-        & $global:SendCippConsoleLog -Message $errorMessage -Level 'Error'
+
+        if ($errorMessage -and -not [string]::IsNullOrWhiteSpace($errorMessage)) {
+            & $global:SendCippConsoleLog -Message $errorMessage -Level 'Error'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Error @PSBoundParameters
@@ -137,7 +144,9 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level 'Verbose'
+        if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
+            & $global:SendCippConsoleLog -Message $Message -Level 'Verbose'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Verbose @PSBoundParameters
@@ -152,7 +161,9 @@ function Enable-CippConsoleLogging {
         )
 
         # Send to telemetry
-        & $global:SendCippConsoleLog -Message $Message -Level 'Debug'
+        if ($Message -and -not [string]::IsNullOrWhiteSpace($Message)) {
+            & $global:SendCippConsoleLog -Message $Message -Level 'Debug'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Debug @PSBoundParameters
@@ -172,7 +183,9 @@ function Enable-CippConsoleLogging {
 
         # Send to telemetry
         $message = if ($Object) { ($Object | Out-String).Trim() } else { '' }
-        & $global:SendCippConsoleLog -Message $message -Level 'Information'
+        if ($message -and -not [string]::IsNullOrWhiteSpace($message)) {
+            & $global:SendCippConsoleLog -Message $message -Level 'Information'
+        }
 
         # Call original function
         Microsoft.PowerShell.Utility\Write-Host @PSBoundParameters
