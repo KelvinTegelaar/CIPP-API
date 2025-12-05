@@ -84,7 +84,7 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message ($MessageData | Out-String).Trim() -Level ([CippConsoleLogLevel]::Information)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Information @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Information.ScriptBlock @PSBoundParameters
     }
 
     # Override Write-Warning
@@ -99,7 +99,7 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Warning)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Warning @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Warning.ScriptBlock @PSBoundParameters
     }
 
     # Override Write-Error
@@ -128,7 +128,7 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message $errorMessage -Level ([CippConsoleLogLevel]::Error)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Error @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Error.ScriptBlock @PSBoundParameters
     }
 
     # Override Write-Verbose
@@ -143,7 +143,7 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Verbose)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Verbose @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Verbose.ScriptBlock @PSBoundParameters
     }
 
     # Override Write-Debug
@@ -158,7 +158,7 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message $Message -Level ([CippConsoleLogLevel]::Debug)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Debug @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Debug.ScriptBlock @PSBoundParameters
     }
 
     # Override Write-Host
@@ -178,6 +178,6 @@ function Enable-CippConsoleLogging {
         & $global:SendCippConsoleLog -Message $message -Level ([CippConsoleLogLevel]::Information)
 
         # Call original function
-        & $global:CippOriginalWriteFunctions.Host @PSBoundParameters
+        & $global:CippOriginalWriteFunctions.Host.ScriptBlock @PSBoundParameters
     }
 }
