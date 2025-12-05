@@ -27,10 +27,10 @@ function Invoke-ExecAppInsightsQuery {
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{
-                Results = @($LogData)
-            }
-            Metadata   = @{
-                Query = $Query
+                Results  = @($LogData)
+                Metadata = @{
+                    Query = $Query
+                }
             }
         }
 
@@ -38,7 +38,11 @@ function Invoke-ExecAppInsightsQuery {
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::InternalServerError
             Body       = @{
-                Error = "Failed to execute Application Insights query: $($_.Exception.Message)"
+                Results  = "Failed to execute Application Insights query: $($_.Exception.Message)"
+                Metadata = @{
+                    Query     = $Query
+                    Exception = Get-CippException -Exception $_
+                }
             }
         }
     }
