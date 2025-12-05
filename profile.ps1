@@ -100,6 +100,17 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
     Write-Host 'Cleared GitHub release notes cache to force refresh on version update.'
 }
+
+# Enable console logging to Application Insights
+if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING) {
+    try {
+        Enable-CippConsoleLogging
+        Write-Information 'Console logging to Application Insights enabled'
+    } catch {
+        Write-Warning "Failed to enable console logging: $($_.Exception.Message)"
+    }
+}
+
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias
 
