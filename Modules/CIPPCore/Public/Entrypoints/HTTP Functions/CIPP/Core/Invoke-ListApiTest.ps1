@@ -10,6 +10,7 @@ function Invoke-ListApiTest {
 
     $Response = @{}
     $Response.Request = $Request
+    $Response.TriggerMetadata = $TriggerMetadata
     if ($env:DEBUG_ENV_VARS -eq 'true') {
         $BlockedKeys = @('ApplicationSecret', 'RefreshToken', 'AzureWebJobsStorage', 'DEPLOYMENT_STORAGE_CONNECTION_STRING')
         $EnvironmentVariables = [PSCustomObject]@{}

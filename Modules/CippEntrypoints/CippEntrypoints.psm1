@@ -332,14 +332,14 @@ function Receive-CippActivityTrigger {
             }
 
             try {
-                Write-Warning "Activity starting Function: $FunctionName."
+                Write-Verbose "Activity starting Function: $FunctionName."
 
                 # Wrap the function execution with telemetry
                 $Output = Measure-CippTask -TaskName $taskName -Metadata $metadata -Script {
                     Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
                 }
 
-                Write-Warning "Activity completed Function: $FunctionName."
+                Write-Verbose "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
                     $null = Set-CippQueueTask @QueueTask
@@ -360,7 +360,7 @@ function Receive-CippActivityTrigger {
             }
         }
     } catch {
-        Write-Information "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
+        Write-Error "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
         if ($TaskStatus) {
             $QueueTask.Status = 'Failed'
             $null = Set-CippQueueTask @QueueTask
