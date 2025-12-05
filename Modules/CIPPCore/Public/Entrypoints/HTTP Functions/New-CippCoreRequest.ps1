@@ -12,6 +12,22 @@ function New-CippCoreRequest {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
 
+    # Initialize AsyncLocal storage for thread-safe per-invocation context
+    if (-not $script:CippInvocationIdStorage) {
+        $script:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    }
+    if (-not $script:CippAllowedTenantsStorage) {
+        $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
+    }
+    if (-not $script:CippAllowedGroupsStorage) {
+        $script:CippAllowedGroupsStorage = [System.Threading.AsyncLocal[object]]::new()
+    }
+
+    # Set InvocationId in AsyncLocal storage for console logging correlation
+    if ($global:TelemetryClient -and $TriggerMetadata.InvocationId) {
+        $script:CippInvocationIdStorage.Value = $TriggerMetadata.InvocationId
+    }
+
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
 
@@ -58,11 +74,11 @@ function New-CippCoreRequest {
 
             if ($AllowedTenants -notcontains 'AllTenants') {
                 Write-Warning 'Limiting tenant access'
-                $script:AllowedTenants = $AllowedTenants
+                $script:CippAllowedTenantsStorage.Value = $AllowedTenants
             }
             if ($AllowedGroups -notcontains 'AllGroups') {
                 Write-Warning 'Limiting group access'
-                $script:AllowedGroups = $AllowedGroups
+                $script:CippAllowedGroupsStorage.Value = $AllowedGroups
             }
 
             try {

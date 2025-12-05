@@ -19,8 +19,8 @@ function Invoke-ListApiTest {
         }
         $Response.EnvironmentVariables = $EnvironmentVariables
     }
-    $Response.AllowedTenants = $script:AllowedTenants
-    $Response.AllowedGroups = $script:AllowedGroups
+    $Response.AllowedTenants = $script:CippAllowedTenantsStorage.Value
+    $Response.AllowedGroups = $script:CippAllowedGroupsStorage.Value
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
