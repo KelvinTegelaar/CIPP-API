@@ -10,7 +10,7 @@ function Get-ApplicationInsightsQuery {
     }
 
     if ($env:MSI_SECRET) {
-        Connect-AzAccount -Identity
+        $null = Connect-AzAccount -Identity
     }
 
     $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
