@@ -65,7 +65,7 @@ function Get-CIPPTenantAlignment {
 
         # Filter by tenant if specified
         $Standards = if ($TenantFilter) {
-            $AllStandards | Where-Object { $_.PartitionKey -eq $TenantFilter }
+            $AllStandards
         } else {
             $Tenants = Get-Tenants -IncludeErrors
             $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
