@@ -20,5 +20,13 @@
       "versionMatchStrategy": "Strict",
       "versionFailureStrategy": "Fail"
     }
+  },
+  "logging": {
+    "logLevel": {
+      "default": "None"
+    },
+    "console": {
+      "isEnabled": false
+    }
   }
 }
