@@ -28,13 +28,7 @@ function Get-CIPPTenantAlignment {
             $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
     try {
         # Get all standard templates
-        $Templates = Measure-CippTask -TaskName 'LoadTemplates' -EventName 'CIPP.AlignmentStatus' -Metadata @{
-            Tenant  = $TenantFilter
-            Section = 'LoadTemplates'
-        } -Script {
-
-
-            (Get-CIPPAzDataTableEntity @TemplateTable -Filter $TemplateFilter) | ForEach-Object {
+        $Templates = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $TemplateFilter) | ForEach-Object {
                 $JSON = $_.JSON -replace '"Action":', '"action":'
                 try {
                     $RowKey = $_.RowKey
@@ -48,7 +42,6 @@ function Get-CIPPTenantAlignment {
                     $Data
                 }
             }
-        }
 
         if (-not $Templates) {
             Write-Warning 'No templates found matching the criteria'
@@ -71,25 +64,16 @@ function Get-CIPPTenantAlignment {
         }
 
         # Filter by tenant if specified
-        $Standards = Measure-CippTask -TaskName 'FilterTenants' -EventName 'CIPP.AlignmentStatus' -Metadata @{
-            Tenant  = $TenantFilter
-            Section = 'FilterTenants'
-        } -Script {
-            if ($TenantFilter) {
-                $AllStandards | Where-Object { $_.PartitionKey -eq $TenantFilter }
-            } else {
-                $Tenants = Get-Tenants -IncludeErrors
-                $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
-            }
+        $Standards = if ($TenantFilter) {
+            $AllStandards | Where-Object { $_.PartitionKey -eq $TenantFilter }
+        } else {
+            $Tenants = Get-Tenants -IncludeErrors
+            $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
         }
 
         # Build tenant standards data structure
-        $TenantStandards = Measure-CippTask -TaskName 'BuildTenantData' -EventName 'CIPP.AlignmentStatus' -Metadata @{
-            Tenant  = $TenantFilter
-            Section = 'BuildTenantData'
-        } -Script {
-            $tenantData = @{}
-            foreach ($Standard in $Standards) {
+        $tenantData = @{}
+        foreach ($Standard in $Standards) {
                 $FieldName = $Standard.RowKey
                 $FieldValue = $Standard.Value
                 $Tenant = $Standard.PartitionKey
@@ -111,25 +95,20 @@ function Get-CIPPTenantAlignment {
                     $FieldValue = [string]$FieldValue
                 }
 
-                if (-not $tenantData.ContainsKey($Tenant)) {
-                    $tenantData[$Tenant] = @{}
-                }
-                $tenantData[$Tenant][$FieldName] = @{
-                    Value       = $FieldValue
-                    LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                }
+            if (-not $tenantData.ContainsKey($Tenant)) {
+                $tenantData[$Tenant] = @{}
             }
-            return $tenantData
+            $tenantData[$Tenant][$FieldName] = @{
+                Value       = $FieldValue
+                LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            }
         }
+        $TenantStandards = $tenantData
 
         $Results = [System.Collections.Generic.List[object]]::new()
 
         # Process each template against all tenants
-        Measure-CippTask -TaskName 'ProcessTemplates' -EventName 'CIPP.AlignmentStatus' -Metadata @{
-            Tenant  = $TenantFilter
-            Section = 'ProcessTemplates'
-        } -Script {
-            foreach ($Template in $Templates) {
+        foreach ($Template in $Templates) {
                 $TemplateStandards = $Template.standards
                 if (-not $TemplateStandards) {
                     continue
@@ -332,7 +311,6 @@ function Get-CIPPTenantAlignment {
                     $Results.Add($Result)
                 }
             }
-        }
 
         return $Results
     } catch {
