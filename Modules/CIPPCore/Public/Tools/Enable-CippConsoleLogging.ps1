@@ -44,13 +44,16 @@ function Enable-CippConsoleLogging {
             [string[]]$Tags
         )
 
-        # Send to telemetry
-        if ($MessageData -and -not [string]::IsNullOrWhiteSpace(($MessageData | Out-String).Trim())) {
-            Send-CippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
-        }
+        # Only process and call original if MessageData is provided
+        if ($PSBoundParameters.ContainsKey('MessageData') -and $MessageData) {
+            # Send to telemetry
+            if (-not [string]::IsNullOrWhiteSpace(($MessageData | Out-String).Trim())) {
+                Send-CippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
+            }
 
-        # Call original function
-        Microsoft.PowerShell.Utility\Write-Information @PSBoundParameters
+            # Call original function
+            Microsoft.PowerShell.Utility\Write-Information @PSBoundParameters
+        }
     }
 
     # Override Write-Warning
