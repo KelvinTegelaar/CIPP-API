@@ -5,7 +5,7 @@ function Get-ApplicationInsightsQuery {
         [string]$Query
     )
 
-    if (!$global:TelemetryClient) {
+    if (-not $env:APPLICATIONINSIGHTS_CONNECTION_STRING -and -not $env:APPINSIGHTS_INSTRUMENTATIONKEY) {
         throw 'Application Insights is not enabled for this instance.'
     }
 
