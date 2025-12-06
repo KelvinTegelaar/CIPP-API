@@ -162,7 +162,7 @@ function Get-CIPPTenantAlignment {
                                 Write-Host "Processing Intune Tag: $($Tag.value)"
                                 $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
                                 $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
-                                $TagTemplates | Where-Object -Property package -EQ $Tag.value
+                                $TagTemplate = $TagTemplates | Where-Object -Property package -EQ $Tag.value
                                 $TagTemplates | ForEach-Object {
                                     $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
                                     [PSCustomObject]@{
