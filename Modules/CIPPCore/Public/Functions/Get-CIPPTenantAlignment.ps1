@@ -226,8 +226,13 @@ function Get-CIPPTenantAlignment {
                 }
 
                 $AllStandards = $StandardsData.StandardId
+                $AllStandardsArray = @($AllStandards)
                 $ReportingEnabledStandards = ($StandardsData | Where-Object { $_.ReportingEnabled }).StandardId
                 $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
+                $ReportingDisabledSet = [System.Collections.Generic.HashSet[string]]::new($ReportingDisabledStandards)
+                $TemplateAssignedTenantsSet = if ($TemplateAssignedTenants.Count -gt 0) {
+                    [System.Collections.Generic.HashSet[string]]::new($TemplateAssignedTenants)
+                } else { $null }
 
                 foreach ($TenantName in $TenantStandards.Keys) {
                     Measure-CippTask -TaskName 'Template.ProcessTenant' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
@@ -236,146 +241,126 @@ function Get-CIPPTenantAlignment {
                         StandardsCount = $AllStandards.Count
                         AppliesToAll   = $AppliestoAllTenants
                     } -Script {
-                        Measure-CippTask -TaskName 'Template.CheckTenantScope' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
-                            TenantName = $TenantName
-                        } -Script {
-                            if (-not $AppliestoAllTenants -and $TenantName -notin $TemplateAssignedTenants) {
+                        # Step 2 & 3: Check tenant scope with HashSet and cache tenant data
+                        if (-not $AppliestoAllTenants) {
+                            if ($TemplateAssignedTenantsSet -and -not $TemplateAssignedTenantsSet.Contains($TenantName)) {
                                 return
                             }
                         }
 
                         $AllCount = $AllStandards.Count
-                        $script:LatestDataCollection = $null
+                        $LatestDataCollection = $null
+                        # Step 3: Cache hashtable lookup
+                        $CurrentTenantStandards = $TenantStandards[$TenantName]
 
-                        $ComparisonTable = Measure-CippTask -TaskName 'Template.BuildComparisonTable' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
-                            TemplateGUID   = $Template.GUID
-                            TenantName     = $TenantName
-                            StandardsCount = $AllStandards.Count
-                        } -Script {
-                            $ComparisonResults = [System.Collections.Generic.List[object]]::new()
+                        # Step 6: Pre-allocate list with capacity
+                        $ComparisonResults = [System.Collections.Generic.List[object]]::new($AllStandardsArray.Count)
 
-                            Measure-CippTask -TaskName 'Template.IterateStandards' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
-                                StandardsCount = $AllStandards.Count
-                            } -Script {
-                                foreach ($StandardKey in $AllStandards) {
-                                    Measure-CippTask -TaskName 'Template.ProcessStandard' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
-                                        StandardKey = $StandardKey
-                                    } -Script {
-                                        $IsReportingDisabled = Measure-CippTask -TaskName 'Template.CheckReportingDisabled' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                            $ReportingDisabledStandards -contains $StandardKey
-                                        }
+                        # Step 4: Use for loop instead of foreach
+                        for ($i = 0; $i -lt $AllStandardsArray.Count; $i++) {
+                            $StandardKey = $AllStandardsArray[$i]
 
-                                        $HasStandard = Measure-CippTask -TaskName 'Template.CheckHasStandard' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                            $TenantStandards[$TenantName].ContainsKey($StandardKey)
-                                        }
+                            # Step 2: Use HashSet for Contains
+                            $IsReportingDisabled = $ReportingDisabledSet.Contains($StandardKey)
+                            # Step 3: Use cached tenant data
+                            $HasStandard = $CurrentTenantStandards.ContainsKey($StandardKey)
 
-                                        if ($HasStandard) {
-                                            $StandardObject = Measure-CippTask -TaskName 'Template.GetStandardObject' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                                $TenantStandards[$TenantName][$StandardKey]
-                                            }
+                            if ($HasStandard) {
+                                $StandardObject = $CurrentTenantStandards[$StandardKey]
+                                $Value = $StandardObject.Value
 
-                                            $Value = $StandardObject.Value
-
-                                            Measure-CippTask -TaskName 'Template.UpdateLatestRefresh' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                                if ($StandardObject.LastRefresh) {
-                                                    $RefreshTime = [DateTime]::Parse($StandardObject.LastRefresh)
-                                                    if (-not $script:LatestDataCollection -or $RefreshTime -gt $script:LatestDataCollection) {
-                                                        $script:LatestDataCollection = $RefreshTime
-                                                    }
-                                                }
-                                            }
-
-                                            $IsCompliant = ($Value -eq $true)
-                                            $IsLicenseMissing = ($Value -is [string] -and $Value -like 'License Missing:*')
-
-                                            $ComplianceStatus = Measure-CippTask -TaskName 'Template.DetermineStatus' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                                if ($IsReportingDisabled) {
-                                                    'Reporting Disabled'
-                                                } elseif ($IsCompliant) {
-                                                    'Compliant'
-                                                } elseif ($IsLicenseMissing) {
-                                                    'License Missing'
-                                                } else {
-                                                    'Non-Compliant'
-                                                }
-                                            }
-
-                                            $StandardValueJson = Measure-CippTask -TaskName 'Template.ConvertToJson' -EventName 'CIPP.TenantAlignment.Profile' -Script {
-                                                $Value | ConvertTo-Json -Depth 5 -Compress
-                                            }
-
-                                            $ComparisonResults.Add([PSCustomObject]@{
-                                                    StandardName      = $StandardKey
-                                                    Compliant         = $IsCompliant
-                                                    StandardValue     = $StandardValueJson
-                                                    ComplianceStatus  = $ComplianceStatus
-                                                    ReportingDisabled = $IsReportingDisabled
-                                                })
-                                        } else {
-                                            $ComplianceStatus = if ($IsReportingDisabled) {
-                                                'Reporting Disabled'
-                                            } else {
-                                                'Non-Compliant'
-                                            }
-
-                                            $ComparisonResults.Add([PSCustomObject]@{
-                                                    StandardName      = $StandardKey
-                                                    Compliant         = $false
-                                                    StandardValue     = 'NOT FOUND'
-                                                    ComplianceStatus  = $ComplianceStatus
-                                                    ReportingDisabled = $IsReportingDisabled
-                                                })
-                                        }
+                                if ($StandardObject.LastRefresh) {
+                                    $RefreshTime = [DateTime]::Parse($StandardObject.LastRefresh)
+                                    if (-not $LatestDataCollection -or $RefreshTime -gt $LatestDataCollection) {
+                                        $LatestDataCollection = $RefreshTime
                                     }
                                 }
-                            }
 
-                            $ComparisonResults
+                                $IsCompliant = ($Value -eq $true)
+                                $IsLicenseMissing = ($Value -is [string] -and $Value -like 'License Missing:*')
+
+                                $ComplianceStatus = if ($IsReportingDisabled) {
+                                    'Reporting Disabled'
+                                } elseif ($IsCompliant) {
+                                    'Compliant'
+                                } elseif ($IsLicenseMissing) {
+                                    'License Missing'
+                                } else {
+                                    'Non-Compliant'
+                                }
+
+                                $StandardValueJson = $Value | ConvertTo-Json -Depth 5 -Compress
+
+                                $ComparisonResults.Add([PSCustomObject]@{
+                                        StandardName      = $StandardKey
+                                        Compliant         = $IsCompliant
+                                        StandardValue     = $StandardValueJson
+                                        ComplianceStatus  = $ComplianceStatus
+                                        ReportingDisabled = $IsReportingDisabled
+                                    })
+                            } else {
+                                $ComplianceStatus = if ($IsReportingDisabled) {
+                                    'Reporting Disabled'
+                                } else {
+                                    'Non-Compliant'
+                                }
+
+                                $ComparisonResults.Add([PSCustomObject]@{
+                                        StandardName      = $StandardKey
+                                        Compliant         = $false
+                                        StandardValue     = 'NOT FOUND'
+                                        ComplianceStatus  = $ComplianceStatus
+                                        ReportingDisabled = $IsReportingDisabled
+                                    })
+                            }
                         }
 
-                        Measure-CippTask -TaskName 'Template.CalculateScores' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
-                            TemplateGUID = $Template.GUID
-                            TenantName   = $TenantName
-                        } -Script {
-                            $CompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Compliant' }).Count
-                            $NonCompliantStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' }).Count
-                            $LicenseMissingStandards = ($ComparisonTable | Where-Object { $_.ComplianceStatus -eq 'License Missing' }).Count
-                            $ReportingDisabledStandardsCount = ($ComparisonTable | Where-Object { $_.ReportingDisabled }).Count
+                        # Step 5: Replace Where-Object with direct counting
+                        $CompliantStandards = 0
+                        $NonCompliantStandards = 0
+                        $LicenseMissingStandards = 0
+                        $ReportingDisabledStandardsCount = 0
 
-                            $AlignmentPercentage = if (($AllCount - $ReportingDisabledStandardsCount) -gt 0) {
-                                [Math]::Round(($CompliantStandards / ($AllCount - $ReportingDisabledStandardsCount)) * 100)
-                            } else {
-                                0
-                            }
-
-                            $LicenseMissingPercentage = if ($AllCount -gt 0) {
-                                [Math]::Round(($LicenseMissingStandards / $AllCount) * 100)
-                            } else {
-                                0
-                            }
-
-                            $Result = [PSCustomObject]@{
-                                TenantFilter             = $TenantName
-                                StandardName             = $Template.templateName
-                                StandardId               = $Template.GUID
-                                standardType             = $Template.type
-                                standardSettings         = $Template.Standards
-                                driftAlertEmail          = $Template.driftAlertEmail
-                                driftAlertWebhook        = $Template.driftAlertWebhook
-                                AlignmentScore           = $AlignmentPercentage
-                                LicenseMissingPercentage = $LicenseMissingPercentage
-                                CombinedScore            = $AlignmentPercentage + $LicenseMissingPercentage
-                                CompliantStandards       = $CompliantStandards
-                                NonCompliantStandards    = $NonCompliantStandards
-                                LicenseMissingStandards  = $LicenseMissingStandards
-                                TotalStandards           = $AllCount
-                                ReportingDisabledCount   = $ReportingDisabledStandardsCount
-                                LatestDataCollection     = if ($script:LatestDataCollection) { $script:LatestDataCollection } else { $null }
-                                ComparisonDetails        = $ComparisonTable
-                            }
-
-                            $Results.Add($Result)
+                        foreach ($item in $ComparisonResults) {
+                            if ($item.ComplianceStatus -eq 'Compliant') { $CompliantStandards++ }
+                            elseif ($item.ComplianceStatus -eq 'Non-Compliant') { $NonCompliantStandards++ }
+                            elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
+                            if ($item.ReportingDisabled) { $ReportingDisabledStandardsCount++ }
                         }
+
+                        $AlignmentPercentage = if (($AllCount - $ReportingDisabledStandardsCount) -gt 0) {
+                            [Math]::Round(($CompliantStandards / ($AllCount - $ReportingDisabledStandardsCount)) * 100)
+                        } else {
+                            0
+                        }
+
+                        $LicenseMissingPercentage = if ($AllCount -gt 0) {
+                            [Math]::Round(($LicenseMissingStandards / $AllCount) * 100)
+                        } else {
+                            0
+                        }
+
+                        $Result = [PSCustomObject]@{
+                            TenantFilter             = $TenantName
+                            StandardName             = $Template.templateName
+                            StandardId               = $Template.GUID
+                            standardType             = $Template.type
+                            standardSettings         = $Template.Standards
+                            driftAlertEmail          = $Template.driftAlertEmail
+                            driftAlertWebhook        = $Template.driftAlertWebhook
+                            AlignmentScore           = $AlignmentPercentage
+                            LicenseMissingPercentage = $LicenseMissingPercentage
+                            CombinedScore            = $AlignmentPercentage + $LicenseMissingPercentage
+                            CompliantStandards       = $CompliantStandards
+                            NonCompliantStandards    = $NonCompliantStandards
+                            LicenseMissingStandards  = $LicenseMissingStandards
+                            TotalStandards           = $AllCount
+                            ReportingDisabledCount   = $ReportingDisabledStandardsCount
+                            LatestDataCollection     = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
+                            ComparisonDetails        = $ComparisonResults
+                        }
+
+                        $Results.Add($Result)
                     }
                 }
             }
