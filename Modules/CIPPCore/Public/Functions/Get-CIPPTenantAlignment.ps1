@@ -29,7 +29,7 @@ function Get-CIPPTenantAlignment {
     try {
         # Get all standard templates
         $Templates = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $TemplateFilter) | ForEach-Object {
-            $JSON = $_.JSON -replace '"Action":', '"action":'
+            $JSON = $_.JSON
             try {
                 $RowKey = $_.RowKey
                 $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
@@ -65,7 +65,7 @@ function Get-CIPPTenantAlignment {
             $Tenants = Get-Tenants -IncludeErrors
             $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
         }
-
+        $TagTemplates = Get-CIPPAzDataTableEntity @TemplateTable
         # Build tenant standards data structure
         $tenantData = @{}
         foreach ($Standard in $Standards) {
@@ -76,18 +76,12 @@ function Get-CIPPTenantAlignment {
             # Process field value
             if ($FieldValue -is [System.Boolean]) {
                 $FieldValue = [bool]$FieldValue
-            } elseif (Test-Json -Json $FieldValue -ErrorAction SilentlyContinue) {
-                try {
-                    $FieldValue = ConvertFrom-Json -Depth 100 -InputObject $FieldValue -ErrorAction Stop
-                } catch {
-                    Write-Warning "$($FieldName) standard report could not be loaded: $($_.Exception.Message)"
-                    $FieldValue = [PSCustomObject]@{
-                        Error         = "Invalid JSON format: $($_.Exception.Message)"
-                        OriginalValue = $FieldValue
-                    }
-                }
             } else {
-                $FieldValue = [string]$FieldValue
+                try {
+                    $FieldValue = ConvertFrom-Json -Depth 5 -InputObject $FieldValue -ErrorAction Stop
+                } catch {
+                    $FieldValue = [string]$FieldValue
+                }
             }
 
             if (-not $tenantData.ContainsKey($Tenant)) {
@@ -181,6 +175,7 @@ function Get-CIPPTenantAlignment {
                                         ReportingEnabled = $IntuneReportingEnabled
                                     }
                                 }
+
                                 if ($IntuneTemplate.'TemplateList-Tags') {
                                     foreach ($Tag in $IntuneTemplate.'TemplateList-Tags') {
                                         Measure-CippTask -TaskName 'Template.ProcessIntuneTag' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
@@ -189,8 +184,8 @@ function Get-CIPPTenantAlignment {
                                             Write-Host "Processing Intune Tag: $($Tag.value)"
                                             $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
                                             $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
-                                            $TemplatesList = Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter | Where-Object -Property package -EQ $Tag.value
-                                            $TemplatesList | ForEach-Object {
+                                            $TagTemplates | Where-Object -Property package -EQ $Tag.value
+                                            $TagTemplates | ForEach-Object {
                                                 $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
                                                 [PSCustomObject]@{
                                                     StandardId       = $TagStandardId
