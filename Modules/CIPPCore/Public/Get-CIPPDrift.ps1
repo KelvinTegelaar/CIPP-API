@@ -210,6 +210,7 @@ function Get-CIPPDrift {
             }
 
             # Perform full policy collection
+            $TenantIntunePolicies = @()
             if ($IntuneCapable) {
                 $TenantIntunePolicies = Measure-CippTask -TaskName 'CollectIntunePolicies' -EventName 'CIPP.GetDriftProfile' -Metadata @{
                     Tenant  = $TenantFilter
@@ -287,6 +288,7 @@ function Get-CIPPDrift {
                 }
             }
             # Get Conditional Access policies
+            $TenantCAPolicies = @()
             if ($ConditionalAccessCapable) {
                 $TenantCAPolicies = Measure-CippTask -TaskName 'CollectCAPolicies' -EventName 'CIPP.GetDriftProfile' -Metadata @{
                     Tenant  = $TenantFilter
@@ -351,41 +353,45 @@ function Get-CIPPDrift {
             }
 
             # Check for extra Intune policies not in template
-            $IntunePolicyDeviations = Measure-CippTask -TaskName 'DetectIntuneDrift' -EventName 'CIPP.GetDriftProfile' -Metadata @{
-                Tenant  = $TenantFilter
-                Command = 'Get-CIPPDrift'
-                Section = 'PolicyDriftDetection'
-            } -Script {
-                $Deviations = [System.Collections.Generic.List[object]]::new()
-                foreach ($TenantPolicy in $TenantIntunePolicies) {
-                    $tenantPolicy.policy | Add-Member -MemberType NoteProperty -Name 'URLName' -Value $TenantPolicy.Type -Force
-                    $TenantPolicyName = if ($TenantPolicy.Policy.displayName) { $TenantPolicy.Policy.displayName } else { $TenantPolicy.Policy.name }
+            if ($IntuneCapable -and $TenantIntunePolicies.Count -gt 0) {
+                $IntunePolicyDeviations = Measure-CippTask -TaskName 'DetectIntuneDrift' -EventName 'CIPP.GetDriftProfile' -Metadata @{
+                    Tenant  = $TenantFilter
+                    Command = 'Get-CIPPDrift'
+                    Section = 'PolicyDriftDetection'
+                } -Script {
+                    $Deviations = [System.Collections.Generic.List[object]]::new()
+                    foreach ($TenantPolicy in $TenantIntunePolicies) {
+                        $tenantPolicy.policy | Add-Member -MemberType NoteProperty -Name 'URLName' -Value $TenantPolicy.Type -Force
+                        $TenantPolicyName = if ($TenantPolicy.Policy.displayName) { $TenantPolicy.Policy.displayName } else { $TenantPolicy.Policy.name }
 
-                    # Use hashtable lookup instead of nested loop - check for null to avoid ContainsKey errors
-                    $PolicyFound = ($TenantPolicy.Policy.displayName -and $TemplatePolicyLookup.ContainsKey($TenantPolicy.Policy.displayName)) -or
-                    ($TenantPolicy.Policy.name -and $TemplatePolicyLookup.ContainsKey($TenantPolicy.Policy.name))
+                        # Use hashtable lookup instead of nested loop - check for null to avoid ContainsKey errors
+                        $PolicyFound = ($TenantPolicy.Policy.displayName -and $TemplatePolicyLookup.ContainsKey($TenantPolicy.Policy.displayName)) -or
+                        ($TenantPolicy.Policy.name -and $TemplatePolicyLookup.ContainsKey($TenantPolicy.Policy.name))
 
-                    if (-not $PolicyFound) {
-                        $PolicyKey = "IntuneTemplates.$($TenantPolicy.Policy.id)"
-                        $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
-                            $ExistingDriftStates[$PolicyKey].Status
-                        } else {
-                            'New'
+                        if (-not $PolicyFound) {
+                            $PolicyKey = "IntuneTemplates.$($TenantPolicy.Policy.id)"
+                            $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
+                                $ExistingDriftStates[$PolicyKey].Status
+                            } else {
+                                'New'
+                            }
+                            $PolicyDeviation = [PSCustomObject]@{
+                                standardName        = $PolicyKey
+                                standardDisplayName = "Intune - $TenantPolicyName"
+                                expectedValue       = 'This policy only exists in the tenant, not in the template.'
+                                receivedValue       = $TenantPolicy.Policy
+                                state               = 'current'
+                                Status              = $Status
+                            }
+                            $Deviations.Add($PolicyDeviation)
                         }
-                        $PolicyDeviation = [PSCustomObject]@{
-                            standardName        = $PolicyKey
-                            standardDisplayName = "Intune - $TenantPolicyName"
-                            expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                            receivedValue       = $TenantPolicy.Policy
-                            state               = 'current'
-                            Status              = $Status
-                        }
-                        $Deviations.Add($PolicyDeviation)
                     }
+                    $Deviations
                 }
-                $Deviations
+                if ($IntunePolicyDeviations) {
+                    $PolicyDeviations.AddRange($IntunePolicyDeviations)
+                }
             }
-            $PolicyDeviations.AddRange($IntunePolicyDeviations)
 
             # Build hashtable lookup for template CA policies
             $TemplateCALookup = @{}
@@ -396,37 +402,41 @@ function Get-CIPPDrift {
             }
 
             # Check for extra Conditional Access policies not in template
-            $CAPolicyDeviations = Measure-CippTask -TaskName 'DetectCADrift' -EventName 'CIPP.GetDriftProfile' -Metadata @{
-                Tenant  = $TenantFilter
-                Command = 'Get-CIPPDrift'
-                Section = 'PolicyDriftDetection'
-            } -Script {
-                $Deviations = [System.Collections.Generic.List[object]]::new()
-                foreach ($TenantCAPolicy in $TenantCAPolicies) {
-                    # Use hashtable lookup instead of nested loop
-                    $PolicyFound = $TemplateCALookup.ContainsKey($TenantCAPolicy.displayName)
+            if ($ConditionalAccessCapable -and $TenantCAPolicies.Count -gt 0) {
+                $CAPolicyDeviations = Measure-CippTask -TaskName 'DetectCADrift' -EventName 'CIPP.GetDriftProfile' -Metadata @{
+                    Tenant  = $TenantFilter
+                    Command = 'Get-CIPPDrift'
+                    Section = 'PolicyDriftDetection'
+                } -Script {
+                    $Deviations = [System.Collections.Generic.List[object]]::new()
+                    foreach ($TenantCAPolicy in $TenantCAPolicies) {
+                        # Use hashtable lookup instead of nested loop
+                        $PolicyFound = $TemplateCALookup.ContainsKey($TenantCAPolicy.displayName)
 
-                    if (-not $PolicyFound) {
-                        $PolicyKey = "ConditionalAccessTemplates.$($TenantCAPolicy.id)"
-                        $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
-                            $ExistingDriftStates[$PolicyKey].Status
-                        } else {
-                            'New'
+                        if (-not $PolicyFound) {
+                            $PolicyKey = "ConditionalAccessTemplates.$($TenantCAPolicy.id)"
+                            $Status = if ($ExistingDriftStates.ContainsKey($PolicyKey)) {
+                                $ExistingDriftStates[$PolicyKey].Status
+                            } else {
+                                'New'
+                            }
+                            $PolicyDeviation = [PSCustomObject]@{
+                                standardName        = $PolicyKey
+                                standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
+                                expectedValue       = 'This policy only exists in the tenant, not in the template.'
+                                receivedValue       = $TenantCAPolicy | Out-String
+                                state               = 'current'
+                                Status              = $Status
+                            }
+                            $Deviations.Add($PolicyDeviation)
                         }
-                        $PolicyDeviation = [PSCustomObject]@{
-                            standardName        = $PolicyKey
-                            standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
-                            expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                            receivedValue       = $TenantCAPolicy | Out-String
-                            state               = 'current'
-                            Status              = $Status
-                        }
-                        $Deviations.Add($PolicyDeviation)
                     }
+                    $Deviations
                 }
-                $Deviations
+                if ($CAPolicyDeviations) {
+                    $PolicyDeviations.AddRange($CAPolicyDeviations)
+                }
             }
-            $PolicyDeviations.AddRange($CAPolicyDeviations)
 
             # Combine all deviations and filter by status
             $DeviationGroups = Measure-CippTask -TaskName 'GroupDeviations' -EventName 'CIPP.GetDriftProfile' -Metadata @{
