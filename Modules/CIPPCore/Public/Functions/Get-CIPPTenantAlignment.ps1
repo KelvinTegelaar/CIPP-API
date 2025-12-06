@@ -236,69 +236,101 @@ function Get-CIPPTenantAlignment {
                         StandardsCount = $AllStandards.Count
                         AppliesToAll   = $AppliestoAllTenants
                     } -Script {
-                        if (-not $AppliestoAllTenants -and $TenantName -notin $TemplateAssignedTenants) {
-                            return
+                        Measure-CippTask -TaskName 'Template.CheckTenantScope' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
+                            TenantName = $TenantName
+                        } -Script {
+                            if (-not $AppliestoAllTenants -and $TenantName -notin $TemplateAssignedTenants) {
+                                return
+                            }
                         }
 
                         $AllCount = $AllStandards.Count
-                        $LatestDataCollection = $null
+                        $script:LatestDataCollection = $null
 
                         $ComparisonTable = Measure-CippTask -TaskName 'Template.BuildComparisonTable' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
                             TemplateGUID   = $Template.GUID
                             TenantName     = $TenantName
                             StandardsCount = $AllStandards.Count
                         } -Script {
-                            foreach ($StandardKey in $AllStandards) {
-                                $IsReportingDisabled = $ReportingDisabledStandards -contains $StandardKey
+                            $ComparisonResults = [System.Collections.Generic.List[object]]::new()
 
-                                if ($TenantStandards[$TenantName].ContainsKey($StandardKey)) {
-                                    $StandardObject = $TenantStandards[$TenantName][$StandardKey]
-                                    $Value = $StandardObject.Value
-
-                                    if ($StandardObject.LastRefresh) {
-                                        $RefreshTime = [DateTime]::Parse($StandardObject.LastRefresh)
-                                        if (-not $LatestDataCollection -or $RefreshTime -gt $LatestDataCollection) {
-                                            $LatestDataCollection = $RefreshTime
+                            Measure-CippTask -TaskName 'Template.IterateStandards' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
+                                StandardsCount = $AllStandards.Count
+                            } -Script {
+                                foreach ($StandardKey in $AllStandards) {
+                                    Measure-CippTask -TaskName 'Template.ProcessStandard' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
+                                        StandardKey = $StandardKey
+                                    } -Script {
+                                        $IsReportingDisabled = Measure-CippTask -TaskName 'Template.CheckReportingDisabled' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                            $ReportingDisabledStandards -contains $StandardKey
                                         }
-                                    }
 
-                                    $IsCompliant = ($Value -eq $true)
-                                    $IsCompliant = ($Value -eq $true)
-                                    $IsLicenseMissing = ($Value -is [string] -and $Value -like 'License Missing:*')
+                                        $HasStandard = Measure-CippTask -TaskName 'Template.CheckHasStandard' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                            $TenantStandards[$TenantName].ContainsKey($StandardKey)
+                                        }
 
-                                    if ($IsReportingDisabled) {
-                                        $ComplianceStatus = 'Reporting Disabled'
-                                    } elseif ($IsCompliant) {
-                                        $ComplianceStatus = 'Compliant'
-                                    } elseif ($IsLicenseMissing) {
-                                        $ComplianceStatus = 'License Missing'
-                                    } else {
-                                        $ComplianceStatus = 'Non-Compliant'
-                                    }
+                                        if ($HasStandard) {
+                                            $StandardObject = Measure-CippTask -TaskName 'Template.GetStandardObject' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                                $TenantStandards[$TenantName][$StandardKey]
+                                            }
 
-                                    [PSCustomObject]@{
-                                        StandardName      = $StandardKey
-                                        Compliant         = $IsCompliant
-                                        StandardValue     = ($Value | ConvertTo-Json -Depth 100 -Compress)
-                                        ComplianceStatus  = $ComplianceStatus
-                                        ReportingDisabled = $IsReportingDisabled
-                                    }
-                                } else {
-                                    if ($IsReportingDisabled) {
-                                        $ComplianceStatus = 'Reporting Disabled'
-                                    } else {
-                                        $ComplianceStatus = 'Non-Compliant'
-                                    }
+                                            $Value = $StandardObject.Value
 
-                                    [PSCustomObject]@{
-                                        StandardName      = $StandardKey
-                                        Compliant         = $false
-                                        StandardValue     = 'NOT FOUND'
-                                        ComplianceStatus  = $ComplianceStatus
-                                        ReportingDisabled = $IsReportingDisabled
+                                            Measure-CippTask -TaskName 'Template.UpdateLatestRefresh' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                                if ($StandardObject.LastRefresh) {
+                                                    $RefreshTime = [DateTime]::Parse($StandardObject.LastRefresh)
+                                                    if (-not $script:LatestDataCollection -or $RefreshTime -gt $script:LatestDataCollection) {
+                                                        $script:LatestDataCollection = $RefreshTime
+                                                    }
+                                                }
+                                            }
+
+                                            $IsCompliant = ($Value -eq $true)
+                                            $IsLicenseMissing = ($Value -is [string] -and $Value -like 'License Missing:*')
+
+                                            $ComplianceStatus = Measure-CippTask -TaskName 'Template.DetermineStatus' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                                if ($IsReportingDisabled) {
+                                                    'Reporting Disabled'
+                                                } elseif ($IsCompliant) {
+                                                    'Compliant'
+                                                } elseif ($IsLicenseMissing) {
+                                                    'License Missing'
+                                                } else {
+                                                    'Non-Compliant'
+                                                }
+                                            }
+
+                                            $StandardValueJson = Measure-CippTask -TaskName 'Template.ConvertToJson' -EventName 'CIPP.TenantAlignment.Profile' -Script {
+                                                $Value | ConvertTo-Json -Depth 5 -Compress
+                                            }
+
+                                            $ComparisonResults.Add([PSCustomObject]@{
+                                                    StandardName      = $StandardKey
+                                                    Compliant         = $IsCompliant
+                                                    StandardValue     = $StandardValueJson
+                                                    ComplianceStatus  = $ComplianceStatus
+                                                    ReportingDisabled = $IsReportingDisabled
+                                                })
+                                        } else {
+                                            $ComplianceStatus = if ($IsReportingDisabled) {
+                                                'Reporting Disabled'
+                                            } else {
+                                                'Non-Compliant'
+                                            }
+
+                                            $ComparisonResults.Add([PSCustomObject]@{
+                                                    StandardName      = $StandardKey
+                                                    Compliant         = $false
+                                                    StandardValue     = 'NOT FOUND'
+                                                    ComplianceStatus  = $ComplianceStatus
+                                                    ReportingDisabled = $IsReportingDisabled
+                                                })
+                                        }
                                     }
                                 }
                             }
+
+                            $ComparisonResults
                         }
 
                         Measure-CippTask -TaskName 'Template.CalculateScores' -EventName 'CIPP.TenantAlignment.Profile' -Metadata @{
@@ -338,7 +370,7 @@ function Get-CIPPTenantAlignment {
                                 LicenseMissingStandards  = $LicenseMissingStandards
                                 TotalStandards           = $AllCount
                                 ReportingDisabledCount   = $ReportingDisabledStandardsCount
-                                LatestDataCollection     = if ($LatestDataCollection) { $LatestDataCollection } else { $null }
+                                LatestDataCollection     = if ($script:LatestDataCollection) { $script:LatestDataCollection } else { $null }
                                 ComparisonDetails        = $ComparisonTable
                             }
 
