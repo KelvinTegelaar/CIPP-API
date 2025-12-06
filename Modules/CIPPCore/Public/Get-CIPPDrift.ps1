@@ -424,14 +424,14 @@ function Get-CIPPDrift {
 
         # Output timing summary
         $OverallStopwatch.Stop()
-        Write-Information '=== Get-CIPPDrift Performance Summary ===' -ForegroundColor Cyan
-        Write-Information "Total execution time: $($OverallStopwatch.ElapsedMilliseconds)ms" -ForegroundColor Green
-        Write-Information "`nSection timings:" -ForegroundColor Cyan
+        Write-Information '=== Get-CIPPDrift Performance Summary ==='
+        Write-Information "Total execution time: $($OverallStopwatch.ElapsedMilliseconds)ms"
+        Write-Information "`nSection timings:"
         foreach ($Section in $SectionTimings.GetEnumerator() | Sort-Object Value -Descending) {
             $Percentage = [math]::Round(($Section.Value / $OverallStopwatch.ElapsedMilliseconds) * 100, 2)
-            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)" -ForegroundColor Yellow
+            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
         }
-        Write-Information "========================================`n" -ForegroundColor Cyan
+        Write-Information "========================================`n"
 
         return @($Results)
 
