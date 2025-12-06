@@ -216,7 +216,7 @@ function Get-CIPPDrift {
                     $CARequests = @(
                         @{
                             id     = 'policies'
-                            url    = 'identity/conditionalAccess/policies'
+                            url    = 'identity/conditionalAccess/policies?$top=999'
                             method = 'GET'
                         }
                     )
