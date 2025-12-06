@@ -146,47 +146,47 @@ function Get-CIPPDrift {
                 $IntuneRequests = @(
                     @{
                         id     = 'deviceAppManagement/managedAppPolicies'
-                        url    = 'deviceAppManagement/managedAppPolicies'
+                        url    = 'deviceAppManagement/managedAppPolicies?$top=999'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/deviceCompliancePolicies'
-                        url    = 'deviceManagement/deviceCompliancePolicies'
+                        url    = 'deviceManagement/deviceCompliancePolicies?$top=999'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/groupPolicyConfigurations'
-                        url    = 'deviceManagement/groupPolicyConfigurations'
+                        url    = 'deviceManagement/groupPolicyConfigurations?$top=999'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/deviceConfigurations'
-                        url    = 'deviceManagement/deviceConfigurations'
+                        url    = 'deviceManagement/deviceConfigurations?$top=999'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/configurationPolicies'
-                        url    = 'deviceManagement/configurationPolicies'
+                        url    = 'deviceManagement/configurationPolicies?$top=999'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/windowsDriverUpdateProfiles'
-                        url    = 'deviceManagement/windowsDriverUpdateProfiles'
+                        url    = 'deviceManagement/windowsDriverUpdateProfiles?$top=200'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/windowsFeatureUpdateProfiles'
-                        url    = 'deviceManagement/windowsFeatureUpdateProfiles'
+                        url    = 'deviceManagement/windowsFeatureUpdateProfiles?$top=200'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/windowsQualityUpdatePolicies'
-                        url    = 'deviceManagement/windowsQualityUpdatePolicies'
+                        url    = 'deviceManagement/windowsQualityUpdatePolicies?$top=200'
                         method = 'GET'
                     }
                     @{
                         id     = 'deviceManagement/windowsQualityUpdateProfiles'
-                        url    = 'deviceManagement/windowsQualityUpdateProfiles'
+                        url    = 'deviceManagement/windowsQualityUpdateProfiles?$top=200'
                         method = 'GET'
                     }
                 )
