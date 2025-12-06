@@ -134,6 +134,12 @@ function Get-CIPPTenantAlignment {
         # Measure template processing
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
         $TemplateProcessingCount = 0
+        $TemplateSectionTimings = @{
+            TenantScopeSetup        = 0
+            StandardsDataExtraction = 0
+            StandardsSetBuilding    = 0
+            TenantComparison        = 0
+        }
         # Process each template against all tenants
         foreach ($Template in $Templates) {
             $TemplateProcessingCount++
@@ -142,6 +148,8 @@ function Get-CIPPTenantAlignment {
                 continue
             }
 
+            # Measure tenant scope setup
+            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             # Check if template has tenant assignments (scope)
             $TemplateAssignedTenants = @()
             $AppliestoAllTenants = $false
@@ -164,7 +172,11 @@ function Get-CIPPTenantAlignment {
             } else {
                 $AppliestoAllTenants = $true
             }
+            $swTemplate.Stop()
+            $TemplateSectionTimings.TenantScopeSetup += $swTemplate.ElapsedMilliseconds
 
+            # Measure standards data extraction
+            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             $StandardsData = foreach ($StandardKey in $TemplateStandards.PSObject.Properties.Name) {
                 $StandardConfig = $TemplateStandards.$StandardKey
                 $StandardId = "standards.$StandardKey"
@@ -234,7 +246,11 @@ function Get-CIPPTenantAlignment {
                     }
                 }
             }
+            $swTemplate.Stop()
+            $TemplateSectionTimings.StandardsDataExtraction += $swTemplate.ElapsedMilliseconds
 
+            # Measure standards set building
+            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             $AllStandards = $StandardsData.StandardId
             $AllStandardsArray = @($AllStandards)
             $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
@@ -245,7 +261,11 @@ function Get-CIPPTenantAlignment {
                 foreach ($item in $TemplateAssignedTenants) { [void]$set.Add($item) }
                 $set
             } else { $null }
+            $swTemplate.Stop()
+            $TemplateSectionTimings.StandardsSetBuilding += $swTemplate.ElapsedMilliseconds
 
+            # Measure tenant comparison processing
+            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             foreach ($TenantName in $TenantStandards.Keys) {
                 # Check tenant scope with HashSet and cache tenant data
                 if (-not $AppliestoAllTenants) {
@@ -368,11 +388,22 @@ function Get-CIPPTenantAlignment {
 
                 $Results.Add($Result)
             }
+            $swTemplate.Stop()
+            $TemplateSectionTimings.TenantComparison += $swTemplate.ElapsedMilliseconds
         }
         $sw.Stop()
         $SectionTimings['TemplateProcessing'] = $sw.ElapsedMilliseconds
         Write-Verbose "Template processing took: $($sw.ElapsedMilliseconds)ms for $TemplateProcessingCount templates"
         Write-Information "Processed $TemplateProcessingCount templates in $($sw.ElapsedMilliseconds)ms"
+
+        # Output template sub-section timings
+        Write-Verbose 'Template processing breakdown:'
+        Write-Information 'Template processing breakdown:'
+        foreach ($Section in $TemplateSectionTimings.GetEnumerator() | Sort-Object Value -Descending) {
+            $Percentage = if ($sw.ElapsedMilliseconds -gt 0) { [math]::Round(($Section.Value / $sw.ElapsedMilliseconds) * 100, 2) } else { 0 }
+            Write-Verbose "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
+            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
+        }
 
         # Output timing summary
         $OverallStopwatch.Stop()
