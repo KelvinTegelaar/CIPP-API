@@ -229,9 +229,12 @@ function Get-CIPPTenantAlignment {
                 $AllStandardsArray = @($AllStandards)
                 $ReportingEnabledStandards = ($StandardsData | Where-Object { $_.ReportingEnabled }).StandardId
                 $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
-                $ReportingDisabledSet = [System.Collections.Generic.HashSet[string]]::new($ReportingDisabledStandards)
+                $ReportingDisabledSet = [System.Collections.Generic.HashSet[string]]::new()
+                foreach ($item in $ReportingDisabledStandards) { [void]$ReportingDisabledSet.Add($item) }
                 $TemplateAssignedTenantsSet = if ($TemplateAssignedTenants.Count -gt 0) {
-                    [System.Collections.Generic.HashSet[string]]::new($TemplateAssignedTenants)
+                    $set = [System.Collections.Generic.HashSet[string]]::new()
+                    foreach ($item in $TemplateAssignedTenants) { [void]$set.Add($item) }
+                    $set
                 } else { $null }
 
                 foreach ($TenantName in $TenantStandards.Keys) {
