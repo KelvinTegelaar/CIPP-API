@@ -38,7 +38,7 @@ function New-CIPPBackupTask {
             Write-Host "CIPPBACKUP: Backup users for $TenantFilter"
             $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
             #remove the property if the value is $null
-            $Users | ForEach-Object {
+            $users = $Users | ForEach-Object {
                 $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                     $_.psobject.properties.Remove($_.Name)
                 }
@@ -46,6 +46,7 @@ function New-CIPPBackupTask {
             $TaskStopwatch.Stop()
             Write-Host "CIPPBACKUP: Users backup completed in $($TaskStopwatch.Elapsed.TotalSeconds) seconds"
             $Users
+
         }
         'groups' {
             $TaskStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
