@@ -32,11 +32,8 @@ function Get-TenantGroups {
         [string]$TenantFilter,
         [switch]$Dynamic
     )
-
-    # Build cache key for result caching
     $CacheKey = "$GroupId|$TenantFilter|$($Dynamic.IsPresent)"
 
-    # Return cached result if available
     if ($script:TenantGroupsResultCache.ContainsKey($CacheKey)) {
         Write-Verbose "Returning cached result for: $CacheKey"
         return $script:TenantGroupsResultCache[$CacheKey]
