@@ -3,13 +3,34 @@
     OutputDirectory          = '../../Output'
     VersionedOutputDirectory = $false
     CopyPaths                = @(
-        'Public\OrganizationManagementRoles.json'
-        'Public\PermissionsTranslator.json'
-        'Public\blank.json'
-        'Public\AdditionalPermissions.json'
-        'Public\ConversionTable.csv'
-        'Public\SAMManifest.json'
-        'lib\NCrontab.Advanced.dll'
+        @{
+            Source      = 'Public\OrganizationManagementRoles.json'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'Public\PermissionsTranslator.json'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'Public\blank.json'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'Public\AdditionalPermissions.json'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'Public\ConversionTable.csv'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'Public\SAMManifest.json'
+            Destination = 'Public'
+        }
+        @{
+            Source      = 'lib\NCrontab.Advanced.dll'
+            Destination = 'lib'
+        }
     )
     Encoding                 = 'UTF8'
     Prefix                   = $null
