@@ -145,7 +145,7 @@ function Invoke-ExecSAMSetup {
                 if ($PartnerSetup) {
                     #$app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
                     $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-                    $SamManifestFile = Get-Item (Join-Path $ModuleBase 'Public\SAMManifest.json')
+                    $SamManifestFile = Get-Item (Join-Path $ModuleBase 'lib\data\SAMManifest.json')
                     $app = Get-Content $SamManifestFile.FullName | ConvertFrom-Json
 
                     $App.web.redirectUris = @($App.web.redirectUris + $URL)

@@ -25,8 +25,8 @@ function Get-CippSamPermissions {
 
     if (!$SavedOnly.IsPresent) {
         $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-        $SamManifestFile = Get-Item (Join-Path $ModuleBase 'Public\SAMManifest.json')
-        $AdditionalPermissions = Get-Item (Join-Path $ModuleBase 'Public\AdditionalPermissions.json')
+        $SamManifestFile = Get-Item (Join-Path $ModuleBase 'lib\data\SAMManifest.json')
+        $AdditionalPermissions = Get-Item (Join-Path $ModuleBase 'lib\data\AdditionalPermissions.json')
 
         $ServicePrincipalList = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=id,appId,displayName' -tenantid $env:TenantID -NoAuthCheck $true
         $SAMManifest = Get-Content -Path $SamManifestFile.FullName | ConvertFrom-Json

@@ -50,8 +50,8 @@ function Get-CIPPLicenseOverview {
         Tenant   = $TenantFilter
         Licenses = $LicRequest
     }
-    Set-Location (Get-Item $PSScriptRoot).FullName
-    $ConvertTable = Import-Csv ConversionTable.csv
+    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $ConvertTable = Import-Csv (Join-Path $ModuleBase 'lib\data\ConversionTable.csv')
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
