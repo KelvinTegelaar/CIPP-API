@@ -24,23 +24,11 @@ function Get-CIPPTenantAlignment {
         [Parameter(Mandatory = $false)]
         [string]$TemplateId
     )
-
-    # Initialize overall stopwatch
-    $OverallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    $SectionTimings = @{}
-
-    # Measure template table initialization
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $TemplateTable = Get-CippTable -tablename 'templates'
     $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
     $TenantGroups = Get-TenantGroups
-    $sw.Stop()
-    $SectionTimings['TemplateTableInit'] = $sw.ElapsedMilliseconds
-    Write-Verbose "Template table initialization took: $($sw.ElapsedMilliseconds)ms"
 
     try {
-        # Measure template loading
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         # Get all standard templates
         $Templates = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $TemplateFilter) | ForEach-Object {
             $JSON = $_.JSON
@@ -56,18 +44,12 @@ function Get-CIPPTenantAlignment {
                 $Data
             }
         }
-        $sw.Stop()
-        $SectionTimings['TemplateLoading'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Template loading took: $($sw.ElapsedMilliseconds)ms"
-        Write-Information "Loaded $($Templates.Count) templates in $($sw.ElapsedMilliseconds)ms"
 
         if (-not $Templates) {
             Write-Warning 'No templates found matching the criteria'
             return @()
         }
 
-        # Measure standards data retrieval
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         # Get standards comparison data
         $StandardsTable = Get-CippTable -TableName 'CippStandardsReports'
         #this if statement is to bring down performance when running scheduled checks, we have to revisit this to a better query due to the extreme size this can get.
@@ -77,13 +59,7 @@ function Get-CIPPTenantAlignment {
             $filter = "PartitionKey ne 'StandardReport' and PartitionKey ne ''"
         }
         $AllStandards = Get-CIPPAzDataTableEntity @StandardsTable -Filter $filter
-        $sw.Stop()
-        $SectionTimings['StandardsDataRetrieval'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Standards data retrieval took: $($sw.ElapsedMilliseconds)ms"
-        Write-Information "Retrieved $($AllStandards.Count) standards records in $($sw.ElapsedMilliseconds)ms"
 
-        # Measure tenant filtering
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         # Filter by tenant if specified
         $Standards = if ($TenantFilter) {
             $AllStandards
@@ -92,12 +68,6 @@ function Get-CIPPTenantAlignment {
             $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
         }
         $TagTemplates = Get-CIPPAzDataTableEntity @TemplateTable
-        $sw.Stop()
-        $SectionTimings['TenantFiltering'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Tenant filtering and tag template loading took: $($sw.ElapsedMilliseconds)ms"
-
-        # Measure tenant data structure building
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         # Build tenant standards data structure
         $tenantData = @{}
         foreach ($Standard in $Standards) {
@@ -125,32 +95,16 @@ function Get-CIPPTenantAlignment {
             }
         }
         $TenantStandards = $tenantData
-        $sw.Stop()
-        $SectionTimings['TenantDataStructureBuilding'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Tenant data structure building took: $($sw.ElapsedMilliseconds)ms"
-        Write-Information "Built data structure for $($tenantData.Count) tenants in $($sw.ElapsedMilliseconds)ms"
 
         $Results = [System.Collections.Generic.List[object]]::new()
 
-        # Measure template processing
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $TemplateProcessingCount = 0
-        $TemplateSectionTimings = @{
-            TenantScopeSetup        = 0
-            StandardsDataExtraction = 0
-            StandardsSetBuilding    = 0
-            TenantComparison        = 0
-        }
         # Process each template against all tenants
         foreach ($Template in $Templates) {
-            $TemplateProcessingCount++
             $TemplateStandards = $Template.standards
             if (-not $TemplateStandards) {
                 continue
             }
 
-            # Measure tenant scope setup
-            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             # Check if template has tenant assignments (scope)
             $TemplateAssignedTenants = @()
             $AppliestoAllTenants = $false
@@ -173,11 +127,7 @@ function Get-CIPPTenantAlignment {
             } else {
                 $AppliestoAllTenants = $true
             }
-            $swTemplate.Stop()
-            $TemplateSectionTimings.TenantScopeSetup += $swTemplate.ElapsedMilliseconds
 
-            # Measure standards data extraction
-            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             $StandardsData = foreach ($StandardKey in $TemplateStandards.PSObject.Properties.Name) {
                 $StandardConfig = $TemplateStandards.$StandardKey
                 $StandardId = "standards.$StandardKey"
@@ -247,11 +197,7 @@ function Get-CIPPTenantAlignment {
                     }
                 }
             }
-            $swTemplate.Stop()
-            $TemplateSectionTimings.StandardsDataExtraction += $swTemplate.ElapsedMilliseconds
 
-            # Measure standards set building
-            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             $AllStandards = $StandardsData.StandardId
             $AllStandardsArray = @($AllStandards)
             $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
@@ -262,11 +208,7 @@ function Get-CIPPTenantAlignment {
                 foreach ($item in $TemplateAssignedTenants) { [void]$set.Add($item) }
                 $set
             } else { $null }
-            $swTemplate.Stop()
-            $TemplateSectionTimings.StandardsSetBuilding += $swTemplate.ElapsedMilliseconds
 
-            # Measure tenant comparison processing
-            $swTemplate = [System.Diagnostics.Stopwatch]::StartNew()
             foreach ($TenantName in $TenantStandards.Keys) {
                 # Check tenant scope with HashSet and cache tenant data
                 if (-not $AppliestoAllTenants) {
@@ -389,34 +331,7 @@ function Get-CIPPTenantAlignment {
 
                 $Results.Add($Result)
             }
-            $swTemplate.Stop()
-            $TemplateSectionTimings.TenantComparison += $swTemplate.ElapsedMilliseconds
         }
-        $sw.Stop()
-        $SectionTimings['TemplateProcessing'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Template processing took: $($sw.ElapsedMilliseconds)ms for $TemplateProcessingCount templates"
-        Write-Information "Processed $TemplateProcessingCount templates in $($sw.ElapsedMilliseconds)ms"
-
-        # Output template sub-section timings
-        Write-Verbose 'Template processing breakdown:'
-        Write-Information 'Template processing breakdown:'
-        foreach ($Section in $TemplateSectionTimings.GetEnumerator() | Sort-Object Value -Descending) {
-            $Percentage = if ($sw.ElapsedMilliseconds -gt 0) { [math]::Round(($Section.Value / $sw.ElapsedMilliseconds) * 100, 2) } else { 0 }
-            Write-Verbose "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
-            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
-        }
-
-        # Output timing summary
-        $OverallStopwatch.Stop()
-        Write-Information '=== Get-CIPPTenantAlignment Performance Summary ==='
-        Write-Information "Total execution time: $($OverallStopwatch.ElapsedMilliseconds)ms"
-        Write-Verbose 'Section timings:'
-        foreach ($Section in $SectionTimings.GetEnumerator() | Sort-Object Value -Descending) {
-            $Percentage = [math]::Round(($Section.Value / $OverallStopwatch.ElapsedMilliseconds) * 100, 2)
-            Write-Verbose "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
-            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
-        }
-        Write-Information '========================================'
 
         return $Results
     } catch {
