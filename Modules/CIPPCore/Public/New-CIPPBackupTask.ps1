@@ -13,7 +13,6 @@ function New-CIPPBackupTask {
                 # Get tenant-specific variables
                 $Tenant = Get-Tenants -TenantFilter $TenantFilter
                 $CustomerId = $Tenant.customerId
-
                 $TenantVariables = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
 
                 # If backing up AllTenants, also get global variables
