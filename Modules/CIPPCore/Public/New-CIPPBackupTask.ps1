@@ -43,10 +43,12 @@ function New-CIPPBackupTask {
         }
         'ca' {
             Measure-CippTask -TaskName 'ConditionalAccess' -EventName 'CIPP.BackupCompleted' -Script {
+                $preloadedUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=displayName,id" -tenantid $TenantFilter
+                $preloadedGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=displayName,id" -tenantid $TenantFilter
                 $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -AsApp $true
                 foreach ($policy in $policies) {
                     try {
-                        New-CIPPCATemplate -TenantFilter $TenantFilter -JSON $policy
+                        New-CIPPCATemplate -TenantFilter $TenantFilter -JSON $policy -preloadedUsers $preloadedUsers -preloadedGroups $preloadedGroups
                     } catch {
                         "Failed to create a template of the Conditional Access Policy with ID: $($policy.id). Error: $($_.Exception.Message)"
                     }

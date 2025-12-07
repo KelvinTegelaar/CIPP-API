@@ -4,15 +4,25 @@ function New-CIPPCATemplate {
         $TenantFilter,
         $JSON,
         $APIName = 'Add CIPP CA Template',
-        $Headers
+        $Headers,
+        $preloadedUsers,
+        $preloadedGroups
     )
 
     $JSON = ([pscustomobject]$JSON) | ForEach-Object {
         $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
         $_ | Select-Object -Property $NonEmptyProperties
     }
-    $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=displayName,id" -tenantid $TenantFilter)
-    $groups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=displayName,id" -tenantid $TenantFilter)
+    if ($preloadedUsers) {
+        $users = $preloadedUsers
+    } else {
+        $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=displayName,id" -tenantid $TenantFilter)
+    }
+    if ($preloadedGroups) {
+        $groups = $preloadedGroups
+    } else {
+        $groups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=displayName,id" -tenantid $TenantFilter)
+    }
     $includelocations = New-Object System.Collections.ArrayList
     $IncludeJSON = foreach ($Location in $JSON.conditions.locations.includeLocations) {
         $locationinfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
