@@ -27,14 +27,13 @@ function New-CIPPBackupTask {
         }
         'users' {
             Measure-CippTask -TaskName 'Users' -EventName 'CIPP.BackupCompleted' -Script {
-                $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
-                #remove the property if the value is $null
-                $users = $Users | ForEach-Object {
+                New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier | ForEach-Object {
+                    #remove the property if the value is $null
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)
                     }
+                    $_
                 }
-                $Users
             }
         }
         'groups' {
@@ -102,19 +101,18 @@ function New-CIPPBackupTask {
 
         'antispam' {
             Measure-CippTask -TaskName 'AntiSpam' -EventName 'CIPP.BackupCompleted' -Script {
-                $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
-                $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
-
-                $Policies | ForEach-Object {
+                $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type* | ForEach-Object {
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)
                     }
+                    $_
                 }
 
-                $Rules | ForEach-Object {
+                $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterRule' | Select-Object * -ExcludeProperty *odata*, *data.type* | ForEach-Object {
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)
                     }
+                    $_
                 }
 
                 @{ policies = $Policies; rules = $Rules } | ConvertTo-Json -Depth 10
@@ -123,19 +121,18 @@ function New-CIPPBackupTask {
 
         'antiphishing' {
             Measure-CippTask -TaskName 'AntiPhishing' -EventName 'CIPP.BackupCompleted' -Script {
-                $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
-                $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
-
-                $Policies | ForEach-Object {
+                $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type* | ForEach-Object {
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)
                     }
+                    $_
                 }
 
-                $Rules | ForEach-Object {
+                $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishRule' | Select-Object * -ExcludeProperty *odata*, *data.type* | ForEach-Object {
                     $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                         $_.psobject.properties.Remove($_.Name)
                     }
+                    $_
                 }
 
                 @{ policies = $Policies; rules = $Rules } | ConvertTo-Json -Depth 10

@@ -51,8 +51,8 @@ function Measure-CippTask {
     $errorMessage = $null
 
     try {
-        # Execute the actual task
-        $result = & $Script
+        # Execute the actual task (use dot-sourcing to preserve parent scope variables)
+        $result = . $Script
     } catch {
         $errorOccurred = $true
         $errorMessage = $_.Exception.Message
