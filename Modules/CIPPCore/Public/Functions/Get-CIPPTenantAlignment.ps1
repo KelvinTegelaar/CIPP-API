@@ -33,6 +33,7 @@ function Get-CIPPTenantAlignment {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $TemplateTable = Get-CippTable -tablename 'templates'
     $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
+    $TenantGroups = Get-TenantGroups
     $sw.Stop()
     $SectionTimings['TemplateTableInit'] = $sw.ElapsedMilliseconds
     Write-Verbose "Template table initialization took: $($sw.ElapsedMilliseconds)ms"
@@ -158,7 +159,7 @@ function Get-CIPPTenantAlignment {
                 # Extract tenant values from the tenantFilter array
                 $TenantValues = $Template.tenantFilter | ForEach-Object {
                     if ($_.type -eq 'group') {
-                        (Get-TenantGroups -GroupId $_.value).members.defaultDomainName
+                        ($TenantGroups | Where-Object -Property GroupName -EQ $_.value).Members.defaultDomainName
                     } else {
                         $_.value
                     }

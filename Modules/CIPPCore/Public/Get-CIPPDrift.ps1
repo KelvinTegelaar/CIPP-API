@@ -29,21 +29,9 @@ function Get-CIPPDrift {
         [switch]$AllTenants
     )
 
-    # Initialize overall stopwatch
-    $OverallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    $SectionTimings = @{}
-
-    # Measure license capability checks
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
     $IntuneTable = Get-CippTable -tablename 'templates'
-    $sw.Stop()
-    $SectionTimings['LicenseChecks'] = $sw.ElapsedMilliseconds
-    Write-Verbose "License checks took: $($sw.ElapsedMilliseconds)ms"
-
-    # Measure Intune template loading
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
     if ($IntuneCapable) {
         $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
         $RawIntuneTemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter)
@@ -61,12 +49,6 @@ function Get-CIPPDrift {
             }
         } | Sort-Object -Property displayName
     }
-    $sw.Stop()
-    $SectionTimings['IntuneTemplateLoading'] = $sw.ElapsedMilliseconds
-    Write-Verbose "Intune template loading took: $($sw.ElapsedMilliseconds)ms"
-
-    # Measure CA template loading
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
     # Load all CA templates
     if ($ConditionalAccessCapable) {
         $CAFilter = "PartitionKey eq 'CATemplate'"
@@ -81,25 +63,15 @@ function Get-CIPPDrift {
             }
         } | Sort-Object -Property displayName
     }
-    $sw.Stop()
-    $SectionTimings['CATemplateLoading'] = $sw.ElapsedMilliseconds
-    Write-Verbose "CA template loading took: $($sw.ElapsedMilliseconds)ms"
 
     try {
-        # Measure alignment data retrieval
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter -TemplateId $TemplateId | Where-Object -Property standardType -EQ 'drift'
-        $sw.Stop()
-        $SectionTimings['AlignmentDataRetrieval'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Alignment data retrieval took: $($sw.ElapsedMilliseconds)ms"
 
         if (-not $AlignmentData) {
             Write-Warning "No alignment data found for tenant $TenantFilter"
             return @()
         }
 
-        # Measure drift state loading
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         # Get existing drift states from the tenantDrift table
         $DriftTable = Get-CippTable -tablename 'tenantDrift'
         $DriftFilter = "PartitionKey eq '$TenantFilter'"
@@ -112,14 +84,9 @@ function Get-CIPPDrift {
         } catch {
             Write-Warning "Failed to get existing drift states: $($_.Exception.Message)"
         }
-        $sw.Stop()
-        $SectionTimings['DriftStateLoading'] = $sw.ElapsedMilliseconds
-        Write-Verbose "Drift state loading took: $($sw.ElapsedMilliseconds)ms"
 
         $Results = [System.Collections.Generic.List[object]]::new()
         foreach ($Alignment in $AlignmentData) {
-            # Measure standards deviation processing
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             # Initialize deviation collections
             $StandardsDeviations = [System.Collections.Generic.List[object]]::new()
             $PolicyDeviations = [System.Collections.Generic.List[object]]::new()
@@ -172,12 +139,7 @@ function Get-CIPPDrift {
                     }
                 }
             }
-            $sw.Stop()
-            $SectionTimings['StandardsDeviationProcessing'] = $sw.ElapsedMilliseconds
-            Write-Verbose "Standards deviation processing took: $($sw.ElapsedMilliseconds)ms"
 
-            # Measure Intune policy collection
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             # Perform full policy collection
             if ($IntuneCapable) {
                 # Always get live data when not in AllTenants mode
@@ -248,12 +210,6 @@ function Get-CIPPDrift {
                     Write-Warning "Failed to get Intune policies: $($_.Exception.Message)"
                 }
             }
-            $sw.Stop()
-            $SectionTimings['IntunePolicyCollection'] = $sw.ElapsedMilliseconds
-            Write-Verbose "Intune policy collection took: $($sw.ElapsedMilliseconds)ms"
-
-            # Measure CA policy collection
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             # Get Conditional Access policies
             if ($ConditionalAccessCapable) {
                 try {
@@ -271,12 +227,7 @@ function Get-CIPPDrift {
                     $TenantCAPolicies = @()
                 }
             }
-            $sw.Stop()
-            $SectionTimings['CAPolicyCollection'] = $sw.ElapsedMilliseconds
-            Write-Verbose "CA policy collection took: $($sw.ElapsedMilliseconds)ms"
 
-            # Measure template extraction
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             if ($Alignment.standardSettings) {
                 if ($Alignment.standardSettings.IntuneTemplate) {
                     $IntuneTemplateIds = $Alignment.standardSettings.IntuneTemplate.TemplateList | ForEach-Object { $_.value }
@@ -304,12 +255,7 @@ function Get-CIPPDrift {
                     Write-Warning "Failed to get Intune templates: $($_.Exception.Message)"
                 }
             }
-            $sw.Stop()
-            $SectionTimings['TemplateExtraction'] = $sw.ElapsedMilliseconds
-            Write-Verbose "Template extraction took: $($sw.ElapsedMilliseconds)ms"
 
-            # Measure Intune policy deviation checking
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             # Check for extra Intune policies not in template
             foreach ($TenantPolicy in $TenantIntunePolicies) {
                 $PolicyFound = $false
@@ -345,12 +291,7 @@ function Get-CIPPDrift {
                     $PolicyDeviations.Add($PolicyDeviation)
                 }
             }
-            $sw.Stop()
-            $SectionTimings['IntunePolicyDeviationCheck'] = $sw.ElapsedMilliseconds
-            Write-Verbose "Intune policy deviation check took: $($sw.ElapsedMilliseconds)ms"
 
-            # Measure CA policy deviation checking
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
             # Check for extra Conditional Access policies not in template
             foreach ($TenantCAPolicy in $TenantCAPolicies) {
                 $PolicyFound = $false
@@ -380,9 +321,6 @@ function Get-CIPPDrift {
                     $PolicyDeviations.Add($PolicyDeviation)
                 }
             }
-            $sw.Stop()
-            $SectionTimings['CAPolicyDeviationCheck'] = $sw.ElapsedMilliseconds
-            Write-Verbose "CA policy deviation check took: $($sw.ElapsedMilliseconds)ms"
 
 
             # Combine all deviations and filter by status
@@ -421,17 +359,6 @@ function Get-CIPPDrift {
 
             $Results.Add($Result)
         }
-
-        # Output timing summary
-        $OverallStopwatch.Stop()
-        Write-Information '=== Get-CIPPDrift Performance Summary ==='
-        Write-Information "Total execution time: $($OverallStopwatch.ElapsedMilliseconds)ms"
-        Write-Information "`nSection timings:"
-        foreach ($Section in $SectionTimings.GetEnumerator() | Sort-Object Value -Descending) {
-            $Percentage = [math]::Round(($Section.Value / $OverallStopwatch.ElapsedMilliseconds) * 100, 2)
-            Write-Information "  $($Section.Key): $($Section.Value)ms ($Percentage%)"
-        }
-        Write-Information "========================================`n"
 
         return @($Results)
 
