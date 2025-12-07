@@ -7,7 +7,7 @@ function New-CIPPBackupTask {
 
     $BackupData = switch ($Task) {
         'CippCustomVariables' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'CustomVariables' -Execute {
+            Measure-CippTask -TaskName 'CustomVariables' -EventName 'CIPP.BackupCompleted' -Script {
                 $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
 
                 # Get tenant-specific variables
@@ -26,7 +26,7 @@ function New-CIPPBackupTask {
             }
         }
         'users' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'Users' -Execute {
+            Measure-CippTask -TaskName 'Users' -EventName 'CIPP.BackupCompleted' -Script {
                 $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
                 #remove the property if the value is $null
                 $users = $Users | ForEach-Object {
@@ -38,12 +38,12 @@ function New-CIPPBackupTask {
             }
         }
         'groups' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'Groups' -Execute {
+            Measure-CippTask -TaskName 'Groups' -EventName 'CIPP.BackupCompleted' -Script {
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter
             }
         }
         'ca' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'ConditionalAccess' -Execute {
+            Measure-CippTask -TaskName 'ConditionalAccess' -EventName 'CIPP.BackupCompleted' -Script {
                 $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -AsApp $true
                 foreach ($policy in $policies) {
                     try {
@@ -55,7 +55,7 @@ function New-CIPPBackupTask {
             }
         }
         'intuneconfig' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'IntuneConfiguration' -Execute {
+            Measure-CippTask -TaskName 'IntuneConfiguration' -EventName 'CIPP.BackupCompleted' -Script {
                 $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000"
                     'https://graph.microsoft.com/beta/deviceManagement/windowsDriverUpdateProfiles'
                     "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=999"
@@ -85,7 +85,7 @@ function New-CIPPBackupTask {
             }
         }
         'intunecompliance' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'IntuneCompliance' -Execute {
+            Measure-CippTask -TaskName 'IntuneCompliance' -EventName 'CIPP.BackupCompleted' -Script {
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
                     New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $_.ID
                 }
@@ -93,7 +93,7 @@ function New-CIPPBackupTask {
         }
 
         'intuneprotection' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'IntuneProtection' -Execute {
+            Measure-CippTask -TaskName 'IntuneProtection' -EventName 'CIPP.BackupCompleted' -Script {
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
                     New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $_.ID
                 }
@@ -101,7 +101,7 @@ function New-CIPPBackupTask {
         }
 
         'antispam' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'AntiSpam' -Execute {
+            Measure-CippTask -TaskName 'AntiSpam' -EventName 'CIPP.BackupCompleted' -Script {
                 $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
                 $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
 
@@ -122,7 +122,7 @@ function New-CIPPBackupTask {
         }
 
         'antiphishing' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'AntiPhishing' -Execute {
+            Measure-CippTask -TaskName 'AntiPhishing' -EventName 'CIPP.BackupCompleted' -Script {
                 $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
                 $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
 
@@ -143,13 +143,13 @@ function New-CIPPBackupTask {
         }
 
         'CippWebhookAlerts' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'WebhookAlerts' -Execute {
+            Measure-CippTask -TaskName 'WebhookAlerts' -EventName 'CIPP.BackupCompleted' -Script {
                 $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
                 Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $TenantFilter -in ($_.Tenants | ConvertFrom-Json).value }
             }
         }
         'CippScriptedAlerts' {
-            Measure-CIPPTask -Name 'CIPP.BackupCompleted' -Section 'ScriptedAlerts' -Execute {
+            Measure-CippTask -TaskName 'ScriptedAlerts' -EventName 'CIPP.BackupCompleted' -Script {
                 $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
                 Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
             }
