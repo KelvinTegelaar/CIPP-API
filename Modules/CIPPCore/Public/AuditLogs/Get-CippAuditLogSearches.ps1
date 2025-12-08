@@ -19,9 +19,14 @@ function Get-CippAuditLogSearches {
 
         if ($ReadyToProcess.IsPresent) {
             Measure-CippTask -TaskName 'QueryReadyToProcess' -EventName 'CIPP.AuditLogsProfile' -Script {
-                $15MinutesAgo = (Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                $1DayAgo = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "PartitionKey eq 'Search' and Tenant eq '$TenantFilter' and (CippStatus eq 'Pending' or (CippStatus eq 'Processing' and Timestamp le datetime'$15MinutesAgo')) and Timestamp ge datetime'$1DayAgo'" | Sort-Object Timestamp
+                $15MinutesAgo = (Get-Date).AddMinutes(-15).ToUniversalTime()
+                $1DayAgo = (Get-Date).AddDays(-1).ToUniversalTime()
+                Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "PartitionKey eq 'Search' and Tenant eq '$TenantFilter'" | Where-Object {
+                    $_.Timestamp -ge $1DayAgo -and (
+                        $_.CippStatus -eq 'Pending' -or
+                        ($_.CippStatus -eq 'Processing' -and $_.Timestamp -le $15MinutesAgo)
+                    )
+                } | Sort-Object Timestamp
             }
         } else {
             Measure-CippTask -TaskName 'QueryAllSearches' -EventName 'CIPP.AuditLogsProfile' -Script {
