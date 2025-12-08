@@ -16,7 +16,7 @@ function Get-CIPPAlertNewAppApproval {
     Measure-CippTask -TaskName 'NewAppApprovalAlert' -EventName 'CIPP.AlertProfile' -Script {
         try {
             $Approvals = Measure-CippTask -TaskName 'GetAppConsentRequests' -EventName 'CIPP.AlertProfile' -Script {
-                New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
+                New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
             }
 
             if ($Approvals.count -gt 0) {
