@@ -38,7 +38,7 @@ function Invoke-ListNewUserDefaults {
     if ($TenantFilter) {
         if ($TenantFilter -eq 'AllTenants') {
             # When requesting AllTenants, return only templates stored under AllTenants
-            $Templates = $Templates | Where-Object -Property tenantFilter -EQ 'AllTenants'
+            $Templates = $Templates | Where-Object -Property tenantFilter -eq 'AllTenants'
         } else {
             # When requesting a specific tenant, return both tenant-specific and AllTenants templates
             $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
@@ -51,7 +51,7 @@ function Invoke-ListNewUserDefaults {
 
     # If a specific ID is requested, filter to that template
     if ($Request.query.ID) {
-        $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.ID
+        $Templates = $Templates | Where-Object -Property GUID -eq $Request.query.ID
     }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
