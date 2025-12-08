@@ -36,7 +36,13 @@ function Invoke-ListNewUserDefaults {
 
     # Filter by tenant if TenantFilter is provided
     if ($TenantFilter) {
-        $Templates = $Templates | Where-Object -Property tenantFilter -EQ $TenantFilter
+        if ($TenantFilter -eq 'AllTenants') {
+            # When requesting AllTenants, return only templates stored under AllTenants
+            $Templates = $Templates | Where-Object -Property tenantFilter -EQ 'AllTenants'
+        } else {
+            # When requesting a specific tenant, return both tenant-specific and AllTenants templates
+            $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
+        }
         Write-Host "Templates after filtering: $($Templates.Count)"
     }
 
