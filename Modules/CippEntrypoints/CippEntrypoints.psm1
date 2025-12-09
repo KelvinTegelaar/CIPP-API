@@ -227,7 +227,14 @@ function Receive-CippOrchestrationTrigger {
                 $Output = $Output | Where-Object { $_.GetType().Name -eq 'ActivityInvocationTask' }
                 if (($Output | Measure-Object).Count -gt 0) {
                     Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
-                    $Results = Wait-ActivityFunction -Task @($Output)
+                    $Results = $Output | ForEach-Object {
+                        $Task = $_
+                        try {
+                            Wait-ActivityFunction -Task $Task
+                        } catch {
+                            Write-Warning "Error waiting for activity function: $($_.Exception.Message)"
+                        }
+                    }
                 } else {
                     $Results = @()
                 }
@@ -333,7 +340,7 @@ function Receive-CippActivityTrigger {
 
             try {
                 Write-Verbose "Activity starting Function: $FunctionName."
-
+                $ActivityStatus = 'Success'
                 # Wrap the function execution with telemetry
                 $Output = Measure-CippTask -TaskName $taskName -Metadata $metadata -Script {
                     Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
@@ -346,6 +353,7 @@ function Receive-CippActivityTrigger {
                 }
             } catch {
                 $ErrorMsg = $_.Exception.Message
+                $ActivityStatus = 'Failed'
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Failed'
                     $QueueTask.Message = $ErrorMsg
@@ -354,6 +362,7 @@ function Receive-CippActivityTrigger {
             }
         } else {
             $ErrorMsg = 'Function not provided'
+            $ActivityStatus = 'Failed'
             if ($TaskStatus) {
                 $QueueTask.Status = 'Failed'
                 $null = Set-CippQueueTask @QueueTask
@@ -361,6 +370,7 @@ function Receive-CippActivityTrigger {
         }
     } catch {
         Write-Error "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
+        $ActivityStatus = 'Failed'
         if ($TaskStatus) {
             $QueueTask.Status = 'Failed'
             $null = Set-CippQueueTask @QueueTask
@@ -371,7 +381,7 @@ function Receive-CippActivityTrigger {
     if ($null -ne $Output -and $Output -ne '') {
         return $Output
     } else {
-        return
+        return "Activity '$($Item.Command)' ended with status: $ActivityStatus."
     }
 }
 
