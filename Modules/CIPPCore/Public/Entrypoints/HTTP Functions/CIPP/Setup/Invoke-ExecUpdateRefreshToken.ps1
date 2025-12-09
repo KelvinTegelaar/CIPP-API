@@ -9,7 +9,7 @@ Function Invoke-ExecUpdateRefreshToken {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $KV = $env:WEBSITE_DEPLOYMENT_ID
+    $KV = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
 
     try {
         # Handle refresh token update

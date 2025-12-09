@@ -42,7 +42,7 @@ function Invoke-ExecExtensionsConfig {
                 Write-Information 'Not sending to keyvault. Key previously set or left blank.'
             } else {
                 Write-Information 'writing API Key to keyvault, and clearing.'
-                Write-Information "$env:WEBSITE_DEPLOYMENT_ID"
+                Write-Information "($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]"
                 if ($Body.$APIKey.APIKey) {
                     Set-ExtensionAPIKey -Extension $APIKey -APIKey $Body.$APIKey.APIKey
                 }
