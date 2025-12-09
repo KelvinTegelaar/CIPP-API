@@ -429,17 +429,18 @@ function Receive-CIPPTimerTrigger {
             if ($Parameters.Count -gt 0) {
                 $metadata['ParameterCount'] = $Parameters.Count
                 # Add specific known parameters
+                Write-Host "CIPP TIMER PARAMETERS: $($Parameters | ConvertTo-Json -Depth 10 -Compress)"
                 if ($Parameters.Tenant) {
                     $metadata['Tenant'] = $Parameters.Tenant
-                }
-                if ($Parameters.Tenant.value) {
-                    $metadata['Tenant'] = $Parameters.Tenant.value
                 }
                 if ($Parameters.TenantFilter) {
                     $metadata['Tenant'] = $Parameters.TenantFilter
                 }
                 if ($Parameters.TenantFilter.value) {
                     $metadata['Tenant'] = $Parameters.TenantFilter.value
+                }
+                if ($Parameters.Tenant.value) {
+                    $metadata['Tenant'] = $Parameters.Tenant.value
                 }
             }
 
