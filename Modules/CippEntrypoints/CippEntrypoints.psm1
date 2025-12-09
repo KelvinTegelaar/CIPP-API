@@ -453,7 +453,7 @@ function Receive-CIPPTimerTrigger {
                     $metadata['Tenant'] = $Parameters.Tenant.value
                 }
                 if ($Parameters.Tenant.defaultDomainName) {
-                    $metadata['Tenant'] = $Parameters.defaultDomainName
+                    $metadata['Tenant'] = $Parameters.Tenant.defaultDomainName
                 }
             }
 
