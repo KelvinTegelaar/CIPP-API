@@ -227,7 +227,12 @@ function Receive-CippOrchestrationTrigger {
                 $Output = $Output | Where-Object { $_.GetType().Name -eq 'ActivityInvocationTask' }
                 if (($Output | Measure-Object).Count -gt 0) {
                     Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
-                    $Results = Wait-ActivityFunction -Task @($Output)
+                    foreach ($Task in $Output) {
+                        Write-Information ($Task | ConvertTo-Json -Depth 10 -Compress)
+                        try {
+                            $Results = Wait-ActivityFunction -Task $Task
+                        } catch {}
+                    }
                 } else {
                     $Results = @()
                 }
@@ -365,6 +370,7 @@ function Receive-CippActivityTrigger {
     } catch {
         Write-Error "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
         $Status = 'Failed'
+        $Output = $null
         if ($TaskStatus) {
             $QueueTask.Status = 'Failed'
             $null = Set-CippQueueTask @QueueTask
