@@ -432,8 +432,14 @@ function Receive-CIPPTimerTrigger {
                 if ($Parameters.Tenant) {
                     $metadata['Tenant'] = $Parameters.Tenant
                 }
+                if ($Parameters.Tenant.value) {
+                    $metadata['Tenant'] = $Parameters.Tenant.value
+                }
                 if ($Parameters.TenantFilter) {
                     $metadata['Tenant'] = $Parameters.TenantFilter
+                }
+                if ($Parameters.TenantFilter.value) {
+                    $metadata['Tenant'] = $Parameters.TenantFilter.value
                 }
             }
 
