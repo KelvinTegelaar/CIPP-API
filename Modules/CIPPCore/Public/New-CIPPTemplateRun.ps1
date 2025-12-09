@@ -149,6 +149,7 @@ function New-CIPPTemplateRun {
                                             JSON         = "$object"
                                             RowKey       = $ExistingPolicy.GUID
                                             PartitionKey = 'IntuneTemplate'
+                                            Package      = $ExistingPolicy.Package
                                         } -Force
                                     } else {
                                         "Policy  $($Template.DisplayName) not found in existing templates, creating new template"
@@ -196,6 +197,7 @@ function New-CIPPTemplateRun {
                                 JSON         = "$object"
                                 RowKey       = $ExistingPolicy.GUID
                                 PartitionKey = 'IntuneTemplate'
+                                Package      = $ExistingPolicy.Package
                             } -Force
                         } else {
                             "Policy  $($Template.DisplayName) not found in existing templates, creating new template"
@@ -237,6 +239,7 @@ function New-CIPPTemplateRun {
                                 JSON         = "$object"
                                 RowKey       = $ExistingPolicy.GUID
                                 PartitionKey = 'IntuneTemplate'
+                                Package      = $ExistingPolicy.Package
                             } -Force
                         } else {
                             "Policy  $($Template.DisplayName) not found in existing templates, creating new template"
