@@ -87,13 +87,21 @@ function New-GraphGetRequest {
                     $RequestSuccessful = $true
 
                     if ($ReturnRawResponse) {
-                        if (Test-Json -Json $Data.Content) {
-                            $Content = $Data.Content | ConvertFrom-Json
-                        } else {
+                        try {
+                            if ($Data.Content -and (Test-Json -Json $Data.Content -ErrorAction Stop)) {
+                                $Content = $Data.Content | ConvertFrom-Json
+                            } else {
+                                $Content = $Data.Content
+                            }
+                        } catch {
                             $Content = $Data.Content
                         }
 
-                        $Data | Select-Object -Property StatusCode, StatusDescription, @{Name = 'Content'; Expression = { $Content } }
+                        [PSCustomObject]@{
+                            StatusCode        = $Data.StatusCode
+                            StatusDescription = $Data.StatusDescription
+                            Content           = $Content
+                        }
                         $nextURL = $null
                     } elseif ($CountOnly) {
                         $Data.'@odata.count'
