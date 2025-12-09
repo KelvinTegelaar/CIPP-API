@@ -452,6 +452,9 @@ function Receive-CIPPTimerTrigger {
                 if ($Parameters.Tenant.value) {
                     $metadata['Tenant'] = $Parameters.Tenant.value
                 }
+                if ($Parameters.Tenant.defaultDomainName) {
+                    $metadata['Tenant'] = $Parameters.defaultDomainName
+                }
             }
 
             # Wrap the timer function execution with telemetry
