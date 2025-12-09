@@ -70,7 +70,7 @@ function Measure-CippTask {
                 $props = New-Object 'System.Collections.Generic.Dictionary[string,string]'
                 $props['TaskName'] = $TaskName
                 $props['Success'] = (-not $errorOccurred).ToString()
-
+                $props['RawPropsAsJson'] = ($Metadata | ConvertTo-Json -Compress)
                 if ($errorOccurred) {
                     $props['ErrorMessage'] = $errorMessage
                 }
