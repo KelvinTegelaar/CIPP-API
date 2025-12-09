@@ -51,7 +51,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
         $CurrentInfo = $Domains | ForEach-Object {
             # Get current DNS records that matches _dmarc hostname and TXT type
-            $RecordsResponse = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($_.Name)" -extraHeaders @{'User-Agent' = 'CIPP/1.0' }
+            $RecordsResponse = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($_.Name)"
             $AllRecords = $RecordsResponse | Select-Object -ExpandProperty DnsRecords
             $CurrentRecords = $AllRecords | Where-Object { $_.HostName -eq '_dmarc' -and $_.Type -eq 'TXT' }
             Write-Information "Found $($CurrentRecords.count) DMARC records for domain $($_.Name)"

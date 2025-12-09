@@ -47,6 +47,11 @@ function New-GraphGetRequest {
                 $headers[$key] = $extraHeaders[$key]
             }
         }
+
+        if (!$headers['User-Agent']) {
+            $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
+        }
+
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
