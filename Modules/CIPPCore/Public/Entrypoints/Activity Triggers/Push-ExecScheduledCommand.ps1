@@ -341,4 +341,5 @@ function Push-ExecScheduledCommand {
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Successfully executed task: $($task.Name)" -sev Info
     }
     Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+    return 'Task Completed Successfully.'
 }
