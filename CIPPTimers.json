@@ -29,8 +29,8 @@
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogIngestion",
     "Description": "Ingest audit logs using Office 365 Management Activity API",
-    "Cron": "0 */15 * * * *",
-    "Priority": 2,
+    "Cron": "0 */30 * * * *",
+    "Priority": 4,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog",
     "IsSystem": true
