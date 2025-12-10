@@ -35,7 +35,7 @@ function Test-CIPPAccessUserRole {
     } else {
         try {
             $uri = "https://graph.microsoft.com/beta/users/$($User.userDetails)/transitiveMemberOf"
-            $Memberships = New-GraphGetRequest -uri $uri -NoAuthCheck $true | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }
+            $Memberships = New-GraphGetRequest -uri $uri -NoAuthCheck $true -AsApp $true | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }
             if ($Memberships) {
                 Write-Information "Found group memberships for $($User.userDetails)"
             } else {
