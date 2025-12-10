@@ -155,8 +155,8 @@ function Push-AuditLogIngestion {
 
                 if ($StateEntity -and $StateEntity.LastContentCreatedUtc) { $StartTime = ([DateTime]$StateEntity.LastContentCreatedUtc).AddMinutes(-5).ToUniversalTime() } else { $StartTime = $Now.AddHours(-1).ToUniversalTime() }
                 $EndTime = $Now.AddMinutes(-5).ToUniversalTime()
-                $StartTimeStr = $StartTime.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
-                $EndTimeStr = $EndTime.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                $StartTimeStr = $StartTime.ToString('yyyy-MM-ddTHH:mm:ss')
+                $EndTimeStr = $EndTime.ToString('yyyy-MM-ddTHH:mm:ss')
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Polling $ContentType from $StartTimeStr to $EndTimeStr" -sev Debug
                 $ContentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=$ContentType&startTime=$StartTimeStr&endTime=$EndTimeStr"
                 $ContentParams = @{
@@ -180,7 +180,7 @@ function Push-AuditLogIngestion {
                     continue
                 }
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Found $($ContentList.Count) content blobs for $ContentType" -sev Info
-                
+
                 $SwFilter = [System.Diagnostics.Stopwatch]::StartNew()
                 $NewContentItems = if ($StateEntity -and $StateEntity.LastContentId) {
                     $LastContentCreated = [DateTime]$StateEntity.LastContentCreatedUtc
@@ -285,11 +285,11 @@ function Push-AuditLogIngestion {
                         }
                     }
                     $StateUpdates[$ContentType].SubscriptionEnabled = $true
-                    $StateUpdates[$ContentType].LastContentCreatedUtc = $LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                    $StateUpdates[$ContentType].LastContentCreatedUtc = $LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss')
                     $StateUpdates[$ContentType].LastContentId = $LatestContentId
-                    $StateUpdates[$ContentType].LastProcessedUtc = $Now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                    $StateUpdates[$ContentType].LastProcessedUtc = $Now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
 
-                    Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Updated watermark for $ContentType to $($LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))" -sev Debug
+                    Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Updated watermark for $ContentType to $($LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss'))" -sev Debug
                 }
 
             } catch {
@@ -297,7 +297,7 @@ function Push-AuditLogIngestion {
                 continue
             }
         }
-        
+
         $Timings['ContentList'] = $SwContentList
         $Timings['ContentFilter'] = $SwContentFilter
         $Timings['BlobDownload'] = $SwBlobDownload
@@ -313,7 +313,7 @@ function Push-AuditLogIngestion {
 
         $TotalStopwatch.Stop()
         $TotalMs = $TotalStopwatch.Elapsed.TotalMilliseconds
-        
+
         $TimingReport = "AUDITLOG: Total: $([math]::Round($TotalMs, 2))ms"
         foreach ($Key in ($Timings.Keys | Sort-Object)) {
             $Ms = [math]::Round($Timings[$Key], 2)
