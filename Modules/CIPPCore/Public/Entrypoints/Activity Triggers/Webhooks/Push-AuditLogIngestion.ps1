@@ -10,17 +10,45 @@ function Push-AuditLogIngestion {
     $ContentTypes = $Item.ContentTypes
 
     try {
+        if (!$ContentTypes -or $ContentTypes.Count -eq 0) {
+            Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'No content types specified' -sev Warn
+            return $true
+        }
+
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'Starting Management API ingestion for tenant' -sev Info
+
         $AuditLogStateTable = Get-CippTable -TableName 'AuditLogState'
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
-        Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Content types to process: $($ContentTypes -join ', ')" -sev Info
+
+        $StateCache = @{}
+        $StateUpdates = @{}
         foreach ($ContentType in $ContentTypes) {
             $StateRowKey = "$TenantFilter-$ContentType"
             $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
+            $StateCache[$ContentType] = $StateEntity
+        }
+
+        Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Content types to process: $($ContentTypes -join ', ')" -sev Info
+
+        $ContentTypesNeedingSubscription = [System.Collections.Generic.List[string]]::new()
+        $EnabledContentTypes = [System.Collections.Generic.List[string]]::new()
+
+        foreach ($ContentType in $ContentTypes) {
+            $StateEntity = $StateCache[$ContentType]
+
             if ($StateEntity -and $StateEntity.SubscriptionEnabled) {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Subscription already enabled for $ContentType" -sev Debug
+                $EnabledContentTypes.Add($ContentType)
                 continue
             }
+
+            $ContentTypesNeedingSubscription.Add($ContentType)
+        }
+
+        foreach ($ContentType in $ContentTypesNeedingSubscription) {
+            $StateRowKey = "$TenantFilter-$ContentType"
+            $StateEntity = $StateCache[$ContentType]
+
             $SubscriptionUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=$ContentType"
             $SubscriptionParams = @{
                 scope    = 'https://manage.office.com/.default'
@@ -28,18 +56,21 @@ function Push-AuditLogIngestion {
                 Method   = 'POST'
                 TenantId = $TenantFilter
             }
+
             try {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Starting subscription for $ContentType" -sev Debug
                 $null = New-GraphPostRequest @SubscriptionParams -ErrorAction Stop
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Successfully started subscription for $ContentType" -sev Info
 
-                $StateEntity = @{
-                    PartitionKey        = 'AuditLogState'
-                    RowKey              = $StateRowKey
-                    SubscriptionEnabled = $true
-                    ContentType         = $ContentType
+                if (!$StateUpdates[$ContentType]) {
+                    $StateUpdates[$ContentType] = @{
+                        PartitionKey = 'AuditLogState'
+                        RowKey       = $StateRowKey
+                        ContentType  = $ContentType
+                    }
                 }
-                Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $StateEntity -Force
+                $StateUpdates[$ContentType].SubscriptionEnabled = $true
+                $EnabledContentTypes.Add($ContentType)
 
             } catch {
                 if ($_.Exception.Message -match 'AADSTS65001') {
@@ -52,26 +83,30 @@ function Push-AuditLogIngestion {
                     Update-CippSamPermissions -UpdatedBy 'CIPP-API'
                     Write-Host "Re-adding delegated permission for tenant: $TenantFilter"
                     Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter
-                    $StateEntity = @{
-                        PartitionKey       = 'AuditLogState'
-                        RowKey             = "$TenantFilter-$ContentType"
-                        PermissionsUpdated = $true
-                        ContentType        = $ContentType
+
+                    if (!$StateUpdates[$ContentType]) {
+                        $StateUpdates[$ContentType] = @{
+                            PartitionKey = 'AuditLogState'
+                            RowKey       = $StateRowKey
+                            ContentType  = $ContentType
+                        }
                     }
-                    Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $StateEntity
-                    return $true
+                    $StateUpdates[$ContentType].PermissionsUpdated = $true
+                    continue
                 }
 
                 if ($_.Exception.Message -match 'already enabled|already exists|AF20024') {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Subscription already exists for $ContentType" -sev Debug
 
-                    $StateEntity = @{
-                        PartitionKey        = 'AuditLogState'
-                        RowKey              = $StateRowKey
-                        SubscriptionEnabled = $true
-                        ContentType         = $ContentType
+                    if (!$StateUpdates[$ContentType]) {
+                        $StateUpdates[$ContentType] = @{
+                            PartitionKey = 'AuditLogState'
+                            RowKey       = $StateRowKey
+                            ContentType  = $ContentType
+                        }
                     }
-                    Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $StateEntity -Force
+                    $StateUpdates[$ContentType].SubscriptionEnabled = $true
+                    $EnabledContentTypes.Add($ContentType)
 
                 } else {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to start subscription for $ContentType : $($_.Exception.Message)" -sev Error
@@ -79,15 +114,24 @@ function Push-AuditLogIngestion {
             }
         }
 
+        if ($EnabledContentTypes.Count -eq 0) {
+            Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'No enabled content types to process' -sev Warn
+            if ($StateUpdates.Count -gt 0) {
+                $UpdateEntities = @($StateUpdates.Values)
+                Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $UpdateEntities -Force
+            }
+            return $true
+        }
+
         $TotalProcessedRecords = 0
         $Now = Get-Date
 
-        foreach ($ContentType in $ContentTypes) {
+        foreach ($ContentType in $EnabledContentTypes) {
             try {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Processing content type: $ContentType" -sev Debug
 
                 $StateRowKey = "$TenantFilter-$ContentType"
-                $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
+                $StateEntity = $StateCache[$ContentType]
 
                 if ($StateEntity -and $StateEntity.LastContentCreatedUtc) { $StartTime = ([DateTime]$StateEntity.LastContentCreatedUtc).AddMinutes(-5).ToUniversalTime() } else { $StartTime = $Now.AddHours(-1).ToUniversalTime() }
                 $EndTime = $Now.AddMinutes(-5).ToUniversalTime()
@@ -164,19 +208,23 @@ function Push-AuditLogIngestion {
 
                         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Caching $($AuditRecords.Count) audit records for $ContentType" -sev Debug
 
+                        $CacheEntities = [System.Collections.Generic.List[hashtable]]::new()
                         foreach ($Record in $AuditRecords) {
-                            try {
-                                $CacheEntity = @{
+                            $CacheEntities.Add(@{
                                     RowKey       = $Record.Id
                                     PartitionKey = $TenantFilter
                                     JSON         = [string]($Record | ConvertTo-Json -Depth 10 -Compress)
                                     ContentId    = $ContentItem.contentId
                                     ContentType  = $ContentType
-                                }
-                                Add-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $CacheEntity -Force
-                                $ProcessedRecords++
+                                })
+                        }
+
+                        if ($CacheEntities.Count -gt 0) {
+                            try {
+                                Add-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $CacheEntities -Force
+                                $ProcessedRecords += $CacheEntities.Count
                             } catch {
-                                Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to cache record for $ContentType : $($_.Exception.Message)" -sev Error
+                                Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to batch cache records for $ContentType : $($_.Exception.Message)" -sev Error
                             }
                         }
 
@@ -195,25 +243,31 @@ function Push-AuditLogIngestion {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Cached $ProcessedRecords audit records for $ContentType" -sev Info
                 $TotalProcessedRecords += $ProcessedRecords
 
-                $Entities = if ($LatestContentCreated) {
-                    $StateEntity = @{
-                        PartitionKey          = 'AuditLogState'
-                        RowKey                = $StateRowKey
-                        PermissionsUpdated    = $true
-                        SubscriptionEnabled   = $true
-                        LastContentCreatedUtc = $LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
-                        LastContentId         = $LatestContentId
-                        LastProcessedUtc      = $Now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
-                        ContentType           = $ContentType
+                if ($LatestContentCreated) {
+                    if (!$StateUpdates[$ContentType]) {
+                        $StateUpdates[$ContentType] = @{
+                            PartitionKey = 'AuditLogState'
+                            RowKey       = $StateRowKey
+                            ContentType  = $ContentType
+                        }
                     }
+                    $StateUpdates[$ContentType].SubscriptionEnabled = $true
+                    $StateUpdates[$ContentType].LastContentCreatedUtc = $LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                    $StateUpdates[$ContentType].LastContentId = $LatestContentId
+                    $StateUpdates[$ContentType].LastProcessedUtc = $Now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
 
-                    Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Updated watermark for $ContentType to $($StateEntity.LastContentCreatedUtc)" -sev Debug
+                    Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Updated watermark for $ContentType to $($LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))" -sev Debug
                 }
-                Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $Entities -Force
+
             } catch {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Error processing content type $ContentType : $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
                 continue
             }
+        }
+
+        if ($StateUpdates.Count -gt 0) {
+            $UpdateEntities = @($StateUpdates.Values)
+            Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $UpdateEntities -Force
         }
 
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Completed ingestion: $TotalProcessedRecords total records cached" -sev Info
