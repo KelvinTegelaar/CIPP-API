@@ -27,8 +27,8 @@
   },
   {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
-    "Command": "Start-AuditLogOrchestrator",
-    "Description": "Orchestrator to download audit logs",
+    "Command": "Start-AuditLogIngestion",
+    "Description": "Ingest audit logs using Office 365 Management Activity API",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
     "RunOnProcessor": true,
@@ -36,21 +36,11 @@
     "IsSystem": true
   },
   {
-    "Id": "01cd512a-15c4-44a9-b8cb-1e5d879cfd2d",
+    "Id": "a8f7c3e1-9d2b-4f6a-8e5c-1a3b7d9e4f2c",
     "Command": "Start-AuditLogProcessingOrchestrator",
-    "Description": "Orchestrator to process audit logs",
+    "Description": "Process cached audit logs and apply webhook rules",
     "Cron": "0 */15 * * * *",
-    "Priority": 3,
-    "RunOnProcessor": true,
-    "PreferredProcessor": "auditlog",
-    "IsSystem": true
-  },
-  {
-    "Id": "03475c86-4314-4d7b-90f2-5a0639e3899b",
-    "Command": "Start-AuditLogSearchCreation",
-    "Description": "Timer to create audit log searches",
-    "Cron": "0 */30 * * * *",
-    "Priority": 4,
+    "Priority": 2,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog",
     "IsSystem": true

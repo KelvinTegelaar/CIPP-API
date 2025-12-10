@@ -12,6 +12,15 @@
   },
   "requiredResourceAccess": [
     {
+      "resourceAppId": "c5393580-f805-4401-95e8-94b7a6ef2fc2",
+      "resourceAccess": [
+        {
+          "id": "594c1fb6-4f81-4475-ae41-0c394909246c",
+          "type": "Scope"
+        }
+      ]
+    },
+    {
       "resourceAppId": "aeb86249-8ea3-49e2-900b-54cc8e308f85",
       "resourceAccess": [
         {
