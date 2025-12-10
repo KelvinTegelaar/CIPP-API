@@ -9,6 +9,9 @@ function Push-AuditLogIngestion {
     $TenantId = $Item.TenantId
     $ContentTypes = $Item.ContentTypes
 
+    $Timings = @{}
+    $TotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
     try {
         if (!$ContentTypes -or $ContentTypes.Count -eq 0) {
             Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'No content types specified' -sev Warn
@@ -17,9 +20,13 @@ function Push-AuditLogIngestion {
 
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'Starting Management API ingestion for tenant' -sev Info
 
+        $SwInit = [System.Diagnostics.Stopwatch]::StartNew()
         $AuditLogStateTable = Get-CippTable -TableName 'AuditLogState'
         $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
+        $SwInit.Stop()
+        $Timings['Initialization'] = $SwInit.Elapsed.TotalMilliseconds
 
+        $SwStateLoad = [System.Diagnostics.Stopwatch]::StartNew()
         $StateCache = @{}
         $StateUpdates = @{}
         foreach ($ContentType in $ContentTypes) {
@@ -27,9 +34,12 @@ function Push-AuditLogIngestion {
             $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
             $StateCache[$ContentType] = $StateEntity
         }
+        $SwStateLoad.Stop()
+        $Timings['StateLoad'] = $SwStateLoad.Elapsed.TotalMilliseconds
 
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Content types to process: $($ContentTypes -join ', ')" -sev Info
 
+        $SwSubscriptionCheck = [System.Diagnostics.Stopwatch]::StartNew()
         $ContentTypesNeedingSubscription = [System.Collections.Generic.List[string]]::new()
         $EnabledContentTypes = [System.Collections.Generic.List[string]]::new()
 
@@ -44,7 +54,10 @@ function Push-AuditLogIngestion {
 
             $ContentTypesNeedingSubscription.Add($ContentType)
         }
+        $SwSubscriptionCheck.Stop()
+        $Timings['SubscriptionCheck'] = $SwSubscriptionCheck.Elapsed.TotalMilliseconds
 
+        $SwSubscriptionSetup = [System.Diagnostics.Stopwatch]::StartNew()
         foreach ($ContentType in $ContentTypesNeedingSubscription) {
             $StateRowKey = "$TenantFilter-$ContentType"
             $StateEntity = $StateCache[$ContentType]
@@ -113,6 +126,8 @@ function Push-AuditLogIngestion {
                 }
             }
         }
+        $SwSubscriptionSetup.Stop()
+        $Timings['SubscriptionSetup'] = $SwSubscriptionSetup.Elapsed.TotalMilliseconds
 
         if ($EnabledContentTypes.Count -eq 0) {
             Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message 'No enabled content types to process' -sev Warn
@@ -125,6 +140,11 @@ function Push-AuditLogIngestion {
 
         $TotalProcessedRecords = 0
         $Now = Get-Date
+
+        $SwContentList = 0
+        $SwContentFilter = 0
+        $SwBlobDownload = 0
+        $SwRecordCache = 0
 
         foreach ($ContentType in $EnabledContentTypes) {
             try {
@@ -145,18 +165,23 @@ function Push-AuditLogIngestion {
                     TenantId = $TenantFilter
                 }
 
+                $SwList = [System.Diagnostics.Stopwatch]::StartNew()
                 try {
                     $ContentList = New-GraphGetRequest @ContentParams -ErrorAction Stop
                 } catch {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to list content for $ContentType : $($_.Exception.Message)" -sev Error
                     continue
                 }
+                $SwList.Stop()
+                $SwContentList += $SwList.Elapsed.TotalMilliseconds
 
                 if (!$ContentList -or ($ContentList | Measure-Object).Count -eq 0) {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "No new content available for $ContentType" -sev Debug
                     continue
                 }
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Found $($ContentList.Count) content blobs for $ContentType" -sev Info
+                
+                $SwFilter = [System.Diagnostics.Stopwatch]::StartNew()
                 $NewContentItems = if ($StateEntity -and $StateEntity.LastContentId) {
                     $LastContentCreated = [DateTime]$StateEntity.LastContentCreatedUtc
                     $LastContentId = $StateEntity.LastContentId
@@ -171,6 +196,8 @@ function Push-AuditLogIngestion {
                 } else {
                     $ContentList
                 }
+                $SwFilter.Stop()
+                $SwContentFilter += $SwFilter.Elapsed.TotalMilliseconds
 
                 if (($NewContentItems | Measure-Object).Count -eq 0) {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "No new content items for $ContentType (all already processed)" -sev Debug
@@ -187,6 +214,7 @@ function Push-AuditLogIngestion {
                     try {
                         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Downloading content blob for $ContentType" -sev Debug
 
+                        $SwBlob = [System.Diagnostics.Stopwatch]::StartNew()
                         $BlobParams = @{
                             scope    = 'https://manage.office.com/.default'
                             Uri      = $ContentItem.contentUri
@@ -200,6 +228,8 @@ function Push-AuditLogIngestion {
                         } else {
                             $AuditRecords = $BlobResponse
                         }
+                        $SwBlob.Stop()
+                        $SwBlobDownload += $SwBlob.Elapsed.TotalMilliseconds
 
                         if (!$AuditRecords) {
                             Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "No records in blob for $ContentType" -sev Warn
@@ -208,6 +238,7 @@ function Push-AuditLogIngestion {
 
                         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Caching $($AuditRecords.Count) audit records for $ContentType" -sev Debug
 
+                        $SwCache = [System.Diagnostics.Stopwatch]::StartNew()
                         $CacheEntities = [System.Collections.Generic.List[hashtable]]::new()
                         foreach ($Record in $AuditRecords) {
                             $CacheEntities.Add(@{
@@ -227,6 +258,8 @@ function Push-AuditLogIngestion {
                                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to batch cache records for $ContentType : $($_.Exception.Message)" -sev Error
                             }
                         }
+                        $SwCache.Stop()
+                        $SwRecordCache += $SwCache.Elapsed.TotalMilliseconds
 
                         $ContentCreated = [DateTime]$ContentItem.contentCreated
                         if (!$LatestContentCreated -or $ContentCreated -gt $LatestContentCreated) {
@@ -264,11 +297,30 @@ function Push-AuditLogIngestion {
                 continue
             }
         }
+        
+        $Timings['ContentList'] = $SwContentList
+        $Timings['ContentFilter'] = $SwContentFilter
+        $Timings['BlobDownload'] = $SwBlobDownload
+        $Timings['RecordCache'] = $SwRecordCache
 
+        $SwStateWrite = [System.Diagnostics.Stopwatch]::StartNew()
         if ($StateUpdates.Count -gt 0) {
             $UpdateEntities = @($StateUpdates.Values)
             Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $UpdateEntities -Force
         }
+        $SwStateWrite.Stop()
+        $Timings['StateWrite'] = $SwStateWrite.Elapsed.TotalMilliseconds
+
+        $TotalStopwatch.Stop()
+        $TotalMs = $TotalStopwatch.Elapsed.TotalMilliseconds
+        
+        $TimingReport = "AUDITLOG: Total: $([math]::Round($TotalMs, 2))ms"
+        foreach ($Key in ($Timings.Keys | Sort-Object)) {
+            $Ms = [math]::Round($Timings[$Key], 2)
+            $Pct = [math]::Round(($Timings[$Key] / $TotalMs) * 100, 1)
+            $TimingReport += " | $Key : $Ms ms ($Pct %)"
+        }
+        Write-Host $TimingReport
 
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Completed ingestion: $TotalProcessedRecords total records cached" -sev Info
 
