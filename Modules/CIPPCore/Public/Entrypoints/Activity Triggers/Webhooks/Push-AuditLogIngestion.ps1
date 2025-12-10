@@ -19,6 +19,13 @@ function Push-AuditLogIngestion {
         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Content types to process: $($ContentTypes -join ', ')" -sev Info
 
         foreach ($ContentType in $ContentTypes) {
+            $StateRowKey = "$TenantFilter-$ContentType"
+            $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
+
+            if ($StateEntity -and $StateEntity.SubscriptionEnabled) {
+                Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Subscription already enabled for $ContentType" -sev Debug
+                continue
+            }
 
             $SubscriptionUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=$ContentType"
             $SubscriptionParams = @{
@@ -27,15 +34,21 @@ function Push-AuditLogIngestion {
                 Method   = 'POST'
                 TenantId = $TenantFilter
             }
-
             try {
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Starting subscription for $ContentType" -sev Debug
                 $null = New-GraphPostRequest @SubscriptionParams -ErrorAction Stop
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Successfully started subscription for $ContentType" -sev Info
+
+                $StateEntity = @{
+                    PartitionKey        = 'AuditLogState'
+                    RowKey              = $StateRowKey
+                    SubscriptionEnabled = $true
+                    ContentType         = $ContentType
+                }
+                Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $StateEntity -Force
+
             } catch {
                 if ($_.Exception.Message -match 'AADSTS65001') {
-                    $StateRowKey = "$TenantFilter-$ContentType"
-                    $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
                     if ($StateEntity -and $StateEntity.PermissionsUpdated) {
                         Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Permissions have already been updated for $ContentType, skipping re-attempt" -sev Warn
                         continue
@@ -45,7 +58,6 @@ function Push-AuditLogIngestion {
                     Update-CippSamPermissions -UpdatedBy 'CIPP-API'
                     Write-Host "Re-adding delegated permission for tenant: $TenantFilter"
                     Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter
-                    #Create an object in the auditlog state table to never try this again.
                     $StateEntity = @{
                         PartitionKey       = 'AuditLogState'
                         RowKey             = "$TenantFilter-$ContentType"
@@ -58,6 +70,15 @@ function Push-AuditLogIngestion {
 
                 if ($_.Exception.Message -match 'already enabled|already exists|AF20024') {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Subscription already exists for $ContentType" -sev Debug
+
+                    $StateEntity = @{
+                        PartitionKey        = 'AuditLogState'
+                        RowKey              = $StateRowKey
+                        SubscriptionEnabled = $true
+                        ContentType         = $ContentType
+                    }
+                    Add-CIPPAzDataTableEntity @AuditLogStateTable -Entity $StateEntity -Force
+
                 } else {
                     Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Failed to start subscription for $ContentType : $($_.Exception.Message)" -sev Error
                 }
@@ -75,15 +96,10 @@ function Push-AuditLogIngestion {
                 $StateEntity = Get-CIPPAzDataTableEntity @AuditLogStateTable -Filter "PartitionKey eq 'AuditLogState' and RowKey eq '$StateRowKey'"
 
                 if ($StateEntity -and $StateEntity.LastContentCreatedUtc) { $StartTime = ([DateTime]$StateEntity.LastContentCreatedUtc).AddMinutes(-5).ToUniversalTime() } else { $StartTime = $Now.AddHours(-1).ToUniversalTime() }
-
-
                 $EndTime = $Now.AddMinutes(-5).ToUniversalTime()
-
                 $StartTimeStr = $StartTime.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
                 $EndTimeStr = $EndTime.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
-
                 Write-LogMessage -API 'AuditLogIngestion' -tenant $TenantFilter -message "Polling $ContentType from $StartTimeStr to $EndTimeStr" -sev Debug
-
                 $ContentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=$ContentType&startTime=$StartTimeStr&endTime=$EndTimeStr"
                 $ContentParams = @{
                     Uri      = $ContentUri
@@ -192,6 +208,7 @@ function Push-AuditLogIngestion {
                         PartitionKey          = 'AuditLogState'
                         RowKey                = $StateRowKey
                         PermissionsUpdated    = $true
+                        SubscriptionEnabled   = $true
                         LastContentCreatedUtc = $LatestContentCreated.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
                         LastContentId         = $LatestContentId
                         LastProcessedUtc      = $Now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
