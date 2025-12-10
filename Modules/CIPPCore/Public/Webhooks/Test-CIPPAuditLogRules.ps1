@@ -206,7 +206,7 @@ function Test-CIPPAuditLogRules {
                 $RecordStartTime = Get-Date
                 Write-Information "Processing RowKey $($AuditRecord.id)"
                 $RootProperties = $AuditRecord | Select-Object * -ExcludeProperty auditData
-                $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
+                $Data = $AuditRecord.JSON | ConvertFrom-Json -Depth 5 | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
                 try {
                     # Attempt to locate GUIDs in $Data and match them with their corresponding user, group, device, or service principal recursively by checking each key/value once located lets store these mapped values in a CIPP$KeyName property
                     Write-Information 'Checking Data for GUIDs to map to users, groups, devices, or service principals'

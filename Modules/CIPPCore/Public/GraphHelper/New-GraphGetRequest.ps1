@@ -20,27 +20,18 @@ function New-GraphGetRequest {
         [switch]$ReturnRawResponse
     )
 
-    $Timings = @{}
-    $TotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
-    $SwAuthCheck = [System.Diagnostics.Stopwatch]::StartNew()
     if ($NoAuthCheck -eq $false) {
         $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
     } else {
         $IsAuthorised = $true
     }
-    $SwAuthCheck.Stop()
-    $Timings['AuthCheck'] = $SwAuthCheck.Elapsed.TotalMilliseconds
 
     if ($NoAuthCheck -eq $true -or $IsAuthorised) {
-        $SwTokenGet = [System.Diagnostics.Stopwatch]::StartNew()
         if ($scope -eq 'ExchangeOnline') {
             $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
         } else {
             $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
-        $SwTokenGet.Stop()
-        $Timings['TokenGet'] = $SwTokenGet.Elapsed.TotalMilliseconds
 
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
@@ -61,7 +52,6 @@ function New-GraphGetRequest {
             $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
         }
 
-        $SwTenantLookup = [System.Diagnostics.Stopwatch]::StartNew()
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
@@ -74,13 +64,6 @@ function New-GraphGetRequest {
                 RowKey          = 'Failed'
             }
         }
-        $SwTenantLookup.Stop()
-        $Timings['TenantLookup'] = $SwTenantLookup.Elapsed.TotalMilliseconds
-
-        $SwApiCalls = 0
-        $SwRetryWait = 0
-        $SwErrorHandling = 0
-        $ApiCallCount = 0
 
         $ReturnedData = do {
             $RetryCount = 0
@@ -89,7 +72,6 @@ function New-GraphGetRequest {
             Write-Information "GET [ $nextURL ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $MaxRetries"
             do {
                 try {
-                    $SwCall = [System.Diagnostics.Stopwatch]::StartNew()
                     $GraphRequest = @{
                         Uri         = $nextURL
                         Method      = 'GET'
@@ -105,9 +87,6 @@ function New-GraphGetRequest {
                         $Data = (Invoke-RestMethod @GraphRequest)
                         $script:LastGraphResponseHeaders = $ResponseHeaders
                     }
-                    $SwCall.Stop()
-                    $SwApiCalls += $SwCall.Elapsed.TotalMilliseconds
-                    $ApiCallCount++
 
                     # If we reach here, the request was successful
                     $RequestSuccessful = $true
@@ -153,7 +132,6 @@ function New-GraphGetRequest {
                         }
                     }
                 } catch {
-                    $SwError = [System.Diagnostics.Stopwatch]::StartNew()
                     $ShouldRetry = $false
                     $WaitTime = 0
                     try {
@@ -187,18 +165,15 @@ function New-GraphGetRequest {
                     # Check for "Resource temporarily unavailable"
                     elseif ($Message -like '*Resource temporarily unavailable*') {
                         if ($RetryCount -lt $MaxRetries) {
+                            $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1  # Random sleep between 1-2 seconds
+                            Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
                         }
                     }
-                    $SwError.Stop()
-                    $SwErrorHandling += $SwError.Elapsed.TotalMilliseconds
 
                     if ($ShouldRetry -and $RetryCount -lt $MaxRetries) {
                         $RetryCount++
-                        $SwWait = [System.Diagnostics.Stopwatch]::StartNew()
                         Start-Sleep -Seconds $WaitTime
-                        $SwWait.Stop()
-                        $SwRetryWait += $SwWait.Elapsed.TotalMilliseconds
                     } else {
                         # Final failure - update tenant error tracking and throw
                         if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
@@ -214,12 +189,6 @@ function New-GraphGetRequest {
                 }
             } while (-not $RequestSuccessful -and $RetryCount -le $MaxRetries)
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-
-        $Timings['ApiCalls'] = $SwApiCalls
-        $Timings['RetryWait'] = $SwRetryWait
-        $Timings['ErrorHandling'] = $SwErrorHandling
-
-        $SwTenantUpdate = [System.Diagnostics.Stopwatch]::StartNew()
         if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
             $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
         } else {
@@ -231,20 +200,6 @@ function New-GraphGetRequest {
             $Tenant.GraphErrorCount = 0
         }
         Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
-        $SwTenantUpdate.Stop()
-        $Timings['TenantUpdate'] = $SwTenantUpdate.Elapsed.TotalMilliseconds
-
-        $TotalStopwatch.Stop()
-        $TotalMs = $TotalStopwatch.Elapsed.TotalMilliseconds
-
-        $TimingReport = "GRAPH_GET: Total: $([math]::Round($TotalMs, 2))ms | Calls: $ApiCallCount"
-        foreach ($Key in ($Timings.Keys | Sort-Object)) {
-            $Ms = [math]::Round($Timings[$Key], 2)
-            $Pct = [math]::Round(($Timings[$Key] / $TotalMs) * 100, 1)
-            $TimingReport += " | $Key : $Ms ms ($Pct %)"
-        }
-        Write-Host $TimingReport
-
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
