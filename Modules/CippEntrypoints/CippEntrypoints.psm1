@@ -284,7 +284,7 @@ function Receive-CippActivityTrigger {
             Tenant   = $Item.TenantFilter.defaultDomainName
             TaskName = $Item.TaskName
             JSONData = ($Item | ConvertTo-Json -Depth 10 -Compress)
-        }
+        } | ConvertTo-Json -Depth 10 -Compress
 
         Write-Information -MessageData $metric -Tag 'CIPPCommandStart'
         if ($Item.QueueId) {
