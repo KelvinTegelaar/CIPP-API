@@ -51,7 +51,7 @@ function New-CIPPIntuneTemplate {
         'configurationPolicies' {
             $Type = 'Catalog'
             $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $TenantFilter | Select-Object name, description, settings, platforms, technologies, templateReference
-            $TemplateJson = $Template | ConvertTo-Json -Depth 100
+            $TemplateJson = $Template | ConvertTo-Json -Depth 100 -Compress
             $DisplayName = $Template.name
 
         }
