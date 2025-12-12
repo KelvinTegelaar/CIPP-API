@@ -49,8 +49,9 @@ function Invoke-CIPPStandardsRun {
         Write-Information 'Classic Standards Run'
 
         $GetStandardParams = @{
-            TenantFilter = $TenantFilter
-            runManually  = $runManually
+            TenantFilter  = $TenantFilter
+            runManually   = $runManually
+            LicenseChecks = $true
         }
 
         if ($TemplateID) {

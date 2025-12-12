@@ -415,11 +415,107 @@ function Get-CIPPStandards {
                     }
                     Write-Host "We're removing Intune templates as the correct license is not present for this standard. We do this to not run unneeded cycles. If you're reading this don't touch."
                     foreach ($Key in $IntuneKeys) { [void]$ComputedStandards.Remove($Key) }
-                    #After the license check we're now going to do a compare for the remaining standards.
-                    #This compare works by bulk requesting the top=1 entries for intune policies inside of the tenant.
-                    #if the 'lastModified' timestamp is the same we skip processing this standard too, there's no need because the tenant hasn't changed anything.
-                    #However, we also check the timestamp of our standardTemplate, if that is newer than the cached lastModified timestamp we also process the standard again, because the template has changed.
-                    #If our cache for this tenant is blank, we also process the standard.
+                } else {
+                    # Bulk check policy timestamps per type
+                    $TypeMap = @{ Device = 'deviceManagement/deviceConfigurations'; Catalog = 'deviceManagement/configurationPolicies'; Admin = 'deviceManagement/groupPolicyConfigurations'; deviceCompliancePolicies = 'deviceManagement/deviceCompliancePolicies'; AppProtection_Android = 'deviceAppManagement/androidManagedAppProtections'; AppProtection_iOS = 'deviceAppManagement/iosManagedAppProtections' }
+                    $BulkRequests = $TypeMap.GetEnumerator() | ForEach-Object {
+                        @{ id = $_.Key; url = "$($_.Value)?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime&`$top=999"; method = 'GET' }
+                    }
+                    try {
+                        $TrackingTable = Get-CippTable -tablename 'IntunePolicyTypeTracking'
+                        $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantName -NoPaginateIds @($BulkRequests.id)
+                        $PolicyTimestamps = @{}
+
+                        foreach ($Result in $BulkResults) {
+                            $GraphTime = $Result.body.value[0].lastModifiedDateTime
+                            $GraphId = $Result.body.value[0].id
+                            $GraphCount = ($Result.body.value | Measure-Object).Count
+                            $Cached = Get-CIPPAzDataTableEntity @TrackingTable -Filter "PartitionKey eq '$TenantName' and RowKey eq '$($Result.id)'"
+
+                            # Check if count changed (indicates addition/deletion)
+                            $CountChanged = $false
+                            if ($Cached -and $Cached.PolicyCount -ne $null) {
+                                $CountChanged = ($GraphCount -ne $Cached.PolicyCount)
+                                if ($CountChanged) {
+                                    Write-Host "Policy count changed for $($Result.id): $($Cached.PolicyCount) -> $GraphCount"
+                                }
+                            }
+
+                            # Check if ID changed (different policy is now most recent)
+                            $IdChanged = $false
+                            if ($GraphId -and $Cached -and $Cached.LatestPolicyId) {
+                                $IdChanged = ($GraphId -ne $Cached.LatestPolicyId)
+                                if ($IdChanged) {
+                                    Write-Host "Policy ID changed for $($Result.id): $($Cached.LatestPolicyId) -> $GraphId"
+                                }
+                            }
+
+                            # Convert both to UTC DateTime for consistent comparison
+                            if ($GraphTime) {
+                                $GraphTimeUtc = ([DateTime]$GraphTime).ToUniversalTime()
+                                if ($Cached -and $Cached.LatestPolicyModified -and -not $IdChanged -and -not $CountChanged) {
+                                    $CachedTimeUtc = ([DateTimeOffset]$Cached.LatestPolicyModified).UtcDateTime
+                                    $TimeDiff = [Math]::Abs(($GraphTimeUtc - $CachedTimeUtc).TotalSeconds)
+                                    $Changed = ($TimeDiff -gt 60)  # Changed if difference > 1 minute
+                                } else {
+                                    $Changed = $true  # No cache, ID changed, count changed, or treat as changed
+                                }
+                                Add-CIPPAzDataTableEntity @TrackingTable -Entity @{ PartitionKey = $TenantName; RowKey = $Result.id; LatestPolicyModified = $GraphTime; LatestPolicyId = $GraphId; PolicyCount = $GraphCount } -Force | Out-Null
+                            } else {
+                                $Changed = $true  # No Graph data means policies deleted or not yet created - always treat as changed
+                            }
+
+                            $PolicyTimestamps[$Result.id] = $Changed
+                        }
+                        # Remove templates whose specific policy type hasn't changed
+                        $TemplateTable = Get-CippTable -tablename 'templates'
+                        $StandardTemplateTable = Get-CippTable -tablename 'templates'
+                        $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+                        foreach ($Key in $IntuneKeys) {
+                            $Template = $ComputedStandards[$Key]
+                            $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Template.TemplateList.value)'"
+
+                            if (-not $TemplateEntity) { continue }
+
+                            # Parse JSON to get Type property
+                            $ParsedTemplate = $TemplateEntity.JSON | ConvertFrom-Json
+                            if (-not $ParsedTemplate.Type) { continue }
+
+                            $PolicyType = $ParsedTemplate.Type
+                            $PolicyChanged = if ($PolicyType -eq 'AppProtection') {
+                                [bool]($PolicyTimestamps['AppProtection_Android'] -or $PolicyTimestamps['AppProtection_iOS'])
+                            } else {
+                                [bool]$PolicyTimestamps[$PolicyType]
+                            }
+
+                            # Check if StandardTemplate changed
+                            $StandardTemplate = Get-CIPPAzDataTableEntity @StandardTemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
+                            $StandardTemplateChanged = $false
+                            if ($StandardTemplate) {
+                                $StandardTimeUtc = ([DateTimeOffset]$StandardTemplate.Timestamp).UtcDateTime
+                                $CachedStandardTemplate = Get-CIPPAzDataTableEntity @TrackingTable -Filter "PartitionKey eq '$TenantName' and RowKey eq 'StandardTemplate_$($Template.TemplateId)'"
+
+                                if ($CachedStandardTemplate -and $CachedStandardTemplate.CachedTimestamp) {
+                                    $CachedStandardTimeUtc = ([DateTimeOffset]$CachedStandardTemplate.CachedTimestamp).UtcDateTime
+                                    $TimeDiff = [Math]::Abs(($StandardTimeUtc - $CachedStandardTimeUtc).TotalSeconds)
+                                    $StandardTemplateChanged = ($TimeDiff -gt 60)  # Changed if difference > 1 minute
+                                } else {
+                                    $StandardTemplateChanged = $true  # No cache, treat as changed
+                                }
+
+                                Add-CIPPAzDataTableEntity @TrackingTable -Entity @{ PartitionKey = $TenantName; RowKey = "StandardTemplate_$($Template.TemplateId)"; CachedTimestamp = $StandardTemplate.Timestamp } -Force | Out-Null
+                            }
+
+                            # Remove if BOTH policy unchanged AND StandardTemplate unchanged
+                            if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
+                                [void]$ComputedStandards.Remove($Key)
+                            } else {
+
+                            }
+                        }
+                    } catch {
+                        Write-Host "Timestamp check failed for $TenantName`: $($_.Exception.Message)"
+                    }
                 }
             }
 
@@ -442,4 +538,3 @@ function Get-CIPPStandards {
         }
     }
 }
-
