@@ -148,38 +148,75 @@ function Test-CIPPAuditLogRules {
             }
         }
 
-        # Collect bulk data for users/groups/devices/applications
-        $Requests = @(
-            @{
-                id     = 'users'
-                url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
-                method = 'GET'
-            }
-            @{
-                id     = 'groups'
-                url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
-                method = 'GET'
-            }
-            @{
-                id     = 'devices'
-                url    = '/devices?$select=id,displayName,deviceId&$top=999'
-                method = 'GET'
-            }
-            @{
-                id     = 'servicePrincipals'
-                url    = '/servicePrincipals?$select=id,displayName&$top=999'
-                method = 'GET'
-            }
-        )
-        $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+        $Table = Get-CIPPTable -tablename 'cacheauditloglookups'
+        $1dayago = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $Lookups = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$TenantFilter' and Timestamp gt datetime'$1dayago'"
+        if (!$Lookups) {
+            # Collect bulk data for users/groups/devices/applications
+            $Requests = @(
+                @{
+                    id     = 'users'
+                    url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'groups'
+                    url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'devices'
+                    url    = '/devices?$select=id,displayName,deviceId&$top=999'
+                    method = 'GET'
+                }
+                @{
+                    id     = 'servicePrincipals'
+                    url    = '/servicePrincipals?$select=id,displayName&$top=999'
+                    method = 'GET'
+                }
+            )
+            $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+            $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value
+            $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
+            $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
+            $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
+            # Cache the lookups for 1 day
+            $Entities = @(
+                @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = 'users'
+                    Data         = [string]($Users | ConvertTo-Json -Compress)
+                }
+                @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = 'groups'
+                    Data         = [string]($Groups | ConvertTo-Json -Compress)
+                }
+                @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = 'devices'
+                    Data         = [string]($Devices | ConvertTo-Json -Compress)
+                }
+                @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = 'servicePrincipals'
+                    Data         = [string]($ServicePrincipals | ConvertTo-Json -Compress)
+                }
+            )
+            # Save the cached lookups
+            Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
+            Write-Information "Cached directory lookups for tenant $TenantFilter"
+        } else {
+            # Use cached lookups
+            $Users = ($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data | ConvertFrom-Json
+            $Groups = ($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json
+            $Devices = ($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json
+            $ServicePrincipals = ($Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }).Data | ConvertFrom-Json
+            Write-Information "Using cached directory lookups for tenant $TenantFilter"
+        }
 
         # partner users
         $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
-
-        $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value
-        $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
-        $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-        $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
 
         Write-Warning '## Audit Log Configuration ##'
         Write-Information ($Configuration | ConvertTo-Json -Depth 10)
