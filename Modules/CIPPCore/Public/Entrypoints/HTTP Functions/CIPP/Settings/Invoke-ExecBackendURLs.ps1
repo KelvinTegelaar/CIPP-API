@@ -32,6 +32,12 @@ function Invoke-ExecBackendURLs {
         RGName             = $RGName
         FunctionName       = $env:WEBSITE_SITE_NAME
         SWAName            = $SWAName
+        Hosted             = $env:CIPP_HOSTED -eq 'true' ?? $false
+        OS                 = $IsLinux ? 'Linux' : 'Windows'
+        SKU                = $env:WEBSITE_SKU
+        Timezone           = $env:WEBSITE_TIME_ZONE ?? 'UTC'
+        BusinessHoursStart = $env:CIPP_BUSINESS_HOURS_START ?? '09:00'
+        BusinessHoursEnd   = $env:CIPP_BUSINESS_HOURS_END ?? '17:00'
     }
 
 
