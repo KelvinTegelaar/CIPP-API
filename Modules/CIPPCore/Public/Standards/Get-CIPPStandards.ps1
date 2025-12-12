@@ -4,6 +4,9 @@ function Get-CIPPStandards {
         [string]$TenantFilter = 'allTenants',
 
         [Parameter(Mandatory = $false)]
+        [switch]$LicenseChecks = $false,
+
+        [Parameter(Mandatory = $false)]
         [switch]$ListAllTenants,
 
         [Parameter(Mandatory = $false)]
@@ -20,16 +23,16 @@ function Get-CIPPStandards {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
-        ForEach-Object {
-            try {
-                # Fix old "Action" => "action"
-                $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
-                ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
-            } catch {}
-        } |
-        Where-Object {
-            $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
-        }
+    ForEach-Object {
+        try {
+            # Fix old "Action" => "action"
+            $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+        } catch {}
+    } |
+    Where-Object {
+        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
+    }
 
     # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
     $ExpandedTemplates = foreach ($Template in $Templates) {
@@ -398,12 +401,31 @@ function Get-CIPPStandards {
                     }
                 }
             }
+            # Checking if IntuneTemplates have a license and if the tenant meets it, if not, remove from the arr so we only do ONE license check instead of hundreds.
+            $IntuneTemplateFound = $LicenseChecks.IsPresent -and ($ComputedStandards.Keys.Where({ $_ -like '*IntuneTemplate*' }, 'First').Count -gt 0)
+            if ($IntuneTemplateFound) {
+                $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantName -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+                if (-not $TestResult) {
+                    $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+                    foreach ($Key in $IntuneKeys) {
+                        $TemplateKey = ($Key -split '\|', 2)[1]
+                        if ($TemplateKey) {
+                            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$TemplateKey" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $TenantName
+                        }
+                    }
+                    Write-Host "We're removing Intune templates as the correct license is not present for this standard. We do this to not run unneeded cycles. If you're reading this don't touch."
+                    foreach ($Key in $IntuneKeys) { [void]$ComputedStandards.Remove($Key) }
+                    #After the license check we're now going to do a compare for the remaining standards.
+                    #This compare works by bulk requesting the top=1 entries for intune policies inside of the tenant.
+                    #if the 'lastModified' timestamp is the same we skip processing this standard too, there's no need because the tenant hasn't changed anything.
+                    #However, we also check the timestamp of our standardTemplate, if that is newer than the cached lastModified timestamp we also process the standard again, because the template has changed.
+                    #If our cache for this tenant is blank, we also process the standard.
+                }
+            }
 
-            # Emit one object per unique (StandardName, TemplateList.value)
             foreach ($Key in $ComputedStandards.Keys) {
                 $Standard = $ComputedStandards[$Key]
                 $StandardName = $Key -replace '\|.*$', ''
-
                 # Preserve TemplateId before removing
                 $PreservedTemplateId = $Standard.TemplateId
                 $Standard.PSObject.Properties.Remove('TemplateId') | Out-Null
