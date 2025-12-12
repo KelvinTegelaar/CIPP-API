@@ -409,6 +409,7 @@ function Receive-CIPPTimerTrigger {
     $UtcNow = (Get-Date).ToUniversalTime()
     $Functions = Get-CIPPTimerFunctions
     Write-Host "CIPP Timer Trigger executed at $UtcNow. Found $($Functions.Count) functions to evaluate. The names are as follows: $($Functions.Command -join ', ')"
+    Write-Host "CIPPTIMER: $($Functions | ConvertTo-Json -Depth 10 -Compress)"
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
     $FunctionName = $env:WEBSITE_SITE_NAME
