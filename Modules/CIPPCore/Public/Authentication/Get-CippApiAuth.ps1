@@ -20,15 +20,15 @@ function Get-CippApiAuth {
         }
 
         # Get auth settings
-        $AuthSettings = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" -ErrorAction Stop | Select-Object -ExpandProperty Content | ConvertFrom-Json
+        $AuthSettings = (Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" -ErrorAction Stop | Select-Object -ExpandProperty Content | ConvertFrom-Json).properties
     }
 
-    if ($AuthSettings.properties) {
+    if ($AuthSettings) {
         [PSCustomObject]@{
             ApiUrl    = "https://$($env:WEBSITE_HOSTNAME)"
-            TenantID  = $AuthSettings.properties.identityProviders.azureActiveDirectory.registration.openIdIssuer -replace 'https://sts.windows.net/', '' -replace '/v2.0', ''
-            ClientIDs = $AuthSettings.properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedApplications
-            Enabled   = $AuthSettings.properties.identityProviders.azureActiveDirectory.enabled
+            TenantID  = $AuthSettings.identityProviders.azureActiveDirectory.registration.openIdIssuer -replace 'https://sts.windows.net/', '' -replace '/v2.0', ''
+            ClientIDs = $AuthSettings.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedApplications
+            Enabled   = $AuthSettings.identityProviders.azureActiveDirectory.enabled
         }
     } else {
         throw 'No auth settings found'
