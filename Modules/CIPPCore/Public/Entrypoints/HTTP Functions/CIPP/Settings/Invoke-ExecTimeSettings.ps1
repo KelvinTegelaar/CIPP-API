@@ -52,29 +52,18 @@ function Invoke-ExecTimeSettings {
 
         Write-Information "Updating function app time settings: Timezone=$Timezone, BusinessHoursStart=$BusinessHoursStart, BusinessHoursEnd=$BusinessHoursEnd"
 
-        # Get current app settings
-        $Token = Get-AzAccessToken -ResourceUrl 'https://management.azure.com'
-        $Headers = @{
-            Authorization  = "Bearer $($Token.Token)"
-            'Content-Type' = 'application/json'
+        # Build app settings hashtable
+        $AppSettings = @{
+            'WEBSITE_TIME_ZONE' = $Timezone
         }
-
-        $AppSettingsUrl = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$RGName/providers/Microsoft.Web/sites/$FunctionName/config/appsettings/list?api-version=2022-03-01"
-
-        $CurrentSettings = Invoke-RestMethod -Uri $AppSettingsUrl -Method POST -Headers $Headers
-
-        # Update settings
-        $CurrentSettings.properties['WEBSITE_TIME_ZONE'] = $Timezone
 
         if ($env:WEBSITE_SKU -eq 'FlexConsumption') {
-            $CurrentSettings.properties['CIPP_BUSINESS_HOURS_START'] = $BusinessHoursStart
-            $CurrentSettings.properties['CIPP_BUSINESS_HOURS_END'] = $BusinessHoursEnd
+            $AppSettings['CIPP_BUSINESS_HOURS_START'] = $BusinessHoursStart
+            $AppSettings['CIPP_BUSINESS_HOURS_END'] = $BusinessHoursEnd
         }
 
-        # Save settings
-        $UpdateUrl = "https://management.azure.com/subscriptions/$Subscription/resourceGroups/$RGName/providers/Microsoft.Web/sites/$FunctionName/config/appsettings?api-version=2022-03-01"
-
-        $UpdateResponse = Invoke-RestMethod -Uri $UpdateUrl -Method PUT -Headers $Headers -Body ($CurrentSettings | ConvertTo-Json -Depth 10)
+        # Update app settings using native cmdlet (managed identity authentication handled automatically)
+        Update-AzFunctionAppSetting -Name $FunctionName -ResourceGroupName $RGName -AppSetting $AppSettings -ErrorAction Stop | Out-Null
 
         Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Updated time settings: Timezone=$Timezone, BusinessHours=$BusinessHoursStart-$BusinessHoursEnd" -Sev 'Info'
 
