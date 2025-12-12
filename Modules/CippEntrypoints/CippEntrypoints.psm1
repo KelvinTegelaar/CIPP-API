@@ -228,7 +228,7 @@ function Receive-CippOrchestrationTrigger {
                 if (($Output | Measure-Object).Count -gt 0) {
                     Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
                     foreach ($Task in $Output) {
-                        Write-Information ($Task | ConvertTo-Json -Depth 10 -Compress)
+                        #Write-Information ($Task | ConvertTo-Json -Depth 10 -Compress)
                         try {
                             $Results = Wait-ActivityFunction -Task $Task
                         } catch {}
