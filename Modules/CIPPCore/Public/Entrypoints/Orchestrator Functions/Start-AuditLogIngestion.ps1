@@ -15,11 +15,9 @@ function Start-AuditLogIngestion {
 
     try {
         Write-Information 'Office 365 Management Activity API: Starting audit log ingestion orchestrator'
-
         # Get webhook rules to determine which tenants to monitor
         $WebhookRulesTable = Get-CippTable -TableName 'WebhookRules'
         $WebhookRules = Get-CIPPAzDataTableEntity @WebhookRulesTable -Filter "PartitionKey eq 'Webhookv2'"
-
         if (($WebhookRules | Measure-Object).Count -eq 0) {
             Write-Information 'No webhook rules defined, skipping audit log ingestion'
             return
@@ -78,7 +76,7 @@ function Start-AuditLogIngestion {
         if ($PSCmdlet.ShouldProcess('Start-AuditLogIngestion', 'Starting Audit Log Ingestion')) {
       $Queue = New-CippQueueEntry -Name 'Audit Logs Ingestion' -Reference 'AuditLogsIngestion' -TotalTasks $TenantsToProcess.Count
       $Batch = $TenantsToProcess | Select-Object @{Name = 'TenantFilter'; Expression = { $_.defaultDomainName } }, @{Name = 'TenantId'; Expression = { $_.customerId } }, @{Name = 'ContentTypes'; Expression = { $_.ContentTypes } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogIngestion' } }
-            $InputObject = [PSCustomObject]@{
+      $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'AuditLogsIngestion'
                 Batch            = @($Batch)
                 SkipLog          = $true
