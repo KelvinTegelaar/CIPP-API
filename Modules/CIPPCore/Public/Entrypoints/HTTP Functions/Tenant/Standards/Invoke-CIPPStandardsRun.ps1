@@ -80,7 +80,7 @@ function Invoke-CIPPStandardsRun {
             $BatchItem
         }
 
-        Write-Information "Built batch of $($Batch.Count) tenant standards list activities"
+        Write-Information "Built batch of $($Batch.Count) tenant standards list activities: $($Batch | ConvertTo-Json -Depth 5 -Compress)"
 
         # Start orchestrator with distributed batch and post-exec aggregation
         $InputObject = [PSCustomObject]@{
