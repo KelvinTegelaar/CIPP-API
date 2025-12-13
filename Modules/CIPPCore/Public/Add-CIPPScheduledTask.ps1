@@ -174,21 +174,22 @@ function Add-CIPPScheduledTask {
             }
 
             $entity = @{
-                PartitionKey         = [string]'ScheduledTask'
-                TaskState            = [string]'Planned'
-                RowKey               = [string]$RowKey
-                Tenant               = [string]$tenantFilter
-                excludedTenants      = [string]$excludedTenants
-                Name                 = [string]$task.Name
-                Command              = [string]$task.Command.value
-                Parameters           = [string]$Parameters
-                ScheduledTime        = [string]$task.ScheduledTime
-                Recurrence           = [string]$Recurrence
-                PostExecution        = [string]$PostExecution
-                AdditionalProperties = [string]$AdditionalProperties
-                Hidden               = [bool]$Hidden
-                Results              = 'Planned'
-                AlertComment         = [string]$task.AlertComment
+                PartitionKey           = [string]'ScheduledTask'
+                TaskState              = [string]'Planned'
+                RowKey                 = [string]$RowKey
+                Tenant                 = [string]$tenantFilter
+                excludedTenants        = [string]$excludedTenants
+                Name                   = [string]$task.Name
+                Command                = [string]$task.Command.value
+                Parameters             = [string]$Parameters
+                ScheduledTime          = [string]$task.ScheduledTime
+                Recurrence             = [string]$Recurrence
+                PostExecution          = [string]$PostExecution
+                Reference              = [string]$task.Reference
+                AdditionalProperties   = [string]$AdditionalProperties
+                Hidden                 = [bool]$Hidden
+                Results                = 'Planned'
+                AlertComment           = [string]$task.AlertComment
             }
 
 
