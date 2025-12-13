@@ -14,7 +14,7 @@ function Push-CIPPStandardsApplyBatch {
             return
         }
 
-        Write-Information "Aggregated $($AllStandards.Count) standards from all tenants"
+        Write-Information "Aggregated $($AllStandards.Count) standards from all tenants: $($AllStandards | ConvertTo-Json -Depth 5 -Compress)"
 
         # Start orchestrator to apply standards
         $InputObject = [PSCustomObject]@{
@@ -23,7 +23,7 @@ function Push-CIPPStandardsApplyBatch {
             SkipLog          = $true
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 25 -Compress)
         Write-Information "Started standards apply orchestrator with ID = '$InstanceId'"
 
     } catch {
