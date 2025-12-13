@@ -13,6 +13,16 @@ function Invoke-ListNewUserDefaults {
     # Get the TenantFilter from query parameters
     $TenantFilter = $Request.Query.TenantFilter
     Write-Host "TenantFilter from request: $TenantFilter"
+    
+    # Get the includeAllTenants flag from query or body parameters (defaults to true)
+    $IncludeAllTenants = if ($null -ne $Request.Query.includeAllTenants) {
+        [System.Convert]::ToBoolean($Request.Query.includeAllTenants)
+    } elseif ($null -ne $Request.Body.includeAllTenants) {
+        [System.Convert]::ToBoolean($Request.Body.includeAllTenants)
+    } else {
+        $true  # Default to including AllTenants templates
+    }
+    Write-Host "IncludeAllTenants: $IncludeAllTenants"
 
     # Get the templates table
     $Table = Get-CippTable -tablename 'templates'
@@ -40,8 +50,14 @@ function Invoke-ListNewUserDefaults {
             # When requesting AllTenants, return only templates stored under AllTenants
             $Templates = $Templates | Where-Object -Property tenantFilter -eq 'AllTenants'
         } else {
-            # When requesting a specific tenant, return both tenant-specific and AllTenants templates
-            $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
+            # When requesting a specific tenant
+            if ($IncludeAllTenants) {
+                # Include both tenant-specific and AllTenants templates
+                $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
+            } else {
+                # Return only tenant-specific templates (exclude AllTenants)
+                $Templates = $Templates | Where-Object -Property tenantFilter -eq $TenantFilter
+            }
         }
         Write-Host "Templates after filtering: $($Templates.Count)"
     }
