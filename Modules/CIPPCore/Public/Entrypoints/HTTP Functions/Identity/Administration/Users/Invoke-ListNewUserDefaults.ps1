@@ -15,12 +15,10 @@ function Invoke-ListNewUserDefaults {
     Write-Host "TenantFilter from request: $TenantFilter"
     
     # Get the includeAllTenants flag from query or body parameters (defaults to true)
-    $IncludeAllTenants = if ($null -ne $Request.Query.includeAllTenants) {
-        [System.Convert]::ToBoolean($Request.Query.includeAllTenants)
-    } elseif ($null -ne $Request.Body.includeAllTenants) {
-        [System.Convert]::ToBoolean($Request.Body.includeAllTenants)
+    $IncludeAllTenants = if ($Request.Query.includeAllTenants -eq $false -or $Request.Body.includeAllTenants -eq $false) {
+        $false
     } else {
-        $true  # Default to including AllTenants templates
+        $true
     }
     Write-Host "IncludeAllTenants: $IncludeAllTenants"
 
