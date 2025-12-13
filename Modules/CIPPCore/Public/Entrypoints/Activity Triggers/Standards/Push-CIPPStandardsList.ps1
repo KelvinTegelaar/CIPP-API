@@ -25,7 +25,7 @@ function Push-CIPPStandardsList {
             Write-Information "No standards found for tenant $TenantFilter"
             return @()
         }
-
+        Write-Host "Retrieved $($AllStandards.Count) standards for tenant $TenantFilter before filtering."
         # Build hashtable for efficient lookup
         $ComputedStandards = @{}
         foreach ($Standard in $AllStandards) {
@@ -179,6 +179,7 @@ function Push-CIPPStandardsList {
             }
         }
 
+        Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
         # Return filtered standards
         $ComputedStandards.Values | ForEach-Object {
             [PSCustomObject]@{
