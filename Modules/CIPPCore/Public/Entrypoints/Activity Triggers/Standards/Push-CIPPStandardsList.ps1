@@ -181,7 +181,7 @@ function Push-CIPPStandardsList {
 
         Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
         # Return filtered standards
-        $ComputedStandards.Values | ForEach-Object {
+        $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
             [PSCustomObject]@{
                 Tenant       = $_.Tenant
                 Standard     = $_.Standard
@@ -190,6 +190,8 @@ function Push-CIPPStandardsList {
                 FunctionName = 'CIPPStandard'
             }
         }
+        Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
+        return $FilteredStandards
 
     } catch {
         Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"
