@@ -196,6 +196,10 @@ function Receive-CippOrchestrationTrigger {
                 $DurableMode = 'Sequence'
                 $NoWait = $false
             }
+            'NoScaling' {
+                $DurableMode = 'NoScaling'
+                $NoWait = $false
+            }
             default {
                 $DurableMode = 'FanOut (Default)'
                 $NoWait = $true
@@ -213,14 +217,23 @@ function Receive-CippOrchestrationTrigger {
         if (($Batch | Measure-Object).Count -gt 0) {
             Write-Information "Batch Count: $($Batch.Count)"
             $Output = foreach ($Item in $Batch) {
-                $DurableActivity = @{
-                    FunctionName = 'CIPPActivityFunction'
-                    Input        = $Item
-                    NoWait       = $NoWait
-                    RetryOptions = $RetryOptions
-                    ErrorAction  = 'Stop'
+                if ($DurableMode -eq 'NoScaling') {
+                    $Activity = @{
+                        FunctionName = 'CIPPActivityFunction'
+                        Input        = $Item
+                        ErrorAction  = 'Stop'
+                    }
+                    Invoke-ActivityFunction @Activity
+                } else {
+                    $DurableActivity = @{
+                        FunctionName = 'CIPPActivityFunction'
+                        Input        = $Item
+                        NoWait       = $NoWait
+                        RetryOptions = $RetryOptions
+                        ErrorAction  = 'Stop'
+                    }
+                    Invoke-DurableActivity @DurableActivity
                 }
-                Invoke-DurableActivity @DurableActivity
             }
 
             if ($NoWait -and $Output) {
