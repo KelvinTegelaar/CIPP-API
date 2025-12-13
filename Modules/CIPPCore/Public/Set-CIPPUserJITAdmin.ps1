@@ -42,6 +42,7 @@ function Set-CIPPUserJITAdmin {
         [ValidateSet('Create', 'AddRoles', 'RemoveRoles', 'DeleteUser', 'DisableUser')]
         [string]$Action,
         [datetime]$Expiration,
+        [datetime]$StartDate,
         [string]$Reason = 'No reason provided',
         $Headers,
         [string]$APIName = 'Set-CIPPUserJITAdmin'
@@ -72,7 +73,9 @@ function Set-CIPPUserJITAdmin {
                     $Schema.id        = @{
                         jitAdminEnabled    = $false
                         jitAdminExpiration = $Expiration.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        jitAdminStartDate  = if ($StartDate) { $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
                         jitAdminReason     = $Reason
+                        jitAdminCreatedBy  = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
                     }
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
@@ -83,7 +86,16 @@ function Set-CIPPUserJITAdmin {
                     if ($PasswordLink) {
                         $Password = $PasswordLink
                     }
-                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Created JIT Admin user: $($User.UserPrincipalName). Reason: $Reason" -Sev 'Info'
+                    $LogData = @{
+                        UserPrincipalName = $User.UserPrincipalName
+                        Action            = 'Create'
+                        Reason            = $Reason
+                        StartDate         = if ($StartDate) { $StartDate.ToString('o') } else { (Get-Date).ToString('o') }
+                        Expiration        = $Expiration.ToString('o')
+                        ExpirationUTC     = $Expiration.ToUniversalTime().ToString('o')
+                        CreatedBy         = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
+                    }
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Created JIT Admin user: $($User.UserPrincipalName). Reason: $Reason" -Sev 'Info' -LogData $LogData
                     [PSCustomObject]@{
                         id                = $NewUser.id
                         userPrincipalName = $NewUser.userPrincipalName
@@ -116,9 +128,21 @@ function Set-CIPPUserJITAdmin {
                     } catch {}
                 }
 
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -Reason $Reason | Out-Null
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -StartDate $StartDate -Reason $Reason -CreatedBy (if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }) | Out-Null
                 $Message = "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName)). Reason: $Reason"
-                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                $LogData = @{
+                    UserPrincipalName = $UserObj.userPrincipalName
+                    UserId            = $UserObj.id
+                    DisplayName       = $UserObj.displayName
+                    Action            = 'AddRoles'
+                    Roles             = $Roles
+                    Reason            = $Reason
+                    StartDate         = if ($StartDate) { $StartDate.ToString('o') } else { (Get-Date).ToString('o') }
+                    Expiration        = $Expiration.ToString('o')
+                    ExpirationUTC     = $Expiration.ToUniversalTime().ToString('o')
+                    CreatedBy         = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
+                }
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info' -LogData $LogData
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
             'RemoveRoles' {

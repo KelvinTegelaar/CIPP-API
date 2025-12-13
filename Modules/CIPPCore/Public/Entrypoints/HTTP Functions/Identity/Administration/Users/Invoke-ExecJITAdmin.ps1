@@ -32,6 +32,7 @@ function Invoke-ExecJITAdmin {
                 'UserPrincipalName' = $Username
             }
             Expiration   = $Expiration
+            StartDate    = $Start
             Reason       = $Request.Body.reason
             Action       = 'Create'
             TenantFilter = $TenantFilter
@@ -152,6 +153,7 @@ function Invoke-ExecJITAdmin {
         Action       = 'AddRoles'
         Reason       = $Request.Body.Reason
         Expiration   = $Expiration
+        StartDate    = $Start
         Headers      = $Headers
         APIName      = $APIName
     }
@@ -173,7 +175,7 @@ function Invoke-ExecJITAdmin {
         }
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         if ($Request.Body.userAction -ne 'create') {
-            Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -Reason $Request.Body.Reason
+            Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -StartDate $Start -Reason $Request.Body.Reason -CreatedBy (([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails)
         }
         $Results.Add("Scheduling JIT Admin enable task for $Username")
     } else {
