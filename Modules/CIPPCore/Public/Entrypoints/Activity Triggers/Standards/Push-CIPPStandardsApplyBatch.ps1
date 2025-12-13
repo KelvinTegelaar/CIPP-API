@@ -7,7 +7,13 @@ function Push-CIPPStandardsApplyBatch {
 
     try {
         # Aggregate all standards from all tenants
-        $AllStandards = @($Item.Results | Where-Object { $_ -and $_.FunctionName -eq 'CIPPStandard' })
+        $AllStandards = $Item.Results | ForEach-Object {
+            foreach ($Standard in $_) {
+                if ($Standard -and $Standard.FunctionName -eq 'CIPPStandard') {
+                    $Standard
+                }
+            }
+        }
 
         if ($AllStandards.Count -eq 0) {
             Write-Information 'No standards to apply across all tenants'
