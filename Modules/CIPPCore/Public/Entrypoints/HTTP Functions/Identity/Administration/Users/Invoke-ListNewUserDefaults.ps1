@@ -15,7 +15,7 @@ function Invoke-ListNewUserDefaults {
     Write-Host "TenantFilter from request: $TenantFilter"
     
     # Get the includeAllTenants flag from query or body parameters (defaults to true)
-    $IncludeAllTenants = if ($Request.Query.includeAllTenants -eq $false -or $Request.Body.includeAllTenants -eq $false) {
+    $IncludeAllTenants = if ($Request.Query.includeAllTenants -eq 'false' -or $Request.Body.includeAllTenants -eq 'false') {
         $false
     } else {
         $true
