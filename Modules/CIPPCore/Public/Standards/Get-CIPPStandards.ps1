@@ -407,11 +407,20 @@ function Get-CIPPStandards {
                 $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantName -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
                 if (-not $TestResult) {
                     $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+                    # Collect all fields for bulk insert
+                    $BulkFields = [System.Collections.Generic.List[object]]::new()
                     foreach ($Key in $IntuneKeys) {
                         $TemplateKey = ($Key -split '\|', 2)[1]
                         if ($TemplateKey) {
-                            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$TemplateKey" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $TenantName
+                            $BulkFields.Add([PSCustomObject]@{
+                                    FieldName  = "standards.IntuneTemplate.$TemplateKey"
+                                    FieldValue = 'This tenant does not have the required license for this standard.'
+                                })
                         }
+                    }
+                    # Single bulk insert operation
+                    if ($BulkFields.Count -gt 0) {
+                        Set-CIPPStandardsCompareField -TenantFilter $TenantName -BulkFields $BulkFields
                     }
                     Write-Host "We're removing Intune templates as the correct license is not present for this standard. We do this to not run unneeded cycles. If you're reading this don't touch."
                     foreach ($Key in $IntuneKeys) { [void]$ComputedStandards.Remove($Key) }
