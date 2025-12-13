@@ -170,7 +170,7 @@ function Push-CIPPStandardsList {
 
                         # Remove if both unchanged
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
-                            [void]$ComputedStandards.Remove($Key)
+x                            [void]$ComputedStandards.Remove($Key)
                         }
                     }
                 } catch {

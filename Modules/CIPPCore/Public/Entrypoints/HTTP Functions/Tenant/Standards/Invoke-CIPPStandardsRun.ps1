@@ -54,6 +54,7 @@ function Invoke-CIPPStandardsRun {
         }
 
         # Get tenant list for batch processing
+        write-host "Getting tenants for filter: $TenantFilter"
         $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
             Get-Tenants
         } else {
