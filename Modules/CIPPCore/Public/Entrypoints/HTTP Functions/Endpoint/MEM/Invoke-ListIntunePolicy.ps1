@@ -25,32 +25,32 @@ function Invoke-ListIntunePolicy {
                 @{
                     id     = 'DeviceConfigurations'
                     method = 'GET'
-                    url    = "/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName,description&`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName,description&`$expand=assignments&`$top=1000"
                 }
                 @{
                     id     = 'WindowsDriverUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsDriverUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsDriverUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'WindowsFeatureUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'windowsQualityUpdatePolicies'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'windowsQualityUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'GroupPolicyConfigurations'
                     method = 'GET'
-                    url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&`$top=1000"
                 }
                 @{
                     id     = 'MobileAppConfigurations'
@@ -60,7 +60,7 @@ function Invoke-ListIntunePolicy {
                 @{
                     id     = 'ConfigurationPolicies'
                     method = 'GET'
-                    url    = "/deviceManagement/configurationPolicies?`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/configurationPolicies?`$expand=assignments&`$top=1000"
                 }
             )
 
