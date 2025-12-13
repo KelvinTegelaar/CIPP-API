@@ -240,10 +240,9 @@ function Receive-CippOrchestrationTrigger {
                 $Output = $Output | Where-Object { $_.GetType().Name -eq 'ActivityInvocationTask' }
                 if (($Output | Measure-Object).Count -gt 0) {
                     Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
-                    foreach ($Task in $Output) {
-                        #Write-Information ($Task | ConvertTo-Json -Depth 10 -Compress)
+                    $Results = foreach ($Task in $Output) {
                         try {
-                            $Results = Wait-ActivityFunction -Task $Task
+                            Wait-ActivityFunction -Task $Task
                         } catch {}
                     }
                 } else {
