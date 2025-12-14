@@ -15,7 +15,7 @@ function Get-HIBPAuth {
 
             $VaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             try {
-                $Secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText -ErrorAction Stop
+                $Secret = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText -ErrorAction Stop
             } catch {
                 $Secret = $null
             }
@@ -25,7 +25,7 @@ function Get-HIBPAuth {
                 if ($SubscriptionId -ne $env:CIPP_HOSTED_KV_SUB -and $env:CIPP_HOSTED_KV_SUB -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
                     $null = Set-AzContext -SubscriptionId $env:CIPP_HOSTED_KV_SUB
                 }
-                $Secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText
+                $Secret = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText
             }
         }
         Set-Item -Path "env:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue
