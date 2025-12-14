@@ -4,24 +4,21 @@ Write-Information '#### CIPP-API Start ####'
 Set-Location -Path $PSScriptRoot
 try {
     $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
-    if (Test-Path $AppInsightsDllPath) {
-        [Reflection.Assembly]::LoadFile($AppInsightsDllPath) | Out-Null
-        Write-Information 'Application Insights SDK loaded successfully'
-    } else {
-        Write-Warning "Application Insights DLL not found at: $AppInsightsDllPath"
-    }
+    $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
+    Write-Information 'Application Insights SDK loaded successfully'
 } catch {
     Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
 }
 
 # Import modules
-@('CIPPCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzBobbyTables') | ForEach-Object {
+$ModulesPath = Join-Path $PSScriptRoot 'Modules'
+$Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'Az.KeyVault', 'AzBobbyTables')
+foreach ($Module in $Modules) {
     try {
-        $Module = $_
-        Import-Module -Name $_ -ErrorAction Stop
+        Import-Module -Name (Join-Path $ModulesPath $Module) -ErrorAction Stop
     } catch {
         Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
-        $_.Exception.Message
+        Write-Error $_.Exception.Message
     }
 }
 
@@ -61,7 +58,7 @@ if ($env:ExternalDurablePowerShellSDK -eq $true) {
 }
 
 try {
-    Disable-AzContextAutosave -Scope Process | Out-Null
+    $null = Disable-AzContextAutosave -Scope Process
 } catch {}
 
 try {
@@ -73,8 +70,7 @@ try {
     Write-LogMessage -message 'Could not retrieve keys from Keyvault' -LogData (Get-CippException -Exception $_) -Sev 'debug'
 }
 
-Set-Location -Path $PSScriptRoot
-$CurrentVersion = (Get-Content .\version_latest.txt).trim()
+$CurrentVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'version_latest.txt') -Raw).Trim()
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
 $global:CippVersion = $CurrentVersion
@@ -84,7 +80,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
-        $LastStartup | Add-Member -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString() -Force
+        Add-Member -InputObject $LastStartup -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString() -Force
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
