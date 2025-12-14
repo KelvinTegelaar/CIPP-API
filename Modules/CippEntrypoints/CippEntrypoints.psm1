@@ -21,6 +21,7 @@ function Receive-CippHttpTrigger {
     if ($Request.Headers.'x-ms-coldstart' -eq 1) {
         Write-Information '** Function app cold start detected **'
     }
+    Write-Information "CIPP_ACTION=$($Request.Params.CIPPEndpoint)"
 
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
@@ -171,7 +172,7 @@ function Receive-CippOrchestrationTrigger {
         Entrypoint
     #>
     param($Context)
-
+    Write-Information "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -286,6 +287,7 @@ function Receive-CippActivityTrigger {
         Entrypoint
     #>
     param($Item)
+    Write-Information "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Output = $null
@@ -358,12 +360,8 @@ function Receive-CippActivityTrigger {
             }
 
             try {
-                Write-Verbose "Activity starting Function: $FunctionName."
-
-                # Wrap the function execution with telemetry
-                $Output = Measure-CippTask -TaskName $taskName -Metadata $metadata -Script {
-                    Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
-                }
+                Write-Verbose "Activity starting Function: $FunctionName."               
+                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
                 $Status = 'Completed'
 
                 Write-Verbose "Activity completed Function: $FunctionName."
@@ -421,8 +419,6 @@ function Receive-CIPPTimerTrigger {
 
     $UtcNow = (Get-Date).ToUniversalTime()
     $Functions = Get-CIPPTimerFunctions
-    Write-Host "CIPP Timer Trigger executed at $UtcNow. Found $($Functions.Count) functions to evaluate. The names are as follows: $($Functions.Command -join ', ')"
-    Write-Host "CIPPTIMER: $($Functions | ConvertTo-Json -Depth 10 -Compress)"
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
     $FunctionName = $env:WEBSITE_SITE_NAME
@@ -481,9 +477,9 @@ function Receive-CIPPTimerTrigger {
             }
 
             # Wrap the timer function execution with telemetry
-            $Results = Measure-CippTask -TaskName $Function.Command -Metadata $metadata -Script {
-                Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
-            }
+            
+            Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
+            
 
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results -join ','
