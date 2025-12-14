@@ -36,15 +36,19 @@ function Push-CippDriftManagement {
 
             $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -CIPPURL $CIPPURL -Tenant $Item.Tenant -InputObject 'driftStandard' -AuditLogLink $drift.standardId
 
-            # Send email alert if configured
-            $CIPPAlert = @{
-                Type         = 'email'
-                Title        = $GenerateEmail.title
-                HTMLContent  = $GenerateEmail.htmlcontent
-                TenantFilter = $Item.Tenant
+            # Send email alert if configured and not disabled
+            if (-not $Settings.driftAlertDisableEmail) {
+                $CIPPAlert = @{
+                    Type         = 'email'
+                    Title        = $GenerateEmail.title
+                    HTMLContent  = $GenerateEmail.htmlcontent
+                    TenantFilter = $Item.Tenant
+                }
+                Write-Information "Sending email alert for tenant $($Item.Tenant)"
+                Send-CIPPAlert @CIPPAlert -altEmail $email
+            } else {
+                Write-Information "Email alert disabled for tenant $($Item.Tenant)"
             }
-            Write-Information "Sending email alert for tenant $($Item.Tenant)"
-            Send-CIPPAlert @CIPPAlert -altEmail $email
             # Send webhook alert if configured
             $WebhookData = @{
                 Title      = $GenerateEmail.title

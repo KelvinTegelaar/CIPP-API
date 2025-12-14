@@ -317,6 +317,7 @@ function Get-CIPPTenantAlignment {
                     standardSettings         = $Template.Standards
                     driftAlertEmail          = $Template.driftAlertEmail
                     driftAlertWebhook        = $Template.driftAlertWebhook
+                    driftAlertDisableEmail   = $Template.driftAlertDisableEmail
                     AlignmentScore           = $AlignmentPercentage
                     LicenseMissingPercentage = $LicenseMissingPercentage
                     CombinedScore            = $AlignmentPercentage + $LicenseMissingPercentage
