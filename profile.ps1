@@ -11,10 +11,11 @@ try {
 }
 
 # Import modules
+$ModulesPath = Join-Path $PSScriptRoot 'Modules'
 $Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'Az.KeyVault', 'AzBobbyTables')
 foreach ($Module in $Modules) {
     try {
-        Import-Module -Name $Module -ErrorAction Stop
+        Import-Module -Name (Join-Path $ModulesPath $Module) -ErrorAction Stop
     } catch {
         Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
         Write-Error $_.Exception.Message
@@ -69,7 +70,7 @@ try {
     Write-LogMessage -message 'Could not retrieve keys from Keyvault' -LogData (Get-CippException -Exception $_) -Sev 'debug'
 }
 
-$CurrentVersion = (Get-Content -Path "$($PSScriptRoot)\version_latest.txt" -Raw).Trim()
+$CurrentVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'version_latest.txt') -Raw).Trim()
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
 $global:CippVersion = $CurrentVersion
