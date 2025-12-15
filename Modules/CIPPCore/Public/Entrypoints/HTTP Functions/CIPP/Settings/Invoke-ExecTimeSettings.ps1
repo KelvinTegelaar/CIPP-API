@@ -9,7 +9,7 @@ function Invoke-ExecTimeSettings {
     param($Request, $TriggerMetadata)
 
     try {
-        $Subscription = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        $Subscription = Get-CIPPAzFunctionAppSubId
         $Owner = $env:WEBSITE_OWNER_NAME
 
         if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {

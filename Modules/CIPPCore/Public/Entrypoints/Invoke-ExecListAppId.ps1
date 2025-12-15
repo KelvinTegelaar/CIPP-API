@@ -18,7 +18,7 @@ Function Invoke-ExecListAppId {
     } else {
         Write-Information 'Connecting to Azure'
         Connect-AzAccount -Identity
-        $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        $SubscriptionId = Get-CIPPAzFunctionAppSubId
         try {
             $Context = Get-AzContext
             if ($Context.Subscription) {

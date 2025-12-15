@@ -22,7 +22,7 @@ function Get-ExtensionAPIKey {
         } else {
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $null = Connect-AzAccount -Identity
-            $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+            $SubscriptionId = Get-CIPPAzFunctionAppSubId
             $Context = Get-AzContext
             if ($Context.Subscription) {
                 if ($Context.Subscription.Id -ne $SubscriptionId) {

@@ -4,7 +4,7 @@ function Get-GradientToken {
     )
     if ($Configuration.vendorKey) {
         $null = Connect-AzAccount -Identity
-        $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        $SubscriptionId = Get-CIPPAzFunctionAppSubId
         $null = Set-AzContext -SubscriptionId $SubscriptionId
         $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
         $partnerApiKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'Gradient' -AsPlainText)

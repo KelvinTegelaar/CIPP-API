@@ -39,7 +39,7 @@ function Invoke-ExecSAMSetup {
         if ($env:MSI_SECRET) {
             Disable-AzContextAutosave -Scope Process | Out-Null
             $null = Connect-AzAccount -Identity
-            $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+            $SubscriptionId = Get-CIPPAzFunctionAppSubId
             $null = Set-AzContext -SubscriptionId $SubscriptionId
         }
     }

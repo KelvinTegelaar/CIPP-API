@@ -7,7 +7,7 @@ function Invoke-ExecBackendURLs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Subscription = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+    $Subscription = Get-CIPPAzFunctionAppSubId
     $SWAName = $env:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
 
     # Write to the Azure Functions log stream.

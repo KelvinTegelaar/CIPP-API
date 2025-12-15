@@ -13,7 +13,7 @@ function Get-ApplicationInsightsQuery {
         $null = Connect-AzAccount -Identity
     }
 
-    $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+    $SubscriptionId = Get-CIPPAzFunctionAppSubId
     if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
         $RGName = $Matches.RGName
     } else {
