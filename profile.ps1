@@ -1,4 +1,7 @@
 Write-Information '#### CIPP-API Start ####'
+
+$Timings = @{}
+$TotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 # Only load Application Insights SDK for telemetry if a connection string or instrumentation key is set
 $hasAppInsights = $false
 if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTATIONKEY) {
@@ -6,6 +9,7 @@ if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTAT
 }
 if ($hasAppInsights) {
     Set-Location -Path $PSScriptRoot
+$SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
         $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
@@ -17,20 +21,31 @@ if ($hasAppInsights) {
 if (!$hasAppInsights) {
     Write-Information 'Application Insights not configured; skipping SDK load'
 }
+$SwAppInsights.Stop()
+$Timings['AppInsightsSDK'] = $SwAppInsights.Elapsed.TotalMilliseconds
 
 # Import modules
+$SwModules = [System.Diagnostics.Stopwatch]::StartNew()
 $ModulesPath = Join-Path $PSScriptRoot 'Modules'
 $Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'AzBobbyTables')
 foreach ($Module in $Modules) {
+    $SwModule = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         Import-Module -Name (Join-Path $ModulesPath $Module) -ErrorAction Stop
+        $SwModule.Stop()
+        $Timings["Module_$Module"] = $SwModule.Elapsed.TotalMilliseconds
     } catch {
+        $SwModule.Stop()
+        $Timings["Module_$Module"] = $SwModule.Elapsed.TotalMilliseconds
         Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
         Write-Error $_.Exception.Message
     }
 }
+$SwModules.Stop()
+$Timings['AllModules'] = $SwModules.Elapsed.TotalMilliseconds
 
 # Initialize global TelemetryClient only if Application Insights is configured
+$SwTelemetry = [System.Diagnostics.Stopwatch]::StartNew()
 if ($hasAppInsights -and -not $global:TelemetryClient) {
     try {
         $connectionString = $env:APPLICATIONINSIGHTS_CONNECTION_STRING
@@ -52,7 +67,10 @@ if ($hasAppInsights -and -not $global:TelemetryClient) {
         Write-Warning "Failed to initialize TelemetryClient: $($_.Exception.Message)"
     }
 }
+$SwTelemetry.Stop()
+$Timings['TelemetryClient'] = $SwTelemetry.Elapsed.TotalMilliseconds
 
+$SwDurableSDK = [System.Diagnostics.Stopwatch]::StartNew()
 if ($env:ExternalDurablePowerShellSDK -eq $true) {
     try {
         Import-Module AzureFunctions.PowerShell.Durable.SDK -ErrorAction Stop
@@ -62,11 +80,17 @@ if ($env:ExternalDurablePowerShellSDK -eq $true) {
         $_.Exception.Message
     }
 }
+$SwDurableSDK.Stop()
+$Timings['DurableSDK'] = $SwDurableSDK.Elapsed.TotalMilliseconds
 
+$SwAzContext = [System.Diagnostics.Stopwatch]::StartNew()
 try {
     $null = Disable-AzContextAutosave -Scope Process
 } catch {}
+$SwAzContext.Stop()
+$Timings['DisableAzContext'] = $SwAzContext.Elapsed.TotalMilliseconds
 
+$SwAuth = [System.Diagnostics.Stopwatch]::StartNew()
 try {
     if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"
@@ -75,7 +99,10 @@ try {
 } catch {
     Write-LogMessage -message 'Could not retrieve keys from Keyvault' -LogData (Get-CippException -Exception $_) -Sev 'debug'
 }
+$SwAuth.Stop()
+$Timings['Authentication'] = $SwAuth.Elapsed.TotalMilliseconds
 
+$SwVersion = [System.Diagnostics.Stopwatch]::StartNew()
 $CurrentVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'version_latest.txt') -Raw).Trim()
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
@@ -106,8 +133,15 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
     Write-Host 'Cleared GitHub release notes cache to force refresh on version update.'
 }
+$SwVersion.Stop()
+$Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
 
-# Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
-# Enable-AzureRmAlias
+$TotalStopwatch.Stop()
+$Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds
 
-# You can also define functions or aliases that can be referenced in any of your PowerShell functions.
+# Output timing summary as compressed JSON
+$TimingsRounded = [ordered]@{}
+foreach ($Key in ($Timings.Keys | Sort-Object)) {
+    $TimingsRounded[$Key] = [math]::Round($Timings[$Key], 2)
+}
+Write-Information "#### Profile Load Timings #### $($TimingsRounded | ConvertTo-Json -Compress)"
