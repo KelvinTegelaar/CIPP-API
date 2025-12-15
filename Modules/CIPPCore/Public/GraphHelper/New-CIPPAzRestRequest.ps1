@@ -70,7 +70,7 @@ function New-CIPPAzRestRequest {
         [hashtable]$Headers = @{},
 
         [Parameter(Mandatory = $false)]
-        [string]$ContentType,
+        [string]$ContentType = 'application/json',
 
         [Parameter(Mandatory = $false)]
         [switch]$SkipHttpErrorCheck,
@@ -137,10 +137,10 @@ function New-CIPPAzRestRequest {
 
     # Build Invoke-RestMethod parameters
     $RestMethodParams = @{
-        Uri                = $Uri
-        Method             = $Method
-        Headers            = $RequestHeaders
-        ErrorAction        = $ErrorActionPreference
+        Uri         = $Uri
+        Method      = $Method
+        Headers     = $RequestHeaders
+        ErrorAction = $ErrorActionPreference
     }
 
     if ($Body) {
