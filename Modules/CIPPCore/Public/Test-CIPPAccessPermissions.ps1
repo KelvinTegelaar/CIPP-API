@@ -39,7 +39,7 @@ function Test-CIPPAccessPermissions {
                 $null = Set-AzContext -SubscriptionId $SubscriptionId
 
                 $KV = $env:WEBSITE_DEPLOYMENT_ID
-                $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
+                $KeyVaultRefresh = Get-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
                 if ($env:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
                     $ErrorMessages.Add('Your refresh token does not match key vault, wait 30 minutes for the function app to update.') | Out-Null

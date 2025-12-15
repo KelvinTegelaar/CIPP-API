@@ -58,14 +58,14 @@ function Get-CIPPAuthentication {
             if ($tenants) {
                 $tenants | ForEach-Object {
                     $name = $_.customerId
-                    $secret = Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $name -AsPlainText -ErrorAction Stop
+                    $secret = Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $name -AsPlainText -ErrorAction Stop
                     if ($secret) {
                         Set-Item -Path env:$name -Value $secret -Force
                     }
                 }
             }
             $Variables | ForEach-Object {
-                Set-Item -Path env:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
+                Set-Item -Path env:$_ -Value (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
         $env:SetFromProfile = $true

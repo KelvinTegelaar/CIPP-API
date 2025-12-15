@@ -7,7 +7,7 @@ function Get-GradientToken {
         $SubscriptionId = Get-CIPPAzFunctionAppSubId
         $null = Set-AzContext -SubscriptionId $SubscriptionId
         $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-        $partnerApiKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'Gradient' -AsPlainText)
+        $partnerApiKey = (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name 'Gradient' -AsPlainText)
         $authorizationToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($configuration.vendorKey):$($partnerApiKey)"))
 
         $headers = [hashtable]@{

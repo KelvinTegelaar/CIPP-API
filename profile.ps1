@@ -1,18 +1,26 @@
 Write-Information '#### CIPP-API Start ####'
-
-# Load Application Insights SDK for telemetry
-Set-Location -Path $PSScriptRoot
-try {
-    $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
-    $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
-    Write-Information 'Application Insights SDK loaded successfully'
-} catch {
-    Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
+# Only load Application Insights SDK for telemetry if a connection string or instrumentation key is set
+$hasAppInsights = $false
+if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTATIONKEY) {
+    $hasAppInsights = $true
+}
+if ($hasAppInsights) {
+    Set-Location -Path $PSScriptRoot
+    try {
+        $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
+        $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
+        Write-Information 'Application Insights SDK loaded successfully'
+    } catch {
+        Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
+    }
+}
+if (!$hasAppInsights) {
+    Write-Information 'Application Insights not configured; skipping SDK load'
 }
 
 # Import modules
 $ModulesPath = Join-Path $PSScriptRoot 'Modules'
-$Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'Az.KeyVault', 'AzBobbyTables')
+$Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'AzBobbyTables')
 foreach ($Module in $Modules) {
     try {
         Import-Module -Name (Join-Path $ModulesPath $Module) -ErrorAction Stop
@@ -22,8 +30,8 @@ foreach ($Module in $Modules) {
     }
 }
 
-# Initialize global TelemetryClient
-if (-not $global:TelemetryClient) {
+# Initialize global TelemetryClient only if Application Insights is configured
+if ($hasAppInsights -and -not $global:TelemetryClient) {
     try {
         $connectionString = $env:APPLICATIONINSIGHTS_CONNECTION_STRING
         if ($connectionString) {
@@ -39,8 +47,6 @@ if (-not $global:TelemetryClient) {
             $global:TelemetryClient.InstrumentationKey = $env:APPINSIGHTS_INSTRUMENTATIONKEY
             Enable-CippConsoleLogging
             Write-Information 'TelemetryClient initialized with instrumentation key'
-        } else {
-            Write-Warning 'No Application Insights connection string or instrumentation key found'
         }
     } catch {
         Write-Warning "Failed to initialize TelemetryClient: $($_.Exception.Message)"
