@@ -29,7 +29,7 @@
                 foreach ($Value in $Config.$($Prop.Name)) {
                     if ($Value) {
                         $null = $Result.Add([PSCustomObject]@{
-                                userPrincipalName = $UserPrincipalName
+                                UserPrincipalName = $UserPrincipalName
                                 UserID            = $UserID
                                 Type              = $Prop.FriendlyName
                                 TypeProperty      = $Prop.Name
