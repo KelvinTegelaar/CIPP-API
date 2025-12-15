@@ -30,6 +30,10 @@ function Invoke-ListApiTest {
         $Timings.GetCippAzIdentityTokenMs = $Sw.Elapsed.TotalMilliseconds
         $Response.Timings = $Timings
         $Response.Jwt = Read-JwtAccessDetails -Token $Token
+
+        # test New-CIPPAzRestRequest KQL for resource graph
+        $Query = 'Resources | project name, type'
+        $Request = New-CIPPAzRestRequest -Method GET -Resource 'https://management.azure.com/' -ApiVersion '2021-03-01' -Endpoint 'providers/Microsoft.ResourceGraph/resources' -QueryParameters @{ 'query' = $Query }
     }
     $Response.AllowedTenants = $script:CippAllowedTenantsStorage.Value
     $Response.AllowedGroups = $script:CippAllowedGroupsStorage.Value
