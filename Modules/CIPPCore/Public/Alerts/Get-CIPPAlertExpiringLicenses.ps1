@@ -21,16 +21,15 @@ function Get-CIPPAlertExpiringLicenses {
             $DaysThreshold = if ($InputValue) { [int]$InputValue } else { 30 }
             $UnassignedOnly = $false
         }
-        
+
         $AlertData = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | ForEach-Object {
-            $TermData = $_.TermInfo | ConvertFrom-Json
             $UnassignedCount = [int]$_.CountAvailable
-            
+
             # If unassigned only filter is enabled, skip licenses with no unassigned units
             if ($UnassignedOnly -and $UnassignedCount -le 0) {
                 return
             }
-            
+
             foreach ($Term in $TermData) {
                 if ($Term.DaysUntilRenew -lt $DaysThreshold -and $Term.DaysUntilRenew -gt 0) {
                     $Message = if ($UnassignedOnly) {
@@ -38,7 +37,7 @@ function Get-CIPPAlertExpiringLicenses {
                     } else {
                         "$($_.License) will expire in $($Term.DaysUntilRenew) days. The estimated term is $($Term.Term)"
                     }
-                    
+
                     Write-Host $Message
                     [PSCustomObject]@{
                         Message        = $Message

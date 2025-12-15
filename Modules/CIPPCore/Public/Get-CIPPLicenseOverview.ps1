@@ -142,11 +142,9 @@ function Get-CIPPLicenseOverview {
                 skuId          = [string]$sku.skuId
                 skuPartNumber  = [string]$PrettyName
                 availableUnits = [string]$sku.prepaidUnits.enabled - $sku.consumedUnits
-                TermInfo       = [string]($TermInfo | ConvertTo-Json -Depth 10 -Compress)
+                TermInfo       = $TermInfo
                 AssignedUsers  = ($UsersBySku.ContainsKey($SkuKey) ? @(($UsersBySku[$SkuKey])) : $null)
                 AssignedGroups = ($GroupsBySku.ContainsKey($SkuKey) ? @(($GroupsBySku[$SkuKey])) : $null)
-                'PartitionKey' = 'License'
-                'RowKey'       = "$($singleReq.Tenant) - $($sku.skuid)"
             }
         }
     }
