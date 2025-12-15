@@ -74,7 +74,7 @@
     "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
     "Command": "Start-DriftStandardsOrchestrator",
     "Description": "Orchestrator to process drift standards",
-    "Cron": "0 0 */1 * * *",
+    "Cron": "0 0 */12 * * *",
     "Priority": 5,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"
