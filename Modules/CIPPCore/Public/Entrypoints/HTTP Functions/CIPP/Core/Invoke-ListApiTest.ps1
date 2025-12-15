@@ -22,6 +22,18 @@ function Invoke-ListApiTest {
     $Response.AllowedTenants = $script:CippAllowedTenantsStorage.Value
     $Response.AllowedGroups = $script:CippAllowedGroupsStorage.Value
 
+    # test Get-AzAccessToken vs Get-CIPPAzAccessToken timing with stopwatch
+    $Sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $null = Get-AzAccessToken
+    $Sw.Stop()
+    $Timings = @{}
+    $Timings.GetAzAccessTokenMs = $Sw.Elapsed.TotalMilliseconds
+    $Sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $null = Get-CIPPAzIdentityToken
+    $Sw.Stop()
+    $Timings.GetCippAzIdentityTokenMs = $Sw.Elapsed.TotalMilliseconds
+    $Response.Timings = $Timings
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Response
