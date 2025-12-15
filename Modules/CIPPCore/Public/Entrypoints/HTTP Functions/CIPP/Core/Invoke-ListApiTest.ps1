@@ -34,7 +34,7 @@ function Invoke-ListApiTest {
         # test New-CIPPAzRestRequest KQL for resource graph
         $Query = 'Resources | project name, type'
         $Json = ConvertTo-Json -Depth 10 -Compress -InputObject @{ query = $Query }
-        $Request = New-CIPPAzRestRequest -Method POST -Resource 'https://management.azure.com/' -Endpoint 'providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01' -Body $Json
+        $Request = New-CIPPAzRestRequest -Method POST -Resource 'https://management.azure.com/' -Uri 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01' -Body $Json
     }
     $Response.AllowedTenants = $script:CippAllowedTenantsStorage.Value
     $Response.AllowedGroups = $script:CippAllowedGroupsStorage.Value
