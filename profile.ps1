@@ -7,9 +7,9 @@ $hasAppInsights = $false
 if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTATIONKEY) {
     $hasAppInsights = $true
 }
+$SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
 if ($hasAppInsights) {
     Set-Location -Path $PSScriptRoot
-$SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
         $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
@@ -111,6 +111,23 @@ $global:CippVersion = $CurrentVersion
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
     Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
+
+    if ($LastStartup -and $LastStartup.Version -ne $CurrentVersion) {
+        Write-Information "Clearing durables due to version change"
+        try {
+            Clear-CippDurables
+        } catch {
+            Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
+        }
+
+        $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
+        Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
+        Write-Information 'Cleared GitHub release notes cache to force refresh on version update.'
+    } else {
+        Write-Information "First run detected - skipping durable cleanup (nothing to clear)"
+    }
+
+    # Always update version record
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
         Add-Member -InputObject $LastStartup -MemberType NoteProperty -Name 'PSVersion' -Value $PSVersionTable.PSVersion.ToString() -Force
@@ -123,15 +140,6 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
         }
     }
     Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
-    try {
-        Clear-CippDurables
-    } catch {
-        Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
-    }
-
-    $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
-    Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
-    Write-Host 'Cleared GitHub release notes cache to force refresh on version update.'
 }
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
