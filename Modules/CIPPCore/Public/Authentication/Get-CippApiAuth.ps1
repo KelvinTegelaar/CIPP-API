@@ -4,17 +4,15 @@ function Get-CippApiAuth {
         [string]$FunctionAppName
     )
 
-    if ($env:WEBSITE_AUTH_V2_CONFIG_JSON) {
+    $SubscriptionId = Get-CIPPAzFunctionAppSubId
+
+    # Get auth settings via REST
+    $uri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
+    $response = New-CIPPAzRestRequest -Uri $uri -Method POST -ErrorAction Stop
+    $AuthSettings = $response.properties
+
+    if (!$AuthSettings -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
         $AuthSettings = $env:WEBSITE_AUTH_V2_CONFIG_JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-    }
-
-    if (-not $AuthSettings) {
-        $SubscriptionId = Get-CIPPAzFunctionAppSubId
-
-        # Get auth settings via REST
-        $uri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
-        $response = New-CIPPAzRestRequest -Uri $uri -Method POST -ErrorAction Stop
-        $AuthSettings = $response.properties
     }
 
     if ($AuthSettings) {
