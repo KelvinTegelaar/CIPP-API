@@ -22,6 +22,14 @@ function New-CippCoreRequest {
     if (-not $script:CippAllowedGroupsStorage) {
         $script:CippAllowedGroupsStorage = [System.Threading.AsyncLocal[object]]::new()
     }
+    if (-not $script:CippUserRolesStorage) {
+        $script:CippUserRolesStorage = [System.Threading.AsyncLocal[hashtable]]::new()
+    }
+    
+    # Initialize user roles cache for this request
+    if (-not $script:CippUserRolesStorage.Value) {
+        $script:CippUserRolesStorage.Value = @{}
+    }
 
     # Set InvocationId in AsyncLocal storage for console logging correlation
     if ($global:TelemetryClient -and $TriggerMetadata.InvocationId) {

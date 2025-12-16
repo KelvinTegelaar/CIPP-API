@@ -17,12 +17,9 @@ if ($hasAppInsights) {
     } catch {
         Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
     }
+    $SwAppInsights.Stop()
+    $Timings['AppInsightsSDK'] = $SwAppInsights.Elapsed.TotalMilliseconds
 }
-if (!$hasAppInsights) {
-    Write-Information 'Application Insights not configured; skipping SDK load'
-}
-$SwAppInsights.Stop()
-$Timings['AppInsightsSDK'] = $SwAppInsights.Elapsed.TotalMilliseconds
 
 # Import modules
 $SwModules = [System.Diagnostics.Stopwatch]::StartNew()
@@ -66,9 +63,9 @@ if ($hasAppInsights -and -not $global:TelemetryClient) {
     } catch {
         Write-Warning "Failed to initialize TelemetryClient: $($_.Exception.Message)"
     }
+    $SwTelemetry.Stop()
+    $Timings['TelemetryClient'] = $SwTelemetry.Elapsed.TotalMilliseconds
 }
-$SwTelemetry.Stop()
-$Timings['TelemetryClient'] = $SwTelemetry.Elapsed.TotalMilliseconds
 
 $SwDurableSDK = [System.Diagnostics.Stopwatch]::StartNew()
 if ($env:ExternalDurablePowerShellSDK -eq $true) {
