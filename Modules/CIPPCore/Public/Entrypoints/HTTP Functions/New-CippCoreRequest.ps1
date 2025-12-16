@@ -12,6 +12,10 @@ function New-CippCoreRequest {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
 
+    # Initialize per-request timing
+    $HttpTimings = @{}
+    $HttpTotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
     # Initialize AsyncLocal storage for thread-safe per-invocation context
     if (-not $script:CippInvocationIdStorage) {
         $script:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
@@ -25,7 +29,7 @@ function New-CippCoreRequest {
     if (-not $script:CippUserRolesStorage) {
         $script:CippUserRolesStorage = [System.Threading.AsyncLocal[hashtable]]::new()
     }
-    
+
     # Initialize user roles cache for this request
     if (-not $script:CippUserRolesStorage.Value) {
         $script:CippUserRolesStorage.Value = @{}
@@ -65,20 +69,39 @@ function New-CippCoreRequest {
 
         if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
             try {
+                $swAccess = [System.Diagnostics.Stopwatch]::StartNew()
                 $Access = Test-CIPPAccess -Request $Request
+                $swAccess.Stop()
+                $HttpTimings['AccessCheck'] = $swAccess.Elapsed.TotalMilliseconds
                 if ($FunctionName -eq 'Invoke-Me') {
+                    $HttpTotalStopwatch.Stop()
+                    $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                    $HttpTimingsRounded = [ordered]@{}
+                    foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                    Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                     return $Access
                 }
             } catch {
                 Write-Information "Access denied for $FunctionName : $($_.Exception.Message)"
+                $HttpTotalStopwatch.Stop()
+                $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                $HttpTimingsRounded = [ordered]@{}
+                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::Forbidden
                         Body       = $_.Exception.Message
                     })
             }
-
+            $swTenants = [System.Diagnostics.Stopwatch]::StartNew()
             $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+            $swTenants.Stop()
+            $HttpTimings['AllowedTenants'] = $swTenants.Elapsed.TotalMilliseconds
+
+            $swGroups = [System.Diagnostics.Stopwatch]::StartNew()
             $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+            $swGroups.Stop()
+            $HttpTimings['AllowedGroups'] = $swGroups.Elapsed.TotalMilliseconds
 
             if ($AllowedTenants -notcontains 'AllTenants') {
                 Write-Warning 'Limiting tenant access'
@@ -114,23 +137,39 @@ function New-CippCoreRequest {
                     }
 
                     # Wrap the API call execution with telemetry
-                    $Response = Measure-CippTask -TaskName $Request.Params.CIPPEndpoint -Metadata $metadata -Script {
-                        & $FunctionName @HttpTrigger
-                    }
+                    $swInvoke = [System.Diagnostics.Stopwatch]::StartNew()
+                    $Response = Measure-CippTask -TaskName $Request.Params.CIPPEndpoint -Metadata $metadata -Script { & $FunctionName @HttpTrigger }
+                    $swInvoke.Stop()
+                    $HttpTimings['InvokeEndpoint'] = $swInvoke.Elapsed.TotalMilliseconds
 
                     # Filter to only return HttpResponseContext objects
                     $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }
                     if ($HttpResponse) {
                         # Return the first valid HttpResponseContext found
+                        $HttpTotalStopwatch.Stop()
+                        $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                        $HttpTimingsRounded = [ordered]@{}
+                        foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                        Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                         return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
                     } else {
                         # If no valid response context found, create a default success response
                         if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {
+                            $HttpTotalStopwatch.Stop()
+                            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                            $HttpTimingsRounded = [ordered]@{}
+                            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                             return ([HttpResponseContext]@{
                                     StatusCode = $Response.StatusCode
                                     Body       = $Response.Body
                                 })
                         } else {
+                            $HttpTotalStopwatch.Stop()
+                            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                            $HttpTimingsRounded = [ordered]@{}
+                            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                             return ([HttpResponseContext]@{
                                     StatusCode = [HttpStatusCode]::OK
                                     Body       = $Response
@@ -140,18 +179,33 @@ function New-CippCoreRequest {
                 }
             } catch {
                 Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
+                $HttpTotalStopwatch.Stop()
+                $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+                $HttpTimingsRounded = [ordered]@{}
+                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::InternalServerError
                         Body       = $_.Exception.Message
                     })
             }
         } else {
+            $HttpTotalStopwatch.Stop()
+            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+            $HttpTimingsRounded = [ordered]@{}
+            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
                     Body       = 'Endpoint not found'
                 })
         }
     } else {
+        $HttpTotalStopwatch.Stop()
+        $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+        $HttpTimingsRounded = [ordered]@{}
+        foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+        Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::PreconditionFailed
                 Body       = 'Request not processed'
