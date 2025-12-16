@@ -18,18 +18,6 @@ function Invoke-ListApiTest {
             $EnvironmentVariables | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value
         }
         $Response.EnvironmentVariables = $EnvironmentVariables
-        # test Get-AzAccessToken vs Get-CIPPAzAccessToken timing with stopwatch
-        $Sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $null = Get-AzAccessToken
-        $Sw.Stop()
-        $Timings = @{}
-        $Timings.GetAzAccessTokenMs = $Sw.Elapsed.TotalMilliseconds
-        $Sw = [System.Diagnostics.Stopwatch]::StartNew()
-        $Token = Get-CIPPAzIdentityToken
-        $Sw.Stop()
-        $Timings.GetCippAzIdentityTokenMs = $Sw.Elapsed.TotalMilliseconds
-        $Response.Timings = $Timings
-        $Response.Jwt = Read-JwtAccessDetails -Token $Token
 
         # test New-CIPPAzRestRequest KQL for resource graph
         $Query = 'Resources | project name, type'
