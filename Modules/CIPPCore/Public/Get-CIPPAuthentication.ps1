@@ -34,22 +34,6 @@ function Get-CIPPAuthentication {
                 }
             }
         } else {
-            Write-Information 'Connecting to Azure'
-            Connect-AzAccount -Identity
-            $SubscriptionId = Get-CIPPAzFunctionAppSubId
-            try {
-                $Context = Get-AzContext
-                if ($Context.Subscription) {
-                    #Write-Information "Current context: $($Context | ConvertTo-Json)"
-                    if ($Context.Subscription.Id -ne $SubscriptionId) {
-                        Write-Information "Setting context to subscription $SubscriptionId"
-                        $null = Set-AzContext -SubscriptionId $SubscriptionId
-                    }
-                }
-            } catch {
-                Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
-            }
-
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             #Get list of tenants that have 'directTenant' set to true
             $TenantsTable = Get-CippTable -tablename 'Tenants'

@@ -24,15 +24,6 @@ function Set-ExtensionAPIKey {
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-            $null = Connect-AzAccount -Identity
-            $SubscriptionId = Get-CIPPAzFunctionAppSubId
-            $Context = Get-AzContext
-            if ($Context.Subscription) {
-                if ($Context.Subscription.Id -ne $SubscriptionId) {
-                    Write-Information "Setting context to subscription $SubscriptionId"
-                    $null = Set-AzContext -SubscriptionId $SubscriptionId
-                }
-            }
             $null = Set-CippKeyVaultSecret -VaultName $keyvaultname -Name $Extension -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $APIKey)
         }
         Set-Item -Path "env:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue

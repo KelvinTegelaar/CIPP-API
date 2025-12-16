@@ -45,7 +45,7 @@ function Get-CippKeyVaultSecret {
         }
 
         # Get access token for Key Vault
-        $token = (Get-AzAccessToken -ResourceUrl "https://vault.azure.net").Token
+        $token = Get-CIPPAzIdentityToken -ResourceUrl "https://vault.azure.net"
 
         # Call Key Vault REST API
         $uri = "https://$VaultName.vault.azure.net/secrets/$Name`?api-version=7.4"

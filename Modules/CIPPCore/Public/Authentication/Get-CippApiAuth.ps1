@@ -9,18 +9,12 @@ function Get-CippApiAuth {
     }
 
     if (-not $AuthSettings) {
-        if ($env:MSI_SECRET) {
-            Disable-AzContextAutosave -Scope Process | Out-Null
-            $null = Connect-AzAccount -Identity
-            $SubscriptionId = Get-CIPPAzFunctionAppSubId
-            $Context = Set-AzContext -SubscriptionId $SubscriptionId
-        } else {
-            $Context = Get-AzContext
-            $SubscriptionId = $Context.Subscription.Id
-        }
+        $SubscriptionId = Get-CIPPAzFunctionAppSubId
 
-        # Get auth settings
-        $AuthSettings = (Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" -ErrorAction Stop | Select-Object -ExpandProperty Content | ConvertFrom-Json).properties
+        # Get auth settings via REST
+        $uri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
+        $response = New-CIPPAzRestRequest -Uri $uri -Method POST -ErrorAction Stop
+        $AuthSettings = $response.properties
     }
 
     if ($AuthSettings) {

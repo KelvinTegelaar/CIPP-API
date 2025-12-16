@@ -33,11 +33,6 @@ function Test-CIPPAccessPermissions {
         }
         if ($env:MSI_SECRET) {
             try {
-                Disable-AzContextAutosave -Scope Process | Out-Null
-                $null = Connect-AzAccount -Identity
-                $SubscriptionId = Get-CIPPAzFunctionAppSubId
-                $null = Set-AzContext -SubscriptionId $SubscriptionId
-
                 $KV = $env:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
                 if ($env:RefreshToken -ne $KeyVaultRefresh) {

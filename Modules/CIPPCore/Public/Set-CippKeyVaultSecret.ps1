@@ -46,7 +46,7 @@ function Set-CippKeyVaultSecret {
         }
 
         # Get access token for Key Vault
-        $token = (Get-AzAccessToken -ResourceUrl "https://vault.azure.net").Token
+        $token = Get-CIPPAzIdentityToken -ResourceUrl "https://vault.azure.net"
 
         # Convert SecureString to plain text
         $plainText = [System.Net.NetworkCredential]::new('', $SecretValue).Password

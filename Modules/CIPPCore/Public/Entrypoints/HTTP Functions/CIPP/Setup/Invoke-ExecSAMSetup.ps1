@@ -35,13 +35,6 @@ function Invoke-ExecSAMSetup {
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         }
-    } else {
-        if ($env:MSI_SECRET) {
-            Disable-AzContextAutosave -Scope Process | Out-Null
-            $null = Connect-AzAccount -Identity
-            $SubscriptionId = Get-CIPPAzFunctionAppSubId
-            $null = Set-AzContext -SubscriptionId $SubscriptionId
-        }
     }
     if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"

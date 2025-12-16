@@ -11,13 +11,6 @@ function Invoke-ExecCombinedSetup {
     #Make arraylist of Results
     $Results = [System.Collections.ArrayList]::new()
     try {
-        # Set up Azure context if needed for Key Vault access
-        if (($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -ne 'true') -and $env:MSI_SECRET) {
-            Disable-AzContextAutosave -Scope Process | Out-Null
-            $null = Connect-AzAccount -Identity
-            $SubscriptionId = Get-CIPPAzFunctionAppSubId
-            $null = Set-AzContext -SubscriptionId $SubscriptionId
-        }
         if ($request.body.selectedBaselines -and $request.body.baselineOption -eq 'downloadBaselines') {
             #do a single download of the selected baselines.
             foreach ($template in $request.body.selectedBaselines) {

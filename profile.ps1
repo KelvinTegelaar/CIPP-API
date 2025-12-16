@@ -9,7 +9,7 @@ if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTAT
 }
 if ($hasAppInsights) {
     Set-Location -Path $PSScriptRoot
-$SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
+    $SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
         $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
@@ -27,7 +27,7 @@ $Timings['AppInsightsSDK'] = $SwAppInsights.Elapsed.TotalMilliseconds
 # Import modules
 $SwModules = [System.Diagnostics.Stopwatch]::StartNew()
 $ModulesPath = Join-Path $PSScriptRoot 'Modules'
-$Modules = @('CIPPCore', 'CippExtensions', 'Az.Accounts', 'AzBobbyTables')
+$Modules = @('CIPPCore', 'CippExtensions', 'AzBobbyTables')
 foreach ($Module in $Modules) {
     $SwModule = [System.Diagnostics.Stopwatch]::StartNew()
     try {

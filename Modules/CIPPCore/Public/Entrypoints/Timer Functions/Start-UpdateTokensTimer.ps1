@@ -23,12 +23,6 @@ function Start-UpdateTokensTimer {
                     Write-LogMessage -API 'Update Tokens' -message 'Could not update refresh token. Will try again in 7 days.' -sev 'CRITICAL'
                 }
             } else {
-                if ($env:MSI_SECRET) {
-                    Disable-AzContextAutosave -Scope Process | Out-Null
-                    $null = Connect-AzAccount -Identity
-                    $SubscriptionId = Get-CIPPAzFunctionAppSubId
-                    $null = Set-AzContext -SubscriptionId $SubscriptionId
-                }
                 $KV = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
                 if ($Refreshtoken) {
                     Set-CippKeyVaultSecret -VaultName $KV -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)

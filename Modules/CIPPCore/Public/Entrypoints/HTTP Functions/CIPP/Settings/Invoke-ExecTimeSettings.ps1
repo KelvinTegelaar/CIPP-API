@@ -62,8 +62,8 @@ function Invoke-ExecTimeSettings {
             $AppSettings['CIPP_BUSINESS_HOURS_END'] = $BusinessHoursEnd
         }
 
-        # Update app settings using native cmdlet (managed identity authentication handled automatically)
-        Update-AzFunctionAppSetting -Name $FunctionName -ResourceGroupName $RGName -AppSetting $AppSettings -ErrorAction Stop | Out-Null
+        # Update app settings using ARM REST via managed identity
+        Update-CIPPAzFunctionAppSetting -Name $FunctionName -ResourceGroupName $RGName -AppSetting $AppSettings | Out-Null
 
         Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Updated time settings: Timezone=$Timezone, BusinessHours=$BusinessHoursStart-$BusinessHoursEnd" -Sev 'Info'
 

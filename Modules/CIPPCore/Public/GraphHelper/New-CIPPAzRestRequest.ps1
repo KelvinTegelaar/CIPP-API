@@ -13,6 +13,8 @@ function New-CIPPAzRestRequest {
     .PARAMETER ResourceUrl
         The Azure resource URL to get a token for. Defaults to 'https://management.azure.com/' for Azure Resource Manager.
         Use 'https://vault.azure.net' for Key Vault, 'https://api.loganalytics.io' for Log Analytics, etc.
+    .PARAMETER AccessToken
+        Optional: A pre-acquired OAuth2 bearer token to use for Authorization. When provided, Managed Identity acquisition is skipped and this token is used as-is.
     .PARAMETER Body
         The request body (can be string, hashtable, or PSCustomObject)
     .PARAMETER Headers
@@ -64,6 +66,9 @@ function New-CIPPAzRestRequest {
         [string]$ResourceUrl = 'https://management.azure.com/',
 
         [Parameter(Mandatory = $false)]
+        [string]$AccessToken,
+
+        [Parameter(Mandatory = $false)]
         [object]$Body,
 
         [Parameter(Mandatory = $false)]
@@ -100,13 +105,18 @@ function New-CIPPAzRestRequest {
         [int]$MaxRetries = 3
     )
 
-    # Get Azure Managed Identity token
-    try {
-        $Token = Get-CIPPAzIdentityToken -ResourceUrl $ResourceUrl
-    } catch {
-        $errorMessage = "Failed to get Azure Managed Identity token: $($_.Exception.Message)"
-        Write-Error -Message $errorMessage -ErrorAction $ErrorActionPreference
-        return
+    # Resolve bearer token: prefer manually-supplied AccessToken, otherwise fetch via Managed Identity
+    $Token = $null
+    if ($AccessToken) {
+        $Token = $AccessToken
+    } else {
+        try {
+            $Token = Get-CIPPAzIdentityToken -ResourceUrl $ResourceUrl
+        } catch {
+            $errorMessage = "Failed to get Azure Managed Identity token: $($_.Exception.Message)"
+            Write-Error -Message $errorMessage -ErrorAction $ErrorActionPreference
+            return
+        }
     }
 
     # Build headers - add Authorization, merge with user-provided headers
