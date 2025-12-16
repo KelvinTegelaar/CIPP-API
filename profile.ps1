@@ -83,13 +83,6 @@ if ($env:ExternalDurablePowerShellSDK -eq $true) {
 $SwDurableSDK.Stop()
 $Timings['DurableSDK'] = $SwDurableSDK.Elapsed.TotalMilliseconds
 
-$SwAzContext = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    $null = Disable-AzContextAutosave -Scope Process
-} catch {}
-$SwAzContext.Stop()
-$Timings['DisableAzContext'] = $SwAzContext.Elapsed.TotalMilliseconds
-
 $SwAuth = [System.Diagnostics.Stopwatch]::StartNew()
 try {
     if (!$env:SetFromProfile) {
