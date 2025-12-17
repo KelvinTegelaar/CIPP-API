@@ -35,6 +35,7 @@ function Invoke-ExecOffboardUser {
                         Email   = [bool]$Request.Body.PostExecution.email
                         PSA     = [bool]$Request.Body.PostExecution.psa
                     }
+                    Reference     = $Request.Body.reference
                 }
                 Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
             } else {
