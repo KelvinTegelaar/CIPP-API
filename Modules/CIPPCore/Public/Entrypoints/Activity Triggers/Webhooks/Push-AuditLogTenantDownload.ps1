@@ -43,15 +43,15 @@ function Push-AuditLogTenantDownload {
             Write-Information ('Audit Logs: Found {0} searches, begin downloading' -f $LogSearches.Count)
             foreach ($Search in $LogSearches) {
                 $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "Tenant eq '$($TenantFilter)' and RowKey eq '$($Search.id)'"
-                $SearchEntity | Add-Member -NotePropertyName CippStatus -NotePropertyValue 'Processing' -Force
+                $SearchEntity.CippStatus = 'Processing'
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
                 try {
                     Write-Information "Audit Log search: Processing search ID: $($Search.id) for tenant: $TenantFilter"
                     $Downloads = New-CIPPAuditLogSearchResultsCache -TenantFilter $TenantFilter -searchId $Search.id
-                    $SearchEntity | Add-Member -NotePropertyName CippStatus -NotePropertyValue 'Downloaded' -Force
+                    $SearchEntity.CippStatus = 'Downloaded'
                 } catch {
                     if ($_.Exception.Message -match 'Request rate is large. More Request Units may be needed, so no changes were made. Please retry this request later.') {
-                        $SearchEntity | Add-Member -NotePropertyName CippStatus -NotePropertyValue 'Pending' -Force
+                        $SearchEntity.CippStatus = 'Pending'
                         Write-Information "Audit Log search: Rate limit hit for $($SearchEntity.RowKey)."
                         if ($SearchEntity.PSObject.Properties.Name -contains 'RetryCount') {
                             $SearchEntity.RetryCount++
@@ -60,8 +60,8 @@ function Push-AuditLogTenantDownload {
                         }
                     } else {
                         $Exception = [string](ConvertTo-Json -Compress -InputObject (Get-CippException -Exception $_))
-                        $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $Exception -Force
-                        $SearchEntity | Add-Member -NotePropertyName CippStatus -NotePropertyValue 'Failed' -Force
+                        $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $Exception
+                        $SearchEntity.CippStatus = 'Failed'
                         Write-Information "Error processing audit log rules: $($_.Exception.Message)"
                     }
 
