@@ -4,26 +4,65 @@ function Test-CIPPAccess {
         [switch]$TenantList,
         [switch]$GroupList
     )
+    # Initialize per-call profiling
+    $AccessTimings = @{}
+    $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
     if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
 
     # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
-    if ($FunctionName -ne 'Invoke-me') {
-        try {
-            $Help = Get-Help $FunctionName -ErrorAction Stop
-        } catch {
-            Write-Warning "Function '$FunctionName' not found"
+    $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
+    if (-not $global:CIPPFunctionPermissions) {
+        $CIPPCoreModule = Get-Module -Name CIPPCore
+        if ($CIPPCoreModule) {
+            $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
+            
+            if (Test-Path $PermissionsFileJson) {
+                try {
+                    $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
+                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+                    foreach ($key in $jsonData.Keys) {
+                        $global:CIPPFunctionPermissions[$key] = $jsonData[$key]
+                    }
+                    Write-Information "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+                } catch {
+                    Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
+                }
+            }
         }
     }
+    $SwPermissions.Stop()
+    $AccessTimings['FunctionPermissions'] = $SwPermissions.Elapsed.TotalMilliseconds
 
-    # Check help for role
-    $APIRole = $Help.Role
+    if ($FunctionName -ne 'Invoke-me') {
+        $swHelp = [System.Diagnostics.Stopwatch]::StartNew()
+        if ($global:CIPPFunctionPermissions -and $global:CIPPFunctionPermissions.ContainsKey($FunctionName)) {
+            $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
+            $APIRole = $PermissionData['Role']
+            $Functionality = $PermissionData['Functionality']
+            Write-Information "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+        } else {
+            try {
+                $Help = Get-Help $FunctionName -ErrorAction Stop
+                $APIRole = $Help.Role
+                $Functionality = $Help.Functionality
+                Write-Information "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            } catch {
+                Write-Warning "Function '$FunctionName' not found"
+            }
+        }
+        $swHelp.Stop()
+        $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
+    }
 
     # Get default roles from config
+    $swRolesLoad = [System.Diagnostics.Stopwatch]::StartNew()
     $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
     $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
+    $swRolesLoad.Stop()
+    $AccessTimings['LoadBaseRoles'] = $swRolesLoad.Elapsed.TotalMilliseconds
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly', 'anonymous', 'authenticated')
 
     if ($APIRole -eq 'Public') {
@@ -32,6 +71,7 @@ function Test-CIPPAccess {
 
     if ($Request.Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Request.Headers.'x-ms-client-principal-name' -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
         $Type = 'APIClient'
+        $swApiClient = [System.Diagnostics.Stopwatch]::StartNew()
         # Direct API Access
         $ForwardedFor = $Request.Headers.'x-forwarded-for' -split ',' | Select-Object -First 1
         $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
@@ -92,14 +132,20 @@ function Test-CIPPAccess {
                         } | ConvertTo-Json -Depth 5)
                 })
         }
+        $swApiClient.Stop()
+        $AccessTimings['ApiClientBranch'] = $swApiClient.Elapsed.TotalMilliseconds
 
     } else {
         $Type = 'User'
+        $swUserBranch = [System.Diagnostics.Stopwatch]::StartNew()
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
         # Check for roles granted via group membership
         if (($User.userRoles | Measure-Object).Count -eq 2 -and $User.userRoles -contains 'authenticated' -and $User.userRoles -contains 'anonymous') {
+            $swResolveUserRoles = [System.Diagnostics.Stopwatch]::StartNew()
             $User = Test-CIPPAccessUserRole -User $User
+            $swResolveUserRoles.Stop()
+            $AccessTimings['ResolveUserRoles'] = $swResolveUserRoles.Elapsed.TotalMilliseconds
         }
 
         #Write-Information ($User | ConvertTo-Json -Depth 5)
@@ -117,7 +163,10 @@ function Test-CIPPAccess {
                     })
             }
 
+            $swPermsMe = [System.Diagnostics.Stopwatch]::StartNew()
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
+            $swPermsMe.Stop()
+            $AccessTimings['GetPermissions(me)'] = $swPermsMe.Elapsed.TotalMilliseconds
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
@@ -187,8 +236,12 @@ function Test-CIPPAccess {
         if (@('admin', 'superadmin') -contains $BaseRole.Name) {
             return $true
         } else {
+            $swTenantsLoad = [System.Diagnostics.Stopwatch]::StartNew()
             $Tenants = Get-Tenants -IncludeErrors
+            $swTenantsLoad.Stop()
+            $AccessTimings['LoadTenants'] = $swTenantsLoad.Elapsed.TotalMilliseconds
             $PermissionsFound = $false
+            $swRolePerms = [System.Diagnostics.Stopwatch]::StartNew()
             $PermissionSet = foreach ($CustomRole in $CustomRoles) {
                 try {
                     Get-CIPPRolePermissions -Role $CustomRole
@@ -198,9 +251,12 @@ function Test-CIPPAccess {
                     continue
                 }
             }
+            $swRolePerms.Stop()
+            $AccessTimings['GetRolePermissions'] = $swRolePerms.Elapsed.TotalMilliseconds
 
             if ($PermissionsFound) {
                 if ($TenantList.IsPresent) {
+                    $swTenantList = [System.Diagnostics.Stopwatch]::StartNew()
                     $LimitedTenantList = foreach ($Permission in $PermissionSet) {
                         if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
                             @('AllTenants')
@@ -240,8 +296,11 @@ function Test-CIPPAccess {
                             $ExpandedAllowedTenants | Where-Object { $ExpandedBlockedTenants -notcontains $_ }
                         }
                     }
+                    $swTenantList.Stop()
+                    $AccessTimings['BuildTenantList'] = $swTenantList.Elapsed.TotalMilliseconds
                     return @($LimitedTenantList | Sort-Object -Unique)
                 } elseif ($GroupList.IsPresent) {
+                    $swGroupList = [System.Diagnostics.Stopwatch]::StartNew()
                     Write-Information "Getting allowed groups for roles: $($CustomRoles -join ', ')"
                     $LimitedGroupList = foreach ($Permission in $PermissionSet) {
                         if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
@@ -254,11 +313,14 @@ function Test-CIPPAccess {
                             }
                         }
                     }
+                    $swGroupList.Stop()
+                    $AccessTimings['BuildGroupList'] = $swGroupList.Elapsed.TotalMilliseconds
                     return @($LimitedGroupList | Sort-Object -Unique)
                 }
 
                 $TenantAllowed = $false
                 $APIAllowed = $false
+                $swPermissionEval = [System.Diagnostics.Stopwatch]::StartNew()
                 foreach ($Role in $PermissionSet) {
                     foreach ($Perm in $Role.Permissions) {
                         if ($Perm -match $APIRole) {
@@ -329,11 +391,13 @@ function Test-CIPPAccess {
                         }
                     }
                 }
+                $swPermissionEval.Stop()
+                $AccessTimings['EvaluatePermissions'] = $swPermissionEval.Elapsed.TotalMilliseconds
 
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
-                if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
                     throw 'Access to this tenant is not allowed'
                 } else {
                     return $true
@@ -371,12 +435,12 @@ function Test-CIPPAccess {
                 }
             }
 
-            if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+            if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
 
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
-                if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
                     Write-Information "Tenant not allowed: $TenantFilter"
 
                     throw 'Access to this tenant is not allowed'
@@ -392,10 +456,22 @@ function Test-CIPPAccess {
             }
             return $true
         }
+        $swUserBranch.Stop()
+        $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
     }
 
     if ($TenantList.IsPresent) {
+        $AccessTotalSw.Stop()
+        $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+        $AccessTimingsRounded = [ordered]@{}
+        foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
         return @('AllTenants')
     }
+    $AccessTotalSw.Stop()
+    $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+    $AccessTimingsRounded = [ordered]@{}
+    foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+    Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
     return $true
 }

@@ -1,4 +1,10 @@
 function Invoke-ListExoRequest {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
+    #>
     param($Request, $TriggerMetadata)
     try {
         $AllowedVerbs = @(

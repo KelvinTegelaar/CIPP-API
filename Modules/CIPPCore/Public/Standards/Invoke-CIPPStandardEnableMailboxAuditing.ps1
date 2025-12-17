@@ -49,8 +49,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     try {
         $AuditState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AuditDisabled
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableMailboxAuditing state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -71,25 +70,30 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
             $LogMessage = 'Tenant level mailbox audit already enabled. '
         }
 
-        # Check for mailbox audit on all mailboxes. Enable for all that it's not enabled for
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{filter = "auditenabled -eq 'False'" } -useSystemMailbox $true -Select 'AuditEnabled,UserPrincipalName'
-        $Request = $mailboxes | ForEach-Object {
-            @{
-                CmdletInput = @{
-                    CmdletName = 'Set-Mailbox'
-                    Parameters = @{Identity = $_.UserPrincipalName; AuditEnabled = $true }
-                }
-            }
-        }
+        # Commented out because MS recommends NOT doing this anymore. From docs: https://learn.microsoft.com/en-us/purview/audit-mailboxes#verify-mailbox-auditing-on-by-default-is-turned-on
+        # When you turn on mailbox auditing on by default for the organization, the AuditEnabled property for affected mailboxes doesn't change from False to True. In other words, mailbox auditing on by default ignores the AuditEnabled property on mailboxes.
+        # Auditing is automatically turned on when you create a new mailbox. You don't need to manually enable mailbox auditing for new users.
+        # You don't need to manage the mailbox actions that are audited. A predefined set of mailbox actions are audited by default for each sign-in type (Admin, Delegate, and Owner).
+        # When Microsoft releases a new mailbox action, the action might be added automatically to the list of mailbox actions that are audited by default (subject to the user having the appropriate license). This result means you don't need to add new actions on mailboxes as they're released.
+        # You have a consistent mailbox auditing policy across your organization because you're auditing the same actions for all mailboxes.
+        #$Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{filter = "auditenabled -eq 'False'" } -useSystemMailbox $true -Select 'AuditEnabled,UserPrincipalName'
+        #$Request = $mailboxes | ForEach-Object {
+        #    @{
+        #       CmdletInput = @{
+        #          CmdletName = 'Set-Mailbox'
+        #         Parameters = @{Identity = $_.UserPrincipalName; AuditEnabled = $true }
+        #    }
+        #}
+        #}
 
-        $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-        $BatchResults | ForEach-Object {
-            if ($_.error) {
-                $ErrorMessage = Get-NormalizedError -Message $_.error
-                Write-Host "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage"
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage" -sev Error
-            }
-        }
+        #$BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
+        #$BatchResults | ForEach-Object {
+        #    if ($_.error) {
+        #        $ErrorMessage = Get-NormalizedError -Message $_.error
+        #        Write-Host "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage"
+        #        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage" -sev Error
+        # }
+        #}
 
         # Disable audit bypass for all mailboxes that have it enabled
 

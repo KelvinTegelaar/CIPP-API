@@ -21,18 +21,18 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             "CIS M365 5.0 (8.5.6)"
         EXECUTIVETEXT
             Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.
-            ADDEDCOMPONENT
-                {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"EveryoneUserOverride","value":"EveryoneUserOverride"},{"label":"EveryoneInCompanyUserOverride","value":"EveryoneInCompanyUserOverride"},{"label":"EveryoneInSameAndFederatedCompanyUserOverride","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"OrganizerOnlyUserOverride","value":"OrganizerOnlyUserOverride"}]}
-                {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}
-                {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, People in my org remains enforced.","options":[{"label":"Everyone","value":"Everyone"},{"label":"People in my org","value":"EveryoneInCompanyExcludingGuests"},{"label":"People in or federated orgs","value":"EveryoneInSameAndFederatedCompany"},{"label":"People invited","value":"InvitedUsers"},{"label":"Only me","value":"OrganizerOnly"}]}
-                {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
-                {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
+        ADDEDCOMPONENT
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"Everyone","value":"EveryoneUserOverride"},{"label":"People in my organization","value":"EveryoneInCompanyUserOverride"},{"label":"People in my organization and trusted organizations","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"Only organizer","value":"OrganizerOnlyUserOverride"}]}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}
+            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People who were invited","value":"InvitedUsers"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
         IMPACT
             Low Impact
         ADDEDDATE
             2024-11-12
-            POWERSHELLEQUIVALENT
-                Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting $false -AllowAnonymousUsersToStartMeeting $false -AutoAdmittedUsers $AutoAdmittedUsers -AllowPSTNUsersToBypassLobby $false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode $DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl $false
+        POWERSHELLEQUIVALENT
+            Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK

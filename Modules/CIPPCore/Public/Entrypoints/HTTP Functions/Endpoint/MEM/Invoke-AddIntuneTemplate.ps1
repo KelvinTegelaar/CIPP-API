@@ -1,4 +1,4 @@
-Function Invoke-AddIntuneTemplate {
+function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -9,10 +9,12 @@ Function Invoke-AddIntuneTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $GUID = (New-Guid).GUID
     try {
         if ($Request.Body.RawJSON) {
-            if (!$Request.Body.displayName) { throw 'You must enter a displayname' }
+            if (!$Request.Body.displayName) { throw 'You must enter a displayName' }
             if ($null -eq ($Request.Body.RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
 
 
@@ -30,9 +32,10 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
 
-            $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+            $Result = 'Successfully added template'
+            $StatusCode = [HttpStatusCode]::OK
         } else {
             $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
             $URLName = $Request.Body.URLName ?? $Request.Query.URLName
@@ -54,19 +57,21 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
 
-            $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+            $Result = 'Successfully added template'
+            $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedMessage)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
     }
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
-
 }

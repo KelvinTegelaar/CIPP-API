@@ -69,7 +69,8 @@ function Add-CIPPDelegatedPermission {
         }
     }
 
-    $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
+    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $Translator = Get-Content (Join-Path $ModuleBase 'lib\data\PermissionsTranslator.json') | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property appId -EQ $ApplicationId
     $Results = [System.Collections.Generic.List[string]]::new()

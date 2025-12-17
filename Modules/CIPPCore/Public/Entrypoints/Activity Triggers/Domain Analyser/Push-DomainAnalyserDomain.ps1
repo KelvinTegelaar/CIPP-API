@@ -145,7 +145,7 @@ function Push-DomainAnalyserDomain {
     try {
         $DMARCPolicy = Read-DmarcPolicy -Domain $Domain -ErrorAction Stop
 
-        If ([string]::IsNullOrEmpty($DMARCPolicy.Record)) {
+        if ([string]::IsNullOrEmpty($DMARCPolicy.Record)) {
             $Result.DMARCPresent = $false
             $ScoreExplanation.Add('No DMARC Records Found') | Out-Null
         } else {
@@ -320,11 +320,8 @@ function Push-DomainAnalyserDomain {
         $DomainTable.Entity = $DomainObject
         $DomainTable.Force = $true
         Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainObject -Force
-
-        # Final Write to Output
-        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "DNS Analyser Finished For $Domain" -sev Info
     } catch {
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
     }
-    return $null
+    return $Result
 }

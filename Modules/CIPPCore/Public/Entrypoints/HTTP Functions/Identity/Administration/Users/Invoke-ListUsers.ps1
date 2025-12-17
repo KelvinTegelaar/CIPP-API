@@ -7,7 +7,8 @@ Function Invoke-ListUsers {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
+    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $ConvertTable = Import-Csv (Join-Path $ModuleBase 'lib\data\ConversionTable.csv') | Sort-Object -Property 'guid' -Unique
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $GraphFilter = $Request.Query.graphFilter

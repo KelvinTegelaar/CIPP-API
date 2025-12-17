@@ -29,6 +29,9 @@ function Set-CIPPAssignedApplication {
                 'macOsVpp' {
                     $assignmentSettings.useDeviceLicensing = $true
                 }
+                'iosVpp' {
+                    $assignmentSettings.useDeviceLicensing = $true
+                }
                 default {
                     # No additional settings
                 }

@@ -56,7 +56,7 @@ function Invoke-ListIntuneTemplates {
                     value         = $package
                     type          = 'tag'
                     templateCount = ($RawTemplates | Where-Object { $_.Package -eq $package }).Count
-                    templates     = ($RawTemplates | Where-Object { $_.Package -eq $package } | ForEach-Object {
+                    templates     = @($RawTemplates | Where-Object { $_.Package -eq $package } | ForEach-Object {
                             try {
                                 $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue

@@ -50,8 +50,8 @@ function Get-CIPPLicenseOverview {
         Tenant   = $TenantFilter
         Licenses = $LicRequest
     }
-    Set-Location (Get-Item $PSScriptRoot).FullName
-    $ConvertTable = Import-Csv ConversionTable.csv
+    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $ConvertTable = Import-Csv (Join-Path $ModuleBase 'lib\data\ConversionTable.csv')
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
@@ -142,11 +142,9 @@ function Get-CIPPLicenseOverview {
                 skuId          = [string]$sku.skuId
                 skuPartNumber  = [string]$PrettyName
                 availableUnits = [string]$sku.prepaidUnits.enabled - $sku.consumedUnits
-                TermInfo       = [string]($TermInfo | ConvertTo-Json -Depth 10 -Compress)
+                TermInfo       = $TermInfo
                 AssignedUsers  = ($UsersBySku.ContainsKey($SkuKey) ? @(($UsersBySku[$SkuKey])) : $null)
                 AssignedGroups = ($GroupsBySku.ContainsKey($SkuKey) ? @(($GroupsBySku[$SkuKey])) : $null)
-                'PartitionKey' = 'License'
-                'RowKey'       = "$($singleReq.Tenant) - $($sku.skuid)"
             }
         }
     }

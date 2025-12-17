@@ -1,10 +1,6 @@
 # This file enables modules to be automatically managed by the Functions service.
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
-@{
-    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'. 
-    # To use the Az module in your function app, please uncomment the line below.
-    'Az.accounts'   = '2.*'
-    'Az.Keyvault'   = '3.*'
-    'AzBobbyTables' = '2.*'
-}
+# CIPP bundles all modules locally in the Modules folder and imports them explicitly.
+# managedDependency is disabled in host.json - this file is intentionally empty.
+@{}
