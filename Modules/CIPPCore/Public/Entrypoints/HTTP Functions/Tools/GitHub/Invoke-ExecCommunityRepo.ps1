@@ -169,13 +169,13 @@ function Invoke-ExecCommunityRepo {
 
                     $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
                     if ($MigrationTable) {
-                        Write-Host 'Found a migration table, getting contents'
+                        Write-Host "Found a migration table, getting contents for $FullName"
                         $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
                     }
 
                     $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
                     $LocationData = foreach ($Location in $NamedLocations) {
-                        (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $Location.path).content | ConvertFrom-Json
+                        (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
                     }
                 }
                 Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData

@@ -11,16 +11,22 @@ function Push-ListLicensesQueue {
     $domainName = $Item.defaultDomainName
     try {
         Write-Host "Processing $domainName"
-        $Overview = Get-CIPPLicenseOverview -TenantFilter $domainName
+        $Licenses = Get-CIPPLicenseOverview -TenantFilter $domainName
     } catch {
-        $Overview = [pscustomobject]@{
+        $Licenses = [pscustomobject]@{
             Tenant         = [string]$domainName
             License        = "Could not connect to client: $($_.Exception.Message)"
             'PartitionKey' = 'License'
-            'RowKey'       = "$($domainName)-$((New-Guid).Guid)"
+            'RowKey'       = "$($domainName)"
         }
     } finally {
         $Table = Get-CIPPTable -TableName cachelicenses
+        $JSON = ConvertTo-Json -Depth 10 -Compress -InputObject @($Licenses)
+        $Overview = [pscustomobject]@{
+            License        = [string]$JSON
+            'PartitionKey' = 'License'
+            'RowKey'       = "$($domainName)"
+        }
         Add-CIPPAzDataTableEntity @Table -Entity $Overview -Force | Out-Null
     }
 }
