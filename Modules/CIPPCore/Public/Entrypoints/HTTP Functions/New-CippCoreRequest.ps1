@@ -78,7 +78,7 @@ function New-CippCoreRequest {
                     $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                     $HttpTimingsRounded = [ordered]@{}
                     foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                    Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                    Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                     return $Access
                 }
             } catch {
@@ -87,7 +87,7 @@ function New-CippCoreRequest {
                 $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                 $HttpTimingsRounded = [ordered]@{}
                 foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::Forbidden
                         Body       = $_.Exception.Message
@@ -150,7 +150,7 @@ function New-CippCoreRequest {
                         $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                         $HttpTimingsRounded = [ordered]@{}
                         foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                        Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                        Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                         return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
                     } else {
                         # If no valid response context found, create a default success response
@@ -159,7 +159,7 @@ function New-CippCoreRequest {
                             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                             $HttpTimingsRounded = [ordered]@{}
                             foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                             return ([HttpResponseContext]@{
                                     StatusCode = $Response.StatusCode
                                     Body       = $Response.Body
@@ -169,7 +169,7 @@ function New-CippCoreRequest {
                             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                             $HttpTimingsRounded = [ordered]@{}
                             foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                             return ([HttpResponseContext]@{
                                     StatusCode = [HttpStatusCode]::OK
                                     Body       = $Response
@@ -183,7 +183,7 @@ function New-CippCoreRequest {
                 $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                 $HttpTimingsRounded = [ordered]@{}
                 foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::InternalServerError
                         Body       = $_.Exception.Message
@@ -194,7 +194,7 @@ function New-CippCoreRequest {
             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
             $HttpTimingsRounded = [ordered]@{}
             foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
                     Body       = 'Endpoint not found'
@@ -205,7 +205,7 @@ function New-CippCoreRequest {
         $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
         $HttpTimingsRounded = [ordered]@{}
         foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-        Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+        Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::PreconditionFailed
                 Body       = 'Request not processed'

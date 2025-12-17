@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-
+    
       - name: Setup PowerShell module cache
         id: cacher
         uses: actions/cache@v3
@@ -48,6 +48,11 @@ jobs:
 
           Write-Host "Building module from: $ModulePath"
           Write-Host "Output directory: $OutputPath"
+
+          # Generate function permissions before replacing the source module
+          $ToolsPath = Join-Path $env:GITHUB_WORKSPACE "Tools"
+          $ScriptPath = Join-Path $ToolsPath "Build-FunctionPermissions.ps1"
+          pwsh -File $ScriptPath -ModulePath $ModulePath
 
           # Build the module using ModuleBuilder
           Build-Module -SourcePath $ModulePath -OutputDirectory $OutputPath -Verbose

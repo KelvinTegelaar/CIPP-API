@@ -13,7 +13,7 @@ if ($hasAppInsights) {
     try {
         $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
         $null = [Reflection.Assembly]::LoadFile($AppInsightsDllPath)
-        Write-Information 'Application Insights SDK loaded successfully'
+        Write-Debug 'Application Insights SDK loaded successfully'
     } catch {
         Write-Warning "Failed to load Application Insights SDK: $($_.Exception.Message)"
     }
@@ -52,13 +52,13 @@ if ($hasAppInsights -and -not $global:TelemetryClient) {
             $config.ConnectionString = $connectionString
             $global:TelemetryClient = [Microsoft.ApplicationInsights.TelemetryClient]::new($config)
             Enable-CippConsoleLogging
-            Write-Information 'TelemetryClient initialized with connection string'
+            Write-Debug 'TelemetryClient initialized with connection string'
         } elseif ($env:APPINSIGHTS_INSTRUMENTATIONKEY) {
             # Fall back to instrumentation key
             $global:TelemetryClient = [Microsoft.ApplicationInsights.TelemetryClient]::new()
             $global:TelemetryClient.InstrumentationKey = $env:APPINSIGHTS_INSTRUMENTATIONKEY
             Enable-CippConsoleLogging
-            Write-Information 'TelemetryClient initialized with instrumentation key'
+            Write-Debug 'TelemetryClient initialized with instrumentation key'
         }
     } catch {
         Write-Warning "Failed to initialize TelemetryClient: $($_.Exception.Message)"
@@ -71,7 +71,7 @@ $SwDurableSDK = [System.Diagnostics.Stopwatch]::StartNew()
 if ($env:ExternalDurablePowerShellSDK -eq $true) {
     try {
         Import-Module AzureFunctions.PowerShell.Durable.SDK -ErrorAction Stop
-        Write-Information 'External Durable SDK enabled'
+        Write-Debug 'External Durable SDK enabled'
     } catch {
         Write-LogMessage -message 'Failed to import module - AzureFunctions.PowerShell.Durable.SDK' -LogData (Get-CippException -Exception $_) -Sev 'debug'
         $_.Exception.Message
@@ -83,7 +83,7 @@ $Timings['DurableSDK'] = $SwDurableSDK.Elapsed.TotalMilliseconds
 $SwAuth = [System.Diagnostics.Stopwatch]::StartNew()
 try {
     if (!$env:SetFromProfile) {
-        Write-Information "We're reloading from KV"
+        Write-Debug "We're reloading from KV"
         $Auth = Get-CIPPAuthentication
     }
 } catch {
@@ -121,7 +121,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
 
     $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
     Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
-    Write-Host 'Cleared GitHub release notes cache to force refresh on version update.'
+    Write-Debug 'Cleared GitHub release notes cache to force refresh on version update.'
 }
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
@@ -134,4 +134,4 @@ $TimingsRounded = [ordered]@{}
 foreach ($Key in ($Timings.Keys | Sort-Object)) {
     $TimingsRounded[$Key] = [math]::Round($Timings[$Key], 2)
 }
-Write-Information "#### Profile Load Timings #### $($TimingsRounded | ConvertTo-Json -Compress)"
+Write-Debug "#### Profile Load Timings #### $($TimingsRounded | ConvertTo-Json -Compress)"

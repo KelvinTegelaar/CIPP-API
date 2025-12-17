@@ -100,6 +100,18 @@ function Send-CIPPAlert {
 
     if ($Type -eq 'webhook') {
         Write-Information 'Trying to send webhook'
+
+        $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
+        $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json)
+
+        if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
+            $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
+            $Headers = @{'CF-Access-Client-Id' = $Configuration.CFZTNA.ClientId; 'CF-Access-Client-Secret' = "$CFAPIKey" }
+            Write-Information 'CF-Access-Client-Id and CF-Access-Client-Secret headers added to webhook API request'
+        } else {
+            $Headers = $null
+        }
+
         $JSONBody = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $JSONContent -EscapeForJson
         try {
             if (![string]::IsNullOrWhiteSpace($Config.webhook) -or ![string]::IsNullOrWhiteSpace($AltWebhook)) {
@@ -124,7 +136,16 @@ function Send-CIPPAlert {
                             Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                         }
                         default {
-                            Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $JSONContent
+                            $RestMethod = @{
+                                Uri         = $webhook
+                                Method      = 'POST'
+                                ContentType = 'application/json'
+                                Body        = $JSONContent
+                            }
+                            if ($Headers) {
+                                $RestMethod['Headers'] = $Headers
+                            }
+                            Invoke-RestMethod @RestMethod
                         }
                     }
                 }
@@ -137,6 +158,7 @@ function Send-CIPPAlert {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
+            return "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
         }
     }
 
