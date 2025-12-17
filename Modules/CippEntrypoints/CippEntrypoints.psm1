@@ -21,7 +21,7 @@ function Receive-CippHttpTrigger {
     if ($Request.Headers.'x-ms-coldstart' -eq 1) {
         Write-Information '** Function app cold start detected **'
     }
-    Write-Information "CIPP_ACTION=$($Request.Params.CIPPEndpoint)"
+    Write-Debug "CIPP_ACTION=$($Request.Params.CIPPEndpoint)"
 
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
@@ -172,7 +172,7 @@ function Receive-CippOrchestrationTrigger {
         Entrypoint
     #>
     param($Context)
-    Write-Information "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
+    Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -287,7 +287,7 @@ function Receive-CippActivityTrigger {
         Entrypoint
     #>
     param($Item)
-    Write-Information "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
+    Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Output = $null
@@ -360,7 +360,7 @@ function Receive-CippActivityTrigger {
             }
 
             try {
-                Write-Verbose "Activity starting Function: $FunctionName."               
+                Write-Verbose "Activity starting Function: $FunctionName."
                 Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
                 $Status = 'Completed'
 
@@ -477,9 +477,9 @@ function Receive-CIPPTimerTrigger {
             }
 
             # Wrap the timer function execution with telemetry
-            
+
             Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
-            
+
 
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results -join ','

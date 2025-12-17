@@ -159,7 +159,7 @@ function New-CippCoreRequest {
                             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
                             $HttpTimingsRounded = [ordered]@{}
                             foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                            Write-Information "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                             return ([HttpResponseContext]@{
                                     StatusCode = $Response.StatusCode
                                     Body       = $Response.Body
