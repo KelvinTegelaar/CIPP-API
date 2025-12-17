@@ -19,7 +19,8 @@ function New-CIPPAPIConfig {
 
     try {
         if ($AppId) {
-            $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($AppId)')" -NoAuthCheck $true
+            $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($AppId)')" -NoAuthCheck $true -AsApp $true
+            Write-Information "Found existing app with AppId $AppId"
         } else {
             $CreateBody = @{
                 api                    = @{
