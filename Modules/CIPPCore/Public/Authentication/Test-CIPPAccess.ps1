@@ -12,19 +12,49 @@ function Test-CIPPAccess {
     # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
+    $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
+    if (-not $global:CIPPFunctionPermissions) {
+        $CIPPCoreModule = Get-Module -Name CIPPCore
+        if ($CIPPCoreModule) {
+            $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
+            
+            if (Test-Path $PermissionsFileJson) {
+                try {
+                    $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
+                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+                    foreach ($key in $jsonData.Keys) {
+                        $global:CIPPFunctionPermissions[$key] = $jsonData[$key]
+                    }
+                    Write-Information "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+                } catch {
+                    Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
+                }
+            }
+        }
+    }
+    $SwPermissions.Stop()
+    $AccessTimings['FunctionPermissions'] = $SwPermissions.Elapsed.TotalMilliseconds
+
     if ($FunctionName -ne 'Invoke-me') {
         $swHelp = [System.Diagnostics.Stopwatch]::StartNew()
-        try {
-            $Help = Get-Help $FunctionName -ErrorAction Stop
-        } catch {
-            Write-Warning "Function '$FunctionName' not found"
+        if ($global:CIPPFunctionPermissions -and $global:CIPPFunctionPermissions.ContainsKey($FunctionName)) {
+            $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
+            $APIRole = $PermissionData['Role']
+            $Functionality = $PermissionData['Functionality']
+            Write-Information "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+        } else {
+            try {
+                $Help = Get-Help $FunctionName -ErrorAction Stop
+                $APIRole = $Help.Role
+                $Functionality = $Help.Functionality
+                Write-Information "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            } catch {
+                Write-Warning "Function '$FunctionName' not found"
+            }
         }
         $swHelp.Stop()
         $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
     }
-
-    # Check help for role
-    $APIRole = $Help.Role
 
     # Get default roles from config
     $swRolesLoad = [System.Diagnostics.Stopwatch]::StartNew()
@@ -367,7 +397,7 @@ function Test-CIPPAccess {
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
-                if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
                     throw 'Access to this tenant is not allowed'
                 } else {
                     return $true
@@ -405,12 +435,12 @@ function Test-CIPPAccess {
                 }
             }
 
-            if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+            if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
 
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
-                if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
                     Write-Information "Tenant not allowed: $TenantFilter"
 
                     throw 'Access to this tenant is not allowed'
