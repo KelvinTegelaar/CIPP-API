@@ -1,31 +1,29 @@
-﻿function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
+function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
     <#
     .FUNCTIONALITY
         Internal
     .COMPONENT
         (APIName) BitLockerKeysForOwnedDevice
     .SYNOPSIS
-        (Label) Restrict users from recovering BitLocker keys for owned devices
+        (Label) Control BitLocker key recovery for owned devices
     .DESCRIPTION
-    (Helptext) Controls whether standard users can recover BitLocker keys for devices they own via Microsoft 365 portals.
-    (DocsDescription) Updates the default user role setting that governs access to BitLocker recovery keys for owned devices. This allows administrators to either permit self-service recovery or require helpdesk involvement through Microsoft Entra authorization policies.
+        (Helptext) Controls whether standard users can recover BitLocker keys for devices they own.
+        (DocsDescription) Updates the Microsoft Entra authorization policy that controls whether standard users can read BitLocker recovery keys for devices they own. Choose to restrict access for tighter security or allow self-service recovery when operational needs require it.
     .NOTES
         CAT
             Entra (AAD) Standards
         TAG
-            "NIST CSF 2.0 (PR.AA-05)"
         EXECUTIVETEXT
-            Ensures administrators retain control over BitLocker recovery secrets when required, while still allowing flexibility to enable self-service recovery when business needs demand it.
+            Gives administrators centralized control over BitLocker recovery secrets—restrict access to ensure IT-assisted recovery flows, or allow self-service when rapid device unlocks are a priority.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select state","name":"standards.BitLockerKeysForOwnedDevice.state","options":[{"label":"Restrict","value":"restrict"},{"label":"Allow","value":"allow"}]}
         IMPACT
-            Medium Impact
+            Low Impact
         ADDEDDATE
             2025-10-12
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthorizationPolicy
         RECOMMENDEDBY
-            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

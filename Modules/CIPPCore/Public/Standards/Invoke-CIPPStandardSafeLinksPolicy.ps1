@@ -18,6 +18,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             "mdo_safelinksforOfficeApps"
             "NIST CSF 2.0 (DE.CM-09)"
         ADDEDCOMPONENT
+            {"type":"textField","name":"standards.SafeLinksPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default SafeLinks Policy"}
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
             {"type":"switch","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
             {"type":"switch","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
