@@ -57,7 +57,13 @@ function Enable-CippConsoleLogging {
         if ($PSBoundParameters.ContainsKey('MessageData') -and $MessageData) {
             # Send to telemetry
             if (-not [string]::IsNullOrWhiteSpace(($MessageData | Out-String).Trim())) {
-                Send-CippConsoleLog -Message ($MessageData | Out-String).Trim() -Level 'Information'
+                # If tag is supplied, include it in the log message
+                $LogMessage = if ($Tags -and $Tags.Count -gt 0) {
+                    '[{0}] {1}' -f ($Tags -join ','), ($MessageData | Out-String).Trim()
+                } else {
+                    ($MessageData | Out-String).Trim()
+                }
+                Send-CippConsoleLog -Message $LogMessage -Level 'Information'
             }
 
             # Call original function
