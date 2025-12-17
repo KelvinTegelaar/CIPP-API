@@ -1,8 +1,8 @@
 function Push-DomainAnalyserTenant {
     <#
-    .FUNCTIONALITY
-        Entrypoint
-    #>
+        .FUNCTIONALITY
+            Entrypoint
+        #>
     param($Item)
 
     $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Item.customerId } | Select-Object -First 1
@@ -13,7 +13,7 @@ function Push-DomainAnalyserTenant {
         $CleanupRows = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
         $CleanupCount = ($CleanupRows | Measure-Object).Count
         if ($CleanupCount -gt 0) {
-            Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
+            Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
             Remove-AzDataTableEntity -Force @DomainTable -Entity $CleanupRows
         }
     } elseif ($Tenant.GraphErrorCount -gt 50) {
@@ -60,8 +60,6 @@ function Push-DomainAnalyserTenant {
                     SupportedServices  = $d.supportedServices
                 }
             }
-
-            Write-Information ($TenantDomains | ConvertTo-Json -Depth 10)
 
             $DomainCount = ($TenantDomains | Measure-Object).Count
             if ($DomainCount -gt 0) {
@@ -119,21 +117,26 @@ function Push-DomainAnalyserTenant {
                                 TenantGUID   = $Tenant.customerId
                             }
                             OrchestratorName = "DomainAnalyser_$($Tenant.defaultDomainName)"
-                            SkipLog          = $true
+                            PostExecution    = @{
+                                FunctionName = 'GetDomainAnalyserResults'
+                                Parameters   = @{
+                                    Tenant = $Tenant
+                                }
+                            }
                         }
                         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
                         Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
-                        Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Started analysis for $DomainCount tenant domains" -sev Info
+                        Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {
-                        Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev 'Error' -LogData (Get-CippException -Exception $_)
+                        Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev 'Error' -LogData (Get-CippException -Exception $_)
                     }
                 } catch {
-                    Write-LogMessage -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_)
+                    Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_)
                 }
             }
         } catch {
             #Write-Host (Get-CippException -Exception $_ | ConvertTo-Json)
-            Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message 'DNS Analyser GraphGetRequest' -LogData (Get-CippException -Exception $_) -sev Error
+            Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message 'DNS Analyser GraphGetRequest' -LogData (Get-CippException -Exception $_) -sev Error
         }
     }
     return $null

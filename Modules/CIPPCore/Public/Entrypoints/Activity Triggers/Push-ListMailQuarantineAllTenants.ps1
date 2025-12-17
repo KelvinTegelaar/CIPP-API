@@ -12,7 +12,7 @@
 
     try {
         $quarantineMessages = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 } | Select-Object -ExcludeProperty *data.type*
-        $GraphRequest = foreach ($message in $quarantineMessages) {
+        foreach ($message in $quarantineMessages) {
             $messageData = @{
                 QuarantineMessage = [string]($message | ConvertTo-Json -Depth 10 -Compress)
                 RowKey            = [string](New-Guid).Guid

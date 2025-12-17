@@ -1,5 +1,5 @@
 
-Function Invoke-ListIntunePolicy {
+function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,38 +16,41 @@ Function Invoke-ListIntunePolicy {
         if ($ID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
         } else {
-            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter | Select-Object -Property id, displayName
-
             $BulkRequests = [PSCustomObject]@(
+                @{
+                    id     = 'Groups'
+                    method = 'GET'
+                    url    = '/groups?$top=999&$select=id,displayName'
+                }
                 @{
                     id     = 'DeviceConfigurations'
                     method = 'GET'
-                    url    = "/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName,description&`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName,description&`$expand=assignments&`$top=1000"
                 }
                 @{
                     id     = 'WindowsDriverUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsDriverUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsDriverUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'WindowsFeatureUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'windowsQualityUpdatePolicies'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'windowsQualityUpdateProfiles'
                     method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&top=200"
+                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&`$top=200"
                 }
                 @{
                     id     = 'GroupPolicyConfigurations'
                     method = 'GET'
-                    url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&`$top=1000"
                 }
                 @{
                     id     = 'MobileAppConfigurations'
@@ -57,13 +60,16 @@ Function Invoke-ListIntunePolicy {
                 @{
                     id     = 'ConfigurationPolicies'
                     method = 'GET'
-                    url    = "/deviceManagement/configurationPolicies?`$expand=assignments&top=1000"
+                    url    = "/deviceManagement/configurationPolicies?`$expand=assignments&`$top=1000"
                 }
             )
 
             $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-            $GraphRequest = $BulkResults | ForEach-Object {
+            # Extract groups for resolving assignment names
+            $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
+
+            $GraphRequest = $BulkResults | Where-Object { $_.id -ne 'Groups' } | ForEach-Object {
                 $URLName = $_.Id
                 $_.body.Value | ForEach-Object {
                     $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
@@ -89,7 +95,7 @@ Function Invoke-ListIntunePolicy {
                     $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
                     $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
                     $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                    ForEach ($target in $Assignments) {
+                    foreach ($target in $Assignments) {
                         switch ($target.'@odata.type') {
                             '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
                             '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }

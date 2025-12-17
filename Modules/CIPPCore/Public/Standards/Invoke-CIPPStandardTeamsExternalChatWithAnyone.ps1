@@ -1,28 +1,28 @@
-﻿function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
+function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     <#
     .FUNCTIONALITY
         Internal
     .COMPONENT
         (APIName) TeamsExternalChatWithAnyone
     .SYNOPSIS
-        (Label) Control Teams "Chat with anyone" feature
+        (Label) Set Teams chat with anyone setting
     .DESCRIPTION
-        (Helptext) Manages whether users can initiate Microsoft Teams chats with any email address, inviting non-Teams users as guests via email.
-        (DocsDescription) Manages the UseB2BInvitesToAddExternalUsers setting on the global Teams messaging policy. When enabled, users can start chats with any email address and external recipients receive an invitation to join as guests. Disabling the setting prevents external email-based chats from being created, keeping conversations restricted to approved collaborators.
+        (Helptext) Controls whether users can start Teams chats with any email address, inviting external recipients as guests via email.
+        (DocsDescription) Manages the Teams messaging policy setting UseB2BInvitesToAddExternalUsers. When enabled, users can start chats with any email address and recipients receive an invitation to join the chat as guests. Disabling the setting prevents these external email chats from being created, keeping conversations limited to internal users and approved guests.
     .NOTES
         CAT
             Teams Standards
         TAG
         EXECUTIVETEXT
-            Controls whether employees can start Microsoft Teams chats with anyone using just their email address. Turning this off keeps chat conversations restricted to internal users and pre-approved guests, reducing the risk of data exposure through unexpected external invitations.
+            Allows organizations to decide if employees can launch Microsoft Teams chats with anyone on the internet using just an email address. Disabling the feature keeps conversations inside trusted boundaries and helps prevent accidental data exposure through unexpected external invitations.
         ADDEDCOMPONENT
-            {"type":"switch","name":"standards.TeamsExternalChatWithAnyone.UseB2BInvitesToAddExternalUsers","label":"Allow chatting with anyone via email","defaultValue":false}
+            {"type":"radio","name":"standards.TeamsExternalChatWithAnyone.UseB2BInvitesToAddExternalUsers","label":"Allow chatting with anyone via email","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}],"defaultValue":"Disabled"}
         IMPACT
-            Medium Impact
+            Low Impact
         ADDEDDATE
             2025-11-03
         POWERSHELLEQUIVALENT
-            Set-CsTeamsMessagingPolicy -Identity Global -UseB2BInvitesToAddExternalUsers $false
+            Set-CsTeamsMessagingPolicy -Identity Global -UseB2BInvitesToAddExternalUsers \$false/\$true
         RECOMMENDEDBY
             "CIPP"
         UPDATECOMMENTBLOCK

@@ -23,6 +23,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "CIS M365 5.0 (2.1.7)"
             "NIST CSF 2.0 (DE.CM-09)"
         ADDEDCOMPONENT
+            {"type":"textField","name":"standards.AntiPhishPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Anti-Phishing Policy"}
             {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1}
             {"type":"switch","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","defaultValue":true}
             {"type":"switch","label":"Show user impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarUsersSafetyTips","defaultValue":true}

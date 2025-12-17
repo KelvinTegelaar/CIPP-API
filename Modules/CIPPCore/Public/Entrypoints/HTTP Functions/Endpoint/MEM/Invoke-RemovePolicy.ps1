@@ -16,7 +16,11 @@ function Invoke-RemovePolicy {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $PolicyId = $Request.Query.ID ?? $Request.body.ID
     $UrlName = $Request.Query.URLName ?? $Request.body.URLName
-    $BaseEndpoint = $UrlName -eq 'managedAppPolicies' ? 'deviceAppManagement' : 'deviceManagement'
+    $BaseEndpoint = switch ($UrlName) {
+        'managedAppPolicies' { 'deviceAppManagement' }
+        'mobileAppConfigurations' { 'deviceAppManagement' }
+        default { 'deviceManagement' }
+    }
     if (!$PolicyId) { exit }
 
     try {

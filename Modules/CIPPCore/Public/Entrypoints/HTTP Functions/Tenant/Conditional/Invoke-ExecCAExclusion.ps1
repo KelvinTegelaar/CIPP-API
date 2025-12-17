@@ -84,6 +84,8 @@ function Invoke-ExecCAExclusion {
                 }
                 Parameters    = [pscustomobject]$Parameters
                 ScheduledTime = $StartDate
+                PostExecution = $Request.Body.postExecution
+                Reference     = $Request.Body.reference
             }
 
             Write-Information ($TaskBody | ConvertTo-Json -Depth 10)
@@ -117,6 +119,7 @@ function Invoke-ExecCAExclusion {
                     Command       = @{ value = 'Set-CIPPAuditLogUserExclusion'; label = 'Set-CIPPAuditLogUserExclusion' }
                     Parameters    = [pscustomobject]@{ Users = $AuditUsers; Action = 'Remove'; Type = 'Location' }
                     ScheduledTime = $EndDate
+                    Reference     = $Request.Body.reference
                 }
                 Add-CIPPScheduledTask -Task $AuditRemoveTask -hidden $true
             }

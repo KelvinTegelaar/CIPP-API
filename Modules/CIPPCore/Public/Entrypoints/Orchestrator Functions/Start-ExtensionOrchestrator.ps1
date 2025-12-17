@@ -10,7 +10,7 @@ function Start-ExtensionOrchestrator {
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $ExtensionConfig = (Get-AzDataTableEntity @Table).config
-    if (Test-Json -Json $ExtensionConfig) {
+    if ($ExtensionConfig -and (Test-Json -Json $ExtensionConfig)) {
         $Configuration = ($ExtensionConfig | ConvertFrom-Json)
     } else {
         $Configuration = @{}

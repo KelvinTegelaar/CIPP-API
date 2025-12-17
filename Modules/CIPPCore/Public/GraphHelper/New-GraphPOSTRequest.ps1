@@ -28,6 +28,10 @@ function New-GraphPOSTRequest {
             }
         }
 
+        if (!$headers['User-Agent']) {
+            $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
+        }
+
         if (!$contentType) {
             $contentType = 'application/json; charset=utf-8'
         }

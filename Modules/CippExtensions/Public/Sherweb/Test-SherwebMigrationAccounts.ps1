@@ -8,7 +8,7 @@ function Test-SherwebMigrationAccounts {
     $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
     $Config = $ExtensionConfig.Sherweb
     #First get a list of all subscribed skus for this tenant, that are in the transfer window.
-    $Licenses = (Get-CIPPLicenseOverview -TenantFilter $TenantFilter) | ForEach-Object { $_.terminfo = ($_.terminfo | ConvertFrom-Json -ErrorAction SilentlyContinue) ; $_ } | Where-Object { $_.terminfo -ne $null -and $_.terminfo.TransferWindow -le 7 }
+    $Licenses = (Get-CIPPLicenseOverview -TenantFilter $TenantFilter) | Where-Object { $null -ne $_.terminfo -and $_.terminfo.TransferWindow -le 7 }
 
     #now check if this exact count of licenses is available at Sherweb, if not, we need to migrate them.
     $SherwebLicenses = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter

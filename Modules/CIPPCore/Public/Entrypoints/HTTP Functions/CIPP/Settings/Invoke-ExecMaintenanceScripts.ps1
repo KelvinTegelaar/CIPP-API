@@ -17,7 +17,7 @@ Function Invoke-ExecMaintenanceScripts {
             '##TENANTID##'      = $env:TenantID
             '##RESOURCEGROUP##' = $env:WEBSITE_RESOURCE_GROUP
             '##FUNCTIONAPP##'   = $env:WEBSITE_SITE_NAME
-            '##SUBSCRIPTION##'  = (($env:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
+            '##SUBSCRIPTION##'  = Get-CIPPAzFunctionAppSubId
             '##TOKENIP##'       = $AccessTokenDetails.IPAddress
         }
     } catch { Write-Host $_.Exception.Message }
