@@ -31,9 +31,6 @@ function Invoke-ListMailboxRules {
             QueueMessage = "Still loading data for $TenantFilter. Please check back in a few more minutes"
             QueueId      = $RunningQueue.RowKey
         }
-        [PSCustomObject]@{
-            Waiting = $true
-        }
     } elseif ((!$Rows -and !$RunningQueue) -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
         Write-Information "No cached mailbox rules found for $TenantFilter, starting new orchestration"
         if ($TenantFilter -eq 'AllTenants') {
@@ -58,7 +55,7 @@ function Invoke-ListMailboxRules {
                 SkipLog          = $true
             }
             #Write-Host ($InputObject | ConvertTo-Json)
-            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
             Write-Host "Started mailbox rules orchestration with ID = '$InstanceId'"
         }
 

@@ -8,7 +8,7 @@ function Get-CIPPTenantCapabilities {
     )
     $ConfigTable = Get-CIPPTable -TableName 'CacheCapabilities'
     $datetime = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq '$TenantFilter' and Timestamp ge datetime'$datetime'"
+    $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq '$TenantFilter' and PartitionKey eq 'Capabilities' and Timestamp ge datetime'$datetime'"
     if ($ConfigEntries) {
         $Org = $ConfigEntries.JSON | ConvertFrom-Json
     } else {

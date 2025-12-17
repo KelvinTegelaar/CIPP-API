@@ -84,7 +84,7 @@
     "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
     "Command": "Start-DriftStandardsOrchestrator",
     "Description": "Orchestrator to process drift standards",
-    "Cron": "0 0 */1 * * *",
+    "Cron": "0 0 */12 * * *",
     "Priority": 5,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"
@@ -211,6 +211,15 @@
     "Description": "Timer to cleanup old tenants",
     "Cron": "0 0 0 * * *",
     "Priority": 20,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
+    "Id": "b8f3c2e1-5d4a-4f7b-9a2c-1e6d8f3b5a7c",
+    "Command": "Start-BackupRetentionCleanup",
+    "Description": "Timer to cleanup old backups based on retention policy",
+    "Cron": "0 0 2 * * *",
+    "Priority": 21,
     "RunOnProcessor": true,
     "IsSystem": true
   }

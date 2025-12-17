@@ -16,13 +16,9 @@ function Invoke-ExecJITAdmin {
     $TenantFilter = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
 
 
-    if ($Request.Body.existingUser.value -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
-        $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
-    }
-
     $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
     $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
-    $Results = [System.Collections.Generic.List[string]]::new()
+    $Results = [System.Collections.Generic.List[object]]::new()
 
     if ($Request.Body.userAction -eq 'create') {
         $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
@@ -36,19 +32,65 @@ function Invoke-ExecJITAdmin {
                 'UserPrincipalName' = $Username
             }
             Expiration   = $Expiration
+            StartDate    = $Start
             Reason       = $Request.Body.reason
             Action       = 'Create'
             TenantFilter = $TenantFilter
+            Headers      = $Headers
+            APIName      = $APIName
         }
-        $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
-        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Created JIT Admin user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ')" -Sev 'Info' -LogData $JITAdmin
-        $Results.Add("Created User: $Username")
+        try {
+            $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
+        } catch {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{'Results' = @("Failed to create JIT Admin user: $($_.Exception.Message)") }
+                })
+        }
+        $Results.Add(@{
+                resultText = "Created User: $Username"
+                copyField  = $Username
+                state      = 'success'
+            })
         if (!$Request.Body.UseTAP) {
-            $Results.Add("Password: $($CreateResult.password)")
+            $Results.Add(@{
+                    resultText = "Password: $($CreateResult.password)"
+                    copyField  = $CreateResult.password
+                    state      = 'success'
+                })
         }
         $Results.Add("JIT Admin Expires: $($Expiration)")
         Start-Sleep -Seconds 1
+    } else {
+
+        $Username = $Request.Body.existingUser.value
+        if ($Username -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+            Write-Information "Resolving UserPrincipalName from ObjectId: $($Request.Body.existingUser.value)"
+            $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.existingUser.value)" -tenantid $TenantFilter).userPrincipalName
+
+            # If the resolved username is a guest user, we need to use the id instead of the UPN
+            if ($Username -clike '*#EXT#*') {
+                $Username = $Request.Body.existingUser.value
+            }
+        }
+
+        # Validate we have a username
+        if ([string]::IsNullOrWhiteSpace($Username)) {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ 'Results' = @("Could not resolve username from existingUser value: $($Request.Body.existingUser.value)") }
+            }
+        }
+
+        # Add username result for existing user
+        $Results.Add(@{
+                resultText = "User: $Username"
+                copyField  = $Username
+                state      = 'success'
+            })
     }
+
+
 
     #Region TAP creation
     if ($Request.Body.UseTAP) {
@@ -82,13 +124,21 @@ function Invoke-ExecJITAdmin {
             $PasswordLink = New-PwPushLink -Payload $TempPass
             $Password = $PasswordLink ? $PasswordLink : $TempPass
 
-            $Results.Add("Temporary Access Pass: $Password")
+            $Results.Add(@{
+                    resultText = "Temporary Access Pass: $Password"
+                    copyField  = $Password
+                    state      = 'success'
+                })
             $Results.Add("This TAP is usable starting at $($TapRequest.startDateTime) UTC for the next $PasswordExpiration minutes")
         } catch {
             $Results.Add('Failed to create TAP, if this is not yet enabled, use the Standards to push the settings to the tenant.')
             Write-Information (Get-CippException -Exception $_ | ConvertTo-Json -Depth 5)
             if ($Password) {
-                $Results.Add("Password: $Password")
+                $Results.Add(@{
+                        resultText = "Password: $Password"
+                        copyField  = $Password
+                        state      = 'success'
+                    })
             }
         }
     }
@@ -103,6 +153,9 @@ function Invoke-ExecJITAdmin {
         Action       = 'AddRoles'
         Reason       = $Request.Body.Reason
         Expiration   = $Expiration
+        StartDate    = $Start
+        Headers      = $Headers
+        APIName      = $APIName
     }
     if ($Start -gt (Get-Date)) {
         $TaskBody = @{
@@ -122,14 +175,19 @@ function Invoke-ExecJITAdmin {
         }
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         if ($Request.Body.userAction -ne 'create') {
-            Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -Reason $Request.Body.Reason
+            Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $Request.Body.existingUser.value -Expiration $Expiration -StartDate $Start -Reason $Request.Body.Reason -CreatedBy (([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails)
         }
         $Results.Add("Scheduling JIT Admin enable task for $Username")
-        Write-LogMessage -Headers $Headers -API $APIName -message "Scheduling JIT Admin for existing user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ') " -tenant $TenantFilter -Sev 'Info'
     } else {
-        $Results.Add("Executing JIT Admin enable task for $Username")
-        Set-CIPPUserJITAdmin @Parameters
-        Write-LogMessage -Headers $Headers -API $APIName -message "Executing JIT Admin for existing user: $Username. Reason: $($Request.Body.reason). Roles: $($Request.Body.adminRoles.label -join ', ') " -tenant $TenantFilter -Sev 'Info'
+        try {
+            $Results.Add("Executing JIT Admin enable task for $Username")
+            Set-CIPPUserJITAdmin @Parameters
+        } catch {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{'Results' = @("Failed to execute JIT Admin enable task: $($_.Exception.Message)") }
+                })
+        }
     }
 
     $DisableTaskBody = [pscustomobject]@{
@@ -158,7 +216,6 @@ function Invoke-ExecJITAdmin {
     $null = Add-CIPPScheduledTask -Task $DisableTaskBody -hidden $false
     $Results.Add("Scheduling JIT Admin $($Request.Body.ExpireAction.value) task for $Username")
 
-    # TODO - We should find a way to have this return a HTTP status code based on the success or failure of the operation. This also doesn't return the results of the operation in a Results hash table, like most of the rest of the API.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{'Results' = @($Results) }

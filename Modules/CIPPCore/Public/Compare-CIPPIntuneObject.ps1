@@ -28,6 +28,8 @@ function Compare-CIPPIntuneObject {
             'qualityUpdatesWillBeRolledBack',
             'qualityUpdatesPauseStartDate',
             'featureUpdatesPauseStartDate'
+            'wslDistributions',
+            'lastSuccessfulSyncDateTime'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties

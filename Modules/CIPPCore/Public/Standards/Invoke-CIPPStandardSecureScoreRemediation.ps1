@@ -8,26 +8,23 @@ function Invoke-CIPPStandardSecureScoreRemediation {
         (Label) Update Secure Score Control Profiles
     .DESCRIPTION
         (Helptext) Allows bulk updating of Secure Score control profiles across tenants. Select controls and assign them to different states: Default, Ignored, Third-Party, or Reviewed.
-        (DocsDescription) Enables automated or template-based updates to Microsoft Secure Score recommendations. This is particularly useful for MSPs managing multiple tenants, allowing you to mark controls as "Third-party" (e.g., when using Mimecast, IronScales, or other third-party security tools) or set them to other states in bulk. This ensures Secure Scores accurately reflect each tenant's true security posture without repetitive manual updates.
+        (DocsDescription) Allows bulk updating of Secure Score control profiles across tenants. Select controls and assign them to different states: Default, Ignored, Third-Party, or Reviewed.
     .NOTES
         CAT
             Global Standards
         TAG
             "lowimpact"
-        EXECUTIVETEXT
-            Automates the management of Secure Score control profiles by allowing bulk updates across tenants. This ensures accurate representation of security posture when using third-party security tools or when certain controls need to be marked as resolved or ignored, significantly reducing manual administrative overhead for MSPs managing multiple clients.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Default","label":"Controls to set to Default"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Ignored","label":"Controls to set to Ignored"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.ThirdParty","label":"Controls to set to Third-Party"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"name":"standards.SecureScoreRemediation.Reviewed","label":"Controls to set to Reviewed"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SecureScoreRemediation.Default","label":"Controls to set to Default","api":{"url":"/secureScore.json","labelField":"title","valueField":"id"}}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SecureScoreRemediation.Ignored","label":"Controls to set to Ignored","api":{"url":"/secureScore.json","labelField":"title","valueField":"id"}}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SecureScoreRemediation.ThirdParty","label":"Controls to set to Third-Party","api":{"url":"/secureScore.json","labelField":"title","valueField":"id"}}
+            {"type":"autoComplete","multiple":true,"required":false,"creatable":true,"name":"standards.SecureScoreRemediation.Reviewed","label":"Controls to set to Reviewed","api":{"url":"/secureScore.json","labelField":"title","valueField":"id"}}
         IMPACT
             Low Impact
         ADDEDDATE
             2025-11-19
         POWERSHELLEQUIVALENT
             New-GraphPostRequest to /beta/security/secureScoreControlProfiles/{id}
-        RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
