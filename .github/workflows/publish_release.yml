@@ -17,7 +17,9 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Read and Trim Version
       - name: Read and Trim Version
