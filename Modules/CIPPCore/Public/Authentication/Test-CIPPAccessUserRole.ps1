@@ -66,7 +66,7 @@ function Test-CIPPAccessUserRole {
                 $UserRoleTimings['Total'] = $UserRoleTotalSw.Elapsed.TotalMilliseconds
                 $timingsRounded = [ordered]@{}
                 foreach ($Key in ($UserRoleTimings.Keys | Sort-Object)) { $timingsRounded[$Key] = [math]::Round($UserRoleTimings[$Key], 2) }
-                Write-Information "#### UserRole Timings #### $($timingsRounded | ConvertTo-Json -Compress)"
+                Write-Debug "#### UserRole Timings #### $($timingsRounded | ConvertTo-Json -Compress)"
                 return $User
             }
 
@@ -127,7 +127,7 @@ function Test-CIPPAccessUserRole {
     $UserRoleTimings['Total'] = $UserRoleTotalSw.Elapsed.TotalMilliseconds
     $timingsRounded = [ordered]@{}
     foreach ($Key in ($UserRoleTimings.Keys | Sort-Object)) { $timingsRounded[$Key] = [math]::Round($UserRoleTimings[$Key], 2) }
-    Write-Information "#### UserRole Timings #### $($timingsRounded | ConvertTo-Json -Compress)"
+    Write-Debug "#### UserRole Timings #### $($timingsRounded | ConvertTo-Json -Compress)"
 
     return $User
 }

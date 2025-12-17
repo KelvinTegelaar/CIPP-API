@@ -435,13 +435,13 @@ function Test-CIPPAccess {
         $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
         $AccessTimingsRounded = [ordered]@{}
         foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-        Write-Information "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
         return @('AllTenants')
     }
     $AccessTotalSw.Stop()
     $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
     $AccessTimingsRounded = [ordered]@{}
     foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-    Write-Information "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+    Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
     return $true
 }

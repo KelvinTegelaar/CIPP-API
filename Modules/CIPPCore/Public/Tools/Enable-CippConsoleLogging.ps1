@@ -40,6 +40,10 @@ function Enable-CippConsoleLogging {
         'Information'
     }
 
+    if ($env:CIPP_CONSOLE_LOG_LEVEL -eq 'Debug') {
+        $global:DebugPreference = 'Continue'
+    }
+
     # Override Write-Information
     function global:Write-Information {
         [CmdletBinding()]
