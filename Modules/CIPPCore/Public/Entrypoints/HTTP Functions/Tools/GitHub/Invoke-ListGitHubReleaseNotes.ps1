@@ -29,12 +29,17 @@
     $Table = Get-CIPPTable -TableName cacheGitHubReleaseNotes
     $PartitionKey = 'GitHubReleaseNotes'
     $Filter = "PartitionKey eq '$PartitionKey'"
-    $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-24)
+    $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter
 
     try {
         if ($Rows) {
             $Releases = ConvertFrom-Json -InputObject $Rows.GitHubReleases -Depth 10
-        } else {
+            if ($Releases.releaseTag -notmatch $global:CippVersion) {
+                $Releases = $null
+            }
+        }
+
+        if (-not $Releases) {
             $Releases = Invoke-GitHubApiRequest -Path $ReleasePath
             $Releases = $Releases | ForEach-Object {
                 [ordered]@{
@@ -48,7 +53,6 @@
                     commitish   = $_.target_commitish
                 }
             }
-
             $Results = @{
                 GitHubReleases = [string](ConvertTo-Json -Depth 10 -InputObject $Releases)
                 RowKey         = [string]'GitHubReleaseNotes'
