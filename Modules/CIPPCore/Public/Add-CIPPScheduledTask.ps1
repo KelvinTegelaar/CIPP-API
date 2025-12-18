@@ -185,6 +185,7 @@ function Add-CIPPScheduledTask {
                 ScheduledTime        = [string]$task.ScheduledTime
                 Recurrence           = [string]$Recurrence
                 PostExecution        = [string]$PostExecution
+                Reference            = [string]$task.Reference
                 AdditionalProperties = [string]$AdditionalProperties
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'

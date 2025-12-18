@@ -88,7 +88,9 @@ function New-CIPPBackup {
             }
             $Table = Get-CippTable -tablename 'ScheduledBackup'
             try {
-                $null = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                measure-cipptask -TaskName 'ScheduledBackupStorage' -EventName 'CIPP.BackupCompleted' -Script {
+                    $null = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                }
                 Write-LogMessage -headers $Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $State = 'Backup finished successfully'
             } catch {

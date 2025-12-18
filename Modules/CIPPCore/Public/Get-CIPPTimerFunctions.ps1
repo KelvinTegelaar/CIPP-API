@@ -41,6 +41,7 @@ function Get-CIPPTimerFunctions {
 
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
     $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
+
     if ($ListAllTasks) {
         $Orchestrators = $CippTimers | ConvertFrom-Json | Sort-Object -Property Priority
     } else {
@@ -59,45 +60,47 @@ function Get-CIPPTimerFunctions {
     }
 
     foreach ($Orchestrator in $Orchestrators) {
-        $Status = $OrchestratorStatus | Where-Object { $_.RowKey -eq $Orchestrator.Id }
-        if ($Status.Cron) {
-            $CronString = $Status.Cron
-        } else {
-            $CronString = $Orchestrator.Cron
-        }
-        $CronCount = ($CronString -split ' ' | Measure-Object).Count
-        if ($CronCount -eq 5) {
-            $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString)
-        } elseif ($CronCount -eq 6) {
-            $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString, [Ncrontab.Advanced.Enumerations.CronStringFormat]::WithSeconds)
-        } else {
-            Write-Warning "Invalid cron expression for $($Orchestrator.Command): $($Orchestrator.Cron)"
-            continue
-        }
-
-        if (!$ListAllTasks.IsPresent) {
-            if ($Orchestrator.PreferredProcessor -and $AvailableNodes -contains $Orchestrator.PreferredProcessor -and $Node -ne $Orchestrator.PreferredProcessor) {
-                # only run on preferred processor when available
-                continue
-            } elseif ((!$Orchestrator.PreferredProcessor -or $AvailableNodes -notcontains $Orchestrator.PreferredProcessor) -and $Node -notin ('http', 'proc')) {
-                # Catchall function nodes
-                continue
-            }
-        }
-
-        $Now = Get-Date
-        if ($ListAllTasks.IsPresent) {
-            $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
-        } else {
-            $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
-            if (!$Status -or $Status.LastOccurrence -eq 'Never') {
-                $NextOccurrence = $NextOccurrences | Where-Object { $_ -le (Get-Date) } | Select-Object -First 1
-            } else {
-                $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime.ToLocalTime() -and $_ -le (Get-Date) } | Select-Object -First 1
-            }
-        }
-
         if (Get-Command -Name $Orchestrator.Command -Module CIPPCore -ErrorAction SilentlyContinue) {
+            $Status = $OrchestratorStatus | Where-Object { $_.RowKey -eq $Orchestrator.Id }
+            if ($Status.Cron -and $Orchestrator.IsSystem -eq $true -and -not $ResetToDefault.IsPresent) {
+                $CronString = $Status.Cron
+            } else {
+                $CronString = $Orchestrator.Cron
+            }
+
+            $CronCount = ($CronString -split ' ' | Measure-Object).Count
+            if ($CronCount -eq 5) {
+                $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString)
+            } elseif ($CronCount -eq 6) {
+                $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString, [Ncrontab.Advanced.Enumerations.CronStringFormat]::WithSeconds)
+            } else {
+                Write-Warning "Invalid cron expression for $($Orchestrator.Command): $($Orchestrator.Cron)"
+                continue
+            }
+
+            if (!$ListAllTasks.IsPresent) {
+                if ($Orchestrator.PreferredProcessor -and $AvailableNodes -contains $Orchestrator.PreferredProcessor -and $Node -ne $Orchestrator.PreferredProcessor) {
+                    # only run on preferred processor when available
+                    continue
+                } elseif ((!$Orchestrator.PreferredProcessor -or $AvailableNodes -notcontains $Orchestrator.PreferredProcessor) -and $Node -notin ('http', 'proc')) {
+                    # Catchall function nodes
+                    continue
+                }
+            }
+
+            $Now = Get-Date
+            if ($ListAllTasks.IsPresent) {
+                $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
+            } else {
+                $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
+                if (!$Status -or $Status.LastOccurrence -eq 'Never') {
+                    $NextOccurrence = $NextOccurrences | Where-Object { $_ -le (Get-Date) } | Select-Object -First 1
+                } else {
+                    $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime.ToLocalTime() -and $_ -le (Get-Date) } | Select-Object -First 1
+                }
+            }
+
+
             if ($NextOccurrence -or $ListAllTasks.IsPresent) {
                 if (!$Status) {
                     $Status = [pscustomobject]@{
@@ -115,8 +118,9 @@ function Get-CIPPTimerFunctions {
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
                 } else {
+                    $Status.Command = $Orchestrator.Command
                     if ($Orchestrator.IsSystem -eq $true -or $ResetToDefault.IsPresent) {
-                        $Status.Cron = $CronString
+                        $Status.Cron = $Orchestrator.Cron
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
                     $PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
@@ -149,6 +153,13 @@ function Get-CIPPTimerFunctions {
                 Write-Warning "Timer function: $($Orchestrator.Command) does not exist"
                 Remove-AzDataTableEntity @Table -Entity $Status
             }
+        }
+    }
+
+    foreach ($StaleStatus in $OrchestratorStatus) {
+        if ($Orchestrators.Id -notcontains $StaleStatus.RowKey) {
+            Write-Warning "Removing stale timer function entry: $($StaleStatus.RowKey)"
+            Remove-AzDataTableEntity @Table -Entity $StaleStatus
         }
     }
 }
