@@ -209,8 +209,8 @@ function Test-CIPPAuditLogRules {
         } else {
             # Use cached lookups
             $Users = ($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data | ConvertFrom-Json
-            $Groups = (($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json) ?? @()
-            $Devices = (($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json) ?? @()
+            $Groups = (($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+            $Devices = (($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
             $ServicePrincipals = ($Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }).Data | ConvertFrom-Json
             Write-Information "Using cached directory lookups for tenant $TenantFilter"
         }
