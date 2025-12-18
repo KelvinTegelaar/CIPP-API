@@ -3,7 +3,7 @@ function Invoke-ListGDAPAccessAssignments {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.Read
+        Tenant.Relationship.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
