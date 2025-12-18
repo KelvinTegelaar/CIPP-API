@@ -66,18 +66,18 @@ function Write-LogMessage {
     if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
     }
-    if ($script:StandardInfo) {
-        $TableRow.Standard = [string]$script:StandardInfo.Standard
-        $TableRow.StandardTemplateId = [string]$script:StandardInfo.StandardTemplateId
-        if ($script:StandardInfo.IntuneTemplateId) {
-            $TableRow.IntuneTemplateId = [string]$script:StandardInfo.IntuneTemplateId
+    if ($script:CippStandardInfoStorage -and $script:CippStandardInfoStorage.Value) {
+        $TableRow.Standard = [string]$script:CippStandardInfoStorage.Value.Standard
+        $TableRow.StandardTemplateId = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+        if ($script:CippStandardInfoStorage.Value.IntuneTemplateId) {
+            $TableRow.IntuneTemplateId = [string]$script:CippStandardInfoStorage.Value.IntuneTemplateId
         }
-        if ($script:StandardInfo.ConditionalAccessTemplateId) {
-            $TableRow.ConditionalAccessTemplateId = [string]$script:StandardInfo.ConditionalAccessTemplateId
+        if ($script:CippStandardInfoStorage.Value.ConditionalAccessTemplateId) {
+            $TableRow.ConditionalAccessTemplateId = [string]$script:CippStandardInfoStorage.Value.ConditionalAccessTemplateId
         }
     }
-    if ($script:ScheduledTaskId) {
-        $TableRow.ScheduledTaskId = [string]$script:ScheduledTaskId
+    if ($script:CippScheduledTaskIdStorage -and $script:CippScheduledTaskIdStorage.Value) {
+        $TableRow.ScheduledTaskId = [string]$script:CippScheduledTaskIdStorage.Value
     }
 
     $Table.Entity = $TableRow

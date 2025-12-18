@@ -23,9 +23,10 @@ function Invoke-AddUser {
                 value = 'New-CIPPUserTask'
                 label = 'New-CIPPUserTask'
             }
-            Parameters    = [pscustomobject]@{ UserObj = $UserObj }
-            ScheduledTime = $UserObj.Scheduled.date
-            PostExecution = @{
+            Parameters             = [pscustomobject]@{ UserObj = $UserObj }
+            ScheduledTime          = $UserObj.Scheduled.date
+            Reference              = $UserObj.reference ?? $null
+            PostExecution          = @{
                 Webhook = [bool]$Request.Body.PostExecution.Webhook
                 Email   = [bool]$Request.Body.PostExecution.Email
                 PSA     = [bool]$Request.Body.PostExecution.PSA

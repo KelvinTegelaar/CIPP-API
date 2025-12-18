@@ -42,12 +42,6 @@ function Import-CommunityTemplate {
                     $excludedTenants = $ExistingJSON.excludedTenants
                     $NewJSON.tenantFilter = $tenantFilter
                     $NewJSON.excludedTenants = $excludedTenants
-
-                    # Extract package tag from existing template
-                    $PackageTag = $Existing.Package
-                    if ($PackageTag) {
-                        $Template | Add-Member -MemberType NoteProperty -Name Package -Value $PackageTag -Force
-                    }
                 }
             }
 
@@ -169,6 +163,11 @@ function Import-CommunityTemplate {
                         GUID         = $ID
                         RowKey       = $ID
                     }
+
+                    if ($Existing -and $Existing.Package) {
+                        $entity.Package = $Existing.Package
+                    }
+
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
 
                 }
