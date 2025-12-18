@@ -13,8 +13,6 @@ function New-CIPPCAPolicy {
         $Headers
     )
 
-    $User = $Request.Headers
-
     function Remove-EmptyArrays ($Object) {
         if ($Object -is [Array]) {
             foreach ($Item in $Object) { Remove-EmptyArrays $Item }
@@ -45,14 +43,14 @@ function New-CIPPCAPolicy {
         $GroupIds = [System.Collections.Generic.List[string]]::new()
         $groupNames | ForEach-Object {
             if (Test-IsGuid $_) {
-                Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Already GUID, no need to replace: $_" -Sev 'Debug'
+                Write-LogMessage -Headers $Headers -API 'Create CA Policy' -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $GroupIds.Add($_) # it's a GUID, so we keep it
             } else {
                 $groupId = ($groups | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the group ID
                 if ($groupId) {
                     foreach ($gid in $groupId) {
                         Write-Warning "Replaced group name $_ with ID $gid"
-                        $null = Write-LogMessage -Headers $User -API 'Create CA Policy' -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
+                        $null = Write-LogMessage -Headers $Headers -API 'Create CA Policy' -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
                         $GroupIds.Add($gid) # add the ID to the list
                     }
                 } elseif ($CreateGroups) {
@@ -138,6 +136,31 @@ function New-CIPPCAPolicy {
             $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $tenantfilter -asApp $true
             $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
             Write-LogMessage -Headers $User -API $APINAME -message "Created new Authentication Strength Policy: $($JSONobj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
+        }
+    }
+
+    #if we have excluded or included applications, we need to remove any appIds that do not have a service principal in the tenant
+
+    if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
+        $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId' -tenantid $TenantFilter -asApp $true
+
+        if ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All') {
+            $ValidExclusions = [system.collections.generic.list[string]]::new()
+            foreach ($appId in $JSONobj.conditions.applications.excludeApplications) {
+                if ($AllServicePrincipals.appId -contains $appId) {
+                    $ValidExclusions.Add($appId)
+                }
+            }
+            $JSONobj.conditions.applications.excludeApplications = $ValidExclusions
+        }
+        if ($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') {
+            $ValidInclusions = [system.collections.generic.list[string]]::new()
+            foreach ($appId in $JSONobj.conditions.applications.includeApplications) {
+                if ($AllServicePrincipals.appId -contains $appId) {
+                    $ValidInclusions.Add($appId)
+                }
+            }
+            $JSONobj.conditions.applications.includeApplications = $ValidInclusions
         }
     }
 

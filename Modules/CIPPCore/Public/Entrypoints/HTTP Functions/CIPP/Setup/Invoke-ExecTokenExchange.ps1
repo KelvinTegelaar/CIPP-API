@@ -39,7 +39,7 @@ Function Invoke-ExecTokenExchange {
             Write-LogMessage -API $APIName -message 'Retrieved client secret from development secrets' -Sev 'Info'
         } else {
             try {
-                $ClientSecret = (Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText)
+                $ClientSecret = (Get-CippKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText)
                 Write-LogMessage -API $APIName -message 'Retrieved client secret from key vault' -Sev 'Info'
             } catch {
                 Write-LogMessage -API $APIName -message "Failed to retrieve client secret: $($_.Exception.Message)" -Sev 'Error'

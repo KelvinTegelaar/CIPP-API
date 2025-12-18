@@ -7,18 +7,15 @@ function Set-CippApiAuth {
         [string[]]$ClientIds
     )
 
-    if ($env:MSI_SECRET) {
-        Disable-AzContextAutosave -Scope Process | Out-Null
-        $null = Connect-AzAccount -Identity
-        $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
-        $Context = Set-AzContext -SubscriptionId $SubscriptionId
-    } else {
-        $Context = Get-AzContext
-        $SubscriptionId = $Context.Subscription.Id
-    }
+    # Resolve subscription ID via helper (managed identity environment assumed for ARM).
+    $SubscriptionId = Get-CIPPAzFunctionAppSubId
 
-    # Get auth settings
-    $AuthSettings = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" | Select-Object -ExpandProperty Content | ConvertFrom-Json
+    # Get auth settings via ARM REST (managed identity)
+    $getUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
+    $resp = New-CIPPAzRestRequest -Uri $getUri -Method 'GET'
+    $AuthSettings = $resp | Select-Object -ExpandProperty Content -ErrorAction SilentlyContinue
+    if ($AuthSettings -is [string]) { $AuthSettings = $AuthSettings | ConvertFrom-Json }
+    else { $AuthSettings = $resp }
 
     Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
@@ -65,11 +62,12 @@ function Set-CippApiAuth {
     }
 
     if ($PSCmdlet.ShouldProcess('Update auth settings')) {
-        # Update auth settings
-        $null = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01" -Method PUT -Payload ($AuthSettings | ConvertTo-Json -Depth 10)
+        # Update auth settings via ARM REST
+        $putUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01"
+        $null = New-CIPPAzRestRequest -Uri $putUri -Method 'PUT' -Body $AuthSettings -ContentType 'application/json'
     }
 
     if ($PSCmdlet.ShouldProcess('Update allowed tenants')) {
-        $null = Update-AzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS' = $TenantId }
+        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS' = $TenantId }
     }
 }

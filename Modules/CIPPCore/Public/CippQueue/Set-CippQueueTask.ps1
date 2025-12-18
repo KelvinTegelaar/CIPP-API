@@ -8,7 +8,8 @@ function Set-CippQueueTask {
         [string]$TaskId = (New-Guid).Guid.ToString(),
         [string]$Name,
         [ValidateSet('Queued', 'Running', 'Completed', 'Failed')]
-        [string]$Status = 'Queued'
+        [string]$Status = 'Queued',
+        [string]$Message
     )
 
     $CippQueueTasks = Get-CippTable -TableName CippQueueTasks
@@ -19,6 +20,9 @@ function Set-CippQueueTask {
         QueueId      = $QueueId
         Name         = $Name
         Status       = $Status
+    }
+    if ($Message) {
+        $QueueTaskEntry.Message = $Message
     }
     $CippQueueTasks.Entity = $QueueTaskEntry
 

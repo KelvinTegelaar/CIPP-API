@@ -1,4 +1,10 @@
-Function Invoke-ListGroupSenderAuthentication {
+function Invoke-ListGroupSenderAuthentication {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Exchange.Groups.Read
+    #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
