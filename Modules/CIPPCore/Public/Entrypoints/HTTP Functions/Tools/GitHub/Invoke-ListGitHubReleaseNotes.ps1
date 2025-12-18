@@ -32,14 +32,31 @@
     $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter
 
     try {
+        $Latest = $false
         if ($Rows) {
             $Releases = ConvertFrom-Json -InputObject $Rows.GitHubReleases -Depth 10
-            if ($Releases.releaseTag -notmatch $global:CippVersion) {
-                $Releases = $null
+            $CurrentVersion = [semver]$global:CippVersion
+            $CurrentMajorMinor = "$($CurrentVersion.Major).$($CurrentVersion.Minor)"
+
+            foreach ($Release in $Releases) {
+                $Version = $Release.releaseTag -replace 'v', ''
+                try {
+                    $ReleaseVersion = [semver]$Version
+                    $ReleaseMajorMinor = "$($ReleaseVersion.Major).$($ReleaseVersion.Minor)"
+
+                    # Check if we have cached notes for the current major.minor version series
+                    if ($ReleaseMajorMinor -eq $CurrentMajorMinor) {
+                        $Latest = $true
+                        break
+                    }
+                } catch {
+                    # Skip invalid semver versions
+                    continue
+                }
             }
         }
 
-        if (-not $Releases) {
+        if (-not $Latest) {
             $Releases = Invoke-GitHubApiRequest -Path $ReleasePath
             $Releases = $Releases | ForEach-Object {
                 [ordered]@{
