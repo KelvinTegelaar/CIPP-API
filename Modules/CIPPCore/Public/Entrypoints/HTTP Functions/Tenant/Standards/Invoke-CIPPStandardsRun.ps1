@@ -67,7 +67,7 @@ function Invoke-CIPPStandardsRun {
         $Batch = foreach ($Tenant in $AllTenantsList) {
             $BatchItem = @{
                 FunctionName = 'CIPPStandardsList'
-                TenantFilter = $Tenant.defaultDomainName
+                TenantFilter = $Tenant
                 runManually  = $runManually
             }
             if ($TemplateID) {
