@@ -70,7 +70,7 @@ function Set-CIPPUserJITAdmin {
                         forceChangePasswordNextSignInWithMfa = $false
                         password                             = $Password
                     }
-                    $Schema.id        = @{
+                    "$($Schema.id)"   = @{
                         jitAdminEnabled    = $false
                         jitAdminExpiration = $Expiration.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                         jitAdminStartDate  = if ($StartDate) { $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
@@ -127,8 +127,11 @@ function Set-CIPPUserJITAdmin {
                         New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json | Out-Null
                     } catch {}
                 }
+                $CreatedBy = if ($Headers) {
+                    ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+                } else { 'Unknown' }
 
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -StartDate $StartDate -Reason $Reason -CreatedBy (if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }) | Out-Null
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -StartDate $StartDate -Reason $Reason -CreatedBy $CreatedBy | Out-Null
                 $Message = "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName)). Reason: $Reason"
                 $LogData = @{
                     UserPrincipalName = $UserObj.userPrincipalName

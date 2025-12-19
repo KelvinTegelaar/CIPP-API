@@ -30,12 +30,12 @@ function Get-CIPPAlertMXRecordChanged {
         # Update cache with current data
         foreach ($Domain in $DomainData) {
             $CacheEntity = @{
-                PartitionKey    = $TenantFilter
-                RowKey          = $Domain.Domain
-                Domain          = $Domain.Domain
-                ActualMXRecords = $Domain.ActualMXRecords
-                LastRefresh     = $Domain.LastRefresh
-                MailProvider    = $Domain.MailProvider
+                PartitionKey    = [string]$TenantFilter
+                RowKey          = [string]$Domain.Domain
+                Domain          = [string]$Domain.Domain
+                ActualMXRecords = [string]$Domain.ActualMXRecords
+                LastRefresh     = [string]$Domain.LastRefresh
+                MailProvider    = [string]$Domain.MailProvider
             }
             Add-CIPPAzDataTableEntity @CacheTable -Entity $CacheEntity -Force
         }
