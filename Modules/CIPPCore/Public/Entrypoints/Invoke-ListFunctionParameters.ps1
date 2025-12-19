@@ -36,7 +36,7 @@ function Invoke-ListFunctionParameters {
             $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }
         }
         $Results = foreach ($Function in $Functions) {
-            if ($Function -In $TemporaryBlacklist) { continue }
+            if ($Function -in $TemporaryBlacklist) { continue }
             $GetHelp = @{
                 Name = $Function
             }
@@ -72,8 +72,8 @@ function Invoke-ListFunctionParameters {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
     return [HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($Results)
-        }
+        StatusCode = $StatusCode
+        Body       = @($Results)
+    }
 
 }
