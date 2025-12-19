@@ -64,7 +64,7 @@ function New-CIPPTemplateRun {
 
                 if (!$ExistingTemplate -or $UpdateNeeded) {
                     $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
-                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData
+                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value
                     if ($UpdateNeeded) {
                         Write-Information "Template $($File.name) needs to be updated as the SHA is different"
                         "Template $($File.name) updated"
