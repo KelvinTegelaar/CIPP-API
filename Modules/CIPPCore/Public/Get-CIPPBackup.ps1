@@ -31,7 +31,7 @@ function Get-CIPPBackup {
             $Info = $Info | Where-Object { $_.RowKey -match "^$($TenantFilter)_" }
         }
     } else {
-        if ($TenantFilter) {
+        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
             $Info = $Info | Where-Object { $_.TenantFilter -eq $TenantFilter }
         }
     }
