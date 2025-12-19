@@ -68,7 +68,7 @@ function Start-UpdateTokensTimer {
                 Write-Information "Found $($ExpiredSecrets.Count) expired application secrets for $AppId. Removing them."
                 foreach ($Secret in $ExpiredSecrets) {
                     try {
-                        New-GraphPostRequest -type DELETE -uri "https://graph.microsoft.com/v1.0/applications/$($PasswordCredentials.id)/removePassword" -Body "{`"keyId`":`"$($Secret.keyId)`"}" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+                        New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($PasswordCredentials.id)/removePassword" -Body "{`"keyId`":`"$($Secret.keyId)`"}" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                         Write-Information "Removed expired application secret with keyId $($Secret.keyId)."
                     } catch {
                         Write-LogMessage -API 'Update Tokens' -message "Error removing expired application secret with keyId $($Secret.keyId), see Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
