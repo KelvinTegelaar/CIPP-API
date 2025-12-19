@@ -1,4 +1,4 @@
-Function Invoke-ExecCAServiceExclusion {
+function Invoke-ExecCAServiceExclusion {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -17,7 +17,7 @@ Function Invoke-ExecCAServiceExclusion {
     try {
         $result = Set-CIPPCAPolicyServiceException -TenantFilter $TenantFilter -PolicyId $ID
         $Body = @{ Results = $result }
-        Write-LogMessage -headers $Headers -API 'Set-CIPPCAPolicyServiceException' -message $Message -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API 'Set-CIPPCAPolicyServiceException' -message $result -Sev 'Info' -tenant $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Body = @{ Results = "Failed to add service provider exception to policy $($ID): $($ErrorMessage.NormalizedError)" }
@@ -25,7 +25,7 @@ Function Invoke-ExecCAServiceExclusion {
     }
 
     return ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $Body
-    })
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        })
 }
