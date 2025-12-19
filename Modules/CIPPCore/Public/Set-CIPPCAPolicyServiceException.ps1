@@ -11,20 +11,20 @@ function Set-CIPPCAPolicyServiceException {
     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
 
     # If the policy is set to affect either all or all guests/external users
-    if ($policy.conditions.users.includeUsers -eq "All" -OR $policy.conditions.users.includeGuestsOrExternalUsers.externalTenants.membershipKind -eq "all") {
+    if ($policy.conditions.users.includeUsers -eq 'All' -or $policy.conditions.users.includeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'all') {
 
         # Check if the policy already has the correct service provider exception
         if ($policy.conditions.users.excludeGuestsOrExternalUsers) {
             $excludeConfig = $policy.conditions.users.excludeGuestsOrExternalUsers
 
             # Check if serviceProvider is already in guestOrExternalUserTypes
-            $hasServiceProvider = $excludeConfig.guestOrExternalUserTypes -match "serviceProvider"
+            $hasServiceProvider = $excludeConfig.guestOrExternalUserTypes -match 'serviceProvider'
 
             # Check if externalTenants is properly configured
             if ($excludeConfig.externalTenants) {
                 $externalTenants = $excludeConfig.externalTenants
-                $hasCorrectExternalTenants = ($externalTenants.membershipKind -eq "enumerated" -and
-                                           $externalTenants.members -contains $CSPtenantId)
+                $hasCorrectExternalTenants = ($externalTenants.membershipKind -eq 'enumerated' -and
+                    $externalTenants.members -contains $CSPtenantId)
 
                 # If already configured, exit without making changes
                 if ($hasServiceProvider -and $hasCorrectExternalTenants) {
@@ -38,11 +38,11 @@ function Set-CIPPCAPolicyServiceException {
 
             # Define data
             $excludeServiceProviderData = [pscustomobject]@{
-                guestOrExternalUserTypes = "serviceProvider"
-                externalTenants = [pscustomobject]@{
-                    '@odata.type' = "#microsoft.graph.conditionalAccessEnumeratedExternalTenants"
-                    membershipKind = "enumerated"
-                    members = @(
+                guestOrExternalUserTypes = 'serviceProvider'
+                externalTenants          = [pscustomobject]@{
+                    '@odata.type'  = '#microsoft.graph.conditionalAccessEnumeratedExternalTenants'
+                    membershipKind = 'enumerated'
+                    members        = @(
                         $CSPtenantId
                     )
                 }
@@ -56,27 +56,31 @@ function Set-CIPPCAPolicyServiceException {
         if ($policy.conditions.users.excludeGuestsOrExternalUsers) {
 
             # If guestOrExternalUserTypes doesn't include type serviceProvider add it
-            if ($policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes -notmatch "serviceProvider") {
-                $policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes += ",serviceProvider"
+            if ($policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes -notmatch 'serviceProvider') {
+                $policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes += ',serviceProvider'
             }
 
             # If guestOrExternalUserTypes includes type serviceProvider and membershipKind is not all tenants
-            if ($policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes -match "serviceProvider" -AND $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -ne "all") {
+            if ($policy.conditions.users.excludeGuestsOrExternalUsers.guestOrExternalUserTypes -match 'serviceProvider' -and $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -ne 'all') {
 
                 # If membershipKind is enumerated and members does not include our tenant add it
-                if ($policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -eq "enumerated" -AND $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members -notmatch $CSPtenantId) {
+                if ($policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'enumerated' -and $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members -notmatch $CSPtenantId) {
                     $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members += $($CSPtenantId)
                 }
             }
         }
+        $Json = $policy | Select-Object * -ExcludeProperty TemplateId, createdDateTime, modifiedDateTime | ConvertTo-Json -Depth 20
 
+        Write-Information 'Updated policy JSON:'
+        Write-Information $Json
+
+        # Patch policy with updated data.
+        # TemplateId,createdDateTime,modifiedDateTime can't be written back so exclude them using -ExcludeProperty
+        if ($PSCmdlet.ShouldProcess($PolicyId, 'Update policy with service provider exception')) {
+            $patch = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($policy.id)" -tenantid $TenantFilter -type PATCH -body ($policy | Select-Object * -ExcludeProperty TemplateId, createdDateTime, modifiedDateTime | ConvertTo-Json -Depth 20) -AsApp $true
+            return "Successfully added service provider to policy $PolicyId"
+        }
+    } else {
+        return "Policy $PolicyId does not target all users or all guest/external users. No changes made."
     }
-
-    # Patch policy with updated data.
-    # TemplateId,createdDateTime,modifiedDateTime can't be written back so exclude them using -ExcludeProperty
-    if ($PSCmdlet.ShouldProcess($PolicyId, "Update policy with service provider exception")) {
-        $patch = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($policy.id)" -tenantid $TenantFilter -type PATCH -body ($policy | Select-Object * -ExcludeProperty TemplateId,createdDateTime,modifiedDateTime | ConvertTo-Json -Depth 20) -AsApp $true
-        return "Successfully added service provider to policy $PolicyId"
-    }
-
 }

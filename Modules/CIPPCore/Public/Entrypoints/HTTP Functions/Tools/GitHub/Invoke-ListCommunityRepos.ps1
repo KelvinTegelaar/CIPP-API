@@ -42,7 +42,7 @@ function Invoke-ListCommunityRepos {
                     WriteAccess   = $Repo.WriteAccess
                     DefaultBranch = $Repo.DefaultBranch
                     UploadBranch  = $Repo.DefaultBranch
-                    Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json)
+                    Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json -ErrorAction SilentlyContinue -Compress)
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity
                 $DefaultsMissing = $true
@@ -65,7 +65,7 @@ function Invoke-ListCommunityRepos {
             WriteAccess     = $_.WriteAccess
             DefaultBranch   = $_.DefaultBranch
             UploadBranch    = $_.UploadBranch ?? $_.DefaultBranch
-            RepoPermissions = $_.Permissions | ConvertFrom-Json
+            RepoPermissions = ($_.Permissions | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @{}
         }
     }
 
