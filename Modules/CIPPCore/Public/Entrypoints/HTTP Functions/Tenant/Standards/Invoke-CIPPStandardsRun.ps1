@@ -53,26 +53,21 @@ function Invoke-CIPPStandardsRun {
             Test-CIPPRerun -ClearAll -TenantFilter $TenantFilter -Type 'Standard'
         }
 
-        # Get tenant list for batch processing
-        write-host "Getting tenants for filter: $TenantFilter"
-        $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
-            Get-Tenants
-        } else {
-            Get-Tenants | Where-Object {
-                $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter
-            }
+        $StandardsParams = @{
+            TenantFilter = $TenantFilter
+            runManually  = $runManually
+        }
+        if ($TemplateID) {
+            $StandardsParams['TemplateId'] = $TemplateID
         }
 
-        if ($AllTenantsList.Count -eq 0) {
-            Write-Information "No tenants found for filter $TenantFilter"
-            return
-        }
+        $AllTenantsList = Get-CIPPStandards @StandardsParams | Select-Object -ExpandProperty Tenant | Sort-Object -Unique
 
         # Build batch of per-tenant list activities
         $Batch = foreach ($Tenant in $AllTenantsList) {
             $BatchItem = @{
                 FunctionName = 'CIPPStandardsList'
-                TenantFilter = $Tenant.defaultDomainName
+                TenantFilter = $Tenant
                 runManually  = $runManually
             }
             if ($TemplateID) {

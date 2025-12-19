@@ -70,7 +70,7 @@ foreach ($command in $commands | Sort-Object -Property Name | Select-Object -Uni
         $functionality = ''
     }
 
-    if ($role -or $functionality) {
+    if ($role -and $functionality) {
         $permissions[$command.Name] = @{
             Role          = $role
             Functionality = $functionality

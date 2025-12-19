@@ -204,6 +204,7 @@ function New-CIPPCAPolicy {
     Write-Information ($LocationLookupTable | ConvertTo-Json -Depth 10)
 
     foreach ($location in $JSONobj.conditions.locations.includeLocations) {
+        if ($null -eq $location) { continue }
         $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
         if (!$lookup) { continue }
         Write-Information "Replacing named location - $location"
@@ -212,6 +213,7 @@ function New-CIPPCAPolicy {
     }
 
     foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
+        if ($null -eq $location) { continue }
         $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
         if (!$lookup) { continue }
         Write-Information "Replacing named location - $location"

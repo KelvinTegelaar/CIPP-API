@@ -176,10 +176,10 @@ function Test-CIPPAuditLogRules {
                 }
             )
             $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
-            $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value
+            $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
             $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
             $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-            $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
+            $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
             # Cache the lookups for 1 day
             $Entities = @(
                 @{
@@ -208,10 +208,10 @@ function Test-CIPPAuditLogRules {
             Write-Information "Cached directory lookups for tenant $TenantFilter"
         } else {
             # Use cached lookups
-            $Users = ($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data | ConvertFrom-Json
-            $Groups = (($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json) ?? @()
-            $Devices = (($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json) ?? @()
-            $ServicePrincipals = ($Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }).Data | ConvertFrom-Json
+            $Users = (($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+            $Groups = (($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+            $Devices = (($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+            $ServicePrincipals = (($Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
             Write-Information "Using cached directory lookups for tenant $TenantFilter"
         }
 
