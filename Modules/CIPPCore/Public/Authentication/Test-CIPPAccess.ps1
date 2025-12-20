@@ -17,7 +17,7 @@ function Test-CIPPAccess {
         $CIPPCoreModule = Get-Module -Name CIPPCore
         if ($CIPPCoreModule) {
             $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
-            
+
             if (Test-Path $PermissionsFileJson) {
                 try {
                     $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
@@ -25,7 +25,7 @@ function Test-CIPPAccess {
                     foreach ($key in $jsonData.Keys) {
                         $global:CIPPFunctionPermissions[$key] = $jsonData[$key]
                     }
-                    Write-Information "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
                 } catch {
                     Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
                 }
@@ -41,13 +41,13 @@ function Test-CIPPAccess {
             $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
             $APIRole = $PermissionData['Role']
             $Functionality = $PermissionData['Functionality']
-            Write-Information "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
         } else {
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
                 $APIRole = $Help.Role
                 $Functionality = $Help.Functionality
-                Write-Information "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+                Write-Debug "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
             } catch {
                 Write-Warning "Function '$FunctionName' not found"
             }
