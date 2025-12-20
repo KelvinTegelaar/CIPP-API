@@ -186,16 +186,6 @@ Write-Host "Validating generated file..." -ForegroundColor Cyan
 try {
     $test = Get-Content $OutputPath -Raw | ConvertFrom-Json
     Write-Host "✓ Validation successful!" -ForegroundColor Green
-    Write-Host "  Functions: $($test.Functions.PSObject.Properties.Count)" -ForegroundColor Gray
-
-    # Test a function with parameters
-    $sampleFunc = $test.Functions.PSObject.Properties |
-                  Where-Object { $_.Value.Parameters } |
-                  Select-Object -First 1
-
-    if ($sampleFunc) {
-        Write-Host "  Sample function '$($sampleFunc.Name)' has $($sampleFunc.Value.Parameters.Count) parameters (type: $($sampleFunc.Value.Parameters.GetType().Name))" -ForegroundColor Gray
-    }
 } catch {
     Write-Error "Validation failed: $_"
     exit 1

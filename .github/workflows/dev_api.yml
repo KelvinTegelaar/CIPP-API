@@ -40,6 +40,19 @@ jobs:
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module ModuleBuilder -AllowClobber -Force
 
+      - name: Build Permissions and Functions Caches
+        shell: pwsh
+        run: |
+          Write-Host "Building Permission Cache"
+          # Build the Permission Cache
+          $ScriptPath = Join-Path $env:GITHUB_WORKSPACE "Tools/Build-PermissionsCache.ps1"
+          & $ScriptPath -SourcePath (Join-Path $env:GITHUB_WORKSPACE "Modules/CIPPHTTP") -OutputPath (Join-Path $env:GITHUB_WORKSPACE "Config/function-metadata.psd1")
+
+          Write-Host "Building Function Cache"
+          # Build the Function Cache
+          $ScriptPath = Join-Path $env:GITHUB_WORKSPACE "Tools/Build-FunctionParametersCache.ps1"
+          & $ScriptPath -SourcePath (Join-Path $env:GITHUB_WORKSPACE "Modules/CIPPHTTP") -OutputPath (Join-Path $env:GITHUB_WORKSPACE "Config/function-parameters.json")
+
       - name: Build CIPPCore Module
         shell: pwsh
         run: |
