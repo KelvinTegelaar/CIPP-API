@@ -21,11 +21,21 @@ function Invoke-ExecListBackup {
 
     if ($NameOnly) {
         $Processed = foreach ($item in $Result) {
-            $properties = $item.PSObject.Properties | Where-Object { $_.Name -notin @('TenantFilter', 'ETag', 'PartitionKey', 'RowKey', 'Timestamp') -and $_.Value }
-            [PSCustomObject]@{
-                BackupName = $item.RowKey
-                Timestamp  = $item.Timestamp
-                Items      = $properties.Name
+            $properties = $item.PSObject.Properties | Where-Object { $_.Name -notin @('TenantFilter', 'ETag', 'PartitionKey', 'RowKey', 'Timestamp', 'OriginalEntityId', 'SplitOverProps', 'PartIndex') -and $_.Value }
+
+            if ($Type -eq 'Scheduled') {
+                [PSCustomObject]@{
+                    TenantFilter = $item.RowKey -match '^(.*?)_' | ForEach-Object { $matches[1] }
+                    BackupName   = $item.RowKey
+                    Timestamp    = $item.Timestamp
+                    Items        = $properties.Name
+                }
+            } else {
+                [PSCustomObject]@{
+                    BackupName = $item.RowKey
+                    Timestamp  = $item.Timestamp
+                }
+
             }
         }
         $Result = $Processed | Sort-Object Timestamp -Descending

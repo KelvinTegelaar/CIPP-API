@@ -280,6 +280,8 @@ function Get-CIPPDrift {
                     } else {
                         'New'
                     }
+                    $reason = if ($ExistingDriftStates.ContainsKey($PolicyKey)) { $ExistingDriftStates[$PolicyKey].Reason }
+                    $User = if ($ExistingDriftStates.ContainsKey($PolicyKey)) { $ExistingDriftStates[$PolicyKey].User }
                     $PolicyDeviation = [PSCustomObject]@{
                         standardName        = $PolicyKey
                         standardDisplayName = "Intune - $TenantPolicyName"
@@ -287,6 +289,8 @@ function Get-CIPPDrift {
                         receivedValue       = $TenantPolicy.Policy
                         state               = 'current'
                         Status              = $Status
+                        Reason              = $reason
+                        lastChangedByUser   = $User
                     }
                     $PolicyDeviations.Add($PolicyDeviation)
                 }
@@ -310,6 +314,8 @@ function Get-CIPPDrift {
                     } else {
                         'New'
                     }
+                    $reason = if ($ExistingDriftStates.ContainsKey($PolicyKey)) { $ExistingDriftStates[$PolicyKey].Reason }
+                    $User = if ($ExistingDriftStates.ContainsKey($PolicyKey)) { $ExistingDriftStates[$PolicyKey].User }
                     $PolicyDeviation = [PSCustomObject]@{
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
@@ -317,6 +323,8 @@ function Get-CIPPDrift {
                         receivedValue       = $TenantCAPolicy | Out-String
                         state               = 'current'
                         Status              = $Status
+                        Reason              = $reason
+                        lastChangedByUser   = $User
                     }
                     $PolicyDeviations.Add($PolicyDeviation)
                 }

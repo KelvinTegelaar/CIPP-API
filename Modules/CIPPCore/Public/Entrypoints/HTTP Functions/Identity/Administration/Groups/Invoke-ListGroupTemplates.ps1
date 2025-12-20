@@ -48,6 +48,8 @@ function Invoke-ListGroupTemplates {
                 allowExternal   = $data.allowExternal
                 username        = $data.username
                 GUID            = $_.RowKey
+                source          = $_.Source
+                isSynced        = (![string]::IsNullOrEmpty($_.SHA))
             }
         } catch {
             Write-Information "Could not parse group template $($_.RowKey): $($_.Exception.Message)"

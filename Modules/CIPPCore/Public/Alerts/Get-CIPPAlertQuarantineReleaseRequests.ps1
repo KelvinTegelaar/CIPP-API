@@ -38,7 +38,7 @@
                     MessageId         = $Message.MessageId
                     Subject           = $Message.Subject
                     SenderAddress     = $Message.SenderAddress
-                    RecipientAddress  = $Message.RecipientAddress
+                    RecipientAddress  = $Message.RecipientAddress -join '; '
                     Type              = $Message.Type
                     PolicyName        = $Message.PolicyName
                     ReleaseStatus     = $Message.ReleaseStatus
