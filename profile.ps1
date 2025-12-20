@@ -24,7 +24,10 @@ if ($hasAppInsights) {
 # Import modules
 $SwModules = [System.Diagnostics.Stopwatch]::StartNew()
 $ModulesPath = Join-Path $PSScriptRoot 'Modules'
-$Modules = @('CIPPCore', 'CippExtensions', 'AzBobbyTables')
+
+# Define base modules to always load
+$Modules = @('CIPPCore', 'AzBobbyTables', 'CIPPHTTP')
+
 foreach ($Module in $Modules) {
     $SwModule = [System.Diagnostics.Stopwatch]::StartNew()
     try {

@@ -25,8 +25,8 @@ function Test-CIPPAccessUserRole {
     $Roles = @()
 
     # Check AsyncLocal cache first (per-request cache)
-    if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value -and $script:CippUserRolesStorage.Value.ContainsKey($User.userDetails)) {
-        $Roles = $script:CippUserRolesStorage.Value[$User.userDetails]
+    if ($global:CippUserRolesStorage -and $global:CippUserRolesStorage.Value -and $global:CippUserRolesStorage.Value.ContainsKey($User.userDetails)) {
+        $Roles = $global:CippUserRolesStorage.Value[$User.userDetails]
     } else {
         # Check table storage cache (persistent cache)
         try {
@@ -45,8 +45,8 @@ function Test-CIPPAccessUserRole {
             $Roles = $UserRole.Role | ConvertFrom-Json
 
             # Store in AsyncLocal cache for this request
-            if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value) {
-                $script:CippUserRolesStorage.Value[$User.userDetails] = $Roles
+            if ($global:CippUserRolesStorage -and $global:CippUserRolesStorage.Value) {
+                $global:CippUserRolesStorage.Value[$User.userDetails] = $Roles
             }
         } else {
             try {
@@ -115,8 +115,8 @@ function Test-CIPPAccessUserRole {
             }
 
             # Store in AsyncLocal cache for this request
-            if ($script:CippUserRolesStorage -and $script:CippUserRolesStorage.Value) {
-                $script:CippUserRolesStorage.Value[$User.userDetails] = $Roles
+            if ($global:CippUserRolesStorage -and $global:CippUserRolesStorage.Value) {
+                $global:CippUserRolesStorage.Value[$User.userDetails] = $Roles
             }
         }
     }

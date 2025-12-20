@@ -37,8 +37,8 @@ function New-GraphGetRequest {
             $headers['ConsistencyLevel'] = 'eventual'
         }
 
-        if ($script:XMsThrottlePriority) {
-            $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
+        if ($global:XMsThrottlePriority) {
+            $headers['x-ms-throttle-priority'] = $global:XMsThrottlePriority
         }
 
         $nextURL = $uri
@@ -85,7 +85,8 @@ function New-GraphGetRequest {
                     } else {
                         $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-RestMethod @GraphRequest)
-                        $script:LastGraphResponseHeaders = $ResponseHeaders
+                        # Store response headers in global scope for cross-module access
+                        $global:LastGraphResponseHeaders = $ResponseHeaders
                     }
 
                     # If we reach here, the request was successful

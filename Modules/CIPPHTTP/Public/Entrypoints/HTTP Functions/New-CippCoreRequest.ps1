@@ -17,27 +17,28 @@ function New-CippCoreRequest {
     $HttpTotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # Initialize AsyncLocal storage for thread-safe per-invocation context
-    if (-not $script:CippInvocationIdStorage) {
-        $script:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    # Using global scope so these variables are accessible across modules (CIPPHTTP and CIPPCore)
+    if (-not $global:CippInvocationIdStorage) {
+        $global:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
     }
-    if (-not $script:CippAllowedTenantsStorage) {
-        $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
+    if (-not $global:CippAllowedTenantsStorage) {
+        $global:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
     }
-    if (-not $script:CippAllowedGroupsStorage) {
-        $script:CippAllowedGroupsStorage = [System.Threading.AsyncLocal[object]]::new()
+    if (-not $global:CippAllowedGroupsStorage) {
+        $global:CippAllowedGroupsStorage = [System.Threading.AsyncLocal[object]]::new()
     }
-    if (-not $script:CippUserRolesStorage) {
-        $script:CippUserRolesStorage = [System.Threading.AsyncLocal[hashtable]]::new()
+    if (-not $global:CippUserRolesStorage) {
+        $global:CippUserRolesStorage = [System.Threading.AsyncLocal[hashtable]]::new()
     }
 
     # Initialize user roles cache for this request
-    if (-not $script:CippUserRolesStorage.Value) {
-        $script:CippUserRolesStorage.Value = @{}
+    if (-not $global:CippUserRolesStorage.Value) {
+        $global:CippUserRolesStorage.Value = @{}
     }
 
     # Set InvocationId in AsyncLocal storage for console logging correlation
     if ($global:TelemetryClient -and $TriggerMetadata.InvocationId) {
-        $script:CippInvocationIdStorage.Value = $TriggerMetadata.InvocationId
+        $global:CippInvocationIdStorage.Value = $TriggerMetadata.InvocationId
     }
 
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
@@ -64,8 +65,9 @@ function New-CippCoreRequest {
     }
 
     if ($PSCmdlet.ShouldProcess("Processing request for $($Request.Params.CIPPEndpoint)")) {
-        # Set script scope variables for Graph API to indicate HTTP request/high priority
-        $script:XMsThrottlePriority = 'high'
+        # Set global scope variable for Graph API to indicate HTTP request/high priority
+        # Using global scope so this is accessible from CIPPCore module functions
+        $global:XMsThrottlePriority = 'high'
 
         if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
             try {
@@ -105,11 +107,11 @@ function New-CippCoreRequest {
 
             if ($AllowedTenants -notcontains 'AllTenants') {
                 Write-Warning 'Limiting tenant access'
-                $script:CippAllowedTenantsStorage.Value = $AllowedTenants
+                $global:CippAllowedTenantsStorage.Value = $AllowedTenants
             }
             if ($AllowedGroups -notcontains 'AllGroups') {
                 Write-Warning 'Limiting group access'
-                $script:CippAllowedGroupsStorage.Value = $AllowedGroups
+                $global:CippAllowedGroupsStorage.Value = $AllowedGroups
             }
 
             try {
