@@ -111,18 +111,27 @@ function Get-CIPPTenantAlignment {
 
             if ($Template.tenantFilter -and $Template.tenantFilter.Count -gt 0) {
                 # Extract tenant values from the tenantFilter array
-                $TenantValues = $Template.tenantFilter | ForEach-Object {
-                    if ($_.type -eq 'group') {
-                        ($TenantGroups | Where-Object -Property GroupName -EQ $_.value).Members.defaultDomainName
+                $TenantValues = [System.Collections.Generic.List[string]]::new()
+                foreach ($filterItem in $Template.tenantFilter) {
+                    if ($filterItem.type -eq 'group') {
+                        # Look up group members by Id (GUID in the value field)
+                        $GroupMembers = $TenantGroups | Where-Object { $_.Id -eq $filterItem.value }
+                        if ($GroupMembers -and $GroupMembers.Members) {
+                            foreach ($member in $GroupMembers.Members.defaultDomainName) {
+                                $TenantValues.Add($member)
+                            }
+                        }
                     } else {
-                        $_.value
+                        $TenantValues.Add($filterItem.value)
                     }
                 }
 
                 if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
+                } elseif ($TenantValues.Count -gt 0) {
+                    $TemplateAssignedTenants = @($TenantValues)
                 } else {
-                    $TemplateAssignedTenants = $TenantValues
+                    $TemplateAssignedTenants = @()
                 }
             } else {
                 $AppliestoAllTenants = $true
