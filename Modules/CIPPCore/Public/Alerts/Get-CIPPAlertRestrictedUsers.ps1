@@ -37,6 +37,6 @@
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-LogMessage -tenant $($TenantFilter) -message "Could not get restricted users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -severity 'Error' -API 'Get-CIPPAlertRestrictedUsers' -LogData (Get-CippException -Exception $_)
+       # Write-LogMessage -tenant $($TenantFilter) -message "Could not get restricted users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -severity 'Error' -API 'Get-CIPPAlertRestrictedUsers' -LogData (Get-CippException -Exception $_)
     }
 }
