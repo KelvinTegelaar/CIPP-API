@@ -23,6 +23,8 @@ function Invoke-listStandardTemplates {
         }
         if ($Data) {
             $Data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+            $Data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
+            $Data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
 
             if (!$Data.excludedTenants) {
                 $Data | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @() -Force

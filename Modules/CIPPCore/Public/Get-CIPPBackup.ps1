@@ -18,14 +18,22 @@ function Get-CIPPBackup {
     }
 
     if ($NameOnly.IsPresent) {
-        $Table.Property = @('PartitionKey', 'RowKey', 'Timestamp', 'OriginalEntityId')
+        $Table.Property = @('RowKey')
     }
 
     $Filter = $Conditions -join ' and '
     $Table.Filter = $Filter
-    $Info = Get-CIPPAzDataTableEntity @Table -Debug
-    if ($TenantFilter) {
-        $Info = $Info | Where-Object { $_.TenantFilter -eq $TenantFilter }
+    $Info = Get-CIPPAzDataTableEntity @Table
+
+    if ($NameOnly.IsPresent) {
+        $Info = $Info | Where-Object { $_.RowKey -notmatch '-part[0-9]+$' }
+        if ($TenantFilter) {
+            $Info = $Info | Where-Object { $_.RowKey -match "^$($TenantFilter)_" }
+        }
+    } else {
+        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+            $Info = $Info | Where-Object { $_.TenantFilter -eq $TenantFilter }
+        }
     }
     return $Info
 }
