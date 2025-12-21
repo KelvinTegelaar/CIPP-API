@@ -263,16 +263,16 @@ function New-CIPPAzServiceSAS {
 
     # Compose ordered query for readability (common fields first)
     $orderedKeys = @('sp', 'st', 'se', 'sip', 'spr', 'sv', 'sr', 'si', 'snapshot', 'ses', 'sdd', 'rscc', 'rscd', 'rsce', 'rscl', 'rsct', 'sig')
-    $parts = @()
+    $parts = [System.Collections.Generic.List[string]]::new()
     foreach ($k in $orderedKeys) {
         if ($q.ContainsKey($k) -and -not [string]::IsNullOrEmpty($q[$k])) {
-            $parts += ("$k=" + [System.Net.WebUtility]::UrlEncode($q[$k]))
+            $parts.Add("$k=" + [System.Net.WebUtility]::UrlEncode($q[$k]))
         }
     }
     # Include any remaining keys
     foreach ($k in $q.Keys) {
         if ($orderedKeys -notcontains $k) {
-            $parts += ("$k=" + [System.Net.WebUtility]::UrlEncode($q[$k]))
+            $parts.Add("$k=" + [System.Net.WebUtility]::UrlEncode($q[$k]))
         }
     }
 
