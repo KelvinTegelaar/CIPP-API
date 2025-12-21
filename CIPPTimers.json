@@ -222,5 +222,14 @@
     "Priority": 21,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
+    "Command": "Start-CIPPDBCacheOrchestrator",
+    "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
+    "Cron": "0 0 3 * * *",
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]
