@@ -25,26 +25,31 @@ function Invoke-ListTests {
 
         $TestResultsData = Get-CIPPTestResults -TenantFilter $TenantFilter
 
+        $TotalTests = 0
+
         if ($ReportId) {
-            $ReportTable = Get-CippTable -tablename 'CippReportingTemplates'
+            $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
             $Filter = "PartitionKey eq 'ReportingTemplate' and RowKey eq '{0}'" -f $ReportId
             $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
 
             if ($ReportTemplate) {
                 $ReportTests = $ReportTemplate.Tests | ConvertFrom-Json
+                $TotalTests = @($ReportTests).Count
                 $FilteredTests = $TestResultsData.TestResults | Where-Object { $ReportTests -contains $_.TestId }
                 $TestResultsData.TestResults = $FilteredTests
             } else {
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Report template '$ReportId' not found" -sev Warning
                 $TestResultsData.TestResults = @()
             }
+        } else {
+            $TotalTests = @($TestResultsData.TestResults).Count
         }
 
         $TestCounts = @{
             Successful = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Passed' }).Count
             Failed     = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Failed' }).Count
             Skipped    = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Skipped' }).Count
-            Total      = @($TestResultsData.TestResults).Count
+            Total      = $TotalTests
         }
 
         $TestResultsData | Add-Member -NotePropertyName 'TestCounts' -NotePropertyValue $TestCounts -Force
