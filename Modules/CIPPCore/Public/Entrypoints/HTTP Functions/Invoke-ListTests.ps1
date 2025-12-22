@@ -26,8 +26,8 @@ function Invoke-ListTests {
         $TestResultsData = Get-CIPPTestResults -TenantFilter $TenantFilter
 
         if ($ReportId) {
-            $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
-            $Filter = "PartitionKey eq 'ReportTemplate' and RowKey eq '{0}'" -f $ReportId
+            $ReportTable = Get-CippTable -tablename 'CippReportingTemplates'
+            $Filter = "PartitionKey eq 'ReportingTemplate' and RowKey eq '{0}'" -f $ReportId
             $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
 
             if ($ReportTemplate) {
