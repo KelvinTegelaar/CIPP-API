@@ -231,5 +231,14 @@
     "Priority": 22,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Id": "1f2e3d4c-5b6a-7c8d-9e0f-1a2b3c4d5e6f",
+    "Command": "Start-TestsOrchestrator",
+    "Description": "Timer to run security and compliance tests against cached data",
+    "Cron": "0 0 4 * * *",
+    "Priority": 23,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]

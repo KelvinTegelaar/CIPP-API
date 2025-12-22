@@ -62,14 +62,8 @@ function Add-CIPPDbItem {
                     Type         = $Type
                 }
             }
+            Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force | Out-Null
 
-            $BatchSize = 1000
-            for ($i = 0; $i -lt $Entities.Count; $i += $BatchSize) {
-                $Batch = $Entities[$i..([Math]::Min($i + $BatchSize - 1, $Entities.Count - 1))]
-                foreach ($Entity in $Batch) {
-                    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
-                }
-            }
         }
 
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $($Data.Count) items of type $Type$(if ($Count) { ' (count mode)' })" -sev Info

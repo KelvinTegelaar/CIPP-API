@@ -58,6 +58,10 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "AdminConsentRequestPolicy collection failed: $($_.Exception.Message)" -sev Error
         }
 
+        try { Set-CIPPDBCacheAuthorizationPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "AuthorizationPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         try { Set-CIPPDBCacheDeviceSettings -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "DeviceSettings collection failed: $($_.Exception.Message)" -sev Error
         }
