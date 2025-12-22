@@ -25,7 +25,8 @@ function Invoke-ListTests {
 
         $TestResultsData = Get-CIPPTestResults -TenantFilter $TenantFilter
 
-        $TotalTests = 0
+        $IdentityTotal = 0
+        $DevicesTotal = 0
 
         if ($ReportId) {
             $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
@@ -33,26 +34,57 @@ function Invoke-ListTests {
             $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
 
             if ($ReportTemplate) {
-                $ReportTests = $ReportTemplate.Tests | ConvertFrom-Json
-                $TotalTests = @($ReportTests).Count
-                $FilteredTests = $TestResultsData.TestResults | Where-Object { $ReportTests -contains $_.TestId }
-                $TestResultsData.TestResults = $FilteredTests
+                $IdentityTests = @()
+                $DeviceTests = @()
+
+                if ($ReportTemplate.identityTests) {
+                    $IdentityTests = $ReportTemplate.identityTests | ConvertFrom-Json
+                    $IdentityTotal = @($IdentityTests).Count
+                }
+
+                if ($ReportTemplate.deviceTests) {
+                    $DeviceTests = $ReportTemplate.deviceTests | ConvertFrom-Json
+                    $DevicesTotal = @($DeviceTests).Count
+                }
+
+                $AllReportTests = $IdentityTests + $DeviceTests
+                $FilteredTests = $TestResultsData.TestResults | Where-Object { $AllReportTests -contains $_.RowKey }
+                $TestResultsData.TestResults = @($FilteredTests)
             } else {
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Report template '$ReportId' not found" -sev Warning
                 $TestResultsData.TestResults = @()
             }
         } else {
-            $TotalTests = @($TestResultsData.TestResults).Count
+            $IdentityTotal = @($TestResultsData.TestResults | Where-Object { $_.TestType -eq 'Identity' }).Count
+            $DevicesTotal = @($TestResultsData.TestResults | Where-Object { $_.TestType -eq 'Devices' }).Count
         }
 
+        $IdentityResults = $TestResultsData.TestResults | Where-Object { $_.TestType -eq 'Identity' }
+        $DeviceResults = $TestResultsData.TestResults | Where-Object { $_.TestType -eq 'Devices' }
+
         $TestCounts = @{
-            Successful = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Passed' }).Count
-            Failed     = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Failed' }).Count
-            Skipped    = @($TestResultsData.TestResults | Where-Object { $_.Result -eq 'Skipped' }).Count
-            Total      = $TotalTests
+            Identity = @{
+                Passed      = @($IdentityResults | Where-Object { $_.Status -eq 'Passed' }).Count
+                Failed      = @($IdentityResults | Where-Object { $_.Status -eq 'Failed' }).Count
+                Investigate = @($IdentityResults | Where-Object { $_.Status -eq 'Investigate' }).Count
+                Skipped     = @($IdentityResults | Where-Object { $_.Status -eq 'Skipped' }).Count
+                Total       = $IdentityTotal
+            }
+            Devices  = @{
+                Passed      = @($DeviceResults | Where-Object { $_.Status -eq 'Passed' }).Count
+                Failed      = @($DeviceResults | Where-Object { $_.Status -eq 'Failed' }).Count
+                Investigate = @($DeviceResults | Where-Object { $_.Status -eq 'Investigate' }).Count
+                Skipped     = @($DeviceResults | Where-Object { $_.Status -eq 'Skipped' }).Count
+                Total       = $DevicesTotal
+            }
         }
 
         $TestResultsData | Add-Member -NotePropertyName 'TestCounts' -NotePropertyValue $TestCounts -Force
+
+        $SecureScoreData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SecureScore'
+        if ($SecureScoreData) {
+            $TestResultsData | Add-Member -NotePropertyName 'SecureScore' -NotePropertyValue $SecureScoreData -Force
+        }
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = $TestResultsData

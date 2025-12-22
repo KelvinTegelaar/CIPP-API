@@ -48,6 +48,9 @@ function Add-CippTestResult {
         [string]$TestId,
 
         [Parameter(Mandatory = $true)]
+        [string]$testType = 'identity',
+
+        [Parameter(Mandatory = $true)]
         [string]$Status,
 
         [Parameter(Mandatory = $false)]
@@ -86,6 +89,7 @@ function Add-CippTestResult {
             UserImpact           = $UserImpact ?? ''
             ImplementationEffort = $ImplementationEffort ?? ''
             Category             = $Category ?? ''
+            TestType             = $TestType
         }
 
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
