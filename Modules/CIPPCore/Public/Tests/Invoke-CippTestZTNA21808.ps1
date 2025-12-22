@@ -18,9 +18,7 @@ function Invoke-CippTestZTNA21808 {
             }
         }
 
-        $BlockPolicies = $DeviceCodePolicies | Where-Object {
-            $_.grantControls.builtInControls -contains 'block'
-        }
+        $BlockPolicies = $DeviceCodePolicies | Where-Object { $_.grantControls.builtInControls -contains 'block' }
 
         if ($BlockPolicies.Count -gt 0) {
             $Status = 'Passed'
