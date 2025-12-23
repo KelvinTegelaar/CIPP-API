@@ -130,23 +130,12 @@ function Invoke-CippTestZTNA21813 {
             $ResultMarkdown = "More than 50% of privileged role assignments in the tenant are Global Administrator.$MdInfo"
         }
 
-        $Result = @{
-            TestId         = $TestId
-            Status         = if ($Passed) { 'Passed' } else { 'Failed' }
-            ResultMarkdown = $ResultMarkdown
-        }
-
-        if ($CustomStatus) {
-            $Result.CustomStatus = $CustomStatus
-        }
-
-        return $Result
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'High Global Administrator to privileged user ratio' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
 
     } catch {
-        return @{
-            TestId         = $TestId
-            Status         = 'Failed'
-            ResultMarkdown = "Error running test: $($_.Exception.Message)"
-        }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'High Global Administrator to privileged user ratio' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
     }
 }

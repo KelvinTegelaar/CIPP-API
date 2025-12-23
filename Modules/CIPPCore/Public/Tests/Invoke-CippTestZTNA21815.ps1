@@ -15,9 +15,9 @@ function Invoke-CippTestZTNA21815 {
         $PermanentAssignments = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Role in $PrivilegedRoles) {
-            $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object { 
-                $_.roleDefinitionId -eq $Role.templateId -and 
-                $_.assignmentType -eq 'Assigned' -and 
+            $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object {
+                $_.roleDefinitionId -eq $Role.templateId -and
+                $_.assignmentType -eq 'Assigned' -and
                 $null -eq $_.endDateTime
             }
 
@@ -51,17 +51,12 @@ function Invoke-CippTestZTNA21815 {
             }
         }
 
-        return @{
-            TestId         = $TestId
-            Status         = if ($Passed) { 'Passed' } else { 'Failed' }
-            ResultMarkdown = $ResultMarkdown
-        }
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'All privileged role assignments are activated just in time and not permanently active' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Privileged access'
 
     } catch {
-        return @{
-            TestId         = $TestId
-            Status         = 'Failed'
-            ResultMarkdown = "Error running test: $($_.Exception.Message)"
-        }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'All privileged role assignments are activated just in time and not permanently active' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Privileged access'
     }
 }

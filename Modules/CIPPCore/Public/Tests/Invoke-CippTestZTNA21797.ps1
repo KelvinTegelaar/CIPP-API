@@ -135,9 +135,9 @@ function Invoke-CippTestZTNA21797 {
 
         $testResultMarkdown = $testResultMarkdown + $mdInfo
 
-        $passed = $result
+        $Status = if ($result) { 'Passed' } else { 'Failed' }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21797' -TestType 'Identity' -Status $passed -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Restrict access to high risk users' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Conditional Access'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21797' -TestType 'Identity' -Status $Status -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Restrict access to high risk users' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Conditional Access'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

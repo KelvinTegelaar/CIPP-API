@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21811 {
             return
         }
 
-        $misconfiguredDomains = $domains | Where-Object { $_.passwordValidityPeriodInDays -ne '2147483647' }
+        $misconfiguredDomains = $domains | Where-Object { $_.passwordValidityPeriodInDays -ne 2147483647 }
 
         $users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
 
@@ -20,11 +20,11 @@ function Invoke-CippTestZTNA21811 {
                 $domainPolicy = $misconfiguredDomains | Where-Object { $_.id -eq $userDomain }
                 if (($user.passwordPolicies -notlike '*DisablePasswordExpiration*') -and ($domainPolicy)) {
                     [PSCustomObject]@{
-                        id                        = $user.id
-                        displayName               = $user.displayName
-                        userPrincipalName         = $user.userPrincipalName
-                        passwordPolicies          = $user.passwordPolicies
-                        DomainPasswordValidity    = $domainPolicy.passwordValidityPeriodInDays
+                        id                     = $user.id
+                        displayName            = $user.displayName
+                        userPrincipalName      = $user.userPrincipalName
+                        passwordPolicies       = $user.passwordPolicies
+                        DomainPasswordValidity = $domainPolicy.passwordValidityPeriodInDays
                     }
                 }
             }

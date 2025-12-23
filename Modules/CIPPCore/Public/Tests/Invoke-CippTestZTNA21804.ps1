@@ -14,10 +14,10 @@ function Invoke-CippTestZTNA21804 {
         $testResultMarkdown = ''
 
         if ($matchedMethods.state -contains 'enabled') {
-            $passed = $false
+            $passed = 'Failed'
             $testResultMarkdown = 'Found weak authentication methods that are still enabled.'
         } else {
-            $passed = $true
+            $passed = 'Passed'
             $testResultMarkdown = 'SMS and voice calls authentication methods are disabled in the tenant.'
         }
 

@@ -169,23 +169,12 @@ function Invoke-CippTestZTNA21816 {
             }
         }
 
-        $Result = @{
-            TestId         = $TestId
-            Status         = if ($Passed) { 'Passed' } else { 'Failed' }
-            ResultMarkdown = $ResultMarkdown
-        }
-
-        if ($CustomStatus) {
-            $Result.CustomStatus = $CustomStatus
-        }
-
-        return $Result
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'All Microsoft Entra privileged role assignments are managed with PIM' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Identity'
 
     } catch {
-        return @{
-            TestId         = $TestId
-            Status         = 'Failed'
-            ResultMarkdown = "Error running test: $($_.Exception.Message)"
-        }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'All Microsoft Entra privileged role assignments are managed with PIM' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Identity'
     }
 }

@@ -104,17 +104,12 @@ function Invoke-CippTestZTNA21818 {
             $ResultMarkdown += "| $($NotificationRule.roleDisplayName) | $($MatchingNotification.notificationScenario) | $($MatchingNotification.notificationType) | $($NotificationRule.isDefaultRecipientsEnabled) | $Recipients |`n"
         }
 
-        return @{
-            TestId         = $TestId
-            Status         = if ($Passed) { 'Passed' } else { 'Failed' }
-            ResultMarkdown = $ResultMarkdown
-        }
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Privileged role activations have monitoring and alerting configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Monitoring'
 
     } catch {
-        return @{
-            TestId         = $TestId
-            Status         = 'Failed'
-            ResultMarkdown = "Error running test: $($_.Exception.Message)"
-        }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Privileged role activations have monitoring and alerting configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Monitoring'
     }
 }

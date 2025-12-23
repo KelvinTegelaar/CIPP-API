@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21812 {
 
     try {
         $AllGlobalAdmins = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId '62e90394-69f5-4237-9190-012177145e10'
-        
+
         $GlobalAdmins = @($AllGlobalAdmins | Where-Object { $_.'@odata.type' -in @('#microsoft.graph.user', '#microsoft.graph.servicePrincipal') })
 
         $Passed = $GlobalAdmins.Count -le 5
@@ -34,7 +34,7 @@ function Invoke-CippTestZTNA21812 {
                     default { 'Unknown' }
                 }
                 $UserPrincipalName = if ($GlobalAdmin.userPrincipalName) { $GlobalAdmin.userPrincipalName } else { 'N/A' }
-                
+
                 $PortalLink = switch ($ObjectType) {
                     'User' { "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($GlobalAdmin.id)" }
                     'Service Principal' { "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/$($GlobalAdmin.id)" }
@@ -45,17 +45,12 @@ function Invoke-CippTestZTNA21812 {
             }
         }
 
-        return @{
-            TestId         = $TestId
-            Status         = if ($Passed) { 'Passed' } else { 'Failed' }
-            ResultMarkdown = $ResultMarkdown
-        }
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'Low' -Name "Maximum number of Global Administrators doesn't exceed five users" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Privileged access'
 
     } catch {
-        return @{
-            TestId         = $TestId
-            Status         = 'Failed'
-            ResultMarkdown = "Error running test: $($_.Exception.Message)"
-        }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'Low' -Name "Maximum number of Global Administrators doesn't exceed five users" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Privileged access'
     }
 }
