@@ -14,7 +14,9 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Create ZIP File in a New Source Directory
       - name: Prepare and Zip Release Files

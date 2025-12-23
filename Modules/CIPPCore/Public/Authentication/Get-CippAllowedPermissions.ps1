@@ -32,7 +32,7 @@ function Get-CippAllowedPermissions {
     $AllPermissionCacheTable = Get-CIPPTable -tablename 'cachehttppermissions'
     $AllPermissionsRow = Get-CIPPAzDataTableEntity @AllPermissionCacheTable -Filter "PartitionKey eq 'HttpFunctions' and RowKey eq 'HttpFunctions' and Version eq '$($Version)'"
 
-    if (-not $AllPermissionsRow) {
+    if (-not $AllPermissionsRow.Permissions) {
         $AllPermissions = Get-CIPPHttpFunctions -ByRole | Select-Object -ExpandProperty Permission
         $Entity = @{
             PartitionKey = 'HttpFunctions'

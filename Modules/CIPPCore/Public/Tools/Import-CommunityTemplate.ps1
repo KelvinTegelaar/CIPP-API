@@ -9,6 +9,7 @@ function Import-CommunityTemplate {
         $SHA,
         $MigrationTable,
         $LocationData,
+        $Source,
         [switch]$Force
     )
 
@@ -42,12 +43,6 @@ function Import-CommunityTemplate {
                     $excludedTenants = $ExistingJSON.excludedTenants
                     $NewJSON.tenantFilter = $tenantFilter
                     $NewJSON.excludedTenants = $excludedTenants
-
-                    # Extract package tag from existing template
-                    $PackageTag = $Existing.Package
-                    if ($PackageTag) {
-                        $Template | Add-Member -MemberType NoteProperty -Name Package -Value $PackageTag -Force
-                    }
                 }
             }
 
@@ -70,6 +65,7 @@ function Import-CommunityTemplate {
             $NewJSON = [string]($NewJSON | ConvertTo-Json -Depth 100 -Compress)
             $Template.JSON = $NewJSON
             $Template | Add-Member -MemberType NoteProperty -Name SHA -Value $SHA -Force
+            $Template | Add-Member -MemberType NoteProperty -Name Source -Value $Source -Force
             Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
         } else {
             if ($Template.mailNickname) { $Type = 'Group' }
@@ -92,6 +88,7 @@ function Import-CommunityTemplate {
                         SHA          = $SHA
                         GUID         = $Template.id
                         RowKey       = $Template.id
+                        Source       = $Source
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     break
@@ -127,13 +124,13 @@ function Import-CommunityTemplate {
                         }
                     }
 
-
                     $entity = @{
                         JSON         = "$RawJson"
                         PartitionKey = 'CATemplate'
                         SHA          = $SHA
                         GUID         = $ID
                         RowKey       = $ID
+                        Source       = $Source
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     break
@@ -168,7 +165,13 @@ function Import-CommunityTemplate {
                         SHA          = $SHA
                         GUID         = $ID
                         RowKey       = $ID
+                        Source       = $Source
                     }
+
+                    if ($Existing -and $Existing.Package) {
+                        $entity.Package = $Existing.Package
+                    }
+
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
 
                 }
