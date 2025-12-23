@@ -144,10 +144,12 @@ function New-CIPPCAPolicy {
     if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
         $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId' -tenantid $TenantFilter -asApp $true
 
+        $ReservedApplicationNames = @('none', 'All', 'Office365', 'MicrosoftAdminPortals')
+
         if ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All') {
             $ValidExclusions = [system.collections.generic.list[string]]::new()
             foreach ($appId in $JSONobj.conditions.applications.excludeApplications) {
-                if ($AllServicePrincipals.appId -contains $appId) {
+                if ($AllServicePrincipals.appId -contains $appId -or $ReservedApplicationNames -contains $appId) {
                     $ValidExclusions.Add($appId)
                 }
             }
@@ -156,7 +158,7 @@ function New-CIPPCAPolicy {
         if ($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') {
             $ValidInclusions = [system.collections.generic.list[string]]::new()
             foreach ($appId in $JSONobj.conditions.applications.includeApplications) {
-                if ($AllServicePrincipals.appId -contains $appId) {
+                if ($AllServicePrincipals.appId -contains $appId -or $ReservedApplicationNames -contains $appId) {
                     $ValidInclusions.Add($appId)
                 }
             }
