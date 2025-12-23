@@ -102,6 +102,22 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "PIMSettings collection failed: $($_.Exception.Message)" -sev Error
         }
 
+        try { Set-CIPPDBCacheDomains -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Domains collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheRoleEligibilitySchedules -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RoleEligibilitySchedules collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheRoleManagementPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RoleManagementPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheRoleAssignmentScheduleInstances -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RoleAssignmentScheduleInstances collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Completed database cache collection for tenant' -sev Info
 
     } catch {
