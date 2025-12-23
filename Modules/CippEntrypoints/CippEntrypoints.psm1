@@ -1,5 +1,21 @@
 using namespace System.Net
 
+# Helper function to lazy-load CIPPStandardsAlerts and CippExtensions modules when needed
+$Modules = @('CippExtensions', 'CIPPStandardsAlerts')
+function Initialize-ExtraCIPPModules {
+    foreach ($Module in $Modules) {
+        if (-not (Get-Module -Name $Module)) {
+            try {
+                $ModulesPath = (Get-Item $PSScriptRoot).Parent.FullName
+                Import-Module -Name (Join-Path $ModulesPath $Module) -ErrorAction Stop
+            } catch {
+                Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
+                Write-Error $_.Exception.Message
+            }
+        }
+    }
+}
+
 function Receive-CippHttpTrigger {
     <#
     .SYNOPSIS
@@ -70,7 +86,9 @@ function Receive-CippHttpTrigger {
 
                 try {
                     # Import required modules in the parallel thread
+                    # Note: CIPPHTTP must be imported because New-CippCoreRequest is defined there
                     Import-Module CIPPCore -Force
+                    Import-Module CIPPHTTP -Force
                     Import-Module CippExtensions -Force -ErrorAction SilentlyContinue
                     Import-Module DNSHealth -Force -ErrorAction SilentlyContinue
                     Import-Module AzBobbyTables -Force -ErrorAction SilentlyContinue
@@ -172,6 +190,10 @@ function Receive-CippOrchestrationTrigger {
         Entrypoint
     #>
     param($Context)
+    
+    # Lazy-load CIPPStandards module (may be needed for Orchestrator triggers)
+    Initialize-ExtraCIPPModules
+    
     Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     try {
         if (Test-Json -Json $Context.Input) {
@@ -287,6 +309,10 @@ function Receive-CippActivityTrigger {
         Entrypoint
     #>
     param($Item)
+    
+    # Lazy-load CIPPStandards module (may be needed for Activity triggers)
+    Initialize-ExtraCIPPModules
+    
     Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
@@ -416,6 +442,9 @@ function Receive-CIPPTimerTrigger {
         Entrypoint
     #>
     param($Timer)
+
+    # Lazy-load CIPPStandards module (needed for Timer triggers)
+    Initialize-ExtraCIPPModules
 
     $UtcNow = (Get-Date).ToUniversalTime()
     $Functions = Get-CIPPTimerFunctions

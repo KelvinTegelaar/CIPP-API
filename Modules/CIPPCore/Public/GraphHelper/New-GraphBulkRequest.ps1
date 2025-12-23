@@ -18,8 +18,8 @@ function New-GraphBulkRequest {
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
 
-        if ($script:XMsThrottlePriority) {
-            $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
+        if ($global:XMsThrottlePriority) {
+            $headers['x-ms-throttle-priority'] = $global:XMsThrottlePriority
         }
 
         $URL = "https://graph.microsoft.com/$Version/`$batch"

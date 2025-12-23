@@ -125,8 +125,8 @@ function Invoke-ListGraphRequest {
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
 
-        if ($script:LastGraphResponseHeaders) {
-            $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        if ($global:LastGraphResponseHeaders) {
+            $Metadata.GraphHeaders = $global:LastGraphResponseHeaders
         }
 
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {

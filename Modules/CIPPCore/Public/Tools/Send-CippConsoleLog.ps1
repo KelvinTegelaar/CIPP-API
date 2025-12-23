@@ -43,8 +43,8 @@ function Send-CippConsoleLog {
                 $props['Timestamp'] = (Get-Date).ToString('o')
 
                 # Add InvocationId if available (from AsyncLocal storage)
-                if ($script:CippInvocationIdStorage -and $script:CippInvocationIdStorage.Value) {
-                    $props['InvocationId'] = $script:CippInvocationIdStorage.Value
+                if ($global:CippInvocationIdStorage -and $global:CippInvocationIdStorage.Value) {
+                    $props['InvocationId'] = $global:CippInvocationIdStorage.Value
                 }
 
                 $global:TelemetryClient.TrackEvent('CIPP.ConsoleLog', $props, $null)

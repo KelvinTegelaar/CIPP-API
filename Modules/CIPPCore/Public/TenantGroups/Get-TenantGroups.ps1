@@ -40,8 +40,8 @@ function Get-TenantGroups {
     }
 
     # Early exit if specific GroupId requested but not allowed
-    if ($GroupId -and $script:CippAllowedGroupsStorage -and $script:CippAllowedGroupsStorage.Value) {
-        if ($script:CippAllowedGroupsStorage.Value -notcontains $GroupId) {
+    if ($GroupId -and $global:CippAllowedGroupsStorage -and $global:CippAllowedGroupsStorage.Value) {
+        if ($global:CippAllowedGroupsStorage.Value -notcontains $GroupId) {
             return @()
         }
     }
@@ -101,8 +101,8 @@ function Get-TenantGroups {
         $Groups = $Groups | Where-Object { $_.RowKey -eq $GroupId }
     }
 
-    if ($script:CippAllowedGroupsStorage -and $script:CippAllowedGroupsStorage.Value) {
-        $Groups = $Groups | Where-Object { $script:CippAllowedGroupsStorage.Value -contains $_.RowKey }
+    if ($global:CippAllowedGroupsStorage -and $global:CippAllowedGroupsStorage.Value) {
+        $Groups = $Groups | Where-Object { $global:CippAllowedGroupsStorage.Value -contains $_.RowKey }
     }
 
     if (!$Groups -or $Groups.Count -eq 0) {
