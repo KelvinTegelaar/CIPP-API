@@ -46,18 +46,9 @@ function Invoke-CIPPStandardPhishProtection {
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not get the branding for $($Tenant). This tenant might not have premium licenses available: $($_.Exception.Message)" -sev Error
     }
-$CSS = @"
+    $CSS = @"
 .ext-sign-in-box {
-    background-image:
-        url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=https://$($CIPPUrl)),
-        linear-gradient(135deg, #0f1a25 0%, #12202c 40%, #0d1620 100%);
-    background-size: cover;
-    background-repeat: no-repeat;
-    border: 2px solid #16d1e3;
-    border-radius: 12px;
-    padding-top: 80px;
-    position: relative;
-    box-shadow: 0 0 35px rgba(22, 209, 227, 0.35);
+    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=https://$($CIPPUrl));
 }
 "@
 
