@@ -4,7 +4,7 @@ function Invoke-CippTestZTNA24547 {
     $TestId = 'ZTNA24547'
 
     try {
-        $IntunePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntunePolicies'
+        $IntunePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceCompliancePolicies'
 
         if (-not $IntunePolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Intune policies not found in database' -Risk 'High' -Name 'Compliance policies protect personally owned Android devices' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
