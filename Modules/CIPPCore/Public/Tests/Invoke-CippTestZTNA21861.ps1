@@ -35,7 +35,7 @@ function Invoke-CippTestZTNA21861 {
                 }
                 $RiskDate = $User.riskLastUpdatedDateTime
                 $RiskDetail = $User.riskDetail
-                
+
                 $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)"
                 $ResultMarkdown += "| [$UserPrincipalName]($PortalLink) | $RiskLevel | $RiskDate | $RiskDetail |`n"
             }

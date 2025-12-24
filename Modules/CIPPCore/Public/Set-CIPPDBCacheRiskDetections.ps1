@@ -17,7 +17,7 @@ function Set-CIPPDBCacheRiskDetections {
 
         # Requires P2 licensing
         $RiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskDetections' -tenantid $TenantFilter
-        
+
         if ($RiskDetections) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections -Count

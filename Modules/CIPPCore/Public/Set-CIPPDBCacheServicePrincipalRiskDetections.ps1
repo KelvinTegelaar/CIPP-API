@@ -17,7 +17,7 @@ function Set-CIPPDBCacheServicePrincipalRiskDetections {
 
         # Requires Workload Identity Premium licensing
         $ServicePrincipalRiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/servicePrincipalRiskDetections' -tenantid $TenantFilter
-        
+
         if ($ServicePrincipalRiskDetections) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipalRiskDetections' -Data $ServicePrincipalRiskDetections
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipalRiskDetections' -Data $ServicePrincipalRiskDetections -Count

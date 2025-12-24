@@ -15,7 +15,7 @@ function Invoke-CippTestZTNA21850 {
             $ResultMarkdown = "❌ Password rule settings template not found."
         } else {
             $LockoutThresholdSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutThreshold' }
-            
+
             if ($null -eq $LockoutThresholdSetting) {
                 $Passed = 'Failed'
                 $ResultMarkdown = "❌ Lockout threshold setting not found in [password rule settings]($PortalLink)."

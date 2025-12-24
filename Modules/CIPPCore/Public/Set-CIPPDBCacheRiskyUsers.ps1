@@ -17,7 +17,7 @@ function Set-CIPPDBCacheRiskyUsers {
 
         # Requires P2 or Governance licensing
         $RiskyUsers = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyUsers' -tenantid $TenantFilter
-        
+
         if ($RiskyUsers) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyUsers' -Data $RiskyUsers
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyUsers' -Data $RiskyUsers -Count

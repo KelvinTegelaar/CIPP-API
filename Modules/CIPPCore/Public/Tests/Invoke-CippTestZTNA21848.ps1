@@ -15,7 +15,7 @@ function Invoke-CippTestZTNA21848 {
 
         $EnableBannedPasswordCheck = ($PasswordProtectionSettings.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value
         $BannedPasswordList = ($PasswordProtectionSettings.values | Where-Object { $_.name -eq 'BannedPasswordList' }).value
-        
+
         if ([string]::IsNullOrEmpty($BannedPasswordList)) {
             $BannedPasswordList = $null
         }

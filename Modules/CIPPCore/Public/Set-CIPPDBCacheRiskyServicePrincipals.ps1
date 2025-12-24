@@ -17,7 +17,7 @@ function Set-CIPPDBCacheRiskyServicePrincipals {
 
         # Requires Workload Identity Premium licensing
         $RiskyServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyServicePrincipals' -tenantid $TenantFilter
-        
+
         if ($RiskyServicePrincipals) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals -Count
