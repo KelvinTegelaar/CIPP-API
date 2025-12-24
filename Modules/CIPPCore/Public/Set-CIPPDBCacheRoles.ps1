@@ -15,11 +15,11 @@ function Set-CIPPDBCacheRoles {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching directory roles' -sev Info
 
-        $Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directoryRoles?$top=999' -tenantid $TenantFilter
+        $Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directoryRoles' -tenantid $TenantFilter
 
         $RolesWithMembers = foreach ($Role in $Roles) {
             try {
-                $Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?\$top=999&\$select=id,displayName,userPrincipalName" -tenantid $TenantFilter
+                $Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?&`$select=id,displayName,userPrincipalName" -tenantid $TenantFilter
                 [PSCustomObject]@{
                     id             = $Role.id
                     displayName    = $Role.displayName

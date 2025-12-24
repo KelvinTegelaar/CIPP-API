@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21780 {
     param($Tenant)
-
+    #tested
     try {
         $Recommendations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DirectoryRecommendations'
 

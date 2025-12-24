@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21773 {
     param($Tenant)
-
+    #tested
     try {
         $Apps = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Apps'
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'

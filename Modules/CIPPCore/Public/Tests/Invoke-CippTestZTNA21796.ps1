@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21796 {
     param($Tenant)
-
+    #tested
     try {
         $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
@@ -22,10 +22,10 @@ function Invoke-CippTestZTNA21796 {
 
         if ($EnabledBlockPolicies.Count -ge 1) {
             $Status = 'Passed'
-            $Result = "Found $($EnabledBlockPolicies.Count) properly configured policies blocking legacy authentication"
+            $Result = "Found $($EnabledBlockPolicies.Count) properly configured policies blocking legacy authentication:`n $($EnabledBlockPolicies | ForEach-Object { "- $($_.displayName)" } | Out-String) "
         } elseif ($BlockPolicies.Count -ge 1) {
             $Status = 'Failed'
-            $Result = 'Policies to block legacy authentication found but not properly configured or enabled'
+            $Result = "Policies to block legacy authentication found but not properly configured or enabled: `n $($BlockPolicies | ForEach-Object { "- $($_.displayName)" } | Out-String) "
         } else {
             $Status = 'Failed'
             $Result = 'No conditional access policies to block legacy authentication found'

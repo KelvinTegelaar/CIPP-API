@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21791 {
     param($Tenant)
-
+    #tested
     try {
         $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21791 {
 
         if ($AllowInvitesFrom -ne 'everyone') {
             $Status = 'Passed'
-            $Result = "Tenant restricts who can invite guests (setting: $AllowInvitesFrom)"
+            $Result = "Tenant restricts who can invite guests (Set to: $AllowInvitesFrom)"
         } else {
             $Status = 'Failed'
             $Result = 'Tenant allows any user including guests to invite other guests'

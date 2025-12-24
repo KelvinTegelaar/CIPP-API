@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21799 {
     param($Tenant)
-
+    #tested
     try {
         $authMethodPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
         $allCAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
@@ -67,10 +67,7 @@ function Invoke-CippTestZTNA21799 {
 
                 $mdInfo += "| $($policy.displayName) | $grantControls | $targetUsers |`n"
             }
-        } else {
-            $mdInfo = 'Some high-risk sign-in attempts are not adequately mitigated by Conditional Access policies.'
         }
-
         $testResultMarkdown = $testResultMarkdown + $mdInfo
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21799' -TestType 'Identity' -Status $passed -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Block high risk sign-ins' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Conditional Access'

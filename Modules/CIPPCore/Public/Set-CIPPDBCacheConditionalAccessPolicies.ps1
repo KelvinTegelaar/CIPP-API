@@ -48,7 +48,7 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
         }
 
         try {
-            $AuthStrengths = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies?$top=999' -tenantid $TenantFilter
+            $AuthStrengths = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
 
             if ($AuthStrengths) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data $AuthStrengths

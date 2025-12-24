@@ -3,7 +3,7 @@ function Invoke-CippTestZTNA21774 {
 
     try {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
-
+        #tested
         if (-not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21774' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Service principals not found in database' -Risk 'High' -Name 'Microsoft services applications do not have credentials configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application Management'
             return

@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21793 {
     param($Tenant)
-
+    #tested
     try {
         $CrossTenantPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CrossTenantAccessPolicy'
 

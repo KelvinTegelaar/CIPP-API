@@ -16,14 +16,13 @@ function Set-CIPPDBCacheAppRoleAssignments {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching app role assignments' -sev Info
 
         # Get all service principals first
-        $ServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=id,appId,displayName&$top=999' -tenantid $TenantFilter
+        $ServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$select=id,appId,displayName&$top=999&expand=appRoleAssignments' -tenantid $TenantFilter
 
         $AllAppRoleAssignments = [System.Collections.Generic.List[object]]::new()
 
         foreach ($SP in $ServicePrincipals) {
             try {
-                $AppRoleAssignments = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($SP.id)/appRoleAssignments?`$top=999" -tenantid $TenantFilter
-
+                $AppRoleAssignments = $SP.appRoleAssignments
                 foreach ($Assignment in $AppRoleAssignments) {
                     # Enrich with service principal info
                     $Assignment | Add-Member -NotePropertyName 'servicePrincipalDisplayName' -NotePropertyValue $SP.displayName -Force
