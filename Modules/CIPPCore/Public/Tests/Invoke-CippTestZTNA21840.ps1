@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21840 {
     param($Tenant)
-
+    #Tested
     $TestId = 'ZTNA21840'
 
     try {

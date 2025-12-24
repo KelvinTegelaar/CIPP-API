@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21844 {
     param($Tenant)
 
     $TestId = 'ZTNA21844'
-
+    #Tested
     try {
         # Azure AD PowerShell App ID
         $AzureADPowerShellAppId = '1b730954-1685-4b74-9bfd-dac224a7b894'

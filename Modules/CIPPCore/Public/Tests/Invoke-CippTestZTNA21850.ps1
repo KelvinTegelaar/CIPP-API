@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21850 {
     param($Tenant)
 
     $TestId = 'ZTNA21850'
-
+    #Tested
     try {
         # Get password rule settings from Settings cache
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21850 {
 
         if ($null -eq $PasswordRuleSettings) {
             $Passed = 'Failed'
-            $ResultMarkdown = "❌ Password rule settings template not found."
+            $ResultMarkdown = '❌ Password rule settings template not found.'
         } else {
             $LockoutThresholdSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutThreshold' }
 

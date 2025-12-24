@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21847 {
     param($Tenant)
 
     $TestId = 'ZTNA21847'
-
+    #Tested
     try {
         # Check if tenant has on-premises sync
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'

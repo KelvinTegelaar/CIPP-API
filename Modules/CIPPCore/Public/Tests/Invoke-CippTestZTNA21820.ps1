@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21820 {
     param($Tenant)
-
+    #Tested
     $TestId = 'ZTNA21820'
 
     try {
@@ -44,8 +44,8 @@ function Invoke-CippTestZTNA21820 {
             }
 
             # Find notification rule for requestor end-user assignment
-            $NotificationRule = $Policy.effectiveRules | Where-Object { 
-                $_.id -like '*Notification_Requestor_EndUser_Assignment*' 
+            $NotificationRule = $Policy.effectiveRules | Where-Object {
+                $_.id -like '*Notification_Requestor_EndUser_Assignment*'
             }
 
             if ($NotificationRule) {

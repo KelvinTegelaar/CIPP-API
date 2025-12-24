@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21862 {
     param($Tenant)
 
     $TestId = 'ZTNA21862'
-
+    #Tested
     try {
         # Get risky service principals and risk detections from cache
         $UntriagedRiskyPrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskyServicePrincipals' | Where-Object { $_.riskState -eq 'atRisk' }

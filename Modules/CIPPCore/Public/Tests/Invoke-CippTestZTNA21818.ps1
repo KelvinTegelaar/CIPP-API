@@ -4,7 +4,7 @@ function Invoke-CippTestZTNA21818 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     $TestId = 'ZTNA21818'
 
     try {

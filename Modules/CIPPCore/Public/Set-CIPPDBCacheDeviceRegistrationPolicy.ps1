@@ -15,8 +15,8 @@ function Set-CIPPDBCacheDeviceRegistrationPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching device registration policy' -sev Info
 
-        $DeviceRegistrationPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy' -tenantid $TenantFilter
-        
+        $DeviceRegistrationPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $TenantFilter
+
         if ($DeviceRegistrationPolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DeviceRegistrationPolicy' -Data @($DeviceRegistrationPolicy)
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached device registration policy successfully' -sev Info

@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21823 {
     param($Tenant)
 
     $TestId = 'ZTNA21823'
-
+    #Tested
     try {
         # Get authentication flows policy from cache
         $AuthFlowPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationFlowsPolicy'

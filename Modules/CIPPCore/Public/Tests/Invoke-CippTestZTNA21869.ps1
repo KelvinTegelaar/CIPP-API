@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21869 {
     param($Tenant)
-
+    #tenant
     try {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
         if (-not $ServicePrincipals) {
@@ -45,8 +45,7 @@ function Invoke-CippTestZTNA21869 {
         $Result = $ResultLines -join "`n"
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21869' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Enterprise applications must require explicit assignment or scoped provisioning' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21869' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Enterprise applications must require explicit assignment or scoped provisioning' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'

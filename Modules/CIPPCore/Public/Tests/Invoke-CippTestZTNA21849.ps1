@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21849 {
     param($Tenant)
 
     $TestId = 'ZTNA21849'
-
+    #Tested
     try {
         # Get password rule settings from Settings cache
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'

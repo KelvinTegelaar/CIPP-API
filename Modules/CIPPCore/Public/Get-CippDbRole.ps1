@@ -34,7 +34,7 @@ function Get-CippDbRole {
             '4a5d8f65-41da-4de4-8968-e035b65339cf',
             '75941009-915a-4869-abe7-691bff18279e'
         )
-        $Roles = $Roles | Where-Object { $PrivilegedRoleTemplateIds -contains $_.templateId }
+        $Roles = $Roles | Where-Object { $PrivilegedRoleTemplateIds -contains $_.RoletemplateId }
     }
 
     if ($CisaHighlyPrivilegedRoles) {
@@ -46,7 +46,7 @@ function Get-CippDbRole {
             '966707d0-3269-4727-9be2-8c3a10f19b9d',
             'b0f54661-2d74-4c50-afa3-1ec803f12efe'
         )
-        $Roles = $Roles | Where-Object { $CisaRoleTemplateIds -contains $_.templateId }
+        $Roles = $Roles | Where-Object { $CisaRoleTemplateIds -contains $_.RoletemplateId }
     }
 
     return $Roles

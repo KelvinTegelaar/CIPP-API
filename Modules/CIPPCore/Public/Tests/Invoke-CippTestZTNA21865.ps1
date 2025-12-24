@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21865 {
     param($Tenant)
 
     $TestId = 'ZTNA21865'
-
+    #tested
     try {
         $NamedLocations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'NamedLocations'
 
@@ -29,8 +29,8 @@ function Invoke-CippTestZTNA21865 {
 
             foreach ($Location in $NamedLocations) {
                 $Name = $Location.displayName
-                $Type = if ($Location.'@odata.type' -eq '#microsoft.graph.ipNamedLocation') { 'IP-based' } 
-                elseif ($Location.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') { 'Country-based' } 
+                $Type = if ($Location.'@odata.type' -eq '#microsoft.graph.ipNamedLocation') { 'IP-based' }
+                elseif ($Location.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') { 'Country-based' }
                 else { 'Unknown' }
                 $Trusted = if ($Location.isTrusted) { 'Yes' } else { 'No' }
                 $ResultMarkdown += "| $Name | $Type | $Trusted |`n"

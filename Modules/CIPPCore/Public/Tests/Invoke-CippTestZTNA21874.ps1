@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21874 {
     param($Tenant)
 
     $TestId = 'ZTNA21874'
-
+    #Trusted
     try {
         # Get B2B Management Policy from cache
         $B2BManagementPolicyObject = New-CIPPDbRequest -TenantFilter $Tenant -Type 'B2BManagementPolicy'

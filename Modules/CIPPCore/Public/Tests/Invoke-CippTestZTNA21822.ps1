@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21822 {
     param($Tenant)
-
+    #Tested
     $TestId = 'ZTNA21822'
 
     try {
@@ -28,7 +28,7 @@ function Invoke-CippTestZTNA21822 {
         }
 
         $ResultMarkdown += "`n`n## [Collaboration restrictions](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/Settings/menuId/)`n`n"
-        $ResultMarkdown += "The tenant is configured to: "
+        $ResultMarkdown += 'The tenant is configured to: '
 
         if ($Passed -eq 'Passed') {
             $ResultMarkdown += "**Allow invitations only to the specified domains (most restrictive)** ✅`n"

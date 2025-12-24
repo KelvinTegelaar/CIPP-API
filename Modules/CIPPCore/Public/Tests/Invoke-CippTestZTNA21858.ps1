@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21858 {
     param($Tenant)
-
+    #Tested
     try {
         $Guests = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Guests'
         if (-not $Guests) {

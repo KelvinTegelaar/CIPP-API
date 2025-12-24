@@ -4,7 +4,7 @@ function Invoke-CippTestZTNA21815 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #tested
     $TestId = 'ZTNA21815'
 
     try {
@@ -16,7 +16,7 @@ function Invoke-CippTestZTNA21815 {
 
         foreach ($Role in $PrivilegedRoles) {
             $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object {
-                $_.roleDefinitionId -eq $Role.templateId -and
+                $_.roleDefinitionId -eq $Role.RoletemplateId -and
                 $_.assignmentType -eq 'Assigned' -and
                 $null -eq $_.endDateTime
             }

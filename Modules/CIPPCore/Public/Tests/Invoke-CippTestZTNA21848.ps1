@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21848 {
     param($Tenant)
 
     $TestId = 'ZTNA21848'
-
+    #Tested
     try {
         # Get password protection settings from Settings cache
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
@@ -36,7 +36,7 @@ function Invoke-CippTestZTNA21848 {
         # Show up to 10 banned passwords, summarize if more exist
         $MaxDisplay = 10
         if ($BannedPasswordArray.Count -gt $MaxDisplay) {
-            $DisplayList = $BannedPasswordArray[0..($MaxDisplay-1)] + "...and $($BannedPasswordArray.Count - $MaxDisplay) more"
+            $DisplayList = $BannedPasswordArray[0..($MaxDisplay - 1)] + "...and $($BannedPasswordArray.Count - $MaxDisplay) more"
         } else {
             $DisplayList = $BannedPasswordArray
         }

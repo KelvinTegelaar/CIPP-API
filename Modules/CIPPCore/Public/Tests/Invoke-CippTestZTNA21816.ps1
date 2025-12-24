@@ -4,7 +4,7 @@ function Invoke-CippTestZTNA21816 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     $TestId = 'ZTNA21816'
 
     try {
@@ -39,11 +39,11 @@ function Invoke-CippTestZTNA21816 {
         foreach ($Role in $PrivilegedRoles) {
             if ($Role.templateId -eq $GlobalAdminRoleId) { continue }
 
-            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.templateId
+            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.RoletemplateId
 
             foreach ($Member in $RoleMembers) {
                 $Assignment = $RoleAssignmentScheduleInstances | Where-Object {
-                    $_.principalId -eq $Member.id -and $_.roleDefinitionId -eq $Role.templateId
+                    $_.principalId -eq $Member.id -and $_.roleDefinitionId -eq $Role.RoletemplateId
                 } | Select-Object -First 1
 
                 if (-not $Assignment -or ($Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime)) {
@@ -51,7 +51,7 @@ function Invoke-CippTestZTNA21816 {
                         displayName       = $Member.displayName
                         userPrincipalName = $Member.userPrincipalName
                         id                = $Member.id
-                        roleTemplateId    = $Role.templateId
+                        roleTemplateId    = $Role.RoletemplateId
                         roleName          = $Role.displayName
                         assignmentType    = if ($Assignment) { $Assignment.assignmentType } else { 'Not in PIM' }
                     }

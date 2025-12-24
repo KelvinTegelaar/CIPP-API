@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21811 {
     param($Tenant)
-
+    #Tested
     try {
         $domains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Domains'
 

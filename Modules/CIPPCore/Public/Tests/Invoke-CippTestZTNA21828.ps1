@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21828 {
     param($Tenant)
-
+    #Tested
     try {
         $allCAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 

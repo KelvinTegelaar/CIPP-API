@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21863 {
     param($Tenant)
 
     $TestId = 'ZTNA21863'
-
+    #Tested
     try {
         # Get risk detections from cache and filter for high-risk untriaged sign-ins
         $RiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskDetections'

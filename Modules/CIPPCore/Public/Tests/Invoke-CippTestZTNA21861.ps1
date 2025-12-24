@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21861 {
     param($Tenant)
 
     $TestId = 'ZTNA21861'
-
+    #Tested
     try {
         # Get risky users from cache
         $RiskyUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskyUsers'
@@ -18,7 +18,7 @@ function Invoke-CippTestZTNA21861 {
         $Passed = if ($UntriagedHighRiskUsers.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "✅ All high-risk users are properly triaged in Entra ID Protection."
+            $ResultMarkdown = '✅ All high-risk users are properly triaged in Entra ID Protection.'
         } else {
             $ResultMarkdown = "❌ Found **$($UntriagedHighRiskUsers.Count)** untriaged high-risk users in Entra ID Protection.`n`n"
             $ResultMarkdown += "## Untriaged High-Risk Users`n`n"

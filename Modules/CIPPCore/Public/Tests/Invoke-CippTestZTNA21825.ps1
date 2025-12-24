@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21825 {
     param($Tenant)
 
     $TestId = 'ZTNA21825'
-
+    #Tested
     try {
         # Get privileged roles
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles

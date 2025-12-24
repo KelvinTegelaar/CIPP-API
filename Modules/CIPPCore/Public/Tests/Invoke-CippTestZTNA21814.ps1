@@ -14,7 +14,7 @@ function Invoke-CippTestZTNA21814 {
         $RoleData = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Role in $PrivilegedRoles) {
-            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.templateId
+            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.RoletemplateId
             $RoleUsers = $RoleMembers | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.user' }
 
             foreach ($RoleMember in $RoleUsers) {

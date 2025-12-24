@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21839 {
     param($Tenant)
 
     $TestId = 'ZTNA21839'
-
+    #Tested
     try {
         # Get FIDO2 authentication method policy
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'

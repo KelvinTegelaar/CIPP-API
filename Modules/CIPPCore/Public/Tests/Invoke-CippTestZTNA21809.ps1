@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21809 {
     param($Tenant)
-
+    #Tested
     try {
         $result = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 

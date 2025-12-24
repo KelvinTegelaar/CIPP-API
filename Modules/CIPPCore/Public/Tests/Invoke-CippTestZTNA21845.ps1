@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21845 {
     param($Tenant)
 
     $TestId = 'ZTNA21845'
-
+    #Tested
     try {
         # Get Temporary Access Pass configuration
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'

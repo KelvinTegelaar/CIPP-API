@@ -15,7 +15,7 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching authentication flows policy' -sev Info
 
-        $AuthFlowPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/authenticationFlowsPolicy' -tenantid $TenantFilter
+        $AuthFlowPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationFlowsPolicy' -tenantid $TenantFilter -AsApp $true
 
         if ($AuthFlowPolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationFlowsPolicy' -Data @($AuthFlowPolicy)

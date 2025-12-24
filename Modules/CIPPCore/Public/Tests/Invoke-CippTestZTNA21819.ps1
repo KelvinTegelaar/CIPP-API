@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21819 {
     param($Tenant)
-
+    #Tested
     $TestId = 'ZTNA21819'
 
     try {
@@ -52,7 +52,7 @@ function Invoke-CippTestZTNA21819 {
         $ResultMarkdown += "| Role display name | Default recipients | Additional recipients |`n"
         $ResultMarkdown += "| :---------------- | :----------------- | :------------------- |`n"
 
-        $RoleLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles"
+        $RoleLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles'
         $DisplayNameLink = "[$($GlobalAdminRole.displayName)]($RoleLink)"
 
         $DefaultRecipientsStatus = if ($IsDefaultRecipientsEnabled -eq $true) {
