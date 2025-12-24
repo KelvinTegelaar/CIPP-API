@@ -4,9 +4,8 @@ function Invoke-CippTestZTNA21822 {
     $TestId = 'ZTNA21822'
 
     try {
-        # Get B2B management policy from legacy policies endpoint
-        $LegacyPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies' -tenantid $Tenant
-        $B2BManagementPolicyObject = $LegacyPolicies | Where-Object { $_.Type -eq 'B2BManagementPolicy' }
+        # Get B2B management policy from cache
+        $B2BManagementPolicyObject = New-CIPPDbRequest -TenantFilter $Tenant -Type 'B2BManagementPolicy'
 
         $Passed = 'Failed'
         $AllowedDomains = @()

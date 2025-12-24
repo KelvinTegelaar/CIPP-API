@@ -4,8 +4,8 @@ function Invoke-CippTestZTNA21823 {
     $TestId = 'ZTNA21823'
 
     try {
-        # Get authentication flows policy
-        $AuthFlowPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/authenticationFlowsPolicy' -tenantid $Tenant
+        # Get authentication flows policy from cache
+        $AuthFlowPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationFlowsPolicy'
 
         if (-not $AuthFlowPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authentication flows policy not found' -Risk 'Medium' -Name 'Guest self-service sign-up via user flow is disabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'External collaboration'
