@@ -146,6 +146,58 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "DeviceRegistrationPolicy collection failed: $($_.Exception.Message)" -sev Error
         }
 
+        try { Set-CIPPDBCacheCredentialUserRegistrationDetails -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "CredentialUserRegistrationDetails collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheUserRegistrationDetails -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "UserRegistrationDetails collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheManagedDeviceEncryptionStates -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ManagedDeviceEncryptionStates collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheOAuth2PermissionGrants -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "OAuth2PermissionGrants collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheAppRoleAssignments -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "AppRoleAssignments collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoAntiPhishPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAntiPhishPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoMalwareFilterPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoMalwareFilterPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoSafeLinksPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoSafeLinksPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoSafeAttachmentPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoSafeAttachmentPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoTransportRules -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoTransportRules collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoDkimSigningConfig -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoDkimSigningConfig collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoOrganizationConfig -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoOrganizationConfig collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        try { Set-CIPPDBCacheExoAcceptedDomains -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAcceptedDomains collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Completed database cache collection for tenant' -sev Info
 
     } catch {
