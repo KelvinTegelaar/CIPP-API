@@ -5,14 +5,14 @@ function Invoke-CippTestZTNA21847 {
 
     try {
         # Check if tenant has on-premises sync
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'
 
         if (-not $Settings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Organization details not found' -Risk 'High' -Name 'Password protection for on-premises is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
             return
         }
 
-        $Org = $Organization[0]
+        $Org = $Settings[0]
 
         if ($Org.onPremisesSyncEnabled -ne $true) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown '✅ **Pass**: This tenant is not synchronized to an on-premises environment.' -Risk 'High' -Name 'Password protection for on-premises is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
