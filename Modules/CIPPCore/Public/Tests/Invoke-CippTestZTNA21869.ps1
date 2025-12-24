@@ -21,7 +21,28 @@ function Invoke-CippTestZTNA21869 {
         }
 
         $Status = 'Investigate'
-        $Result = "Found $($AppsWithoutAssignment.Count) enterprise application(s) without assignment requirements. Full provisioning scope validation requires Graph API calls not available in cache."
+
+        $ResultLines = @(
+            "Found $($AppsWithoutAssignment.Count) enterprise application(s) without assignment requirements."
+            ''
+            '**Applications without user assignment requirements:**'
+        )
+
+        $Top10Apps = $AppsWithoutAssignment | Select-Object -First 10
+        foreach ($App in $Top10Apps) {
+            $ResultLines += "- $($App.displayName) (SSO: $($App.preferredSingleSignOnMode))"
+        }
+
+        if ($AppsWithoutAssignment.Count -gt 10) {
+            $ResultLines += "- ... and $($AppsWithoutAssignment.Count - 10) more application(s)"
+        }
+
+        $ResultLines += ''
+        $ResultLines += '**Note:** Full provisioning scope validation requires Graph API synchronization endpoint not available in cache.'
+        $ResultLines += ''
+        $ResultLines += '**Recommendation:** Enable user assignment requirements or configure scoped provisioning to limit application access.'
+
+        $Result = $ResultLines -join "`n"
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21869' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Enterprise applications must require explicit assignment or scoped provisioning' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
     }

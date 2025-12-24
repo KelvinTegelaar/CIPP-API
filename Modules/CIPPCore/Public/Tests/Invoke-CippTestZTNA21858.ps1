@@ -20,7 +20,7 @@ function Invoke-CippTestZTNA21858 {
         $InactiveGuests = @()
         foreach ($Guest in $EnabledGuests) {
             $DaysSinceLastActivity = $null
-            
+
             if ($Guest.signInActivity.lastSuccessfulSignInDateTime) {
                 $LastSignIn = [DateTime]$Guest.signInActivity.lastSuccessfulSignInDateTime
                 $DaysSinceLastActivity = ($Today - $LastSignIn).Days
@@ -36,7 +36,45 @@ function Invoke-CippTestZTNA21858 {
 
         if ($InactiveGuests.Count -gt 0) {
             $Status = 'Failed'
-            $Result = "Found $($InactiveGuests.Count) inactive guest user(s) with no sign-in activity in the last $InactivityThresholdDays days"
+
+            $ResultLines = @(
+                "Found $($InactiveGuests.Count) inactive guest user(s) with no sign-in activity in the last $InactivityThresholdDays days."
+                ''
+                "**Total enabled guests:** $($EnabledGuests.Count)"
+                "**Inactive guests:** $($InactiveGuests.Count)"
+                "**Inactivity threshold:** $InactivityThresholdDays days"
+                ''
+                '**Top 10 inactive guest users:**'
+            )
+
+            $Top10Guests = $InactiveGuests | Sort-Object {
+                if ($_.signInActivity.lastSuccessfulSignInDateTime) {
+                    [DateTime]$_.signInActivity.lastSuccessfulSignInDateTime
+                } else {
+                    [DateTime]$_.createdDateTime
+                }
+            } | Select-Object -First 10
+
+            foreach ($Guest in $Top10Guests) {
+                if ($Guest.signInActivity.lastSuccessfulSignInDateTime) {
+                    $LastActivity = [DateTime]$Guest.signInActivity.lastSuccessfulSignInDateTime
+                    $DaysInactive = [Math]::Round(($Today - $LastActivity).TotalDays, 0)
+                    $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName)) - Last sign-in: $DaysInactive days ago"
+                } else {
+                    $Created = [DateTime]$Guest.createdDateTime
+                    $DaysSinceCreated = [Math]::Round(($Today - $Created).TotalDays, 0)
+                    $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName)) - Never signed in (Created $DaysSinceCreated days ago)"
+                }
+            }
+
+            if ($InactiveGuests.Count -gt 10) {
+                $ResultLines += "- ... and $($InactiveGuests.Count - 10) more inactive guest(s)"
+            }
+
+            $ResultLines += ''
+            $ResultLines += '**Recommendation:** Review and remove or disable inactive guest accounts to reduce security risks.'
+
+            $Result = $ResultLines -join "`n"
         } else {
             $Status = 'Passed'
             $Result = "All enabled guest users have been active within the last $InactivityThresholdDays days"

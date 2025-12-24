@@ -20,7 +20,32 @@ function Invoke-CippTestZTNA21886 {
         }
 
         $Status = 'Investigate'
-        $Result = "Found $($AppsWithSSO.Count) application(s) configured for SSO. Provisioning template and job validation requires Graph API synchronization endpoint not available in cache."
+
+        $ResultLines = @(
+            "Found $($AppsWithSSO.Count) application(s) configured for SSO."
+            ''
+            '**Applications with SSO enabled:**'
+        )
+
+        $SSOByType = $AppsWithSSO | Group-Object -Property preferredSingleSignOnMode
+        foreach ($Group in $SSOByType) {
+            $ResultLines += ""
+            $ResultLines += "**$($Group.Name.ToUpper()) SSO** ($($Group.Count) app(s)):"
+            $Top5 = $Group.Group | Select-Object -First 5
+            foreach ($App in $Top5) {
+                $ResultLines += "- $($App.displayName)"
+            }
+            if ($Group.Count -gt 5) {
+                $ResultLines += "- ... and $($Group.Count - 5) more"
+            }
+        }
+
+        $ResultLines += ''
+        $ResultLines += '**Note:** Provisioning template and job validation requires Graph API synchronization endpoint not available in cache.'
+        $ResultLines += ''
+        $ResultLines += '**Recommendation:** Configure automatic user provisioning for applications that support it to ensure consistent access management.'
+
+        $Result = $ResultLines -join "`n"
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21886' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Applications are configured for automatic user provisioning' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Applications management'
     } catch {

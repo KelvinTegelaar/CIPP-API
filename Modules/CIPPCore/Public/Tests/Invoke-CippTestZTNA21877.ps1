@@ -20,7 +20,30 @@ function Invoke-CippTestZTNA21877 {
             $Result = 'All guest accounts in the tenant have an assigned sponsor'
         } else {
             $Status = 'Failed'
-            $Result = "Found $($GuestsWithoutSponsors.Count) guest user(s) without sponsors out of $($Guests.Count) total guests"
+
+            $ResultLines = @(
+                "Found $($GuestsWithoutSponsors.Count) guest user(s) without sponsors out of $($Guests.Count) total guests."
+                ''
+                "**Total guests:** $($Guests.Count)"
+                "**Guests without sponsors:** $($GuestsWithoutSponsors.Count)"
+                "**Guests with sponsors:** $($Guests.Count - $GuestsWithoutSponsors.Count)"
+                ''
+                '**Top 10 guests without sponsors:**'
+            )
+
+            $Top10Guests = $GuestsWithoutSponsors | Select-Object -First 10
+            foreach ($Guest in $Top10Guests) {
+                $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName))"
+            }
+
+            if ($GuestsWithoutSponsors.Count -gt 10) {
+                $ResultLines += "- ... and $($GuestsWithoutSponsors.Count - 10) more guest(s)"
+            }
+
+            $ResultLines += ''
+            $ResultLines += '**Recommendation:** Assign sponsors to all guest accounts for better accountability and lifecycle management.'
+
+            $Result = $ResultLines -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
