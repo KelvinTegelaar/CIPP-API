@@ -198,6 +198,10 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAcceptedDomains collection failed: $($_.Exception.Message)" -sev Error
         }
 
+        try { Set-CIPPDBCacheIntuneAppProtectionPolicies -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneAppProtectionPolicies collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Completed database cache collection for tenant' -sev Info
 
     } catch {

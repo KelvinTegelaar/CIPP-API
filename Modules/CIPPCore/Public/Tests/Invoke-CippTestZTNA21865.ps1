@@ -30,8 +30,8 @@ function Invoke-CippTestZTNA21865 {
             foreach ($Location in $NamedLocations) {
                 $Name = $Location.displayName
                 $Type = if ($Location.'@odata.type' -eq '#microsoft.graph.ipNamedLocation') { 'IP-based' } 
-                        elseif ($Location.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') { 'Country-based' } 
-                        else { 'Unknown' }
+                elseif ($Location.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') { 'Country-based' } 
+                else { 'Unknown' }
                 $Trusted = if ($Location.isTrusted) { 'Yes' } else { 'No' }
                 $ResultMarkdown += "| $Name | $Type | $Trusted |`n"
             }

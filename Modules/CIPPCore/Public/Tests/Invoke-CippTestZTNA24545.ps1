@@ -1,0 +1,42 @@
+function Invoke-CippTestZTNA24545 {
+    param($Tenant)
+
+    $TestId = 'ZTNA24545'
+
+    try {
+        $IntunePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntunePolicies'
+
+        if (-not $IntunePolicies) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Intune policies not found in database' -Risk 'High' -Name 'Compliance policies protect fully managed and corporate-owned Android devices' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+            return
+        }
+
+        $AndroidPolicies = @($IntunePolicies | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.androidDeviceOwnerCompliancePolicy' })
+        $AssignedPolicies = @($AndroidPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+
+        $Passed = $AssignedPolicies.Count -gt 0
+
+        if ($Passed) {
+            $ResultMarkdown = "✅ At least one compliance policy for Android Enterprise Fully managed devices exists and is assigned.`n`n"
+        } else {
+            $ResultMarkdown = "❌ No compliance policy for Android Enterprise exists or none are assigned.`n`n"
+        }
+
+        $ResultMarkdown += "## Android Device Owner Compliance Policies`n`n"
+        $ResultMarkdown += "| Policy Name | Assigned |`n"
+        $ResultMarkdown += "| :---------- | :------- |`n"
+
+        foreach ($policy in $AndroidPolicies) {
+            $assigned = if ($policy.assignments -and $policy.assignments.Count -gt 0) { '✅ Yes' } else { '❌ No' }
+            $ResultMarkdown += "| $($policy.displayName) | $assigned |`n"
+        }
+
+        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Compliance policies protect fully managed and corporate-owned Android devices' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Compliance policies protect fully managed and corporate-owned Android devices' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+    }
+}
