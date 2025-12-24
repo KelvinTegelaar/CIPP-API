@@ -18,15 +18,13 @@ function Invoke-CippTestZTNA21877 {
         if ($GuestsWithoutSponsors.Count -eq 0) {
             $Status = 'Passed'
             $Result = 'All guest accounts in the tenant have an assigned sponsor'
-        }
-        else {
+        } else {
             $Status = 'Failed'
             $Result = "Found $($GuestsWithoutSponsors.Count) guest user(s) without sponsors out of $($Guests.Count) total guests"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
