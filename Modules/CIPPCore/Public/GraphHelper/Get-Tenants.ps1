@@ -276,8 +276,8 @@ function Get-Tenants {
     }
 
     # Limit tenant list to allowed tenants if set in script scope from New-CippCoreRequest
-    if ($script:AllowedTenants) {
-        $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:AllowedTenants -contains $_.customerId }
+    if ($script:CippAllowedTenantsStorage -and $script:CippAllowedTenantsStorage.Value) {
+        $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:CippAllowedTenantsStorage.Value -contains $_.customerId }
     }
 
     return $IncludedTenantsCache | Where-Object { ($null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) } | Where-Object $IncludedTenantFilter | Sort-Object -Property displayName

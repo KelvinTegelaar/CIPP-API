@@ -46,7 +46,9 @@
                 accountEnabled     = $_.accountEnabled
                 jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
                 jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
+                jitAdminStartDate  = $_.($Schema.id).jitAdminStartDate
                 jitAdminReason     = $_.($Schema.id).jitAdminReason
+                jitAdminCreatedBy  = $_.($Schema.id).jitAdminCreatedBy
                 memberOf           = $MemberOf
             }
         }
@@ -109,7 +111,9 @@
                         accountEnabled     = $UserObject.accountEnabled
                         jitAdminEnabled    = $UserObject.jitAdminEnabled
                         jitAdminExpiration = $UserObject.jitAdminExpiration
+                        jitAdminStartDate  = $UserObject.jitAdminStartDate
                         jitAdminReason     = $UserObject.jitAdminReason
+                        jitAdminCreatedBy  = $UserObject.jitAdminCreatedBy
                         memberOf           = $UserObject.memberOf
                     }
                 )

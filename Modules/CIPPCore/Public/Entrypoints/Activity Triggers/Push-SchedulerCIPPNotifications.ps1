@@ -115,6 +115,7 @@ function Push-SchedulerCIPPNotifications {
             }
 
             if ($CurrentStandardsLogs) {
+                $Data = $CurrentStandardsLogs
                 $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table' -CIPPURL $CIPPURL
                 $CurrentStandardsLogs | ConvertTo-Json -Compress
                 Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'

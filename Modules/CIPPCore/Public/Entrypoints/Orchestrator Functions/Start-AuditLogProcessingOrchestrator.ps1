@@ -28,9 +28,9 @@ function Start-AuditLogProcessingOrchestrator {
             $ProcessBatch = foreach ($TenantGroup in $TenantGroups) {
                 $TenantFilter = $TenantGroup.Name
                 $RowIds = @($TenantGroup.Group.RowKey)
-                for ($i = 0; $i -lt $RowIds.Count; $i += 1000) {
-                    Write-Host "Processing $TenantFilter with $($RowIds.Count) row IDs. We're processing id $($RowIds[$i]) to $($RowIds[[Math]::Min($i + 999, $RowIds.Count - 1)])"
-                    $BatchRowIds = $RowIds[$i..([Math]::Min($i + 999, $RowIds.Count - 1))]
+                for ($i = 0; $i -lt $RowIds.Count; $i += 500) {
+                    Write-Host "Processing $TenantFilter with $($RowIds.Count) row IDs. We're processing id $($RowIds[$i]) to $($RowIds[[Math]::Min($i + 499, $RowIds.Count - 1)])"
+                    $BatchRowIds = $RowIds[$i..([Math]::Min($i + 499, $RowIds.Count - 1))]
                     [PSCustomObject]@{
                         TenantFilter = $TenantFilter
                         RowIds       = $BatchRowIds

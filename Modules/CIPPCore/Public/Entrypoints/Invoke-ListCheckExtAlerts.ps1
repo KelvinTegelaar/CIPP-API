@@ -22,7 +22,7 @@ function Invoke-ListCheckExtAlerts {
 
     try {
         $Tenants = Get-Tenants -IncludeErrors
-        $Alerts = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $Tenants.defaultDomainName -contains $_.tenantFilter } ?? @()
+        $Alerts = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $Tenants.defaultDomainName -contains $_.tenantFilter }) ?? @()
     } catch {
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to retrieve check extension alerts: $($_.Exception.Message)" -Sev 'Error'
         $Alerts = @()

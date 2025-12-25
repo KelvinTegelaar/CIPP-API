@@ -35,6 +35,8 @@ function Invoke-ListCAtemplates {
             $row = $_
             $data = $row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $row.GUID -Force
+            $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $row.Source -Force
+            $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($row.SHA)) -Force
             $data
         } catch {
             Write-Warning "Failed to process CA template: $($row.RowKey) - $($_.Exception.Message)"
