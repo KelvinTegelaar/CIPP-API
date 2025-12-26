@@ -22,11 +22,19 @@ function Invoke-CippTestZTNA24570 {
         $OrgInfo = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'
 
         if (-not $OrgInfo) {
-            Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve organization information from cache.' `
-                -Risk 'High' -Name 'Entra Connect uses a service principal' `
-                -UserImpact 'Medium' -ImplementationEffort 'High' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA24570'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve organization information from cache.'
+                Risk                 = 'High'
+                Name                 = 'Entra Connect uses a service principal'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'High'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -34,11 +42,19 @@ function Invoke-CippTestZTNA24570 {
         $HybridEnabled = $OrgInfo.onPremisesSyncEnabled -eq $true
 
         if (-not $HybridEnabled) {
-            Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown '✅ **N/A**: Hybrid identity synchronization is not enabled in this tenant.' `
-                -Risk 'High' -Name 'Entra Connect uses a service principal' `
-                -UserImpact 'Medium' -ImplementationEffort 'High' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA24570'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = '✅ **N/A**: Hybrid identity synchronization is not enabled in this tenant.'
+                Risk                 = 'High'
+                Name                 = 'Entra Connect uses a service principal'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'High'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -46,11 +62,19 @@ function Invoke-CippTestZTNA24570 {
         $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
 
         if (-not $Roles) {
-            Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve roles from cache.' `
-                -Risk 'High' -Name 'Entra Connect uses a service principal' `
-                -UserImpact 'Medium' -ImplementationEffort 'High' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA24570'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve roles from cache.'
+                Risk                 = 'High'
+                Name                 = 'Entra Connect uses a service principal'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'High'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -64,11 +88,19 @@ function Invoke-CippTestZTNA24570 {
         }
 
         if (-not $DirSyncRole) {
-            Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-                -ResultMarkdown '❌ **Error**: Unable to find Directory Synchronization Accounts role in cache.' `
-                -Risk 'High' -Name 'Entra Connect uses a service principal' `
-                -UserImpact 'Medium' -ImplementationEffort 'High' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA24570'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Failed'
+                ResultMarkdown       = '❌ **Error**: Unable to find Directory Synchronization Accounts role in cache.'
+                Risk                 = 'High'
+                Name                 = 'Entra Connect uses a service principal'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'High'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -122,18 +154,34 @@ function Invoke-CippTestZTNA24570 {
             $ResultMarkdown += "`n[Migrate to service principal](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles)"
         }
 
-        Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'High' -Name 'Entra Connect uses a service principal' `
-            -UserImpact 'Medium' -ImplementationEffort 'High' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA24570'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'Entra Connect uses a service principal'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'High'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA24570' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'High' -Name 'Entra Connect uses a service principal' `
-            -UserImpact 'Medium' -ImplementationEffort 'High' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA24570'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'Entra Connect uses a service principal'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'High'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA24570 failed: $($_.Exception.Message)" -sev Error
     }
 }

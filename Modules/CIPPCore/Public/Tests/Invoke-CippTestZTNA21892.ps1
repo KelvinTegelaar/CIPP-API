@@ -18,17 +18,25 @@ function Invoke-CippTestZTNA21892 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #tested
     try {
         # Get Conditional Access policies from cache
         $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $Policies) {
-            Add-CippTestResult -TestId 'ZTNA21892' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'No Conditional Access policies found in cache.' `
-                -Risk 'High' -Name 'All sign-in activity comes from managed devices' `
-                -UserImpact 'High' -ImplementationEffort 'High' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA21892'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'No Conditional Access policies found in cache.'
+                Risk                 = 'High'
+                Name                 = 'All sign-in activity comes from managed devices'
+                UserImpact           = 'High'
+                ImplementationEffort = 'High'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -112,18 +120,34 @@ function Invoke-CippTestZTNA21892 {
             $ResultMarkdown += 'Organizations should enforce that all sign-ins come from managed devices (compliant or hybrid Azure AD joined) to ensure security controls are applied.'
         }
 
-        Add-CippTestResult -TestId 'ZTNA21892' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'High' -Name 'All sign-in activity comes from managed devices' `
-            -UserImpact 'High' -ImplementationEffort 'High' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21892'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'All sign-in activity comes from managed devices'
+            UserImpact           = 'High'
+            ImplementationEffort = 'High'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA21892' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'High' -Name 'All sign-in activity comes from managed devices' `
-            -UserImpact 'High' -ImplementationEffort 'High' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21892'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'All sign-in activity comes from managed devices'
+            UserImpact           = 'High'
+            ImplementationEffort = 'High'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21892 failed: $($_.Exception.Message)" -sev Error
     }
 }

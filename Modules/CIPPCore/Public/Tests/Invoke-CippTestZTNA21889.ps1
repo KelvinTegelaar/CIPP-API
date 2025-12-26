@@ -15,17 +15,25 @@ function Invoke-CippTestZTNA21889 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #tested
     try {
         # Get authentication methods policy from cache
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TestId 'ZTNA21889' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve authentication methods policy from cache.' `
-                -Risk 'High' -Name 'Reduce the user-visible password surface area' `
-                -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId = 'ZTNA21889'
+                TenantFilter = $Tenant
+                TestType = 'ZeroTrustNetworkAccess'
+                Status = 'Skipped'
+                ResultMarkdown = 'Unable to retrieve authentication methods policy from cache.'
+                Risk = 'High'
+                Name = 'Reduce the user-visible password surface area'
+                UserImpact = 'Medium'
+                ImplementationEffort = 'Medium'
+                Category = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -106,18 +114,34 @@ function Invoke-CippTestZTNA21889 {
         $AuthStatus = if ($AuthValid) { '✅ Pass' } else { '❌ Fail' }
         $ResultMarkdown += "| Microsoft Authenticator | $AuthState | $AuthTargetsDisplay | $AuthModeDisplay | $AuthStatus |`n"
 
-        Add-CippTestResult -TestId 'ZTNA21889' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'High' -Name 'Reduce the user-visible password surface area' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId = 'ZTNA21889'
+            TenantFilter = $Tenant
+            TestType = 'ZeroTrustNetworkAccess'
+            Status = $Status
+            ResultMarkdown = $ResultMarkdown
+            Risk = 'High'
+            Name = 'Reduce the user-visible password surface area'
+            UserImpact = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category = 'Access control'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA21889' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'High' -Name 'Reduce the user-visible password surface area' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId = 'ZTNA21889'
+            TenantFilter = $Tenant
+            TestType = 'ZeroTrustNetworkAccess'
+            Status = 'Failed'
+            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
+            Risk = 'High'
+            Name = 'Reduce the user-visible password surface area'
+            UserImpact = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category = 'Access control'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21889 failed: $($_.Exception.Message)" -sev Error
     }
 }

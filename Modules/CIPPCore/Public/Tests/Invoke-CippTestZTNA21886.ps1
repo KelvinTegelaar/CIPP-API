@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21886 {
     param($Tenant)
-
+    #Tested
     try {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
         if (-not $ServicePrincipals) {
@@ -29,7 +29,7 @@ function Invoke-CippTestZTNA21886 {
 
         $SSOByType = $AppsWithSSO | Group-Object -Property preferredSingleSignOnMode
         foreach ($Group in $SSOByType) {
-            $ResultLines += ""
+            $ResultLines += ''
             $ResultLines += "**$($Group.Name.ToUpper()) SSO** ($($Group.Count) app(s)):"
             $Top5 = $Group.Group | Select-Object -First 5
             foreach ($App in $Top5) {

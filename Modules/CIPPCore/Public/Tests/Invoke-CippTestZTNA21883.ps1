@@ -17,17 +17,25 @@ function Invoke-CippTestZTNA21883 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #tested
     try {
         # Get Conditional Access policies from cache
         $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $Policies) {
-            Add-CippTestResult -TestId 'ZTNA21883' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'No Conditional Access policies found in cache.' `
-                -Risk 'Medium' -Name 'Workload identities configured with risk-based policies' `
-                -UserImpact 'High' -ImplementationEffort 'Low' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA21883'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'No Conditional Access policies found in cache.'
+                Risk                 = 'Medium'
+                Name                 = 'Workload identities configured with risk-based policies'
+                UserImpact           = 'High'
+                ImplementationEffort = 'Low'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -92,18 +100,34 @@ function Invoke-CippTestZTNA21883 {
             $ResultMarkdown += 'Workload identities should be protected by policies that block authentication when service principal risk is detected.'
         }
 
-        Add-CippTestResult -TestId 'ZTNA21883' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'Medium' -Name 'Workload identities configured with risk-based policies' `
-            -UserImpact 'High' -ImplementationEffort 'Low' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21883'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'Medium'
+            Name                 = 'Workload identities configured with risk-based policies'
+            UserImpact           = 'High'
+            ImplementationEffort = 'Low'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA21883' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'Medium' -Name 'Workload identities configured with risk-based policies' `
-            -UserImpact 'High' -ImplementationEffort 'Low' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21883'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'Medium'
+            Name                 = 'Workload identities configured with risk-based policies'
+            UserImpact           = 'High'
+            ImplementationEffort = 'Low'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21883 failed: $($_.Exception.Message)" -sev Error
     }
 }

@@ -21,11 +21,19 @@ function Invoke-CippTestZTNA24827 {
         $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
-            Add-CippTestResult -TestId 'ZTNA24827' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve Conditional Access policies from cache.' `
-                -Risk 'Medium' -Name 'CA policies block unmanaged mobile apps' `
-                -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-                -Category 'Application security'
+            $TestParams = @{
+                TestId               = 'ZTNA24827'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve Conditional Access policies from cache.'
+                Risk                 = 'Medium'
+                Name                 = 'CA policies block unmanaged mobile apps'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'Medium'
+                Category             = 'Application security'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -57,11 +65,19 @@ function Invoke-CippTestZTNA24827 {
         }
 
         if ($CompliantAppPolicies.Count -eq 0) {
-            Add-CippTestResult -TestId 'ZTNA24827' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-                -ResultMarkdown "❌ **Fail**: No Conditional Access policies found that block unmanaged mobile apps.`n`n[Create policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)" `
-                -Risk 'Medium' -Name 'CA policies block unmanaged mobile apps' `
-                -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-                -Category 'Application security'
+            $TestParams = @{
+                TestId               = 'ZTNA24827'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Failed'
+                ResultMarkdown       = "❌ **Fail**: No Conditional Access policies found that block unmanaged mobile apps.`n`n[Create policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
+                Risk                 = 'Medium'
+                Name                 = 'CA policies block unmanaged mobile apps'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'Medium'
+                Category             = 'Application security'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -136,18 +152,34 @@ function Invoke-CippTestZTNA24827 {
 
         $ResultMarkdown += "`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
 
-        Add-CippTestResult -TestId 'ZTNA24827' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'Medium' -Name 'CA policies block unmanaged mobile apps' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Application security'
+        $TestParams = @{
+            TestId               = 'ZTNA24827'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'Medium'
+            Name                 = 'CA policies block unmanaged mobile apps'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category             = 'Application security'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA24827' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'Medium' -Name 'CA policies block unmanaged mobile apps' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Application security'
+        $TestParams = @{
+            TestId               = 'ZTNA24827'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'Medium'
+            Name                 = 'CA policies block unmanaged mobile apps'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category             = 'Application security'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA24827 failed: $($_.Exception.Message)" -sev Error
     }
 }

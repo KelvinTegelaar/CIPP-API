@@ -21,11 +21,19 @@ function Invoke-CippTestZTNA22659 {
         $RiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
 
         if (-not $RiskDetections) {
-            Add-CippTestResult -TestId 'ZTNA22659' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve service principal risk detections from cache.' `
-                -Risk 'High' -Name 'Triage risky workload identity sign-ins' `
-                -UserImpact 'High' -ImplementationEffort 'Low' `
-                -Category 'Identity protection'
+            $TestParams = @{
+                TestId = 'ZTNA22659'
+                TenantFilter = $Tenant
+                TestType = 'ZeroTrustNetworkAccess'
+                Status = 'Skipped'
+                ResultMarkdown = 'Unable to retrieve service principal risk detections from cache.'
+                Risk = 'High'
+                Name = 'Triage risky workload identity sign-ins'
+                UserImpact = 'High'
+                ImplementationEffort = 'Low'
+                Category = 'Identity protection'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -71,18 +79,34 @@ function Invoke-CippTestZTNA22659 {
             $ResultMarkdown += "`n[Investigate and remediate](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/IdentityProtectionMenuBlade/~/RiskyServicePrincipals)"
         }
 
-        Add-CippTestResult -TestId 'ZTNA22659' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'High' -Name 'Triage risky workload identity sign-ins' `
-            -UserImpact 'High' -ImplementationEffort 'Low' `
-            -Category 'Identity protection'
+        $TestParams = @{
+            TestId = 'ZTNA22659'
+            TenantFilter = $Tenant
+            TestType = 'ZeroTrustNetworkAccess'
+            Status = $Status
+            ResultMarkdown = $ResultMarkdown
+            Risk = 'High'
+            Name = 'Triage risky workload identity sign-ins'
+            UserImpact = 'High'
+            ImplementationEffort = 'Low'
+            Category = 'Identity protection'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA22659' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'High' -Name 'Triage risky workload identity sign-ins' `
-            -UserImpact 'High' -ImplementationEffort 'Low' `
-            -Category 'Identity protection'
+        $TestParams = @{
+            TestId = 'ZTNA22659'
+            TenantFilter = $Tenant
+            TestType = 'ZeroTrustNetworkAccess'
+            Status = 'Failed'
+            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
+            Risk = 'High'
+            Name = 'Triage risky workload identity sign-ins'
+            UserImpact = 'High'
+            ImplementationEffort = 'Low'
+            Category = 'Identity protection'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA22659 failed: $($_.Exception.Message)" -sev Error
     }
 }

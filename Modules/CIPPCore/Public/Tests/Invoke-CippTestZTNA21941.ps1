@@ -22,11 +22,19 @@ function Invoke-CippTestZTNA21941 {
         $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
-            Add-CippTestResult -TestId 'ZTNA21941' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Skipped' `
-                -ResultMarkdown 'Unable to retrieve Conditional Access policies from cache.' `
-                -Risk 'High' -Name 'Implement token protection policies' `
-                -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-                -Category 'Access control'
+            $TestParams = @{
+                TestId               = 'ZTNA21941'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve Conditional Access policies from cache.'
+                Risk                 = 'High'
+                Name                 = 'Implement token protection policies'
+                UserImpact           = 'Medium'
+                ImplementationEffort = 'Medium'
+                Category             = 'Access control'
+            }
+            Add-CippTestResult @TestParams
             return
         }
 
@@ -38,7 +46,7 @@ function Invoke-CippTestZTNA21941 {
 
         # Filter for policies with Windows platform and secureSignInSession control
         $TokenProtectionPolicies = [System.Collections.Generic.List[object]]::new()
-        
+
         foreach ($policy in $CAPolicies) {
             # Check if policy has Windows platform
             $hasWindows = $false
@@ -144,25 +152,41 @@ function Invoke-CippTestZTNA21941 {
                 $usersIcon = if ($policy.HasUsers) { '✅' } else { '❌' }
                 $appsIcon = if ($policy.HasRequiredApps) { '✅' } else { '❌' }
                 $statusIcon = if ($policy.Status -eq 'Pass') { '✅' } else { '❌' }
-                
+
                 $ResultMarkdown += "| $($policy.Name) | $stateIcon $($policy.State) | $usersIcon | $appsIcon | $statusIcon $($policy.Status) |`n"
             }
 
             $ResultMarkdown += "`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
         }
 
-        Add-CippTestResult -TestId 'ZTNA21941' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status $Status `
-            -ResultMarkdown $ResultMarkdown `
-            -Risk 'High' -Name 'Implement token protection policies' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21941'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'Implement token protection policies'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
 
     } catch {
-        Add-CippTestResult -TestId 'ZTNA21941' -TenantFilter $Tenant -TestType 'ZeroTrustNetworkAccess' -Status 'Failed' `
-            -ResultMarkdown "❌ **Error**: $($_.Exception.Message)" `
-            -Risk 'High' -Name 'Implement token protection policies' `
-            -UserImpact 'Medium' -ImplementationEffort 'Medium' `
-            -Category 'Access control'
+        $TestParams = @{
+            TestId               = 'ZTNA21941'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'Implement token protection policies'
+            UserImpact           = 'Medium'
+            ImplementationEffort = 'Medium'
+            Category             = 'Access control'
+        }
+        Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21941 failed: $($_.Exception.Message)" -sev Error
     }
 }
