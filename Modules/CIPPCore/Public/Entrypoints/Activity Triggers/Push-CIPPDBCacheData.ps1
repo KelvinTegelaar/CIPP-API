@@ -18,6 +18,14 @@ function Push-CIPPDBCacheData {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Starting database cache collection for tenant' -sev Info
 
+        # Check tenant capabilities for license-specific features
+        $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+        $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2') -SkipLog
+        $AzureADPremiumP2Capable = Test-CIPPStandardLicense -StandardName 'AzureADPremiumP2LicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
+
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "License capabilities - Intune: $IntuneCapable, Conditional Access: $ConditionalAccessCapable, Azure AD Premium P2: $AzureADPremiumP2Capable" -sev Info
+
+        #region All Licenses - Basic tenant data collection
         Write-Host 'Getting cache for Users'
         try { Set-CIPPDBCacheUsers -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Users collection failed: $($_.Exception.Message)" -sev Error
@@ -46,11 +54,6 @@ function Push-CIPPDBCacheData {
         Write-Host 'Getting cache for Devices'
         try { Set-CIPPDBCacheDevices -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Devices collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for ManagedDevices'
-        try { Set-CIPPDBCacheManagedDevices -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ManagedDevices collection failed: $($_.Exception.Message)" -sev Error
         }
 
         Write-Host 'Getting cache for Organization'
@@ -108,16 +111,6 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SecureScore collection failed: $($_.Exception.Message)" -sev Error
         }
 
-        Write-Host 'Getting cache for IntunePolicies'
-        try { Set-CIPPDBCacheIntunePolicies -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntunePolicies collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for ConditionalAccessPolicies'
-        try { Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ConditionalAccessPolicies collection failed: $($_.Exception.Message)" -sev Error
-        }
-
         Write-Host 'Getting cache for PIMSettings'
         try { Set-CIPPDBCachePIMSettings -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "PIMSettings collection failed: $($_.Exception.Message)" -sev Error
@@ -153,26 +146,6 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "AuthenticationFlowsPolicy collection failed: $($_.Exception.Message)" -sev Error
         }
 
-        Write-Host 'Getting cache for RiskyUsers'
-        try { Set-CIPPDBCacheRiskyUsers -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskyUsers collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for RiskyServicePrincipals'
-        try { Set-CIPPDBCacheRiskyServicePrincipals -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskyServicePrincipals collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for ServicePrincipalRiskDetections'
-        try { Set-CIPPDBCacheServicePrincipalRiskDetections -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ServicePrincipalRiskDetections collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for RiskDetections'
-        try { Set-CIPPDBCacheRiskDetections -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskDetections collection failed: $($_.Exception.Message)" -sev Error
-        }
-
         Write-Host 'Getting cache for DeviceRegistrationPolicy'
         try { Set-CIPPDBCacheDeviceRegistrationPolicy -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "DeviceRegistrationPolicy collection failed: $($_.Exception.Message)" -sev Error
@@ -186,11 +159,6 @@ function Push-CIPPDBCacheData {
         Write-Host 'Getting cache for UserRegistrationDetails'
         try { Set-CIPPDBCacheUserRegistrationDetails -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "UserRegistrationDetails collection failed: $($_.Exception.Message)" -sev Error
-        }
-
-        Write-Host 'Getting cache for ManagedDeviceEncryptionStates'
-        try { Set-CIPPDBCacheManagedDeviceEncryptionStates -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ManagedDeviceEncryptionStates collection failed: $($_.Exception.Message)" -sev Error
         }
 
         Write-Host 'Getting cache for OAuth2PermissionGrants'
@@ -242,11 +210,70 @@ function Push-CIPPDBCacheData {
         try { Set-CIPPDBCacheExoAcceptedDomains -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAcceptedDomains collection failed: $($_.Exception.Message)" -sev Error
         }
+        #endregion All Licenses
 
-        Write-Host 'Getting cache for IntuneAppProtectionPolicies'
-        try { Set-CIPPDBCacheIntuneAppProtectionPolicies -TenantFilter $TenantFilter } catch {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneAppProtectionPolicies collection failed: $($_.Exception.Message)" -sev Error
+        #region Conditional Access Licensed - Azure AD Premium features
+        if ($ConditionalAccessCapable) {
+            Write-Host 'Getting cache for ConditionalAccessPolicies'
+            try { Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ConditionalAccessPolicies collection failed: $($_.Exception.Message)" -sev Error
+            }
+        } else {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Conditional Access data collection - tenant does not have required license' -sev Info
         }
+        #endregion Conditional Access Licensed
+
+        #region Azure AD Premium P2 - Identity Protection features
+        if ($AzureADPremiumP2Capable) {
+            Write-Host 'Getting cache for RiskyUsers'
+            try { Set-CIPPDBCacheRiskyUsers -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskyUsers collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for RiskyServicePrincipals'
+            try { Set-CIPPDBCacheRiskyServicePrincipals -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskyServicePrincipals collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for ServicePrincipalRiskDetections'
+            try { Set-CIPPDBCacheServicePrincipalRiskDetections -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ServicePrincipalRiskDetections collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for RiskDetections'
+            try { Set-CIPPDBCacheRiskDetections -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "RiskDetections collection failed: $($_.Exception.Message)" -sev Error
+            }
+        } else {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Azure AD Premium P2 Identity Protection data collection - tenant does not have required license' -sev Info
+        }
+        #endregion Azure AD Premium P2
+
+        #region Intune Licensed - Intune management features
+        if ($IntuneCapable) {
+            Write-Host 'Getting cache for ManagedDevices'
+            try { Set-CIPPDBCacheManagedDevices -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ManagedDevices collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for IntunePolicies'
+            try { Set-CIPPDBCacheIntunePolicies -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntunePolicies collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for ManagedDeviceEncryptionStates'
+            try { Set-CIPPDBCacheManagedDeviceEncryptionStates -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ManagedDeviceEncryptionStates collection failed: $($_.Exception.Message)" -sev Error
+            }
+
+            Write-Host 'Getting cache for IntuneAppProtectionPolicies'
+            try { Set-CIPPDBCacheIntuneAppProtectionPolicies -TenantFilter $TenantFilter } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneAppProtectionPolicies collection failed: $($_.Exception.Message)" -sev Error
+            }
+        } else {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Intune data collection - tenant does not have required license' -sev Info
+        }
+        #endregion Intune Licensed
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Completed database cache collection for tenant' -sev Info
 

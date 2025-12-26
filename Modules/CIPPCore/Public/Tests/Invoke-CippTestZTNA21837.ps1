@@ -5,7 +5,7 @@ function Invoke-CippTestZTNA21837 {
     #Tested
     try {
         # Get device registration policy
-        $DeviceSettings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'deviceRegistrationPolicy'
+        $DeviceSettings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
 
         if (-not $DeviceSettings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Device settings not found in database' -Risk 'High' -Name 'Limit the maximum number of devices per user to 10' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Devices'
