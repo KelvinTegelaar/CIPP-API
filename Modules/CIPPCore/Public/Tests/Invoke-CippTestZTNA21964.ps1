@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA21964 {
     param($Tenant)
 
     $TestId = 'ZTNA21964'
-
+    #Tested
     try {
         $AuthStrengths = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationStrengths'
 

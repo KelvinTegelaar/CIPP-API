@@ -4,7 +4,7 @@ function Invoke-CippTestZTNA21992 {
     try {
         $Apps = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Apps'
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
-
+        #Tested
         if (-not $Apps -and -not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21992' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Application and service principal data not found in database' -Risk 'High' -Name 'Application certificates must be rotated on a regular basis' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'
             return

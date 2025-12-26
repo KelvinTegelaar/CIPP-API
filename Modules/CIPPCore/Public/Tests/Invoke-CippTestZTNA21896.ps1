@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21896 {
     param($Tenant)
-
+    #tested
     try {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
         if (-not $ServicePrincipals) {
@@ -47,8 +47,7 @@ function Invoke-CippTestZTNA21896 {
         $Result = $ResultLines -join "`n"
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21896' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Service principals do not have certificates or credentials associated with them' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21896' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Service principals do not have certificates or credentials associated with them' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'

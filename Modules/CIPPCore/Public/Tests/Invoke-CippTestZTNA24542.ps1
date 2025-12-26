@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA24542 {
     param($Tenant)
 
     $TestId = 'ZTNA24542'
-
+    #Tested - Device
     try {
         $IntunePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceCompliancePolicies'
 

@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA22128 {
     param($Tenant)
-
+    #Tested
     try {
         $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
         $Guests = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Guests'
@@ -38,9 +38,9 @@ function Invoke-CippTestZTNA22128 {
                 foreach ($Member in $Role.members) {
                     if ($GuestIdHash.ContainsKey($Member.id)) {
                         $GuestsInPrivilegedRoles += [PSCustomObject]@{
-                            RoleName = $Role.displayName
-                            GuestId = $Member.id
-                            GuestDisplayName = $Member.displayName
+                            RoleName               = $Role.displayName
+                            GuestId                = $Member.id
+                            GuestDisplayName       = $Member.displayName
                             GuestUserPrincipalName = $Member.userPrincipalName
                         }
                     }
@@ -66,7 +66,7 @@ function Invoke-CippTestZTNA22128 {
 
         $RoleGroups = $GuestsInPrivilegedRoles | Group-Object -Property RoleName
         foreach ($RoleGroup in $RoleGroups) {
-            $ResultLines += ""
+            $ResultLines += ''
             $ResultLines += "**$($RoleGroup.Name)** ($($RoleGroup.Count) guest(s)):"
             foreach ($Guest in $RoleGroup.Group) {
                 $ResultLines += "- $($Guest.GuestDisplayName) ($($Guest.GuestUserPrincipalName))"
@@ -79,8 +79,7 @@ function Invoke-CippTestZTNA22128 {
         $Result = $ResultLines -join "`n"
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'

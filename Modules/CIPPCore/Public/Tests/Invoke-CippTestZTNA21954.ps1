@@ -15,23 +15,23 @@ function Invoke-CippTestZTNA21954 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     try {
         # Get authorization policy from cache
         $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthPolicy) {
             $TestParams = @{
-                TestId = 'ZTNA21954'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Skipped'
-                ResultMarkdown = 'Unable to retrieve authorization policy from cache.'
-                Risk = 'Low'
-                Name = 'Restrict non-admin users from reading BitLocker recovery keys'
-                UserImpact = 'Low'
+                TestId               = 'ZTNA21954'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve authorization policy from cache.'
+                Risk                 = 'Low'
+                Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+                UserImpact           = 'Low'
                 ImplementationEffort = 'Low'
-                Category = 'Device security'
+                Category             = 'Device security'
             }
             Add-CippTestResult @TestParams
             return
@@ -51,31 +51,31 @@ function Invoke-CippTestZTNA21954 {
         }
 
         $TestParams = @{
-            TestId = 'ZTNA21954'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = $Status
-            ResultMarkdown = $ResultMarkdown
-            Risk = 'Low'
-            Name = 'Restrict non-admin users from reading BitLocker recovery keys'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21954'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'Low'
+            Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
 
     } catch {
         $TestParams = @{
-            TestId = 'ZTNA21954'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = 'Failed'
-            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
-            Risk = 'Low'
-            Name = 'Restrict non-admin users from reading BitLocker recovery keys'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21954'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'Low'
+            Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21954 failed: $($_.Exception.Message)" -sev Error

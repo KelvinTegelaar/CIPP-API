@@ -15,6 +15,7 @@ function Invoke-CippTestZTNA24827 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
+    #Tested - Device
 
     try {
         # Get CA policies from cache

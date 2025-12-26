@@ -15,23 +15,23 @@ function Invoke-CippTestZTNA22124 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     try {
         # Get directory recommendations from cache
         $Recommendations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DirectoryRecommendations'
 
         if (-not $Recommendations) {
             $TestParams = @{
-                TestId = 'ZTNA22124'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Skipped'
-                ResultMarkdown = 'Unable to retrieve directory recommendations from cache.'
-                Risk = 'High'
-                Name = 'Address high priority Entra recommendations'
-                UserImpact = 'Medium'
+                TestId               = 'ZTNA22124'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve directory recommendations from cache.'
+                Risk                 = 'High'
+                Name                 = 'Address high priority Entra recommendations'
+                UserImpact           = 'Medium'
                 ImplementationEffort = 'Medium'
-                Category = 'Governance'
+                Category             = 'Governance'
             }
             Add-CippTestResult @TestParams
             return
@@ -67,31 +67,31 @@ function Invoke-CippTestZTNA22124 {
         }
 
         $TestParams = @{
-            TestId = 'ZTNA22124'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = $Status
-            ResultMarkdown = $ResultMarkdown
-            Risk = 'High'
-            Name = 'Address high priority Entra recommendations'
-            UserImpact = 'Medium'
+            TestId               = 'ZTNA22124'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'Address high priority Entra recommendations'
+            UserImpact           = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Governance'
+            Category             = 'Governance'
         }
         Add-CippTestResult @TestParams
 
     } catch {
         $TestParams = @{
-            TestId = 'ZTNA22124'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = 'Failed'
-            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
-            Risk = 'High'
-            Name = 'Address high priority Entra recommendations'
-            UserImpact = 'Medium'
+            TestId               = 'ZTNA22124'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'Address high priority Entra recommendations'
+            UserImpact           = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Governance'
+            Category             = 'Governance'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA22124 failed: $($_.Exception.Message)" -sev Error

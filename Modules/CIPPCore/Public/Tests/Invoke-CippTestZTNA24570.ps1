@@ -16,7 +16,7 @@ function Invoke-CippTestZTNA24570 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     try {
         # Get organization info to check if hybrid identity is enabled
         $OrgInfo = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'

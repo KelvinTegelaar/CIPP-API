@@ -1,5 +1,6 @@
 function Invoke-CippTestZTNA24550 {
     param($Tenant)
+    #Tested - Device
 
     try {
         $ConfigurationPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
@@ -43,12 +44,12 @@ function Invoke-CippTestZTNA24550 {
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'
             $ResultLines = @(
-                "At least one Windows BitLocker policy is configured and assigned."
+                'At least one Windows BitLocker policy is configured and assigned.'
                 ''
-                "**Windows BitLocker Policies:**"
+                '**Windows BitLocker Policies:**'
                 ''
-                "| Policy Name | Status | Assignment Count |"
-                "| :---------- | :----- | :--------------- |"
+                '| Policy Name | Status | Assignment Count |'
+                '| :---------- | :----- | :--------------- |'
             )
 
             foreach ($Policy in $WindowsBitLockerPolicies) {
@@ -62,29 +63,26 @@ function Invoke-CippTestZTNA24550 {
             }
 
             $Result = $ResultLines -join "`n"
-        }
-        else {
+        } else {
             $Status = 'Failed'
             if ($WindowsBitLockerPolicies.Count -gt 0) {
                 $ResultLines = @(
-                    "Windows BitLocker policies exist but none are assigned."
+                    'Windows BitLocker policies exist but none are assigned.'
                     ''
-                    "**Unassigned BitLocker Policies:**"
+                    '**Unassigned BitLocker Policies:**'
                     ''
                 )
                 foreach ($Policy in $WindowsBitLockerPolicies) {
                     $ResultLines += "- $($Policy.name)"
                 }
-            }
-            else {
-                $ResultLines = @("No Windows BitLocker policy is configured or assigned.")
+            } else {
+                $ResultLines = @('No Windows BitLocker policy is configured or assigned.')
             }
             $Result = $ResultLines -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24550' -TestType 'Devices' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Data on Windows is protected by BitLocker encryption' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24550' -TestType 'Devices' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Data on Windows is protected by BitLocker encryption' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'

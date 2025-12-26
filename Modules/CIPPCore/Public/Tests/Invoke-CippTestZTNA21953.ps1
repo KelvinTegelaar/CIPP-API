@@ -15,6 +15,7 @@ function Invoke-CippTestZTNA21953 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
+    #Tested
 
     try {
         # Get device registration policy from cache
@@ -22,16 +23,16 @@ function Invoke-CippTestZTNA21953 {
 
         if (-not $DeviceRegPolicy) {
             $TestParams = @{
-                TestId = 'ZTNA21953'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Skipped'
-                ResultMarkdown = 'Unable to retrieve device registration policy from cache.'
-                Risk = 'High'
-                Name = 'Deploy Windows Local Administrator Password Solution (LAPS)'
-                UserImpact = 'Low'
+                TestId               = 'ZTNA21953'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve device registration policy from cache.'
+                Risk                 = 'High'
+                Name                 = 'Deploy Windows Local Administrator Password Solution (LAPS)'
+                UserImpact           = 'Low'
                 ImplementationEffort = 'Low'
-                Category = 'Device security'
+                Category             = 'Device security'
             }
             Add-CippTestResult @TestParams
             return
@@ -51,31 +52,31 @@ function Invoke-CippTestZTNA21953 {
         }
 
         $TestParams = @{
-            TestId = 'ZTNA21953'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = $Status
-            ResultMarkdown = $ResultMarkdown
-            Risk = 'High'
-            Name = 'Deploy Windows Local Administrator Password Solution (LAPS)'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21953'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'Deploy Windows Local Administrator Password Solution (LAPS)'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
 
     } catch {
         $TestParams = @{
-            TestId = 'ZTNA21953'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = 'Failed'
-            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
-            Risk = 'High'
-            Name = 'Deploy Windows Local Administrator Password Solution (LAPS)'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21953'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'Deploy Windows Local Administrator Password Solution (LAPS)'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21953 failed: $($_.Exception.Message)" -sev Error

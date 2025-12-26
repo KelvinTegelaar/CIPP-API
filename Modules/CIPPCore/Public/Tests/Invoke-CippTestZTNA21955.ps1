@@ -15,23 +15,23 @@ function Invoke-CippTestZTNA21955 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     try {
         # Get device registration policy from cache
         $DeviceRegPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
 
         if (-not $DeviceRegPolicy) {
             $TestParams = @{
-                TestId = 'ZTNA21955'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Skipped'
-                ResultMarkdown = 'Unable to retrieve device registration policy from cache.'
-                Risk = 'Medium'
-                Name = 'Manage local admins on Entra joined devices'
-                UserImpact = 'Low'
+                TestId               = 'ZTNA21955'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve device registration policy from cache.'
+                Risk                 = 'Medium'
+                Name                 = 'Manage local admins on Entra joined devices'
+                UserImpact           = 'Low'
                 ImplementationEffort = 'Low'
-                Category = 'Device security'
+                Category             = 'Device security'
             }
             Add-CippTestResult @TestParams
             return
@@ -51,31 +51,31 @@ function Invoke-CippTestZTNA21955 {
         }
 
         $TestParams = @{
-            TestId = 'ZTNA21955'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = $Status
-            ResultMarkdown = $ResultMarkdown
-            Risk = 'Medium'
-            Name = 'Manage local admins on Entra joined devices'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21955'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'Medium'
+            Name                 = 'Manage local admins on Entra joined devices'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
 
     } catch {
         $TestParams = @{
-            TestId = 'ZTNA21955'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = 'Failed'
-            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
-            Risk = 'Medium'
-            Name = 'Manage local admins on Entra joined devices'
-            UserImpact = 'Low'
+            TestId               = 'ZTNA21955'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'Medium'
+            Name                 = 'Manage local admins on Entra joined devices'
+            UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21955 failed: $($_.Exception.Message)" -sev Error

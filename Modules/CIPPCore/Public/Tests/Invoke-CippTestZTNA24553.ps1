@@ -1,5 +1,6 @@
 function Invoke-CippTestZTNA24553 {
     param($Tenant)
+    #Tested - Device
 
     $TestId = 'ZTNA24553'
 

@@ -15,23 +15,23 @@ function Invoke-CippTestZTNA24824 {
         [Parameter(Mandatory = $true)]
         [string]$Tenant
     )
-
+    #Tested
     try {
         # Get CA policies from cache
         $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
             $TestParams = @{
-                TestId = 'ZTNA24824'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Skipped'
-                ResultMarkdown = 'Unable to retrieve Conditional Access policies from cache.'
-                Risk = 'High'
-                Name = 'CA policies block access from noncompliant devices'
-                UserImpact = 'Medium'
+                TestId               = 'ZTNA24824'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Skipped'
+                ResultMarkdown       = 'Unable to retrieve Conditional Access policies from cache.'
+                Risk                 = 'High'
+                Name                 = 'CA policies block access from noncompliant devices'
+                UserImpact           = 'Medium'
                 ImplementationEffort = 'Medium'
-                Category = 'Device security'
+                Category             = 'Device security'
             }
             Add-CippTestResult @TestParams
             return
@@ -50,16 +50,16 @@ function Invoke-CippTestZTNA24824 {
 
         if ($CompliantDevicePolicies.Count -eq 0) {
             $TestParams = @{
-                TestId = 'ZTNA24824'
-                TenantFilter = $Tenant
-                TestType = 'ZeroTrustNetworkAccess'
-                Status = 'Failed'
-                ResultMarkdown = "❌ **Fail**: No Conditional Access policies found that block access from noncompliant devices.`n`n[Create policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
-                Risk = 'High'
-                Name = 'CA policies block access from noncompliant devices'
-                UserImpact = 'Medium'
+                TestId               = 'ZTNA24824'
+                TenantFilter         = $Tenant
+                TestType             = 'ZeroTrustNetworkAccess'
+                Status               = 'Failed'
+                ResultMarkdown       = "❌ **Fail**: No Conditional Access policies found that block access from noncompliant devices.`n`n[Create policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
+                Risk                 = 'High'
+                Name                 = 'CA policies block access from noncompliant devices'
+                UserImpact           = 'Medium'
                 ImplementationEffort = 'Medium'
-                Category = 'Device security'
+                Category             = 'Device security'
             }
             Add-CippTestResult @TestParams
             return
@@ -68,8 +68,8 @@ function Invoke-CippTestZTNA24824 {
         # Track platform coverage
         $PlatformCoverage = @{
             'windows' = $false
-            'macOS' = $false
-            'iOS' = $false
+            'macOS'   = $false
+            'iOS'     = $false
             'android' = $false
         }
         $AllPlatformsPolicy = $false
@@ -101,9 +101,9 @@ function Invoke-CippTestZTNA24824 {
             }
 
             $PolicyDetails.Add([PSCustomObject]@{
-                Name = $policy.displayName
-                Platforms = $platforms
-            })
+                    Name      = $policy.displayName
+                    Platforms = $platforms
+                })
         }
 
         # Check if all platforms are covered (either by a single policy or combination)
@@ -143,31 +143,31 @@ function Invoke-CippTestZTNA24824 {
         $ResultMarkdown += "`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
 
         $TestParams = @{
-            TestId = 'ZTNA24824'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = $Status
-            ResultMarkdown = $ResultMarkdown
-            Risk = 'High'
-            Name = 'CA policies block access from noncompliant devices'
-            UserImpact = 'Medium'
+            TestId               = 'ZTNA24824'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = $Status
+            ResultMarkdown       = $ResultMarkdown
+            Risk                 = 'High'
+            Name                 = 'CA policies block access from noncompliant devices'
+            UserImpact           = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
 
     } catch {
         $TestParams = @{
-            TestId = 'ZTNA24824'
-            TenantFilter = $Tenant
-            TestType = 'ZeroTrustNetworkAccess'
-            Status = 'Failed'
-            ResultMarkdown = "❌ **Error**: $($_.Exception.Message)"
-            Risk = 'High'
-            Name = 'CA policies block access from noncompliant devices'
-            UserImpact = 'Medium'
+            TestId               = 'ZTNA24824'
+            TenantFilter         = $Tenant
+            TestType             = 'ZeroTrustNetworkAccess'
+            Status               = 'Failed'
+            ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
+            Risk                 = 'High'
+            Name                 = 'CA policies block access from noncompliant devices'
+            UserImpact           = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Device security'
+            Category             = 'Device security'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA24824 failed: $($_.Exception.Message)" -sev Error

@@ -2,6 +2,7 @@ function Invoke-CippTestZTNA24576 {
     param($Tenant)
 
     $TestId = 'ZTNA24576'
+    #Tested - Device
 
     try {
         $DeviceConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
@@ -11,10 +12,10 @@ function Invoke-CippTestZTNA24576 {
             return
         }
 
-        $WindowsHealthMonitoringPolicies = @($DeviceConfigs | Where-Object { 
-                $_.'@odata.type' -eq '#microsoft.graph.windowsHealthMonitoringConfiguration' 
+        $WindowsHealthMonitoringPolicies = @($DeviceConfigs | Where-Object {
+                $_.'@odata.type' -eq '#microsoft.graph.windowsHealthMonitoringConfiguration'
             })
-        
+
         $AssignedPolicies = @($WindowsHealthMonitoringPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
         $Passed = $AssignedPolicies.Count -gt 0
 

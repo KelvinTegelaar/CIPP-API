@@ -2,7 +2,7 @@ function Invoke-CippTestZTNA24572 {
     param($Tenant)
 
     $TestId = 'ZTNA24572'
-
+    #Tested
     try {
         $EnrollmentConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceEnrollmentConfigurations'
 
@@ -12,9 +12,9 @@ function Invoke-CippTestZTNA24572 {
         }
 
         $EnrollmentNotifications = @($EnrollmentConfigs | Where-Object {
-            $_.'@odata.type' -eq '#microsoft.graph.windowsEnrollmentStatusScreenSettings' -or
-            $_.'deviceEnrollmentConfigurationType' -eq 'EnrollmentNotificationsConfiguration'
-        })
+                $_.'@odata.type' -eq '#microsoft.graph.windowsEnrollmentStatusScreenSettings' -or
+                $_.'deviceEnrollmentConfigurationType' -eq 'EnrollmentNotificationsConfiguration'
+            })
 
         $AssignedNotifications = @($EnrollmentNotifications | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
         $Passed = $AssignedNotifications.Count -gt 0
