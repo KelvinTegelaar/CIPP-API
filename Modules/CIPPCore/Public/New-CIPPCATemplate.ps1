@@ -56,7 +56,14 @@ function New-CIPPCATemplate {
     }
 
     if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
-    if ($JSON.conditions.users.includeUsers) {
+    # Check if conditions.users exists and is a PSCustomObject (not an array) before accessing properties
+    $hasConditionsUsers = $null -ne $JSON.conditions.users
+    # Explicitly exclude array types - arrays have properties but we can't set custom properties on them
+    $isArray = $hasConditionsUsers -and ($JSON.conditions.users -is [Array] -or $JSON.conditions.users -is [System.Collections.IList])
+    $isPSCustomObject = $hasConditionsUsers -and -not $isArray -and ($JSON.conditions.users -is [PSCustomObject] -or ($JSON.conditions.users.PSObject.Properties.Count -gt 0 -and -not $isArray))
+    $hasIncludeUsers = $isPSCustomObject -and ($null -ne $JSON.conditions.users.includeUsers)
+    
+    if ($isPSCustomObject -and $hasIncludeUsers) {
         $JSON.conditions.users.includeUsers = @($JSON.conditions.users.includeUsers | ForEach-Object {
                 $originalID = $_
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
@@ -65,7 +72,8 @@ function New-CIPPCATemplate {
             })
     }
 
-    if ($JSON.conditions.users.excludeUsers) {
+    # Use the same type check for other user properties
+    if ($isPSCustomObject -and $null -ne $JSON.conditions.users.excludeUsers) {
         $JSON.conditions.users.excludeUsers = @($JSON.conditions.users.excludeUsers | ForEach-Object {
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
                 $originalID = $_
@@ -74,7 +82,7 @@ function New-CIPPCATemplate {
             })
     }
 
-    if ($JSON.conditions.users.includeGroups) {
+    if ($isPSCustomObject -and $null -ne $JSON.conditions.users.includeGroups) {
         $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
                 $originalID = $_
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
@@ -82,7 +90,7 @@ function New-CIPPCATemplate {
                 if ($match) { $match.displayName } else { $originalID }
             })
     }
-    if ($JSON.conditions.users.excludeGroups) {
+    if ($isPSCustomObject -and $null -ne $JSON.conditions.users.excludeGroups) {
         $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
                 $originalID = $_
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
