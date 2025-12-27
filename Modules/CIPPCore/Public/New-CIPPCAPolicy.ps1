@@ -173,13 +173,26 @@ function New-CIPPCAPolicy {
             if (!$location.displayName) { continue }
             $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true
             if ($Location.displayName -in $CheckExisting.displayName) {
-                [pscustomobject]@{
-                    id         = ($CheckExisting | Where-Object -Property displayName -EQ $Location.displayName).id
-                    name       = ($CheckExisting | Where-Object -Property displayName -EQ $Location.displayName).displayName
-                    templateId = $location.id
+                $ExistingLocation = $CheckExisting | Where-Object -Property displayName -EQ $Location.displayName
+                if ($Overwrite) {
+                    $LocationUpdate = $location | Select-Object * -ExcludeProperty id
+                    Remove-ODataProperties -Object $LocationUpdate
+                    $Body = ConvertTo-Json -InputObject $LocationUpdate -Depth 10     
+                    try {
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($ExistingLocation.id)" -body $body -Type PATCH -tenantid $tenantfilter -asApp $true
+                        Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Updated existing Named Location: $($location.displayName)" -Sev 'Info'
+                    } catch {
+                        Write-Warning "Failed to update location $($location.displayName): $_"
+                        Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Failed to update existing Named Location: $($location.displayName). Error: $_" -Sev 'Error'
+                    }
+                } else {
+                    Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
                 }
-                Write-LogMessage -Tenant $TenantFilter -Headers $User -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
-
+                [pscustomobject]@{
+                    id          = $ExistingLocation.id
+                    name        = $ExistingLocation.displayName
+                    templateId  = $location.id
+                }
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $location | Select-Object * -ExcludeProperty id
