@@ -1,6 +1,6 @@
 function Invoke-CippTestZTNA21835 {
     param($Tenant)
-    #Tested
+    #Untested
     $TestId = 'ZTNA21835'
 
     try {
@@ -14,7 +14,7 @@ function Invoke-CippTestZTNA21835 {
         }
 
         # Get permanent Global Administrator members
-        $PermanentGAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleId $GlobalAdminRole.id | Where-Object {
+        $PermanentGAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId '62e90394-69f5-4237-9190-012177145e10' | Where-Object {
             $_.AssignmentType -eq 'Permanent' -and $_.'@odata.type' -eq '#microsoft.graph.user'
         }
 
