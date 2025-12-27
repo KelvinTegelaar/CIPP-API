@@ -1,0 +1,15 @@
+{
+  "name": "Zero Trust Network Access Tests",
+  "description": "Microsoft's Comprehensive security assessment covering identity and device compliance, conditional access policies, authentication methods, and endpoint protection aligned with Zero Trust principles.",
+  "version": "1.0",
+  "categories": {
+    "identity": {
+      "title": "Identity & Access",
+      "description": "Authentication, authorization, conditional access, and credential management"
+    },
+    "device": {
+      "title": "Device Security",
+      "description": "Device compliance, configuration profiles, app protection, and endpoint security"
+    }
+  }
+}
