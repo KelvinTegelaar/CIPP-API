@@ -240,7 +240,7 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
+                $IntroText = "$($data.ObjectId) has been removed by $($data.UserId)."
                 $ButtonUrl = "$CIPPURL/tenant/administration/applications/enterprise-apps?tenantFilter=$Tenant"
                 $ButtonText = 'Enterprise Apps'
             }
