@@ -27,8 +27,9 @@ function Enable-CippConsoleLogging {
     param()
 
     # Initialize AsyncLocal storage for InvocationId (thread-safe)
-    if (-not $script:CippInvocationIdStorage) {
-        $script:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    # Using global scope so this variable is accessible across modules (CIPPHTTP and CIPPCore)
+    if (-not $global:CippInvocationIdStorage) {
+        $global:CippInvocationIdStorage = [System.Threading.AsyncLocal[string]]::new()
     }
 
     # Set minimum log level from environment variable (default: Information)

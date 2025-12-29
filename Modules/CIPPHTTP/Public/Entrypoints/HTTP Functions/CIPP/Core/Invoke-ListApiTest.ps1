@@ -25,8 +25,8 @@ function Invoke-ListApiTest {
         $Request = New-CIPPAzRestRequest -Method POST -Resource 'https://management.azure.com/' -Uri 'https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01' -Body $Json
         $Response.ResourceGraphTest = $Request
     }
-    $Response.AllowedTenants = $script:CippAllowedTenantsStorage.Value
-    $Response.AllowedGroups = $script:CippAllowedGroupsStorage.Value
+    $Response.AllowedTenants = $global:CippAllowedTenantsStorage.Value
+    $Response.AllowedGroups = $global:CippAllowedGroupsStorage.Value
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
