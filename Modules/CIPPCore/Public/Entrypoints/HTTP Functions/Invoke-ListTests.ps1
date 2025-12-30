@@ -27,31 +27,62 @@ function Invoke-ListTests {
 
         $IdentityTotal = 0
         $DevicesTotal = 0
+        $IdentityTests = @()
+        $DevicesTests = @()
 
         if ($ReportId) {
-            $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
-            $Filter = "PartitionKey eq 'ReportingTemplate' and RowKey eq '{0}'" -f $ReportId
-            $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
+            $ReportJsonFiles = Get-ChildItem 'Modules\CIPPCore\Public\Tests\*\report.json' -ErrorAction SilentlyContinue
+            $ReportFound = $false
 
-            if ($ReportTemplate) {
-                $IdentityTests = @()
-                $DeviceTests = @()
+            $MatchingReport = $ReportJsonFiles | Where-Object { $_.Directory.Name.ToLower() -eq $ReportId.ToLower() } | Select-Object -First 1
 
-                if ($ReportTemplate.identityTests) {
-                    $IdentityTests = $ReportTemplate.identityTests | ConvertFrom-Json
-                    $IdentityTotal = @($IdentityTests).Count
+            if ($MatchingReport) {
+                try {
+                    $ReportContent = Get-Content $MatchingReport.FullName -Raw | ConvertFrom-Json
+                    if ($ReportContent.IdentityTests) {
+                        $IdentityTests = $ReportContent.IdentityTests
+                        $IdentityTotal = @($IdentityTests).Count
+                    }
+                    if ($ReportContent.DevicesTests) {
+                        $DevicesTests = $ReportContent.DevicesTests
+                        $DevicesTotal = @($DevicesTests).Count
+                    }
+                    $ReportFound = $true
+                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Error reading report.json: $($_.Exception.Message)" -sev Warning
                 }
+            }
 
-                if ($ReportTemplate.deviceTests) {
-                    $DeviceTests = $ReportTemplate.deviceTests | ConvertFrom-Json
-                    $DevicesTotal = @($DeviceTests).Count
+            # Fall back to database if not found in JSON files
+            if (-not $ReportFound) {
+                $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
+                $Filter = "PartitionKey eq 'Report' and RowKey eq '{0}'" -f $ReportId
+                $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
+
+                if ($ReportTemplate) {
+                    if ($ReportTemplate.identityTests) {
+                        $IdentityTests = $ReportTemplate.identityTests | ConvertFrom-Json
+                        $IdentityTotal = @($IdentityTests).Count
+                    }
+
+                    if ($ReportTemplate.DevicesTests) {
+                        $DevicesTests = $ReportTemplate.DevicesTests | ConvertFrom-Json
+                        $DevicesTotal = @($DevicesTests).Count
+                    }
+                    $ReportFound = $true
+                } else {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Report template '$ReportId' not found" -sev Warning
                 }
+            }
 
-                $AllReportTests = $IdentityTests + $DeviceTests
-                $FilteredTests = $TestResultsData.TestResults | Where-Object { $AllReportTests -contains $_.RowKey }
+            # Filter tests if report was found
+            if ($ReportFound) {
+                $AllReportTests = $IdentityTests + $DevicesTests
+                # Use HashSet for O(1) lookup performance
+                $TestLookup = [System.Collections.Generic.HashSet[string]]::new([string[]]$AllReportTests)
+                $FilteredTests = $TestResultsData.TestResults | Where-Object { $TestLookup.Contains($_.RowKey) }
                 $TestResultsData.TestResults = @($FilteredTests)
             } else {
-                Write-LogMessage -API $APIName -tenant $TenantFilter -message "Report template '$ReportId' not found" -sev Warning
                 $TestResultsData.TestResults = @()
             }
         } else {
