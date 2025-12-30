@@ -85,6 +85,10 @@ function Invoke-ListTests {
         if ($SecureScoreData) {
             $TestResultsData | Add-Member -NotePropertyName 'SecureScore' -NotePropertyValue $SecureScoreData -Force
         }
+        $MFAStateData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'MFAState'
+        if ($MFAStateData) {
+            $TestResultsData | Add-Member -NotePropertyName 'MFAState' -NotePropertyValue $MFAStateData -Force
+        }
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = $TestResultsData
