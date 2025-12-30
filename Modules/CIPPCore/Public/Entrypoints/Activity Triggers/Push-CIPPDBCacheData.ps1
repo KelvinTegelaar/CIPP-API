@@ -210,6 +210,16 @@ function Push-CIPPDBCacheData {
         try { Set-CIPPDBCacheExoAcceptedDomains -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAcceptedDomains collection failed: $($_.Exception.Message)" -sev Error
         }
+
+        Write-Host 'Getting cache for License Overview'
+        try { Set-CIPPDBCacheLicenseOverview -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "License Overview collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for MFA State'
+        try { Set-CIPPDBCacheMFAState -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "MFA State collection failed: $($_.Exception.Message)" -sev Error
+        }
         #endregion All Licenses
 
         #region Conditional Access Licensed - Azure AD Premium features
