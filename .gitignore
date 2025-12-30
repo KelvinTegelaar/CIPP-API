@@ -10,6 +10,8 @@ ExcludedTenants
 SendNotifications/config.json
 .env
 Output/
+node_modules/.yarn-integrity
+yarn.lock
 
 # Cursor IDE
 .cursor/rules
