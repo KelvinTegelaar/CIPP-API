@@ -73,7 +73,6 @@ function Invoke-ListAvailableTests {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message "Failed to list available tests: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = [PSCustomObject]@{
             Results = "Failed to list available tests: $($ErrorMessage.NormalizedError)"
         }
