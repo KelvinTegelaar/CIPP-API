@@ -121,6 +121,11 @@ function Invoke-ListTests {
             $TestResultsData | Add-Member -NotePropertyName 'MFAState' -NotePropertyValue $MFAStateData -Force
         }
 
+        $LicenseData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'LicenseOverview'
+        if ($LicenseData) {
+            $TestResultsData | Add-Member -NotePropertyName 'LicenseData' -NotePropertyValue @($LicenseData) -Force
+        }
+
         $StatusCode = [HttpStatusCode]::OK
         $Body = $TestResultsData
 
