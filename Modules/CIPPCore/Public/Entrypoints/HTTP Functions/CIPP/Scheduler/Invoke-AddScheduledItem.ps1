@@ -32,7 +32,7 @@ function Invoke-AddScheduledItem {
         $ScheduledTask = @{
             Task                  = $Request.Body
             Headers               = $Request.Headers
-            hidden                = $hidden
+            Hidden                = $hidden
             DisallowDuplicateName = $Request.Query.DisallowDuplicateName
             DesiredStartTime      = $Request.Body.DesiredStartTime
         }
