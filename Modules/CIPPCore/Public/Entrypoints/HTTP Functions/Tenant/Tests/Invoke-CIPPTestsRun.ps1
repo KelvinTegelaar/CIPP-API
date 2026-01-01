@@ -25,7 +25,7 @@ function Invoke-CIPPTestsRun {
 
         Write-Information "Found $($AllTests.Count) test functions to run"
         $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
-            $DbCounts = Get-CIPPDbItem -CountsOnly
+            $DbCounts = Get-CIPPDbItem -CountsOnly -TenantFilter 'allTenants'
             $TenantsWithData = $DbCounts | Where-Object { $_.Count -gt 0 } | Select-Object -ExpandProperty PartitionKey -Unique
             Write-Information "Found $($TenantsWithData.Count) tenants with data in database"
             $TenantsWithData

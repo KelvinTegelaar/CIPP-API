@@ -23,7 +23,7 @@ function Get-CIPPDbItem {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
@@ -37,7 +37,11 @@ function Get-CIPPDbItem {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
         if ($CountsOnly) {
-            $Filter = "PartitionKey eq '{0}'" -f $TenantFilter
+            if ($TenantFilter -eq 'allTenants') {
+                $Filter = $null
+            } else {
+                $Filter = "PartitionKey eq '{0}'" -f $TenantFilter
+            }
             $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Results = $Results | Where-Object { $_.RowKey -like '*-Count' }
         } else {
