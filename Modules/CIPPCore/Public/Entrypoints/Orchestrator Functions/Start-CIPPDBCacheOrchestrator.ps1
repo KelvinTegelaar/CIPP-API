@@ -25,7 +25,7 @@ function Start-CIPPDBCacheOrchestrator {
         $Queue = New-CippQueueEntry -Name 'Database Cache Collection' -TotalTasks $TenantList.Count
         $Batch = foreach ($Tenant in $TenantList) {
             [PSCustomObject]@{
-                FunctionName = 'Push-CIPPDBCacheData'
+                FunctionName = 'CIPPDBCacheData'
                 TenantFilter = $Tenant.defaultDomainName
                 QueueId      = $Queue.RowKey
                 QueueName    = "DB Cache - $($Tenant.defaultDomainName)"
