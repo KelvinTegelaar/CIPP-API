@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21842 {
+    <#
+    .SYNOPSIS
+    Block administrators from using SSPR
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21842'

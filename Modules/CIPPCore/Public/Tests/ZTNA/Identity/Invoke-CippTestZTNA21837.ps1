@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21837 {
+    <#
+    .SYNOPSIS
+    Limit the maximum number of devices per user to 10
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21837'

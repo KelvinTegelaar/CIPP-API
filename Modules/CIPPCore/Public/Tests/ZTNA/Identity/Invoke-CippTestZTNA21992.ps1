@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21992 {
+    <#
+    .SYNOPSIS
+    Application certificates must be rotated on a regular basis
+    #>
     param($Tenant)
 
     try {

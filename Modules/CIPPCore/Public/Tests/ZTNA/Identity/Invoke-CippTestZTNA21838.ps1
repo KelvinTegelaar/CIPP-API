@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21838 {
+    <#
+    .SYNOPSIS
+    Security key authentication method enabled
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21838'

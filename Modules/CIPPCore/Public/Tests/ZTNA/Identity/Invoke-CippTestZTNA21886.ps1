@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21886 {
+    <#
+    .SYNOPSIS
+    Applications are configured for automatic user provisioning
+    #>
     param($Tenant)
     #Tested
     try {

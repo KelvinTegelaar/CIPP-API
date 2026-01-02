@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21865 {
+    <#
+    .SYNOPSIS
+    Named locations are configured
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21865'

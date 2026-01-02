@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21849 {
+    <#
+    .SYNOPSIS
+    Smart lockout duration is set to a minimum of 60
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21849'

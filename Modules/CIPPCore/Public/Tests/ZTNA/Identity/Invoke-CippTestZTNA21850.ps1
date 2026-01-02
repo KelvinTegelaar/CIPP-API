@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21850 {
+    <#
+    .SYNOPSIS
+    Smart lockout threshold set to 10 or less
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21850'

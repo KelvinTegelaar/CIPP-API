@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21862 {
+    <#
+    .SYNOPSIS
+    All risky workload identities are triaged
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21862'

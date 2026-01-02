@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21858 {
+    <#
+    .SYNOPSIS
+    Inactive guest identities are disabled or removed from the tenant
+    #>
     param($Tenant)
     #Tested
     try {

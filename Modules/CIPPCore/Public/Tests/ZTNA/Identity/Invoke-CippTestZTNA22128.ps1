@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA22128 {
+    <#
+    .SYNOPSIS
+    Guests are not assigned high privileged directory roles
+    #>
     param($Tenant)
     #Tested
     try {

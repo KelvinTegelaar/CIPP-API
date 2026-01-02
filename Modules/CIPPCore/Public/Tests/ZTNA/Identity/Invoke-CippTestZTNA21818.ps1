@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21818 {
+    <#
+    .SYNOPSIS
+    Privileged role activations have monitoring and alerting configured
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

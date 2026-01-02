@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21896 {
+    <#
+    .SYNOPSIS
+    Service principals do not have certificates or credentials associated with them
+    #>
     param($Tenant)
     #tested
     try {

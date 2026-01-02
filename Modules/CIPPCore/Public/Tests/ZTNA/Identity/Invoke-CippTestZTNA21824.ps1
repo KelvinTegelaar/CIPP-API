@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21824 {
+    <#
+    .SYNOPSIS
+    Guests don't have long lived sign-in sessions
+    #>
     param($Tenant)
     #Tested
     try {

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21848 {
+    <#
+    .SYNOPSIS
+    Add organizational terms to the banned password list
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21848'

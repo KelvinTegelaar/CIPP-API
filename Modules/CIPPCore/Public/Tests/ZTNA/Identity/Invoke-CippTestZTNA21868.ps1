@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21868 {
+    <#
+    .SYNOPSIS
+    Guests do not own apps in the tenant
+    #>
     param($Tenant)
 
     try {

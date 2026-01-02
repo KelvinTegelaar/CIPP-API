@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21877 {
+    <#
+    .SYNOPSIS
+    All guests have a sponsor
+    #>
     param($Tenant)
     #Tested
     try {

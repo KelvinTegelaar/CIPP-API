@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21847 {
+    <#
+    .SYNOPSIS
+    Password protection for on-premises is enabled
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21847'

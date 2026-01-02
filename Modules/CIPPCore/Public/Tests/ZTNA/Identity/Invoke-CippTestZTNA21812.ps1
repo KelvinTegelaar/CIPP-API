@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21812 {
+    <#
+    .SYNOPSIS
+    Maximum number of Global Administrators doesn't exceed five users
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

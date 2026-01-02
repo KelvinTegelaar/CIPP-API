@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21816 {
+    <#
+    .SYNOPSIS
+    All Microsoft Entra privileged role assignments are managed with PIM
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

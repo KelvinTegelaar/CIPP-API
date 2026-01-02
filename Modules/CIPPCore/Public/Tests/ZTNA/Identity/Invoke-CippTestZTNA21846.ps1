@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21846 {
+    <#
+    .SYNOPSIS
+    Restrict Temporary Access Pass to Single Use
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21846'

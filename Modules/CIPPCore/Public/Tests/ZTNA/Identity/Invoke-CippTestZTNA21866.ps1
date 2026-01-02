@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21866 {
+    <#
+    .SYNOPSIS
+    All Microsoft Entra recommendations are addressed
+    #>
     param($Tenant)
     #Tested
     $TestId = 'ZTNA21866'

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21841 {
+    <#
+    .SYNOPSIS
+    Microsoft Authenticator app report suspicious activity setting is enabled
+    #>
     param($Tenant)
     #Tested
     $TestId = 'ZTNA21841'

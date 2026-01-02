@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21835 {
+    <#
+    .SYNOPSIS
+    Emergency access accounts are configured appropriately
+    #>
     param($Tenant)
     #Untested
     $TestId = 'ZTNA21835'

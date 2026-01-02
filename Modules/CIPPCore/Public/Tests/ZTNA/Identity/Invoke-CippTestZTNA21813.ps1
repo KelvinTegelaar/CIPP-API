@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21813 {
+    <#
+    .SYNOPSIS
+    High Global Administrator to privileged user ratio
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

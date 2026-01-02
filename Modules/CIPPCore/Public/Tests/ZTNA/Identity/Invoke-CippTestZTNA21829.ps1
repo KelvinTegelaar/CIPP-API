@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21829 {
+    <#
+    .SYNOPSIS
+    Use cloud authentication
+    #>
     param($Tenant)
     #Tested
     $TestId = 'ZTNA21829'

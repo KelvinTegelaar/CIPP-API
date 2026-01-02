@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21872 {
+    <#
+    .SYNOPSIS
+    Require multifactor authentication for device join and device registration using user action
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21872'

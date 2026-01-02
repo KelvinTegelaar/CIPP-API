@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21869 {
+    <#
+    .SYNOPSIS
+    Enterprise applications must require explicit assignment or scoped provisioning
+    #>
     param($Tenant)
     #tenant
     try {

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24572 {
+    <#
+    .SYNOPSIS
+    Device enrollment notifications are enforced to ensure user awareness and secure onboarding
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24572'

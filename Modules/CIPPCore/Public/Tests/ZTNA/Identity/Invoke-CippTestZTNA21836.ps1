@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21836 {
+    <#
+    .SYNOPSIS
+    Workload Identities are not assigned privileged roles
+    #>
     param($Tenant)
     #Untested
     $TestId = 'ZTNA21836'

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21830 {
+    <#
+    .SYNOPSIS
+    Conditional Access policies for Privileged Access Workstations are configured
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21830'

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21814 {
+    <#
+    .SYNOPSIS
+    Privileged accounts are cloud native identities
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

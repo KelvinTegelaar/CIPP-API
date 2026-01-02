@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21828 {
+    <#
+    .SYNOPSIS
+    Authentication transfer is blocked
+    #>
     param($Tenant)
     #Tested
     try {

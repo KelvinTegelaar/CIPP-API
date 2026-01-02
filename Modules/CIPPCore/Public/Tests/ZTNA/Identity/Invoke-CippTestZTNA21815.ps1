@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21815 {
+    <#
+    .SYNOPSIS
+    All privileged role assignments are activated just in time and not permanently active
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

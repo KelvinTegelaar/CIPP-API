@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21844 {
+    <#
+    .SYNOPSIS
+    Block legacy Azure AD PowerShell module
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21844'
