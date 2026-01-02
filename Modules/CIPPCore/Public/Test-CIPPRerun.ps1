@@ -12,7 +12,7 @@ function Test-CIPPRerun {
         [int64]$BaseTime = 0   # Base time to calculate from (defaults to current time)
     )
     $RerunTable = Get-CIPPTable -tablename 'RerunCache'
-    
+
     # Use custom interval if provided, otherwise use type-based defaults
     if ($Interval -gt 0) {
         $EstimatedDifference = $Interval
@@ -23,7 +23,7 @@ function Test-CIPPRerun {
             default { throw "Unknown type: $Type" }
         }
     }
-    
+
     # Use BaseTime if provided, otherwise use current time
     $CurrentUnixTime = if ($BaseTime -gt 0) { $BaseTime } else { [int][double]::Parse((Get-Date -UFormat %s)) }
     $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
