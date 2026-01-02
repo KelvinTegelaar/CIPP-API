@@ -8,7 +8,7 @@ function Invoke-CippTestZTNA24540 {
     try {
         $ConfigurationPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
         if (-not $ConfigurationPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24540' -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Intune configuration policies not found in database' -Risk 'High' -Name 'Windows Firewall policies protect against unauthorized network access' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Device'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24540' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Windows Firewall policies protect against unauthorized network access' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 

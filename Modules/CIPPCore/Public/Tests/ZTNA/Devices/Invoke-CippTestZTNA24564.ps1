@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24564 {
     try {
         $ConfigPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
         if (-not $ConfigPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24564' -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Configuration policy data not found in database' -Risk 'High' -Name 'Local account usage on Windows is restricted to reduce unauthorized access' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24564' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Local account usage on Windows is restricted to reduce unauthorized access' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 

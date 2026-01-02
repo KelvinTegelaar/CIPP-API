@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA24576 {
         $DeviceConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
 
         if (-not $DeviceConfigs) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Device configurations not found in database' -Risk 'Low' -Name 'Endpoint Analytics is enabled to help identify risks on Windows devices' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Endpoint Analytics is enabled to help identify risks on Windows devices' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant'
             return
         }
 

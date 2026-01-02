@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24574 {
     try {
         $ConfigPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
         if (-not $ConfigPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24574' -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Configuration policy data not found in database' -Risk 'High' -Name 'Attack Surface Reduction rules are applied to Windows devices to prevent exploitation of vulnerable system components' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Device'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24574' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Attack Surface Reduction rules are applied to Windows devices to prevent exploitation of vulnerable system components' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
