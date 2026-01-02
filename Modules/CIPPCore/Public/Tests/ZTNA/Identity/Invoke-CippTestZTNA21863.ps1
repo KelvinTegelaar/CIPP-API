@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21863 {
         $RiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskDetections'
 
         if (-not $RiskDetections) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Risk detections data not found. This may indicate Identity Protection is not available (requires P2 licensing) or no risk detections exist.' -Risk 'High' -Name 'All high-risk sign-ins are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All high-risk sign-ins are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
             return
         }
 

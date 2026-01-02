@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21829 {
         $Domains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Domains'
 
         if (-not $Domains) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Domains not found in database' -Risk 'High' -Name 'Use cloud authentication' -UserImpact 'High' -ImplementationEffort 'High' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Use cloud authentication' -UserImpact 'High' -ImplementationEffort 'High' -Category 'Access control'
             return
         }
 

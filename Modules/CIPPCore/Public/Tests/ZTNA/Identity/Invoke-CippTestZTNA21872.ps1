@@ -13,12 +13,12 @@ function Invoke-CippTestZTNA21872 {
         $DeviceRegistrationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
 
         if (-not $CAPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Conditional Access policies not found in cache' -Risk 'High' -Name 'Require multifactor authentication for device join and device registration using user action' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Require multifactor authentication for device join and device registration using user action' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
             return
         }
 
         if (-not $DeviceRegistrationPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Device registration policy not found in cache' -Risk 'High' -Name 'Require multifactor authentication for device join and device registration using user action' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Require multifactor authentication for device join and device registration using user action' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
             return
         }
 

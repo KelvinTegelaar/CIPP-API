@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21783 {
         $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
 
         if (-not $CAPolicies -or -not $Roles) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21783' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Conditional Access policies or roles not found in database' -Risk 'High' -Name 'Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21783' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'
             return
         }
 

@@ -11,7 +11,7 @@ function Invoke-CippTestZTNA21964 {
         $AuthStrengths = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationStrengths'
 
         if (-not $AuthStrengths) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authentication strength policies not found in database' -Risk 'High' -Name 'Enable protected actions to secure Conditional Access policy creation and changes' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Enable protected actions to secure Conditional Access policy creation and changes' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
             return
         }
 

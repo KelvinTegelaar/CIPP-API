@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21793 {
         $CrossTenantPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CrossTenantAccessPolicy'
 
         if (-not $CrossTenantPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21793' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Cross-tenant access policy not found in database' -Risk 'High' -Name 'Tenant restrictions v2 policy is configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21793' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Tenant restrictions v2 policy is configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
             return
         }
 

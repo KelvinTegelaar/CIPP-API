@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21866 {
         $Recommendations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DirectoryRecommendations'
 
         if (-not $Recommendations) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Directory recommendations not found in cache' -Risk 'Medium' -Name 'All Microsoft Entra recommendations are addressed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Monitoring'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'All Microsoft Entra recommendations are addressed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Monitoring'
             return
         }
 

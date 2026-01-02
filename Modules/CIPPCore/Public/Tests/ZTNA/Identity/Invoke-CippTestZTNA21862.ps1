@@ -14,7 +14,7 @@ function Invoke-CippTestZTNA21862 {
         $UntriagedRiskDetections = $ServicePrincipalRiskDetections | Where-Object { $_.riskState -eq 'atRisk' }
 
         if (-not $UntriagedRiskyPrincipals -and -not $ServicePrincipalRiskDetections) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Risky service principals data not found. This may indicate Workload Identity Protection is not available (requires Workload Identity Premium licensing) or no risky workload identities exist.' -Risk 'High' -Name 'All risky workload identities are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All risky workload identities are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
             return
         }
 

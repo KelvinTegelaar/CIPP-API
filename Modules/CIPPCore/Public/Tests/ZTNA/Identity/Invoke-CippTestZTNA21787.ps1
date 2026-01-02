@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21787 {
         $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21787' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authorization policy not found in database' -Risk 'High' -Name 'Permissions to create new tenants are limited to the Tenant Creator role' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21787' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Permissions to create new tenants are limited to the Tenant Creator role' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 

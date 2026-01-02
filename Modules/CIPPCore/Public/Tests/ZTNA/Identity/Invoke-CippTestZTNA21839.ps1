@@ -12,14 +12,14 @@ function Invoke-CippTestZTNA21839 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authentication methods policy not found in database' -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'
             return
         }
 
         $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Fido2' }
 
         if (-not $Fido2Config) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'FIDO2 authentication method configuration not found' -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'
             return
         }
 

@@ -11,7 +11,7 @@ function Invoke-CippTestZTNA24572 {
         $EnrollmentConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceEnrollmentConfigurations'
 
         if (-not $EnrollmentConfigs) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Investigate' -ResultMarkdown 'Device enrollment configurations not found in database' -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
             return
         }
 

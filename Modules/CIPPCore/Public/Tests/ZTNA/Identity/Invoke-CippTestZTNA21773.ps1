@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21773 {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
 
         if (-not $Apps -and -not $ServicePrincipals) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21773' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Applications and service principals not found in database' -Risk 'Medium' -Name 'Applications do not have certificates with expiration longer than 180 days' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21773' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Applications do not have certificates with expiration longer than 180 days' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
             return
         }
 

@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21825 {
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
 
         if (-not $PrivilegedRoles -or $PrivilegedRoles.Count -eq 0) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'No privileged roles found in database' -Risk 'Medium' -Name 'Privileged users have short-lived sign-in sessions' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Privileged users have short-lived sign-in sessions' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'
             return
         }
 

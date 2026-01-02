@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21824 {
         $allCAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $allCAPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21824' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Conditional Access policies not found in database' -Risk 'Medium' -Name "Guests don't have long lived sign-in sessions" -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Conditional Access'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21824' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name "Guests don't have long lived sign-in sessions" -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Conditional Access'
             return
         }
 

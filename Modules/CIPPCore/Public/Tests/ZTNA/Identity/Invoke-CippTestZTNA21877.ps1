@@ -8,7 +8,7 @@ function Invoke-CippTestZTNA21877 {
     try {
         $Guests = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Guests'
         if (-not $Guests) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Guest user data not found in database' -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
             return
         }
 

@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21835 {
         $GlobalAdminRole = $Roles | Where-Object { $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' }
 
         if (-not $GlobalAdminRole) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Global Administrator role not found in database' -Risk 'High' -Name 'Emergency access accounts are configured appropriately' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Emergency access accounts are configured appropriately' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'
             return
         }
 

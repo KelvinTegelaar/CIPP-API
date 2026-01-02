@@ -12,7 +12,7 @@ function Invoke-CippTestZTNA21861 {
         $RiskyUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskyUsers'
 
         if (-not $RiskyUsers) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Risky users data not found. This may indicate Identity Protection is not available (requires P2 licensing) or no risky users exist.' -Risk 'High' -Name 'All high-risk users are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All high-risk users are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'
             return
         }
 

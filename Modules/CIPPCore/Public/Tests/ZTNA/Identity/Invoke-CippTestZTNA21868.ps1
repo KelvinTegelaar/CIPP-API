@@ -11,7 +11,7 @@ function Invoke-CippTestZTNA21868 {
         $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
 
         if (-not $Guests -or -not $Apps -or -not $ServicePrincipals) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21868' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Required data not found in database' -Risk 'Medium' -Name 'Guests do not own apps in the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21868' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Guests do not own apps in the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
             return
         }
 

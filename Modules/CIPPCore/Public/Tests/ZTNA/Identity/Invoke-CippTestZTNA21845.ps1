@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21845 {
         $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'TemporaryAccessPass' }
 
         if (-not $TAPConfig) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Temporary Access Pass configuration not found' -Risk 'Medium' -Name 'Temporary access pass is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Temporary access pass is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
             return
         }
 

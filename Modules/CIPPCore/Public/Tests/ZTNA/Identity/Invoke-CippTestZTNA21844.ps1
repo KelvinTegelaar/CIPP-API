@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA21844 {
         $ResultMarkdown = $SummaryLines -join "`n"
 
         if ($InvestigateStatus) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Investigate' -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Block legacy Azure AD PowerShell module' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Block legacy Azure AD PowerShell module' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access control'
         } else {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Block legacy Azure AD PowerShell module' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access control'
         }

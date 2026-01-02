@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21802 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21802' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authentication methods policy not found in database' -Risk 'Medium' -Name 'Microsoft Authenticator app shows sign-in context' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access Control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21802' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Microsoft Authenticator app shows sign-in context' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access Control'
             return
         }
 

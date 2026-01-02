@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA22128 {
         $Guests = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Guests'
 
         if (-not $Roles -or -not $Guests) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Role or guest user data not found in database' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
             return
         }
 

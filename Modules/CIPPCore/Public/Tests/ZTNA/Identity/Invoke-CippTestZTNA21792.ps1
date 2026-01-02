@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21792 {
         $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21792' -TestType 'Identity' -Status 'Investigate' -ResultMarkdown 'Authorization policy not found in database' -Risk 'Medium' -Name 'Guests have restricted access to directory objects' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'External Collaboration'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21792' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Guests have restricted access to directory objects' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'External Collaboration'
             return
         }
 
