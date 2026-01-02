@@ -114,11 +114,11 @@ function Invoke-ListTests {
 
         $SecureScoreData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SecureScore'
         if ($SecureScoreData) {
-            $TestResultsData | Add-Member -NotePropertyName 'SecureScore' -NotePropertyValue $SecureScoreData -Force
+            $TestResultsData | Add-Member -NotePropertyName 'SecureScore' -NotePropertyValue @($SecureScoreData) -Force
         }
         $MFAStateData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'MFAState'
         if ($MFAStateData) {
-            $TestResultsData | Add-Member -NotePropertyName 'MFAState' -NotePropertyValue $MFAStateData -Force
+            $TestResultsData | Add-Member -NotePropertyName 'MFAState' -NotePropertyValue @($MFAStateData) -Force
         }
 
         $LicenseData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'LicenseOverview'
