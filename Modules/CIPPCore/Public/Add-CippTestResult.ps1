@@ -47,7 +47,7 @@ function Add-CippTestResult {
         [Parameter(Mandatory = $true)]
         [string]$TestId,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$testType = 'identity',
 
         [Parameter(Mandatory = $true)]
