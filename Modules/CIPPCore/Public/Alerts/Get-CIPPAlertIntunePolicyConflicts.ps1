@@ -75,7 +75,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
             $ManagedDevices = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$select=id,deviceName,userPrincipalName&`$expand=deviceConfigurationStates(`$select=displayName,state,settingStates)" -tenantid $TenantFilter
 
             foreach ($Device in $ManagedDevices) {
-                $PolicyStates = $Device.deviceConfigurationStates | Where-Object { $_.state -and ($AlertableStatuses -contains $_.state.ToLowerInvariant()) }
+                $PolicyStates = $Device.deviceConfigurationStates | Where-Object { $_.state -and ($AlertableStatuses -contains $_.state) }
                 foreach ($State in $PolicyStates) {
                     $Issues += [PSCustomObject]@{
                         Message           = "Policy '$($State.displayName)' is $($State.state) on device '$($Device.deviceName)' for $($Device.userPrincipalName)."
