@@ -79,7 +79,10 @@ function Invoke-ListTests {
             if ($ReportFound) {
                 $AllReportTests = $IdentityTests + $DevicesTests
                 # Use HashSet for O(1) lookup performance
-                $TestLookup = [System.Collections.Generic.HashSet[string]]::new([string[]]$AllReportTests)
+                $TestLookup = [System.Collections.Generic.HashSet[string]]::new()
+                foreach ($test in $AllReportTests) {
+                    [void]$TestLookup.Add($test)
+                }
                 $FilteredTests = $TestResultsData.TestResults | Where-Object { $TestLookup.Contains($_.RowKey) }
                 $TestResultsData.TestResults = @($FilteredTests)
             } else {
