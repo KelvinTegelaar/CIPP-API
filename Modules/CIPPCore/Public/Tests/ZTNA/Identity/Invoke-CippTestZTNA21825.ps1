@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21825 {
+    <#
+    .SYNOPSIS
+    Privileged users have short-lived sign-in sessions
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21825'

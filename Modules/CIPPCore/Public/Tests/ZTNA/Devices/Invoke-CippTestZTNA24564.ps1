@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24564 {
+    <#
+    .SYNOPSIS
+    Local account usage on Windows is restricted to reduce unauthorized access
+    #>
     param($Tenant)
     #Tested - Device
 

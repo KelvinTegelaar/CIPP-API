@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24575 {
+    <#
+    .SYNOPSIS
+    Defender Antivirus policies protect Windows devices from malware
+    #>
     param($Tenant)
     #Tested - Device
 

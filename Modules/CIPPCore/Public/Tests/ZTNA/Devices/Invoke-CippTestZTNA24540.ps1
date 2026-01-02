@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24540 {
+    <#
+    .SYNOPSIS
+    Windows Firewall policies protect against unauthorized network access
+    #>
     param($Tenant)
     #Tested - Device
     try {

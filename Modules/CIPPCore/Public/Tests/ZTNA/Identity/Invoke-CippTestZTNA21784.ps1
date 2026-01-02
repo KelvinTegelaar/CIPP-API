@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21784 {
+    <#
+    .SYNOPSIS
+    All user sign in activity uses phishing-resistant authentication methods
+    #>
     param($Tenant)
     #tested
     try {

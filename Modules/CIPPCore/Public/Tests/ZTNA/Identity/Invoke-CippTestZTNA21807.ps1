@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21807 {
+    <#
+    .SYNOPSIS
+    Creating new applications and service principals is restricted to privileged users
+    #>
     param($Tenant)
     #Tested
     try {

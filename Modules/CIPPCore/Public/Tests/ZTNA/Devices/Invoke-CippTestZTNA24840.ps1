@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24840 {
+    <#
+    .SYNOPSIS
+    Secure Wi-Fi profiles protect Android devices from unauthorized network access
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24840'

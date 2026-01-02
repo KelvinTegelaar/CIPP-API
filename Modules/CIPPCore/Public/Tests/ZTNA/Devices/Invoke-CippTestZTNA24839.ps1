@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24839 {
+    <#
+    .SYNOPSIS
+    Secure Wi-Fi profiles protect iOS devices from unauthorized network access
+    #>
     param($Tenant)
     #Tested - Device
 

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24541 {
+    <#
+    .SYNOPSIS
+    Compliance policies protect Windows devices
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24541'

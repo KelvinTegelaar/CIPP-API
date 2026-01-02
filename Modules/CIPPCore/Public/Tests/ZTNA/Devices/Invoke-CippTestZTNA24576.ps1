@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24576 {
+    <#
+    .SYNOPSIS
+    Endpoint Analytics is enabled to help identify risks on Windows devices
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24576'

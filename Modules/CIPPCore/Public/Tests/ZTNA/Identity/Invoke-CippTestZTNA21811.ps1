@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21811 {
+    <#
+    .SYNOPSIS
+    Password expiration is disabled
+    #>
     param($Tenant)
     #Tested
     try {

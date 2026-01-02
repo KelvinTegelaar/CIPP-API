@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24553 {
+    <#
+    .SYNOPSIS
+    Windows Update policies are enforced to reduce risk from unpatched vulnerabilities
+    #>
     param($Tenant)
     #Tested - Device
 

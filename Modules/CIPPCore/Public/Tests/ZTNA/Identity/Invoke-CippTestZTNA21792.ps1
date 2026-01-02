@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21792 {
+    <#
+    .SYNOPSIS
+    Guests have restricted access to directory objects
+    #>
     param($Tenant)
     #tested
     try {

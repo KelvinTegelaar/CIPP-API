@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21802 {
+    <#
+    .SYNOPSIS
+    Microsoft Authenticator app shows sign-in context
+    #>
     param($Tenant)
     #tested
     try {

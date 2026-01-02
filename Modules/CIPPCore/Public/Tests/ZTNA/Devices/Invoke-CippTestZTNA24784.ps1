@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24784 {
+    <#
+    .SYNOPSIS
+    Defender Antivirus policies protect macOS devices from malware
+    #>
     param($Tenant)
     #Tested - Device
 

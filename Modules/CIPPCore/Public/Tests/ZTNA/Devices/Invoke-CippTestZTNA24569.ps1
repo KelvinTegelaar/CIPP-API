@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24569 {
+    <#
+    .SYNOPSIS
+    FileVault encryption protects data on macOS devices
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24569'

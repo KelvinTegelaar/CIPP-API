@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24568 {
+    <#
+    .SYNOPSIS
+    Platform SSO is configured to strengthen authentication on macOS devices
+    #>
     param($Tenant)
     #Tested - Device
 

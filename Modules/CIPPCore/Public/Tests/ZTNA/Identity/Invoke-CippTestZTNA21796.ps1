@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21796 {
+    <#
+    .SYNOPSIS
+    Block legacy authentication policy is configured
+    #>
     param($Tenant)
     #tested
     try {

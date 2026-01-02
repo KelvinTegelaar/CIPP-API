@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21774 {
+    <#
+    .SYNOPSIS
+    Microsoft services applications do not have credentials configured
+    #>
     param($Tenant)
 
     try {

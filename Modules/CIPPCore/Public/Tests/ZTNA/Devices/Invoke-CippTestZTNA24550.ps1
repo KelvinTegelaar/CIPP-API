@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24550 {
+    <#
+    .SYNOPSIS
+    Data on Windows is protected by BitLocker encryption
+    #>
     param($Tenant)
     #Tested - Device
 

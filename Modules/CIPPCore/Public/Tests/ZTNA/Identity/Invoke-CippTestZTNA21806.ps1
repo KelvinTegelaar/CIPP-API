@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21806 {
+    <#
+    .SYNOPSIS
+    Secure the MFA registration (My Security Info) page
+    #>
     param($Tenant)
     #tested
     try {

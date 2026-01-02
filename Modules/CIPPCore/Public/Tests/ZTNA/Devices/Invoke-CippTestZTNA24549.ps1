@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24549 {
+    <#
+    .SYNOPSIS
+    Data on Android is protected by app protection policies
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24549'

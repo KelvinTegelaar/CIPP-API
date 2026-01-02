@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21820 {
+    <#
+    .SYNOPSIS
+    Activation alert for all privileged role assignments
+    #>
     param($Tenant)
     #Tested
     $TestId = 'ZTNA21820'

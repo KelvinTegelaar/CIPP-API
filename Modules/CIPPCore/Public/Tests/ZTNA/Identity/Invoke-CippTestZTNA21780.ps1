@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21780 {
+    <#
+    .SYNOPSIS
+    No usage of ADAL in the tenant
+    #>
     param($Tenant)
     #tested
     try {

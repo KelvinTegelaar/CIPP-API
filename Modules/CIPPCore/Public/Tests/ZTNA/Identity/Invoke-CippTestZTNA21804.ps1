@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21804 {
+    <#
+    .SYNOPSIS
+    SMS and Voice Call authentication methods are disabled
+    #>
     param($Tenant)
     #Tested
     try {

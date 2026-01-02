@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21772 {
+    <#
+    .SYNOPSIS
+    Applications do not have client secrets configured
+    #>
     param($Tenant)
     #tested
     try {

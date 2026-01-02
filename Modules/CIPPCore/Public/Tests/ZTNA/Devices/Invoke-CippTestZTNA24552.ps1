@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24552 {
+    <#
+    .SYNOPSIS
+    Data on macOS is protected by firewall
+    #>
     param($Tenant)
     #Tested - Device
 

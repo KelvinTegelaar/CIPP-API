@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21799 {
+    <#
+    .SYNOPSIS
+    Restrict high risk sign-ins
+    #>
     param($Tenant)
     #tested
     try {

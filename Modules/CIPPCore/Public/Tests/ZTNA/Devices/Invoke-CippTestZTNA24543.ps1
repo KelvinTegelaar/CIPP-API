@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24543 {
+    <#
+    .SYNOPSIS
+    Compliance policies protect iOS/iPadOS devices
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24543'

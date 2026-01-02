@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21773 {
+    <#
+    .SYNOPSIS
+    Applications do not have certificates with expiration longer than 180 days
+    #>
     param($Tenant)
     #tested
     try {

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21790 {
+    <#
+    .SYNOPSIS
+    Outbound cross-tenant access settings are configured
+    #>
     param($Tenant)
     #tested
     try {

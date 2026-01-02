@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21776 {
+    <#
+    .SYNOPSIS
+    User consent settings are restricted
+    #>
     param($Tenant)
     #tested
     try {

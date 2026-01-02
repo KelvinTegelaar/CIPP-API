@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24574 {
+    <#
+    .SYNOPSIS
+    Attack Surface Reduction rules are applied to Windows devices to prevent exploitation of vulnerable system components
+    #>
     param($Tenant)
     #Tested - Device
 

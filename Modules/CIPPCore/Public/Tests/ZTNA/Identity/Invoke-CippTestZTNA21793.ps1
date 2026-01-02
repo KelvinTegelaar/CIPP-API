@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21793 {
+    <#
+    .SYNOPSIS
+    Tenant restrictions v2 policy is configured
+    #>
     param($Tenant)
     #tested
     try {

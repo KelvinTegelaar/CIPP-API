@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21808 {
+    <#
+    .SYNOPSIS
+    Restrict device code flow
+    #>
     param($Tenant)
     #Tested
     try {

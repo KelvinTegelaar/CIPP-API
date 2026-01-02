@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21786 {
+    <#
+    .SYNOPSIS
+    User sign-in activity uses token protection
+    #>
     param($Tenant)
     #tested
     try {

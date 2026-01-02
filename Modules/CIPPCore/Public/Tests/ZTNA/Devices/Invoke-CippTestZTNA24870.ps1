@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24870 {
+    <#
+    .SYNOPSIS
+    Secure Wi-Fi profiles protect macOS devices from unauthorized network access
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24870'

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21787 {
+    <#
+    .SYNOPSIS
+    Permissions to create new tenants are limited to the Tenant Creator role
+    #>
     param($Tenant)
     #tested
     try {

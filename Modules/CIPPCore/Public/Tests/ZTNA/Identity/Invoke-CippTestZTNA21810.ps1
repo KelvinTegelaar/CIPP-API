@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21810 {
+    <#
+    .SYNOPSIS
+    Resource-specific consent is restricted
+    #>
     param($Tenant)
     #Tested
     try {

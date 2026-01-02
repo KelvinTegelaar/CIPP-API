@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24547 {
+    <#
+    .SYNOPSIS
+    Compliance policies protect personally owned Android devices
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA24547'

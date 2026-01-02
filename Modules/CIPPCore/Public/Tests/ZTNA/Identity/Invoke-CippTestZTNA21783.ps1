@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21783 {
+    <#
+    .SYNOPSIS
+    Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods
+    #>
     param($Tenant)
     #tested
     try {

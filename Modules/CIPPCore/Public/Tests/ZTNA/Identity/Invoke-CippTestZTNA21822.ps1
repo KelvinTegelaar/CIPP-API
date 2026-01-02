@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21822 {
+    <#
+    .SYNOPSIS
+    Guest access is limited to approved tenants
+    #>
     param($Tenant)
     #Tested
     $TestId = 'ZTNA21822'

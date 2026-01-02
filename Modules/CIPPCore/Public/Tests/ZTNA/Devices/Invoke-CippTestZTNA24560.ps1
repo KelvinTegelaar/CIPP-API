@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA24560 {
+    <#
+    .SYNOPSIS
+    Local administrator credentials on Windows are protected by Windows LAPS
+    #>
     param($Tenant)
     #Tested - Device
 

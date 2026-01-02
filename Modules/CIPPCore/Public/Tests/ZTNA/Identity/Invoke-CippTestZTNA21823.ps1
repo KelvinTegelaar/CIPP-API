@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21823 {
+    <#
+    .SYNOPSIS
+    Guest self-service sign-up via user flow is disabled
+    #>
     param($Tenant)
 
     $TestId = 'ZTNA21823'

@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21809 {
+    <#
+    .SYNOPSIS
+    Admin consent workflow is enabled
+    #>
     param($Tenant)
     #Tested
     try {

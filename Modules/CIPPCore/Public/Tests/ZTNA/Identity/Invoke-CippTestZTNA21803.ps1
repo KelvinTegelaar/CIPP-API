@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21803 {
+    <#
+    .SYNOPSIS
+    Migrate from legacy MFA and SSPR policies
+    #>
     param($Tenant)
     #Tested
     try {

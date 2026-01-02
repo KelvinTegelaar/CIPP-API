@@ -1,4 +1,8 @@
 function Invoke-CippTestZTNA21791 {
+    <#
+    .SYNOPSIS
+    Guests cannot invite other guests
+    #>
     param($Tenant)
     #tested
     try {
