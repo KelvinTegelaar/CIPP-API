@@ -14,7 +14,7 @@ function Start-CIPPDBCacheOrchestrator {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -message 'Starting database cache orchestration' -sev Info
-
+        Write-Host 'Starting database cache orchestration'
         $TenantList = Get-Tenants | Where-Object { $_.defaultDomainName -ne $null }
 
         if ($TenantList.Count -eq 0) {
@@ -23,16 +23,16 @@ function Start-CIPPDBCacheOrchestrator {
         }
 
         $Queue = New-CippQueueEntry -Name 'Database Cache Collection' -TotalTasks $TenantList.Count
-
         $Batch = foreach ($Tenant in $TenantList) {
             [PSCustomObject]@{
-                FunctionName = 'Push-CIPPDBCacheData'
+                FunctionName = 'CIPPDBCacheData'
                 TenantFilter = $Tenant.defaultDomainName
                 QueueId      = $Queue.RowKey
                 QueueName    = "DB Cache - $($Tenant.defaultDomainName)"
             }
         }
-
+        Write-Host "Created queue $($Queue.RowKey) for database cache collection of $($TenantList.Count) tenants"
+        Write-Host "Starting batch of $($Batch.Count) cache collection activities"
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batch)
             OrchestratorName = 'CIPPDBCacheOrchestrator'

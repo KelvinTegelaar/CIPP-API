@@ -28,12 +28,7 @@ function Get-CIPPTestResults {
         foreach ($CountRow in $CountData) {
             $TypeName = $CountRow.RowKey -replace '-Count$', ''
             $TenantCounts[$TypeName] = $CountRow.DataCount
-
-            if ($CountRow.Timestamp) {
-                if (-not $LatestTimestamp -or $CountRow.Timestamp -gt $LatestTimestamp) {
-                    $LatestTimestamp = $CountRow.Timestamp
-                }
-            }
+            $LatestTimestamp = $CountRow.Timestamp
         }
 
         return [PSCustomObject]@{

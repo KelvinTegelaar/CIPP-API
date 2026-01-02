@@ -11,7 +11,7 @@ function Push-CIPPDBCacheData {
     #>
     [CmdletBinding()]
     param($Item)
-
+    Write-Host "Starting cache collection for tenant: $($Item.TenantFilter) - Queue: $($Item.QueueName) (ID: $($Item.QueueId))"
     $TenantFilter = $Item.TenantFilter
     #This collects all data for a tenant and caches it in the CIPP Reporting database. DO NOT ADD PROCESSING OR LOGIC HERE.
     #The point of this file is to always be <10 minutes execution time.
