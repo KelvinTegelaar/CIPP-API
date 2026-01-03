@@ -36,10 +36,7 @@ function Invoke-ExecTestRun {
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
         $StatusCode = [HttpStatusCode]::OK
-        $Body = [PSCustomObject]@{
-            Results    = "Successfully started data collection and test run for $TenantFilter"
-            InstanceId = $InstanceId
-        }
+        $Body = [PSCustomObject]@{ Results = "Successfully started data collection and test run for $TenantFilter" }
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Data collection and test run orchestration started. Instance ID: $InstanceId" -sev Info
 
