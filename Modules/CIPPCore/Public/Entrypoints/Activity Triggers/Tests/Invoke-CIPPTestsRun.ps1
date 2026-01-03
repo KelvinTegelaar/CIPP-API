@@ -73,6 +73,6 @@ function Invoke-CIPPTestsRun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -message "Failed to start tests orchestration: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        throw
+        throw $ErrorMessage
     }
 }
