@@ -156,7 +156,7 @@ function Invoke-ListTests {
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
         })

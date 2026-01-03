@@ -53,7 +53,7 @@ function Invoke-AddTestReport {
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = ConvertTo-Json -InputObject $Body -Depth 10
         })

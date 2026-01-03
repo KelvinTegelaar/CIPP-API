@@ -46,7 +46,7 @@ function Invoke-ExecDevicePasscodeAction {
         $Results = $Result
     }
 
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @{Results = $Results }
         })
