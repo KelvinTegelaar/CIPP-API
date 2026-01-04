@@ -90,8 +90,11 @@ function Get-CIPPTenantAlignment {
                 $tenantData[$Tenant] = @{}
             }
             $tenantData[$Tenant][$FieldName] = @{
-                Value       = $FieldValue
-                LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                Value            = $FieldValue
+                LastRefresh      = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                LicenseAvailable = $Standard.LicenseAvailable
+                CurrentValue     = $Standard.CurrentValue
+                ExpectedValue    = $Standard.ExpectedValue
             }
         }
         $TenantStandards = $tenantData
@@ -276,6 +279,9 @@ function Get-CIPPTenantAlignment {
                                 StandardValue     = $StandardValueJson
                                 ComplianceStatus  = $ComplianceStatus
                                 ReportingDisabled = $IsReportingDisabled
+                                LicenseAvailable  = $StandardObject.LicenseAvailable
+                                CurrentValue      = $StandardObject.CurrentValue
+                                ExpectedValue     = $StandardObject.ExpectedValue
                             })
                     } else {
                         $ComplianceStatus = if ($IsReportingDisabled) {
@@ -290,6 +296,9 @@ function Get-CIPPTenantAlignment {
                                 StandardValue     = 'NOT FOUND'
                                 ComplianceStatus  = $ComplianceStatus
                                 ReportingDisabled = $IsReportingDisabled
+                                LicenseAvailable  = $null
+                                CurrentValue      = $null
+                                ExpectedValue     = $null
                             })
                     }
                 }

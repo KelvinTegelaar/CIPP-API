@@ -129,12 +129,14 @@ function Get-CIPPDrift {
                                 standardName        = $ComparisonItem.StandardName
                                 standardDisplayName = $displayName
                                 standardDescription = $standardDescription
-                                expectedValue       = 'Compliant'
                                 receivedValue       = $ComparisonItem.StandardValue
                                 state               = 'current'
                                 Status              = $Status
                                 Reason              = $reason
                                 lastChangedByUser   = $User
+                                LicenseAvailable    = $ComparisonItem.LicenseAvailable
+                                CurrentValue        = $ComparisonItem.CurrentValue
+                                ExpectedValue       = $ComparisonItem.ExpectedValue
                             })
                     }
                 }
@@ -286,7 +288,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Intune - $TenantPolicyName"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = $TenantPolicy.Policy
+                        receivedValue       = ($TenantPolicy.Policy | ConvertTo-Json -Depth 10 -Compress)
                         state               = 'current'
                         Status              = $Status
                         Reason              = $reason
