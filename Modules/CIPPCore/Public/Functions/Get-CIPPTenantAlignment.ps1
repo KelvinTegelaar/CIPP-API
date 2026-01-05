@@ -86,7 +86,7 @@ function Get-CIPPTenantAlignment {
                 }
             }
 
-            if (-not $tenantData.ContainsKey($Tenant)) {
+            if ($Tenant -and -not $tenantData.ContainsKey($Tenant)) {
                 $tenantData[$Tenant] = @{}
             }
             $tenantData[$Tenant][$FieldName] = @{
@@ -245,7 +245,8 @@ function Get-CIPPTenantAlignment {
                     # Use HashSet for Contains
                     $IsReportingDisabled = $ReportingDisabledSet.Contains($StandardKey)
                     # Use cached tenant data
-                    $HasStandard = $CurrentTenantStandards.ContainsKey($StandardKey)
+
+                    $HasStandard = $StandardKey -and $CurrentTenantStandards.ContainsKey($StandardKey)
 
                     if ($HasStandard) {
                         $StandardObject = $CurrentTenantStandards[$StandardKey]
