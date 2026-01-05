@@ -46,18 +46,10 @@ function Add-CIPPScheduledTask {
                 return "Could not run task: $ErrorMessage"
             }
         } else {
-            # Generate RowKey early to use in duplicate check
             if (!$Task.RowKey) {
                 $RowKey = (New-Guid).Guid
             } else {
                 $RowKey = $Task.RowKey
-            }
-
-            # Check for duplicate RowKey (prevents race conditions)
-            $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$RowKey'"
-            $ExistingTaskByKey = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
-            if ($ExistingTaskByKey) {
-                return "Task with ID $RowKey already exists"
             }
 
             if ($DisallowDuplicateName) {
@@ -125,7 +117,6 @@ function Add-CIPPScheduledTask {
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
             if ($Parameters -eq 'null') { $Parameters = '' }
 
-            # RowKey already generated during duplicate check above
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
                 $task.Recurrence
