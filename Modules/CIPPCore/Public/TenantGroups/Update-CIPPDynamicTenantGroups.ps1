@@ -96,12 +96,34 @@ function Update-CIPPDynamicTenantGroups {
                             }
                         }
                         'tenantGroupMember' {
-                            # Get members of the referenced tenant group
-                            $ReferencedGroupId = $Value.value
-                            if ($Operator -eq 'in') {
-                                "`$_.customerId -in `$script:TenantGroupMembersCache['$ReferencedGroupId']"
+                            # Get members of the referenced tenant group(s)
+                            if ($Operator -in @('in', 'notin')) {
+                                # Handle array of group IDs
+                                $ReferencedGroupIds = @($Value.value)
+
+                                # Collect all unique member customerIds from all referenced groups
+                                $AllMembers = [System.Collections.Generic.HashSet[string]]::new()
+                                foreach ($GroupId in $ReferencedGroupIds) {
+                                    if ($script:TenantGroupMembersCache.ContainsKey($GroupId)) {
+                                        foreach ($MemberId in $script:TenantGroupMembersCache[$GroupId]) {
+                                            [void]$AllMembers.Add($MemberId)
+                                        }
+                                    }
+                                }
+
+                                # Convert to array string for condition
+                                $MemberArray = $AllMembers | ForEach-Object { "'$_'" }
+                                $MemberArrayString = $MemberArray -join ', '
+
+                                if ($Operator -eq 'in') {
+                                    "`$_.customerId -in @($MemberArrayString)"
+                                } else {
+                                    "`$_.customerId -notin @($MemberArrayString)"
+                                }
                             } else {
-                                "`$_.customerId -notin `$script:TenantGroupMembersCache['$ReferencedGroupId']"
+                                # Single value with other operators
+                                $ReferencedGroupId = $Value.value
+                                "`$_.customerId -$Operator `$script:TenantGroupMembersCache['$ReferencedGroupId']"
                             }
                         }
                         'customVariable' {
