@@ -13,13 +13,27 @@ function Invoke-ListCustomRole {
 
     $AccessRoleGroupTable = Get-CippTable -tablename 'AccessRoleGroups'
     $RoleGroups = Get-CIPPAzDataTableEntity @AccessRoleGroupTable
+    
+    $AccessIPRangeTable = Get-CippTable -tablename 'AccessIPRanges'
+    $AccessIPRanges = Get-CIPPAzDataTableEntity @AccessIPRangeTable
 
     $TenantList = Get-Tenants -IncludeErrors
 
     $RoleList = [System.Collections.Generic.List[pscustomobject]]::new()
     foreach ($Role in $DefaultRoles) {
         $RoleGroup = $RoleGroups | Where-Object -Property RowKey -EQ $Role
-
+        
+        $IPRangeEntity = $AccessIPRanges | Where-Object -Property RowKey -EQ $Role
+        if ($IPRangeEntity) {
+            try {
+                $IPRanges = @($IPRangeEntity.IPRanges | ConvertFrom-Json)
+            } catch {
+                $IPRanges = @()
+            }
+        } else {
+            $IPRanges = @()
+        }
+        
         $RoleList.Add([pscustomobject]@{
                 RoleName       = $Role
                 Type           = 'Built-In'
@@ -28,6 +42,7 @@ function Invoke-ListCustomRole {
                 BlockedTenants = @()
                 EntraGroup     = $RoleGroup.GroupName ?? $null
                 EntraGroupId   = $RoleGroup.GroupId ?? $null
+                            IPRange        = $IPRanges
             })
     }
     foreach ($Role in $CustomRoles) {
@@ -129,3 +144,16 @@ function Invoke-ListCustomRole {
             Body       = ConvertTo-Json -InputObject $Body -Depth 5
         })
 }
+        
+        $IPRangeEntity = $AccessIPRanges | Where-Object -Property RowKey -EQ $Role.RowKey
+        if ($IPRangeEntity) {
+            try {
+                $IPRanges = @($IPRangeEntity.IPRanges | ConvertFrom-Json)
+            } catch {
+                $IPRanges = @()
+            }
+            $Role | Add-Member -NotePropertyName IPRange -NotePropertyValue $IPRanges -Force
+        } else {
+            $Role | Add-Member -NotePropertyName IPRange -NotePropertyValue @() -Force
+        }
+        
