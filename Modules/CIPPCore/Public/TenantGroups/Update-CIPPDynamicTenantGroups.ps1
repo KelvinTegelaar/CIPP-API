@@ -53,7 +53,9 @@ function Update-CIPPDynamicTenantGroups {
                 $script:TenantGroupMembersCache[$Member.GroupId] = [system.collections.generic.list[string]]::new()
             }
             $script:TenantGroupMembersCache[$Member.GroupId].Add($Member.customerId)
-        }        foreach ($Group in $DynamicGroups) {
+        }
+
+        foreach ($Group in $DynamicGroups) {
             try {
                 Write-LogMessage -API 'TenantGroups' -message "Processing dynamic group: $($Group.Name)" -sev Info
                 $Rules = @($Group.DynamicRules | ConvertFrom-Json)
