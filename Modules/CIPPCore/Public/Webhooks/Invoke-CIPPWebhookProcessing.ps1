@@ -51,7 +51,7 @@ function Invoke-CippWebhookProcessing {
                 }
                 $RuleDisabled = 0
                 New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
-                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
+                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Mailbox = $username; Confirm = $false; Identity = $_.RuleIdentity }
                     "Disabled Inbox Rule $($_.Identity) for $Username"
                     $RuleDisabled++
                 }
