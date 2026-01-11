@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM07 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.featureSettings.displayAppInformationRequiredState.includeTarget.id -eq 'all_users') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator app information display targets all users.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator app information display does not target all users. Current target: $($MethodConfig.featureSettings.displayAppInformationRequiredState.includeTarget.id)"
         }
 

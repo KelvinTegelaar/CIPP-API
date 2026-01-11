@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM09 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.featureSettings.displayLocationInformationRequiredState.state -eq 'enabled') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator location information display is enabled.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator location information display is not enabled. Current state: $($MethodConfig.featureSettings.displayLocationInformationRequiredState.state)"
         }
 

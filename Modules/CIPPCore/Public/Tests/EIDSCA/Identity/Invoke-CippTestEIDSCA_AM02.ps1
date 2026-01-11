@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM02 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.isSoftwareOathEnabled -eq $false) {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator software OATH is disabled.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator software OATH is enabled. It should be disabled."
         }
 

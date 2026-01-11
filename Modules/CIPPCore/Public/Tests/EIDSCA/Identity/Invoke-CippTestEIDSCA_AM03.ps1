@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM03 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.featureSettings.numberMatchingRequiredState.state -eq 'enabled') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator number matching is enabled.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator number matching is not enabled. Current state: $($MethodConfig.featureSettings.numberMatchingRequiredState.state)"
         }
 

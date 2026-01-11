@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM04 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.featureSettings.numberMatchingRequiredState.includeTarget.id -eq 'all_users') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator number matching targets all users.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator number matching does not target all users. Current target: $($MethodConfig.featureSettings.numberMatchingRequiredState.includeTarget.id)"
         }
 

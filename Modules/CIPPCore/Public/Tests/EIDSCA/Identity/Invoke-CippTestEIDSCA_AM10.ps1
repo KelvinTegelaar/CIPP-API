@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM10 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.featureSettings.displayLocationInformationRequiredState.includeTarget.id -eq 'all_users') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator location information display targets all users.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator location information display does not target all users. Current target: $($MethodConfig.featureSettings.displayLocationInformationRequiredState.includeTarget.id)"
         }
 

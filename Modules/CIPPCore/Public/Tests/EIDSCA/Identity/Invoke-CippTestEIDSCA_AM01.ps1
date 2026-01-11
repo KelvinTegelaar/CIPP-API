@@ -16,10 +16,10 @@ function Invoke-CippTestEIDSCA_AM01 {
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
 
         if ($MethodConfig.state -eq 'enabled') {
-            $Status = 'Pass'
+            $Status = 'Passed'
             $Result = 'Microsoft Authenticator authentication method is enabled.'
         } else {
-            $Status = 'Fail'
+            $Status = 'Failed'
             $Result = "Microsoft Authenticator authentication method is not enabled. Current state: $($MethodConfig.state)"
         }
 
