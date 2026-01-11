@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_CR04 {
         $AdminConsentPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 
         if (-not $AdminConsentPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'EIDSCACR04: Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
             return
         }
 
@@ -33,10 +33,10 @@ A shorter duration ensures consent requests are reviewed and processed in a time
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Low' -Name 'EIDSCACR04: Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Low' -Name 'Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Low' -Name 'EIDSCACR04: Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Low' -Name 'Admin Consent - Duration' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
     }
 }

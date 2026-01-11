@@ -1,7 +1,7 @@
 function Invoke-CippTestEIDSCA_AP06 {
     <#
     .SYNOPSIS
-    Default Authorization Settings - User can join the tenant by email validation
+    Authorization Policy - Email Validation Join
     #>
     param($Tenant)
 
@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_AP06 {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthorizationPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCAAP06: Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
             return
         }
 
@@ -33,10 +33,10 @@ Disabling this feature prevents unauthorized users from self-registering into yo
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCAAP06: Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCAAP06: Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP06' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Authorization Policy - Email Validation Join' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     }
 }

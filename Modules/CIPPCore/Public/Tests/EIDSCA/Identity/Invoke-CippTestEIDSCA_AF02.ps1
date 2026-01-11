@@ -9,14 +9,14 @@ function Invoke-CippTestEIDSCA_AF02 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'EIDSCAAF02: FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
         $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Fido2' }
 
         if (-not $Fido2Config) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'FIDO2 configuration not found in Authentication Methods Policy.' -Risk 'Low' -Name 'EIDSCAAF02: FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'FIDO2 configuration not found in Authentication Methods Policy.' -Risk 'Low' -Name 'FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
@@ -38,10 +38,10 @@ Enabling self-service registration improves user experience and adoption of FIDO
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Low' -Name 'EIDSCAAF02: FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Low' -Name 'FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Low' -Name 'EIDSCAAF02: FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF02' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Low' -Name 'FIDO2 - Self-Service' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     }
 }

@@ -1,7 +1,7 @@
 function Invoke-CippTestEIDSCA_AM01 {
     <#
     .SYNOPSIS
-    Checks if Microsoft Authenticator authentication method is enabled
+    MS Authenticator - State
     #>
     param($Tenant)
 
@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_AM01 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCAAM01: MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
@@ -23,10 +23,10 @@ function Invoke-CippTestEIDSCA_AM01 {
             $Result = "Microsoft Authenticator authentication method is not enabled. Current state: $($MethodConfig.state)"
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCAAM01: MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCAAM01: MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAM01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'MS Authenticator - State' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     }
 }

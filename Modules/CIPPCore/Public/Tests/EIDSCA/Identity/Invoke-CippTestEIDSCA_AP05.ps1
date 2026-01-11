@@ -1,7 +1,7 @@
 function Invoke-CippTestEIDSCA_AP05 {
     <#
     .SYNOPSIS
-    Default Authorization Settings - Sign-up for email based subscription
+    Authorization Policy - Email-Based Subscription Sign-up
     #>
     param($Tenant)
 
@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_AP05 {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthorizationPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'EIDSCAAP05: Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
             return
         }
 
@@ -33,10 +33,10 @@ Disabling email-based subscriptions helps maintain control over tenant access.
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'EIDSCAAP05: Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'EIDSCAAP05: Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Authorization Policy - Email-Based Subscription Sign-up' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     }
 }

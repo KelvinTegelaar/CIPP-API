@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_ST08 {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCAST08: Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
             return
         }
 
@@ -31,10 +31,10 @@ Guests should not be allowed to become group owners to maintain proper access co
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCAST08: Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCAST08: Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST08' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Classification and M365 Groups - Allow Guests to become Group Owner' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Settings'
     }
 }

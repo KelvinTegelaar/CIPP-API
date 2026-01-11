@@ -1,7 +1,7 @@
 function Invoke-CippTestEIDSCA_AP08 {
     <#
     .SYNOPSIS
-    Default Authorization Settings - User consent policy assigned for applications
+    Authorization Policy - User Consent Policy
     #>
     param($Tenant)
 
@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_AP08 {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthorizationPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCAAP08: Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
             return
         }
 
@@ -34,10 +34,10 @@ This limits users to only consent to applications with low-risk permissions.
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCAAP08: Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCAAP08: Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP08' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Authorization Policy - User Consent Policy' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'
     }
 }
