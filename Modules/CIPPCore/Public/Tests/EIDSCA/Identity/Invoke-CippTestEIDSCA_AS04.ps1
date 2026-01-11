@@ -9,14 +9,14 @@ function Invoke-CippTestEIDSCA_AS04 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AS04' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCA.AS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAS04' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCAAS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
         $SmsConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Sms' }
 
         if (-not $SmsConfig) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AS04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'SMS authentication configuration not found in Authentication Methods Policy.' -Risk 'High' -Name 'EIDSCA.AS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAS04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'SMS authentication configuration not found in Authentication Methods Policy.' -Risk 'High' -Name 'EIDSCAAS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
@@ -47,10 +47,10 @@ Disabling SMS for sign-in while keeping it for MFA provides better security.
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AS04' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCA.AS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAS04' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCAAS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AS04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCA.AS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAS04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCAAS04: SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
     }
 }

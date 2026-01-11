@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_CP03 {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CP03' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCA.CP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACP03' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'EIDSCACP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
             return
         }
 
@@ -31,10 +31,10 @@ User consent for risky apps should be blocked to prevent security risks.
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CP03' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCA.CP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACP03' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'EIDSCACP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CP03' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCA.CP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACP03' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'EIDSCACP03: Consent Policy Settings - Block user consent for risky apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'
     }
 }

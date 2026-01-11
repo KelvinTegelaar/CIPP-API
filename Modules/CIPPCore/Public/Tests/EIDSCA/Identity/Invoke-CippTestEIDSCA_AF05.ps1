@@ -9,14 +9,14 @@ function Invoke-CippTestEIDSCA_AF05 {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AF05' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'EIDSCA.AF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF05' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'EIDSCAAF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
             return
         }
 
         $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Fido2' }
 
         if (-not $Fido2Config) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AF05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'FIDO2 configuration not found in Authentication Methods Policy.' -Risk 'Medium' -Name 'EIDSCA.AF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'FIDO2 configuration not found in Authentication Methods Policy.' -Risk 'Medium' -Name 'EIDSCAAF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
             return
         }
 
@@ -39,10 +39,10 @@ Specifying AAGuids allows you to restrict registration to specific, approved sec
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AF05' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'EIDSCA.AF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF05' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'EIDSCAAF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.AF05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'EIDSCA.AF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF05' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'EIDSCAAF05: FIDO2 - Restricted Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'
     }
 }

@@ -9,7 +9,7 @@ function Invoke-CippTestEIDSCA_CR01 {
         $AdminConsentPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 
         if (-not $AdminConsentPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CR01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'EIDSCA.CR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'EIDSCACR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
             return
         }
 
@@ -31,10 +31,10 @@ Enabling this workflow provides a secure process for users to request access to 
 "@
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CR01' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'EIDSCA.CR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR01' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'EIDSCACR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCA.CR01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'EIDSCA.CR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'EIDSCACR01: Admin Consent - Enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'
     }
 }
