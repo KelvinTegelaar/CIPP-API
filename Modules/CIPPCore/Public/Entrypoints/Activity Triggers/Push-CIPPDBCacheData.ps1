@@ -256,6 +256,27 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoRemoteDomain collection failed: $($_.Exception.Message)" -sev Error
         }
 
+
+        Write-Host 'Getting cache for ExoSharingPolicy'
+        try { Set-CIPPDBCacheExoSharingPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoSharingPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoAdminAuditLogConfig'
+        try { Set-CIPPDBCacheExoAdminAuditLogConfig -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAdminAuditLogConfig collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoPresetSecurityPolicy'
+        try { Set-CIPPDBCacheExoPresetSecurityPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoPresetSecurityPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoTenantAllowBlockList'
+        try { Set-CIPPDBCacheExoTenantAllowBlockList -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoTenantAllowBlockList collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         Write-Host 'Getting cache for License Overview'
         try { Set-CIPPDBCacheLicenseOverview -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "License Overview collection failed: $($_.Exception.Message)" -sev Error
