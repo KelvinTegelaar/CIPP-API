@@ -31,10 +31,10 @@ function Invoke-CippTestCISAMSEXO113 {
         if ($PoliciesWithIntelligence.Count -gt 0) {
             $ResultTable = $PoliciesWithIntelligence | ForEach-Object {
                 [PSCustomObject]@{
-                    'Policy' = $_.Identity
-                    'Mailbox Intelligence' = $_.EnableMailboxIntelligence
+                    'Policy'                  = $_.Identity
+                    'Mailbox Intelligence'    = $_.EnableMailboxIntelligence
                     'Intelligence Protection' = $_.EnableMailboxIntelligenceProtection
-                    'State' = $_.State
+                    'State'                   = $_.State
                 }
             }
 
@@ -43,7 +43,7 @@ function Invoke-CippTestCISAMSEXO113 {
             $Status = 'Pass'
         } else {
             $Result = "❌ **Fail**: No policies found with mailbox intelligence enabled.`n`n"
-            $Result += "Enable mailbox intelligence in preset security policies for AI-powered impersonation protection."
+            $Result += 'Enable mailbox intelligence in preset security policies for AI-powered impersonation protection.'
             $Status = 'Fail'
         }
 
