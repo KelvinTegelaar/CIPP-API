@@ -43,11 +43,20 @@ function Add-CIPPDbItem {
     try {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
+        # Helper function to format RowKey values by removing disallowed characters
+        function Format-RowKey {
+            param([string]$RowKey)
+
+            # Remove disallowed characters: / \ # ? and control characters (U+0000 to U+001F and U+007F to U+009F)
+            $sanitized = $RowKey -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', ''
+
+            return $sanitized
+        }
 
         if ($Count) {
             $Entity = @{
                 PartitionKey = $TenantFilter
-                RowKey       = "$Type-Count"
+                RowKey       = Format-RowKey "$Type-Count"
                 DataCount    = [int]$Data.Count
             }
 
@@ -61,10 +70,10 @@ function Add-CIPPDbItem {
                 Remove-AzDataTableEntity @Table -Entity $ExistingEntities -Force | Out-Null
             }
             $Entities = foreach ($Item in $Data) {
-                $ItemId = $Item.id ? $Item.id : $item.skuId
+                $ItemId = $Item.id ?? $Item.ExternalDirectoryObjectId ?? $Item.Identity ?? $Item.skuId
                 @{
                     PartitionKey = $TenantFilter
-                    RowKey       = "$Type-$ItemId"
+                    RowKey       = Format-RowKey "$Type-$ItemId"
                     Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
                     Type         = $Type
                 }
