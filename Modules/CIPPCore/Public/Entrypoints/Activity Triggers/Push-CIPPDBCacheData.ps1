@@ -211,6 +211,51 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAcceptedDomains collection failed: $($_.Exception.Message)" -sev Error
         }
 
+        Write-Host 'Getting cache for ExoHostedContentFilterPolicy'
+        try { Set-CIPPDBCacheExoHostedContentFilterPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoHostedContentFilterPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoHostedOutboundSpamFilterPolicy'
+        try { Set-CIPPDBCacheExoHostedOutboundSpamFilterPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoHostedOutboundSpamFilterPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoAntiPhishPolicy'
+        try { Set-CIPPDBCacheExoAntiPhishPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAntiPhishPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoSafeLinksPolicy'
+        try { Set-CIPPDBCacheExoSafeLinksPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoSafeLinksPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoSafeAttachmentPolicy'
+        try { Set-CIPPDBCacheExoSafeAttachmentPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoSafeAttachmentPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoMalwareFilterPolicy'
+        try { Set-CIPPDBCacheExoMalwareFilterPolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoMalwareFilterPolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoAtpPolicyForO365'
+        try { Set-CIPPDBCacheExoAtpPolicyForO365 -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoAtpPolicyForO365 collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoQuarantinePolicy'
+        try { Set-CIPPDBCacheExoQuarantinePolicy -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoQuarantinePolicy collection failed: $($_.Exception.Message)" -sev Error
+        }
+
+        Write-Host 'Getting cache for ExoRemoteDomain'
+        try { Set-CIPPDBCacheExoRemoteDomain -TenantFilter $TenantFilter } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "ExoRemoteDomain collection failed: $($_.Exception.Message)" -sev Error
+        }
+
         Write-Host 'Getting cache for License Overview'
         try { Set-CIPPDBCacheLicenseOverview -TenantFilter $TenantFilter } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "License Overview collection failed: $($_.Exception.Message)" -sev Error
