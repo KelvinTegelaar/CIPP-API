@@ -17,36 +17,43 @@ function Set-CIPPDBCacheRoles {
 
         $Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directoryRoles' -tenantid $TenantFilter
 
-        $RolesWithMembers = foreach ($Role in $Roles) {
-            try {
-                $Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?&`$select=id,displayName,userPrincipalName" -tenantid $TenantFilter
+        # Build bulk request for role members
+        $MemberRequests = $Roles | ForEach-Object {
+            if ($_.id) {
+                [PSCustomObject]@{
+                    id     = $_.id
+                    method = 'GET'
+                    url    = "/directoryRoles/$($_.id)/members?`$select=id,displayName,userPrincipalName"
+                }
+            }
+        }
+
+        if ($MemberRequests) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching role members' -sev Info
+            $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
+
+            # Add members to each role object
+            $RolesWithMembers = foreach ($Role in $Roles) {
+                $Members = ($MemberResults | Where-Object { $_.id -eq $Role.id }).body.value
                 [PSCustomObject]@{
                     id             = $Role.id
                     displayName    = $Role.displayName
                     description    = $Role.description
                     roleTemplateId = $Role.roleTemplateId
                     members        = $Members
-                    memberCount    = $Members.Count
-                }
-            } catch {
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to get members for role $($Role.displayName): $($_.Exception.Message)" -sev Warning
-                [PSCustomObject]@{
-                    id             = $Role.id
-                    displayName    = $Role.displayName
-                    description    = $Role.description
-                    roleTemplateId = $Role.roleTemplateId
-                    members        = @()
-                    memberCount    = 0
+                    memberCount    = ($Members | Measure-Object).Count
                 }
             }
+
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers -Count
+            $Roles = $null
+            $RolesWithMembers = $null
+        } else {
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $Roles
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $Roles -Count
+            $Roles = $null
         }
-
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers
-
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers -Count
-
-        $Roles = $null
-        $RolesWithMembers = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory roles successfully' -sev Info
 
