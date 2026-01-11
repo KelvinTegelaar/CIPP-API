@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AT01 {
     Temp Access Pass - State
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 

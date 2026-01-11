@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_CP04 {
     Consent Policy Settings - Users can request admin consent
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

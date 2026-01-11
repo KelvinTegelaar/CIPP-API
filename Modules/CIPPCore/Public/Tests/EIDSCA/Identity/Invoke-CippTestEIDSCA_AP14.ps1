@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP14 {
     Default Authorization Settings - Default User Role Permissions - Allowed to read other users
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

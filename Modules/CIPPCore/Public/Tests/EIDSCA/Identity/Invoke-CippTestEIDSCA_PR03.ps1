@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_PR03 {
     Password Rule Settings - Enforce custom list
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

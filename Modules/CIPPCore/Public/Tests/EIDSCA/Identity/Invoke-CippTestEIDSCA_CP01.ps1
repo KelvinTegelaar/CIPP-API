@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_CP01 {
     Consent Policy Settings - Group owner consent for apps accessing data
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

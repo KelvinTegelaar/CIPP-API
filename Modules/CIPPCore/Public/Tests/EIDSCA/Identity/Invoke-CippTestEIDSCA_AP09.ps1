@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP09 {
     Default Authorization Settings - Allow user consent on risk-based apps
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_CP03 {
     Consent Policy Settings - Block user consent for risky apps
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

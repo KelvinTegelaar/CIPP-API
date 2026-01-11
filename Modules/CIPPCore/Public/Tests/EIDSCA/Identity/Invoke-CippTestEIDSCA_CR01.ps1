@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_CR01 {
     Admin Consent - Enabled
     #>
     param($Tenant)
-    
+
     try {
         $AdminConsentPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 

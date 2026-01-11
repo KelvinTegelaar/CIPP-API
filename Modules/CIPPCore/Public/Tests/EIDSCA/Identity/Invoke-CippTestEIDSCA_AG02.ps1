@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AG02 {
     Authentication Method - General Settings - Report suspicious activity State
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 

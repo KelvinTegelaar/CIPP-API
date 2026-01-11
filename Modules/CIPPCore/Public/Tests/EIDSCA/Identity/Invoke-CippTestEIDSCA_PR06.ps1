@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_PR06 {
     Password Rule Settings - Lockout threshold
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

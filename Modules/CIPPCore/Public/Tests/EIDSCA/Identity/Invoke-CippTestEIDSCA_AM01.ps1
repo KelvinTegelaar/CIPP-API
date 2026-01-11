@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AM01 {
     Checks if Microsoft Authenticator authentication method is enabled
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
@@ -14,7 +14,7 @@ function Invoke-CippTestEIDSCA_AM01 {
         }
 
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
-        
+
         if ($MethodConfig.state -eq 'enabled') {
             $Status = 'Pass'
             $Result = 'Microsoft Authenticator authentication method is enabled.'

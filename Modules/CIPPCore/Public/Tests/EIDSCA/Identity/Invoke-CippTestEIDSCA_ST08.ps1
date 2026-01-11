@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_ST08 {
     Classification and M365 Groups - Allow Guests to become Group Owner
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

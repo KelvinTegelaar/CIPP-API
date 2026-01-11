@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AM02 {
     Checks if Microsoft Authenticator software OATH is disabled
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
@@ -14,7 +14,7 @@ function Invoke-CippTestEIDSCA_AM02 {
         }
 
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
-        
+
         if ($MethodConfig.isSoftwareOathEnabled -eq $false) {
             $Status = 'Pass'
             $Result = 'Microsoft Authenticator software OATH is disabled.'

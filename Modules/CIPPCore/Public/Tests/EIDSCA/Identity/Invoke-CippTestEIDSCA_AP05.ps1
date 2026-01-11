@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP05 {
     Default Authorization Settings - Sign-up for email based subscription
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

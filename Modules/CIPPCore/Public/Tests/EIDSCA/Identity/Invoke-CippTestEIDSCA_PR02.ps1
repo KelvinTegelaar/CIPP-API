@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_PR02 {
     Password Rule Settings - Enable password protection on Windows Server Active Directory
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

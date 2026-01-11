@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AM03 {
     Checks if Microsoft Authenticator number matching is enabled
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
@@ -14,7 +14,7 @@ function Invoke-CippTestEIDSCA_AM03 {
         }
 
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
-        
+
         if ($MethodConfig.featureSettings.numberMatchingRequiredState.state -eq 'enabled') {
             $Status = 'Pass'
             $Result = 'Microsoft Authenticator number matching is enabled.'

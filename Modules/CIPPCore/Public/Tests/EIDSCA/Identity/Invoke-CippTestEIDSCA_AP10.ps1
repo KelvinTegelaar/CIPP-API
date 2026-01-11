@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP10 {
     Default Authorization Settings - Default User Role Permissions - Allowed to create Apps
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

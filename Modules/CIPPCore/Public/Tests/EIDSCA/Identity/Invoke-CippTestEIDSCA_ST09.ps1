@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_ST09 {
     Classification and M365 Groups - Allow Guests to have access to groups content
     #>
     param($Tenant)
-    
+
     try {
         $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
 

@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP01 {
     Default Authorization Settings - Enabled Self service password reset for administrators
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

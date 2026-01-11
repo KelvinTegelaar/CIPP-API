@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AM10 {
     Checks if Microsoft Authenticator location information display targets all users
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
@@ -14,7 +14,7 @@ function Invoke-CippTestEIDSCA_AM10 {
         }
 
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
-        
+
         if ($MethodConfig.featureSettings.displayLocationInformationRequiredState.includeTarget.id -eq 'all_users') {
             $Status = 'Pass'
             $Result = 'Microsoft Authenticator location information display targets all users.'

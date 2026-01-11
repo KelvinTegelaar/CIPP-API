@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP06 {
     Default Authorization Settings - User can join the tenant by email validation
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

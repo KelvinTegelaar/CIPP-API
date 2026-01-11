@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AM07 {
     Checks if Microsoft Authenticator app information display targets all users
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
@@ -14,7 +14,7 @@ function Invoke-CippTestEIDSCA_AM07 {
         }
 
         $MethodConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' }
-        
+
         if ($MethodConfig.featureSettings.displayAppInformationRequiredState.includeTarget.id -eq 'all_users') {
             $Status = 'Pass'
             $Result = 'Microsoft Authenticator app information display targets all users.'

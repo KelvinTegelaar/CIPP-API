@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AP07 {
     Default Authorization Settings - Guest user access
     #>
     param($Tenant)
-    
+
     try {
         $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 

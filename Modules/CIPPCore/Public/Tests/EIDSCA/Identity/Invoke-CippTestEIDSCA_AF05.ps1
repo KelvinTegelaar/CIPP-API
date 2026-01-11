@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AF05 {
     FIDO2 - Restricted Keys
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 

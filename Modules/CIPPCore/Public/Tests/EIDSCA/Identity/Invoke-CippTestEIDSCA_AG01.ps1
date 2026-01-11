@@ -4,7 +4,7 @@ function Invoke-CippTestEIDSCA_AG01 {
     Authentication Method - General Settings - Manage migration
     #>
     param($Tenant)
-    
+
     try {
         $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
