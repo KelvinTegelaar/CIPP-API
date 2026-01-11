@@ -1,5 +1,5 @@
 {
-  "name": "Entra ID Security Configuration Analyzer (EIDSCA) Tests",
+  "name": "EIDSCA (Entra ID Security Configuration Analyzer) Tests",
   "description": "Comprehensive security assessment for Microsoft Entra ID (formerly Azure AD) covering authorization policies, authentication methods, consent policies, password policies, and group settings. Based on Microsoft's EIDSCA framework for identity security best practices.",
   "version": "1.0",
   "source": "https://github.com/maester365/maester",

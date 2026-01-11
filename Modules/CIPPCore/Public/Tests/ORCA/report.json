@@ -1,5 +1,5 @@
 {
-  "name": "Office 365 Recommended Configuration Analyzer (ORCA) Tests",
+  "name": "ORCA (Office 365 Recommended Configuration Analyzer) Tests",
   "description": "Comprehensive security assessment for Microsoft Exchange Online and Office 365 security configurations. Tests cover anti-spam, anti-phish, anti-malware, safe links, safe attachments, DKIM, transport rules, and other Exchange Online security settings.",
   "version": "1.0",
   "source": "https://github.com/maester365/maester",
