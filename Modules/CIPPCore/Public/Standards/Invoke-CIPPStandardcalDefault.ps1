@@ -115,8 +115,5 @@ function Invoke-CIPPStandardcalDefault {
 
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter out of $TotalMailboxes mailboxes." -sev Info
         }
-        if ($Settings.report -eq $true) {
-            #This script always returns true, as it only disables the Safe Senders list
-            Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -FieldValue $true -Tenant $Tenant
-        }
+
     }

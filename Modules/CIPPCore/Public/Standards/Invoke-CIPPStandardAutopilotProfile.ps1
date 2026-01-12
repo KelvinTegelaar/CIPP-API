@@ -78,6 +78,32 @@ function Invoke-CIPPStandardAutopilotProfile {
         $StateIsCorrect = $false
     }
 
+    $CurrentValue = $CurrentConfig | Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, @{Name = 'outOfBoxExperienceSetting'; Expression = {
+            [PSCustomObject]@{
+                deviceUsageType              = $_.outOfBoxExperienceSetting.deviceUsageType
+                privacySettingsHidden        = $_.outOfBoxExperienceSetting.privacySettingsHidden
+                eulaHidden                   = $_.outOfBoxExperienceSetting.eulaHidden
+                userType                     = $_.outOfBoxExperienceSetting.userType
+                keyboardSelectionPageSkipped = $_.outOfBoxExperienceSetting.keyboardSelectionPageSkipped
+            }
+        }
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        displayName                   = $Settings.DisplayName
+        description                   = $Settings.Description
+        deviceNameTemplate            = $Settings.DeviceNameTemplate
+        locale                        = $Settings.Languages.value
+        preprovisioningAllowed        = $Settings.AllowWhiteGlove
+        hardwareHashExtractionEnabled = $Settings.CollectHash
+        outOfBoxExperienceSetting     = [PSCustomObject]@{
+            deviceUsageType              = $DeploymentMode
+            privacySettingsHidden        = $Settings.HidePrivacy
+            eulaHidden                   = $Settings.HideTerms
+            userType                     = $userType
+            keyboardSelectionPageSkipped = $Settings.AutoKeyboard
+        }
+    }
+
     # Remediate if the state is not correct
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -117,8 +143,7 @@ function Invoke-CIPPStandardAutopilotProfile {
 
     # Report
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect -eq $true ? $true : $CurrentConfig
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -FieldValue $FieldValue -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
