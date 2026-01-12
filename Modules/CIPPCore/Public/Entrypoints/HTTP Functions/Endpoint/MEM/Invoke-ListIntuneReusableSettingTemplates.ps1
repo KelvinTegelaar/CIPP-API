@@ -10,6 +10,12 @@ function Invoke-ListIntuneReusableSettingTemplates {
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate'"
+
+    if ($Request.query.ID) {
+        $EscapedId = $Request.query.ID -replace "'", "''"  # escape OData quotes
+        $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$EscapedId'"
+    }
+
     $RawTemplates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     $Templates = foreach ($Item in $RawTemplates) {
@@ -31,10 +37,6 @@ function Invoke-ListIntuneReusableSettingTemplates {
     }
 
     $Templates = $Templates | Sort-Object -Property displayName
-
-    if ($Request.query.ID) {
-        $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.ID
-    }
 
     return ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::OK
