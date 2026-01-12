@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO95 {
         $MalwarePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicy'
 
         if (-not $MalwarePolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoMalwareFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO95' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoMalwareFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Click-to-run files SHOULD be blocked' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO95' -TenantFilter $Tenant
             return
         }
 
@@ -30,10 +30,10 @@ function Invoke-CippTestCISAMSEXO95 {
             if (-not $Policy.EnableFileFilter) {
                 # Policy doesn't have file filtering enabled at all
                 $FailedPolicies.Add([PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'File Filter Enabled' = $false
-                    'Issue' = 'File filtering not enabled'
-                })
+                        'Policy Name'         = $Policy.Name
+                        'File Filter Enabled' = $false
+                        'Issue'               = 'File filtering not enabled'
+                    })
                 continue
             }
 
@@ -43,26 +43,32 @@ function Invoke-CippTestCISAMSEXO95 {
 
             if ($MissingTypes) {
                 $FailedPolicies.Add([PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'File Filter Enabled' = $true
-                    'Missing Blocked Types' = ($MissingTypes -join ', ')
-                })
+                        'Policy Name'           = $Policy.Name
+                        'File Filter Enabled'   = $true
+                        'Missing Blocked Types' = ($MissingTypes -join ', ')
+                    })
             }
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All malware filter policies block click-to-run files (.exe, .cmd, .vbe)."
-            $Status = 'Pass'
+            $Result = '✅ **Pass**: All malware filter policies block click-to-run files (.exe, .cmd, .vbe).'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: $($FailedPolicies.Count) malware filter policy/policies do not properly block click-to-run executables:`n`n"
-            $Result += ($FailedPolicies | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | File Filter Enabled | Missing Blocked Types |`n"
+            $Result += "| :---------- | :------------------ | :-------------------- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $fileFilterValue = if ($Policy.'File Filter Enabled') { $Policy.'File Filter Enabled' } else { $Policy.'Issue' }
+                $missingTypes = if ($Policy.'Missing Blocked Types') { $Policy.'Missing Blocked Types' } else { 'N/A' }
+                $Result += "| $($Policy.'Policy Name') | $fileFilterValue | $missingTypes |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO95' -Status $Status -ResultMarkdown $Result -Risk 'High' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO95' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Click-to-run files SHOULD be blocked' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO95' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Click-to-run files SHOULD be blocked' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO95' -TenantFilter $Tenant
     }
 }

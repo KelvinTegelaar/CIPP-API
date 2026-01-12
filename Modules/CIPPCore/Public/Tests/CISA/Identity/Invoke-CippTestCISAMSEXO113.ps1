@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO113 {
         $PresetPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
 
         if (-not $PresetPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO113' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Mailbox intelligence SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO113' -TenantFilter $Tenant
             return
         }
 
@@ -29,28 +29,23 @@ function Invoke-CippTestCISAMSEXO113 {
         }
 
         if ($PoliciesWithIntelligence.Count -gt 0) {
-            $ResultTable = $PoliciesWithIntelligence | ForEach-Object {
-                [PSCustomObject]@{
-                    'Policy'                  = $_.Identity
-                    'Mailbox Intelligence'    = $_.EnableMailboxIntelligence
-                    'Intelligence Protection' = $_.EnableMailboxIntelligenceProtection
-                    'State'                   = $_.State
-                }
-            }
-
             $Result = "✅ **Pass**: $($PoliciesWithIntelligence.Count) policy/policies have mailbox intelligence enabled:`n`n"
-            $Result += ($ResultTable | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Pass'
+            $Result += "| Policy | Mailbox Intelligence | Intelligence Protection | State |`n"
+            $Result += "| :----- | :------------------- | :---------------------- | :---- |`n"
+            foreach ($Policy in $PoliciesWithIntelligence) {
+                $Result += "| $($Policy.Identity) | $($Policy.EnableMailboxIntelligence) | $($Policy.EnableMailboxIntelligenceProtection) | $($Policy.State) |`n"
+            }
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: No policies found with mailbox intelligence enabled.`n`n"
             $Result += 'Enable mailbox intelligence in preset security policies for AI-powered impersonation protection.'
-            $Status = 'Fail'
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO113' -Status $Status -ResultMarkdown $Result -Risk 'High' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO113' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Mailbox intelligence SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO113' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Mailbox intelligence SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO113' -TenantFilter $Tenant
     }
 }

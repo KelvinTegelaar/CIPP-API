@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO62 {
         $SharingPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSharingPolicy'
 
         if (-not $SharingPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSharingPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO62' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSharingPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Calendar details SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection' -TestId 'CISAMSEXO62' -TenantFilter $Tenant
             return
         }
 
@@ -42,17 +42,21 @@ function Invoke-CippTestCISAMSEXO62 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: No sharing policies allow detailed calendar sharing with all domains."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: $($FailedPolicies.Count) sharing policy/policies allow detailed calendar sharing with all domains:`n`n"
-            $Result += ($FailedPolicies | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Enabled | Issue |`n"
+            $Result += "| :---------- | :------ | :---- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.'Policy Name') | $($Policy.Enabled) | $($Policy.Issue) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO62' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO62' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Calendar details SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO62' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Calendar details SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection' -TestId 'CISAMSEXO62' -TenantFilter $Tenant
     }
 }

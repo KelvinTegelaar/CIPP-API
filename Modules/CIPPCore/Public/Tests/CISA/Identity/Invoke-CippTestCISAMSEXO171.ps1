@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO171 {
         $AuditConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
 
         if (-not $AuditConfig) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO171' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Microsoft Purview Audit logging SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO171' -TenantFilter $Tenant
             return
         }
 
@@ -29,18 +29,18 @@ function Invoke-CippTestCISAMSEXO171 {
             $Result = "✅ **Pass**: Microsoft Purview Audit (Standard) logging is enabled.`n`n"
             $Result += "**Current Settings:**`n"
             $Result += "- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)"
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: Microsoft Purview Audit (Standard) logging is not enabled.`n`n"
             $Result += "**Current Settings:**`n"
             $Result += "- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)"
-            $Status = 'Fail'
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO171' -Status $Status -ResultMarkdown $Result -Risk 'High' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO171' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Microsoft Purview Audit logging SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO171' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Microsoft Purview Audit logging SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO171' -TenantFilter $Tenant
     }
 }

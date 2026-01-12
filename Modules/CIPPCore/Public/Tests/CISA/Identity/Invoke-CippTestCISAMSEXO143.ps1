@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO143 {
         $SpamPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $SpamPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO143' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Allowed senders SHOULD NOT be added to anti-spam filter' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO143' -TenantFilter $Tenant
             return
         }
 
@@ -31,27 +31,31 @@ function Invoke-CippTestCISAMSEXO143 {
 
             if ($AllowedSenders -gt 0 -or $AllowedSenderDomains -gt 0) {
                 $FailedPolicies.Add([PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'Allowed Senders' = $AllowedSenders
-                    'Allowed Domains' = $AllowedSenderDomains
-                    'Issue' = 'Has allowed senders/domains that bypass spam filtering'
-                })
+                        'Policy Name'     = $Policy.Name
+                        'Allowed Senders' = $AllowedSenders
+                        'Allowed Domains' = $AllowedSenderDomains
+                        'Issue'           = 'Has allowed senders/domains that bypass spam filtering'
+                    })
             }
         }
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have no spam filter bypasses configured."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have spam filter bypasses configured:`n`n"
-            $Result += ($FailedPolicies | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Allowed Senders | Allowed Domains | Issue |`n"
+            $Result += "| :---------- | :-------------- | :-------------- | :---- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.'Policy Name') | $($Policy.'Allowed Senders') | $($Policy.'Allowed Domains') | $($Policy.Issue) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO143' -Status $Status -ResultMarkdown $Result -Risk 'High' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO143' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Allowed senders SHOULD NOT be added to anti-spam filter' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO143' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Allowed senders SHOULD NOT be added to anti-spam filter' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO143' -TenantFilter $Tenant
     }
 }

@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO111 {
         $PresetPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
 
         if (-not $PresetPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO111' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Impersonation protection checks SHOULD be used' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection' -TestId 'CISAMSEXO111' -TenantFilter $Tenant
             return
         }
 
@@ -36,17 +36,17 @@ function Invoke-CippTestCISAMSEXO111 {
         if ($EnabledPolicies.Count -gt 0) {
             $Result = "✅ **Pass**: Preset security policies with impersonation protection are enabled:`n`n"
             $Result += ($EnabledPolicies | ForEach-Object { "- $_" }) -join "`n"
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: No preset security policies with impersonation protection enabled.`n`n"
             $Result += "Enable Standard or Strict preset security policies to provide impersonation protection."
-            $Status = 'Fail'
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO111' -Status $Status -ResultMarkdown $Result -Risk 'High' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO111' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Impersonation protection checks SHOULD be used' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Category 'Exchange Online' -TestId 'CISAMSEXO111' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Impersonation protection checks SHOULD be used' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection' -TestId 'CISAMSEXO111' -TenantFilter $Tenant
     }
 }

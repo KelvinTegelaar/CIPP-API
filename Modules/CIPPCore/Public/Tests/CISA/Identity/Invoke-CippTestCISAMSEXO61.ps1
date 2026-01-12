@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO61 {
         $SharingPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSharingPolicy'
 
         if (-not $SharingPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSharingPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO61' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSharingPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Contact folders SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection' -TestId 'CISAMSEXO61' -TenantFilter $Tenant
             return
         }
 
@@ -41,58 +41,21 @@ function Invoke-CippTestCISAMSEXO61 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = '✅ **Pass**: No sharing policies allow contact folder sharing with external domains.'
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: $($FailedPolicies.Count) sharing policy/policies allow contact folder sharing:`n`n"
-            $Result += ($FailedPolicies | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Enabled | Issue |`n"
+            $Result += "| :---------- | :------ | :---- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.'Policy Name') | $($Policy.Enabled) | $($Policy.Issue) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO61' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO61' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Contact folders SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO61' -TenantFilter $Tenant
-    }
-}
-function Invoke-CippTestCISAMSEXO61 {
-    <#
-    .SYNOPSIS
-    MS.EXO.6.1 - Contact folder sharing SHALL be restricted
-    
-    .DESCRIPTION
-    Tests if contact folder sharing with external users is restricted
-    
-    .LINK
-    https://github.com/cisagov/ScubaGear
-    #>
-    param($Tenant)
-    
-    try {
-        $OrgConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
-        
-        if (-not $OrgConfig) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO61' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoOrganizationConfig cache not found. Please ensure cache data is available.' -Risk 'Medium' -Name 'Contact folder sharing restricted' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Exchange Online'
-            return
-        }
-        
-        # Check if external sharing of contacts is disabled
-        $SharingPolicy = $OrgConfig.DefaultSharingPolicy
-        
-        $Status = 'Skipped'
-        $Result = "⚠️ **Additional Data Required**`n`n"
-        $Result += "This test requires sharing policy details to verify contact folder sharing restrictions.`n`n"
-        $Result += "**Current Organization Configuration:**`n"
-        $Result += "- Default Sharing Policy: $($SharingPolicy)`n`n"
-        $Result += "**Manual verification recommended:**`n"
-        $Result += "1. Navigate to Exchange Admin Center > Organization > Sharing`n"
-        $Result += "2. Verify that contact folder sharing with external domains is disabled or limited`n"
-        $Result += "3. Check that the default policy does not allow 'ContactsSharing' for external domains`n"
-        
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO61' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Contact folder sharing restricted' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Exchange Online'
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run CISA test CISAMSEXO61: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO61' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Contact folder sharing restricted' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Exchange Online'
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Contact folders SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection' -TestId 'CISAMSEXO61' -TenantFilter $Tenant
     }
 }

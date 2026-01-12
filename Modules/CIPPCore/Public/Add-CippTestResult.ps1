@@ -48,7 +48,7 @@ function Add-CippTestResult {
         [string]$TestId,
 
         [Parameter(Mandatory = $false)]
-        [string]$testType = 'identity',
+        [string]$testType = 'Identity',
 
         [Parameter(Mandatory = $true)]
         [string]$Status,
@@ -93,7 +93,7 @@ function Add-CippTestResult {
         }
 
         Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
-        Write-LogMessage -API 'CIPPTestResults' -tenant $TenantFilter -message "Added test result: $TestId - $Status" -sev Info
+        Write-LogMessage -API 'CIPPTestResults' -tenant $TenantFilter -message "Added test result: $TestId - $Status" -sev Debug
     } catch {
         Write-LogMessage -API 'CIPPTestResults' -tenant $TenantFilter -message "Failed to add test result: $($_.Exception.Message)" -sev Error
         throw

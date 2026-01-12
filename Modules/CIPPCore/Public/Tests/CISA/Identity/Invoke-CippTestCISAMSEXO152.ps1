@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO152 {
         $SafeLinksPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicy'
 
         if (-not $SafeLinksPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Real-time suspicious URL scanning SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
             return
         }
 
@@ -27,24 +27,21 @@ function Invoke-CippTestCISAMSEXO152 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have real-time URL scanning enabled."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
-            $ResultTable = foreach ($Policy in $FailedPolicies) {
-                [PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'Scan URLs' = $Policy.ScanUrls
-                }
-            }
-
             $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have real-time URL scanning enabled:`n`n"
-            $Result += ($ResultTable | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Scan URLs |`n"
+            $Result += "| :---------- | :-------- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.Name) | $($Policy.ScanUrls) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO152' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO152' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Real-time suspicious URL scanning SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Real-time suspicious URL scanning SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
     }
 }

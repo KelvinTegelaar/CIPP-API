@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO142 {
         $SpamPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $SpamPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO142' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Spam SHALL be moved to junk email or quarantine' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO142' -TenantFilter $Tenant
             return
         }
 
@@ -29,26 +29,30 @@ function Invoke-CippTestCISAMSEXO142 {
         foreach ($Policy in $SpamPolicies) {
             if ($Policy.SpamAction -notin $AcceptableActions) {
                 $FailedPolicies.Add([PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'Current Action' = $Policy.SpamAction
-                    'Expected' = 'MoveToJmf or Quarantine'
-                })
+                        'Policy Name'    = $Policy.Name
+                        'Current Action' = $Policy.SpamAction
+                        'Expected'       = 'MoveToJmf or Quarantine'
+                    })
             }
         }
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies move spam to junk folder or quarantine."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies do not properly handle spam:`n`n"
-            $Result += ($FailedPolicies | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Current Action | Expected |`n"
+            $Result += "| :---------- | :------------- | :------- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO142' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO142' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Spam SHALL be moved to junk email or quarantine' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO142' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Spam SHALL be moved to junk email or quarantine' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO142' -TenantFilter $Tenant
     }
 }

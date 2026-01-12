@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO173 {
         $AuditConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
 
         if (-not $AuditConfig) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO173' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Audit logs SHALL be maintained for at least 1 year' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO173' -TenantFilter $Tenant
             return
         }
 
@@ -29,18 +29,18 @@ function Invoke-CippTestCISAMSEXO173 {
             $Result = "✅ **Pass**: Admin audit log is enabled (provides 1 year retention).`n`n"
             $Result += "**Current Settings:**`n"
             $Result += "- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)"
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: Admin audit log is not enabled.`n`n"
             $Result += "**Current Settings:**`n"
             $Result += "- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)"
-            $Status = 'Fail'
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO173' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO173' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Audit logs SHALL be maintained for at least 1 year' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO173' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Audit logs SHALL be maintained for at least 1 year' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO173' -TenantFilter $Tenant
     }
 }

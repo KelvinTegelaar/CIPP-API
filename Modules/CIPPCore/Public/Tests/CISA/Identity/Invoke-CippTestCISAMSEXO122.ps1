@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO122 {
         $SpamPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $SpamPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO122' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Safe lists SHOULD NOT be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO122' -TenantFilter $Tenant
             return
         }
 
@@ -27,24 +27,21 @@ function Invoke-CippTestCISAMSEXO122 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have safe lists disabled."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
-            $ResultTable = foreach ($Policy in $FailedPolicies) {
-                [PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'Safe List Enabled' = $Policy.EnableSafeList
-                }
-            }
-
             $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have safe lists enabled:`n`n"
-            $Result += ($ResultTable | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Safe List Enabled |`n"
+            $Result += "| :---------- | :---------------- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.Name) | $($Policy.EnableSafeList) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO122' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO122' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Safe lists SHOULD NOT be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO122' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Safe lists SHOULD NOT be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO122' -TenantFilter $Tenant
     }
 }

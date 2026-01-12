@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO151 {
         $SafeLinksPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicy'
 
         if (-not $SafeLinksPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO151' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'URL comparison with block-list SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO151' -TenantFilter $Tenant
             return
         }
 
@@ -27,24 +27,21 @@ function Invoke-CippTestCISAMSEXO151 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = "✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have URL comparison with block-list enabled."
-            $Status = 'Pass'
+            $Status = 'Passed'
         } else {
-            $ResultTable = foreach ($Policy in $FailedPolicies) {
-                [PSCustomObject]@{
-                    'Policy Name' = $Policy.Name
-                    'Safe Links for Email' = $Policy.EnableSafeLinksForEmail
-                }
-            }
-
             $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have URL scanning enabled:`n`n"
-            $Result += ($ResultTable | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Fail'
+            $Result += "| Policy Name | Safe Links for Email |`n"
+            $Result += "| :---------- | :------------------- |`n"
+            foreach ($Policy in $FailedPolicies) {
+                $Result += "| $($Policy.Name) | $($Policy.EnableSafeLinksForEmail) |`n"
+            }
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO151' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO151' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'URL comparison with block-list SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO151' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'URL comparison with block-list SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO151' -TenantFilter $Tenant
     }
 }

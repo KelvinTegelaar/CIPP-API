@@ -19,7 +19,7 @@ function Invoke-CippTestCISAMSEXO112 {
         $PresetPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
 
         if (-not $PresetPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO112' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'User warnings comparable to EOP safety tips SHOULD be displayed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection' -TestId 'CISAMSEXO112' -TenantFilter $Tenant
             return
         }
 
@@ -30,28 +30,23 @@ function Invoke-CippTestCISAMSEXO112 {
         }
 
         if ($PoliciesWithTips.Count -gt 0) {
-            $ResultTable = $PoliciesWithTips | ForEach-Object {
-                [PSCustomObject]@{
-                    'Policy' = $_.Identity
-                    'Similar Users Tips' = $_.EnableSimilarUsersSafetyTips
-                    'Similar Domains Tips' = $_.EnableSimilarDomainsSafetyTips
-                    'Unusual Characters Tips' = $_.EnableUnusualCharactersSafetyTips
-                }
-            }
-
             $Result = "✅ **Pass**: $($PoliciesWithTips.Count) policy/policies have impersonation safety tips enabled:`n`n"
-            $Result += ($ResultTable | ConvertTo-Html -Fragment | Out-String)
-            $Status = 'Pass'
+            $Result += "| Policy | Similar Users Tips | Similar Domains Tips | Unusual Characters Tips |`n"
+            $Result += "| :----- | :----------------- | :------------------- | :---------------------- |`n"
+            foreach ($Policy in $PoliciesWithTips) {
+                $Result += "| $($Policy.Identity) | $($Policy.EnableSimilarUsersSafetyTips) | $($Policy.EnableSimilarDomainsSafetyTips) | $($Policy.EnableUnusualCharactersSafetyTips) |`n"
+            }
+            $Status = 'Passed'
         } else {
             $Result = "❌ **Fail**: No policies found with impersonation safety tips enabled.`n`n"
             $Result += "Enable safety tips in preset security policies to warn users about potential impersonation."
-            $Status = 'Fail'
+            $Status = 'Failed'
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO112' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Category 'Exchange Online'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CISAMSEXO112' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'User warnings comparable to EOP safety tips SHOULD be displayed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Category 'Exchange Online' -TestId 'CISAMSEXO112' -TenantFilter $Tenant
+        Add-CippTestResult -Status 'Failed' -ResultMarkdown "Test execution failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'User warnings comparable to EOP safety tips SHOULD be displayed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection' -TestId 'CISAMSEXO112' -TenantFilter $Tenant
     }
 }
