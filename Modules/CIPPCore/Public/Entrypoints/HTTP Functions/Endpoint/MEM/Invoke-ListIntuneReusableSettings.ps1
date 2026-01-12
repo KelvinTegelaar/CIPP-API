@@ -57,7 +57,6 @@ function Invoke-ListIntuneReusableSettings {
         $ErrorMessage = Get-CippException -Exception $_
         $logMessage = "Failed to retrieve reusable policy settings: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $logMessage -Sev Error -LogData $ErrorMessage
-        $Settings = @()
         $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
         return ([HttpResponseContext]@{
                 StatusCode = $StatusCode
