@@ -1,4 +1,4 @@
-Function Invoke-ExecJITAdminSettings {
+function Invoke-ExecJITAdminSettings {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -19,9 +19,9 @@ Function Invoke-ExecJITAdminSettings {
 
         if (-not $JITAdminConfig) {
             $JITAdminConfig = @{
-                PartitionKey    = 'JITAdminSettings'
-                RowKey          = 'JITAdminSettings'
-                MaxDuration     = $null  # null means no limit
+                PartitionKey = 'JITAdminSettings'
+                RowKey       = 'JITAdminSettings'
+                MaxDuration  = $null  # null means no limit
             }
         }
 
@@ -35,17 +35,17 @@ Function Invoke-ExecJITAdminSettings {
             }
             'Set' {
                 $MaxDuration = $Request.Body.MaxDuration.value
-
+                Write-Host "MAx dur: $($MaxDuration)"
                 # Validate ISO 8601 duration format if provided
                 if (![string]::IsNullOrWhiteSpace($MaxDuration)) {
                     try {
                         # Test if it's a valid ISO 8601 duration
                         $null = [System.Xml.XmlConvert]::ToTimeSpan($MaxDuration)
-                        $JITAdminConfig.MaxDuration = $MaxDuration
+                        $JITAdminConfig | Add-Member -NotePropertyName MaxDuration -NotePropertyValue $MaxDuration -Force
                     } catch {
                         $StatusCode = [HttpStatusCode]::BadRequest
                         @{
-                            Results = "Error: Invalid ISO 8601 duration format. Expected format like PT4H, P1D, P4W, etc."
+                            Results = 'Error: Invalid ISO 8601 duration format. Expected format like PT4H, P1D, P4W, etc.'
                         }
                         break
                     }
@@ -62,7 +62,7 @@ Function Invoke-ExecJITAdminSettings {
                 $Message = if ($JITAdminConfig.MaxDuration) {
                     "Successfully set JIT Admin maximum duration to $($JITAdminConfig.MaxDuration)"
                 } else {
-                    "Successfully removed JIT Admin maximum duration limit"
+                    'Successfully removed JIT Admin maximum duration limit'
                 }
 
                 Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Info'
