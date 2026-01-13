@@ -21,8 +21,8 @@ function Invoke-AddTestReport {
 
         # Generate a unique ID
         $ReportId = New-Guid
-        $IdentityTests = $Body.IdentityTests ? ($Body.IdentityTests.value | ConvertTo-Json) : '[]'
-        $DevicesTests = $Body.DevicesTests ? ($Body.DevicesTests.value | ConvertTo-Json) : '[]'
+        $IdentityTests = $Body.IdentityTests ? ($Body.IdentityTests | ConvertTo-Json -Compress) : '[]'
+        $DevicesTests = $Body.DevicesTests ? ($Body.DevicesTests | ConvertTo-Json -Compress) : '[]'
 
         # Create report object
         $Report = [PSCustomObject]@{
