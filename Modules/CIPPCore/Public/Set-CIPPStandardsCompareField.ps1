@@ -27,6 +27,13 @@ function Set-CIPPStandardsCompareField {
         }
     }
 
+    if ($CurrentValue -and $CurrentValue -isnot [string]) {
+        $CurrentValue = [string](ConvertTo-Json -InputObject $CurrentValue -Depth 10 -Compress)
+    }
+    if ($ExpectedValue -and $ExpectedValue -isnot [string]) {
+        $ExpectedValue = [string](ConvertTo-Json -InputObject $ExpectedValue -Depth 10 -Compress)
+    }
+
     # Handle bulk operations
     if ($BulkFields) {
         # Get all existing entities for this tenant in one query
