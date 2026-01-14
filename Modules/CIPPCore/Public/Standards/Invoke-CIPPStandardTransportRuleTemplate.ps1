@@ -34,7 +34,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TransportRuleTemplate'
+
     $existingRules = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet 'Get-TransportRule' -useSystemMailbox $true
     if ($Settings.remediate -eq $true) {
         Write-Host "Settings: $($Settings | ConvertTo-Json)"
@@ -78,12 +78,15 @@ function Invoke-CIPPStandardTransportRuleTemplate {
             }
         }
 
-        if ($MissingRules.Count -eq 0) {
-            $fieldValue = $true
-        } else {
-            $fieldValue = $MissingRules -join ', '
+        $CurrentValue = @{
+            DeployedTransportRules = $existingRules.DisplayName | Where-Object { $rules.displayname -contains $_ } | Sort-Object
+            MissingTransportRules  = $MissingRules
+        }
+        $ExpectedValue = @{
+            DeployedTransportRules = $rules.displayname | Sort-Object
+            MissingTransportRules  = @()
         }
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.TransportRuleTemplate' -FieldValue $fieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.TransportRuleTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }
