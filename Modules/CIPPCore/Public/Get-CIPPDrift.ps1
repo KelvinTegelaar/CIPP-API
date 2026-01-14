@@ -232,7 +232,17 @@ function Get-CIPPDrift {
 
             if ($Alignment.standardSettings) {
                 if ($Alignment.standardSettings.IntuneTemplate) {
-                    $IntuneTemplateIds = $Alignment.standardSettings.IntuneTemplate.TemplateList | ForEach-Object { $_.value }
+                    $IntuneTemplateIds = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Template in $Alignment.standardSettings.IntuneTemplate) {
+                        if ($Template.TemplateList.value) {
+                            $IntuneTemplateIds.Add($Template.TemplateList.value)
+                        }
+                        if ($Template.'TemplateList-Tags'.rawData.templates) {
+                            foreach ($TagTemplate in $Template.'TemplateList-Tags'.rawData.templates) {
+                                $IntuneTemplateIds.Add($TagTemplate.GUID)
+                            }
+                        }
+                    }
                 }
                 if ($Alignment.standardSettings.ConditionalAccessTemplate) {
                     $CATemplateIds = $Alignment.standardSettings.ConditionalAccessTemplate.TemplateList | ForEach-Object { $_.value }
