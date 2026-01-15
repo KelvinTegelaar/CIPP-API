@@ -103,24 +103,30 @@ function Get-CIPPDrift {
                         # Reset displayName and description for each deviation to prevent carryover from previous iterations
                         $displayName = $null
                         $standardDescription = $null
-                        #if the $ComparisonItem.StandardName contains *intuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
-                        if ($ComparisonItem.StandardName -like '*intuneTemplate*') {
-                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Index 2
-                            Write-Verbose "Extracted GUID: $CompareGuid"
+                        #if the $ComparisonItem.StandardName contains *IntuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
+                        if ($ComparisonItem.StandardName -like '*IntuneTemplate*') {
+                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Last 1
+                            Write-Verbose "Extracted Intune GUID: $CompareGuid from $($ComparisonItem.StandardName)"
                             $Template = $AllIntuneTemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
                             if ($Template) {
                                 $displayName = $Template.displayName
                                 $standardDescription = $Template.description
+                                Write-Verbose "Found Intune template: $displayName"
+                            } else {
+                                Write-Warning "Intune template not found for GUID: $CompareGuid"
                             }
                         }
                         # Handle Conditional Access templates
                         if ($ComparisonItem.StandardName -like '*ConditionalAccessTemplate*') {
-                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Index 2
-                            Write-Verbose "Extracted CA GUID: $CompareGuid"
+                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Last 1
+                            Write-Verbose "Extracted CA GUID: $CompareGuid from $($ComparisonItem.StandardName)"
                             $Template = $AllCATemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
                             if ($Template) {
                                 $displayName = $Template.displayName
                                 $standardDescription = $Template.description
+                                Write-Verbose "Found CA template: $displayName"
+                            } else {
+                                Write-Warning "CA template not found for GUID: $CompareGuid"
                             }
                         }
                         $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }
