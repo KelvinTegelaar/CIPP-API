@@ -14,6 +14,18 @@ function Invoke-AddUser {
 
     $UserObj = $Request.Body
 
+    if (!$UserObj.tenantFilter) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{
+                    'Results' = @{
+                        resultText = 'tenantFilter is required to create a user.'
+                        state      = 'error'
+                    }
+                }
+            })
+    }
+
     if ($UserObj.Scheduled.Enabled) {
         $Username = $UserObj.username ?? $UserObj.mailNickname
         $TaskBody = [pscustomobject]@{
@@ -23,10 +35,10 @@ function Invoke-AddUser {
                 value = 'New-CIPPUserTask'
                 label = 'New-CIPPUserTask'
             }
-            Parameters             = [pscustomobject]@{ UserObj = $UserObj }
-            ScheduledTime          = $UserObj.Scheduled.date
-            Reference              = $UserObj.reference ?? $null
-            PostExecution          = @{
+            Parameters    = [pscustomobject]@{ UserObj = $UserObj }
+            ScheduledTime = $UserObj.Scheduled.date
+            Reference     = $UserObj.reference ?? $null
+            PostExecution = @{
                 Webhook = [bool]$Request.Body.PostExecution.Webhook
                 Email   = [bool]$Request.Body.PostExecution.Email
                 PSA     = [bool]$Request.Body.PostExecution.PSA
