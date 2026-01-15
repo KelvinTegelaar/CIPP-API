@@ -32,37 +32,36 @@ function Get-CIPPDrift {
     $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
     $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
     $IntuneTable = Get-CippTable -tablename 'templates'
-    if ($IntuneCapable) {
-        $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
-        $RawIntuneTemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter)
-        $AllIntuneTemplates = $RawIntuneTemplates | ForEach-Object {
-            try {
-                $JSONData = $_.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-                $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
-                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-                $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                $data
-            } catch {
-                # Skip invalid templates
-            }
-        } | Sort-Object -Property displayName
-    }
+
+    # Always load templates for display name resolution, even if tenant doesn't have licenses
+    $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
+    $RawIntuneTemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter)
+    $AllIntuneTemplates = $RawIntuneTemplates | ForEach-Object {
+        try {
+            $JSONData = $_.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
+            $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
+            $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+            $data
+        } catch {
+            # Skip invalid templates
+        }
+    } | Sort-Object -Property displayName
+
     # Load all CA templates
-    if ($ConditionalAccessCapable) {
-        $CAFilter = "PartitionKey eq 'CATemplate'"
-        $RawCATemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $CAFilter)
-        $AllCATemplates = $RawCATemplates | ForEach-Object {
-            try {
-                $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                $data
-            } catch {
-                # Skip invalid templates
-            }
-        } | Sort-Object -Property displayName
-    }
+    $CAFilter = "PartitionKey eq 'CATemplate'"
+    $RawCATemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $CAFilter)
+    $AllCATemplates = $RawCATemplates | ForEach-Object {
+        try {
+            $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+            $data
+        } catch {
+            # Skip invalid templates
+        }
+    } | Sort-Object -Property displayName
 
     try {
         $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter -TemplateId $TemplateId | Where-Object -Property standardType -EQ 'drift'
