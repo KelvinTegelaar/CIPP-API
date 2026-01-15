@@ -33,7 +33,7 @@ function Invoke-CIPPStandardSPFileRequests {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SPFileRequests' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPFileRequests' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'The tenant is not licenced for this standard SPFileRequests' -sev Error
@@ -42,14 +42,13 @@ function Invoke-CIPPStandardSPFileRequests {
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, CoreRequestFilesLinkEnabled, OneDriveRequestFilesLinkEnabled, CoreRequestFilesLinkExpirationInDays, OneDriveRequestFilesLinkExpirationInDays
-    }
-    catch {
+    } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to get current state of SPO tenant details' -sev Error
         return
     }
 
     # Input validation
-    if (($Settings.state -eq $null) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (($null -eq $Settings.state) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Invalid state parameter set for standard SPFileRequests' -sev Error
         return
     }
@@ -65,7 +64,7 @@ function Invoke-CIPPStandardSPFileRequests {
 
     # Check expiration settings if specified
     $ExpirationIsCorrect = $true
-    if ($ExpirationDays -ne $null -and $WantedState -eq $true) {
+    if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
         $CoreExpirationIsCorrect = ($CurrentState.CoreRequestFilesLinkExpirationInDays -eq $ExpirationDays)
         $OneDriveExpirationIsCorrect = ($CurrentState.OneDriveRequestFilesLinkExpirationInDays -eq $ExpirationDays)
         $ExpirationIsCorrect = $CoreExpirationIsCorrect -and $OneDriveExpirationIsCorrect
@@ -78,37 +77,37 @@ function Invoke-CIPPStandardSPFileRequests {
         if ($AllSettingsCorrect -eq $false) {
             try {
                 $Properties = @{
-                    CoreRequestFilesLinkEnabled = $WantedState
+                    CoreRequestFilesLinkEnabled     = $WantedState
                     OneDriveRequestFilesLinkEnabled = $WantedState
                 }
 
                 # Add expiration settings if specified and feature is being enabled
-                if ($ExpirationDays -ne $null -and $WantedState -eq $true) {
+                if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
                     $Properties['CoreRequestFilesLinkExpirationInDays'] = $ExpirationDays
                     $Properties['OneDriveRequestFilesLinkExpirationInDays'] = $ExpirationDays
                 }
 
                 $CurrentState | Set-CIPPSPOTenant -Properties $Properties
 
-                $ExpirationMessage = if ($ExpirationDays -ne $null -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { "" }
+                $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set File Requests to $HumanReadableState$ExpirationMessage" -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set File Requests to $HumanReadableState. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
-            $ExpirationMessage = if ($ExpirationDays -ne $null -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { "" }
+            $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
             Write-LogMessage -API 'Standards' -tenant $tenant -message "File Requests are already set to the wanted state of $HumanReadableState$ExpirationMessage" -sev Info
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($AllSettingsCorrect -eq $true) {
-            $ExpirationMessage = if ($ExpirationDays -ne $null -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { "" }
+            $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
             Write-LogMessage -API 'Standards' -tenant $tenant -message "File Requests are already set to the wanted state of $HumanReadableState$ExpirationMessage" -sev Info
         } else {
             $AlertMessage = "File Requests are not set to the wanted state of $HumanReadableState"
-            if ($ExpirationDays -ne $null -and $WantedState -eq $true) {
+            if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
                 $AlertMessage += " with $ExpirationDays day expiration"
             }
             Write-StandardsAlert -message $AlertMessage -object $CurrentState -tenant $tenant -standardName 'SPFileRequests' -standardId $Settings.standardId
@@ -121,16 +120,23 @@ function Invoke-CIPPStandardSPFileRequests {
         Add-CIPPBPAField -FieldName 'SPCoreFileRequestsEnabled' -FieldValue $CurrentState.CoreRequestFilesLinkEnabled -StoreAs bool -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'SPOneDriveFileRequestsEnabled' -FieldValue $CurrentState.OneDriveRequestFilesLinkEnabled -StoreAs bool -Tenant $Tenant
 
-        if ($ExpirationDays -ne $null) {
+        if ($null -ne $ExpirationDays) {
             Add-CIPPBPAField -FieldName 'SPCoreFileRequestsExpirationDays' -FieldValue $CurrentState.CoreRequestFilesLinkExpirationInDays -StoreAs string -Tenant $Tenant
             Add-CIPPBPAField -FieldName 'SPOneDriveFileRequestsExpirationDays' -FieldValue $CurrentState.OneDriveRequestFilesLinkExpirationInDays -StoreAs string -Tenant $Tenant
         }
 
-        if ($AllSettingsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            CoreRequestFilesLinkEnabled              = $CurrentState.CoreRequestFilesLinkEnabled
+            OneDriveRequestFilesLinkEnabled          = $CurrentState.OneDriveRequestFilesLinkEnabled
+            CoreRequestFilesLinkExpirationInDays     = $CurrentState.CoreRequestFilesLinkExpirationInDays
+            OneDriveRequestFilesLinkExpirationInDays = $CurrentState.OneDriveRequestFilesLinkExpirationInDays
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPFileRequests' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            CoreRequestFilesLinkEnabled              = $WantedState
+            OneDriveRequestFilesLinkEnabled          = $WantedState
+            CoreRequestFilesLinkExpirationInDays     = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $ExpirationDays } else { $null }
+            OneDriveRequestFilesLinkExpirationInDays = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $ExpirationDays } else { $null }
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPFileRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

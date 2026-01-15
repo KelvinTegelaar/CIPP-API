@@ -14,6 +14,18 @@ function Invoke-AddUser {
 
     $UserObj = $Request.Body
 
+    if (!$UserObj.tenantFilter) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{
+                    'Results' = @{
+                        resultText = 'tenantFilter is required to create a user.'
+                        state      = 'error'
+                    }
+                }
+            })
+    }
+
     if ($UserObj.Scheduled.Enabled) {
         try {
             $Username = $UserObj.username ?? $UserObj.mailNickname

@@ -11,8 +11,6 @@ function Invoke-ListJITAdminTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    Write-LogMessage -headers $Headers -API $APIName -message 'Listing JIT Admin Templates' -Sev 'Info'
-
     # Get the TenantFilter from query parameters
     $TenantFilter = $Request.Query.TenantFilter
 
@@ -44,7 +42,7 @@ function Invoke-ListJITAdminTemplates {
     if ($TenantFilter) {
         if ($TenantFilter -eq 'AllTenants') {
             # When requesting AllTenants, return only templates stored under AllTenants
-            $Templates = $Templates | Where-Object -Property tenantFilter -eq 'AllTenants'
+            $Templates = $Templates | Where-Object -Property tenantFilter -EQ 'AllTenants'
         } else {
             # When requesting a specific tenant
             if ($IncludeAllTenants) {
@@ -52,7 +50,7 @@ function Invoke-ListJITAdminTemplates {
                 $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
             } else {
                 # Return only tenant-specific templates (exclude AllTenants)
-                $Templates = $Templates | Where-Object -Property tenantFilter -eq $TenantFilter
+                $Templates = $Templates | Where-Object -Property tenantFilter -EQ $TenantFilter
             }
         }
     }
@@ -62,7 +60,7 @@ function Invoke-ListJITAdminTemplates {
 
     # If a specific GUID is requested, filter to that template
     if ($Request.query.GUID) {
-        $Templates = $Templates | Where-Object -Property GUID -eq $Request.query.GUID
+        $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.GUID
     }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
