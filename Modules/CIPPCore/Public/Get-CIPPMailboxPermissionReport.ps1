@@ -130,18 +130,36 @@ function Get-CIPPMailboxPermissionReport {
                 $UserKey = $_.Name
                 $UserDisplay = $_.Group[0].User # Use original User value for display
 
-                # Build detailed permissions list with mailbox and access rights
-                $PermissionDetails = $_.Group | ForEach-Object {
-                    [PSCustomObject]@{
-                        Mailbox      = $_.MailboxDisplayName
-                        MailboxUPN   = $_.MailboxUPN
-                        AccessRights = $_.AccessRights
+                # Look up the user's mailbox type using multi-strategy approach
+                $UserMailbox = $null
+                if ($UserDisplay) {
+                    # Try UPN/primarySmtpAddress lookup (case-insensitive)
+                    $UserMailbox = $MailboxLookup[$UserDisplay.ToLower()]
+
+                    # If not found, try ExternalDirectoryObjectId lookup
+                    if (-not $UserMailbox) {
+                        $UserMailbox = $MailboxByExternalIdLookup[$UserDisplay]
+                    }
+
+                    # If not found, try ID lookup
+                    if (-not $UserMailbox) {
+                        $UserMailbox = $MailboxByIdLookup[$UserDisplay]
                     }
                 }
+                $UserMailboxType = if ($UserMailbox) { $UserMailbox.recipientTypeDetails } else { 'Unknown' }
+
+                # Build detailed permissions list with mailbox and access rights
+                $PermissionDetails = @($_.Group | ForEach-Object {
+                        [PSCustomObject]@{
+                            Mailbox      = $_.MailboxDisplayName
+                            MailboxUPN   = $_.MailboxUPN
+                            AccessRights = $_.AccessRights
+                        }
+                    })
 
                 [PSCustomObject]@{
                     User                     = $UserDisplay
-                    UserType                 = if ($UserDisplay -match '@') { 'Email/UPN' } else { 'Display Name' }
+                    UserMailboxType          = $UserMailboxType
                     MailboxCount             = $_.Count
                     Permissions              = $PermissionDetails
                     MailboxCacheTimestamp    = $MailboxCacheTimestamp
@@ -154,13 +172,20 @@ function Get-CIPPMailboxPermissionReport {
                 $MailboxUPN = $_.Name
                 $MailboxInfo = $_.Group[0]
 
+                # Build detailed permissions list with user and access rights
+                $PermissionDetails = @($_.Group | ForEach-Object {
+                        [PSCustomObject]@{
+                            User         = $_.User
+                            AccessRights = $_.AccessRights
+                        }
+                    })
+
                 [PSCustomObject]@{
                     MailboxUPN               = $MailboxUPN
                     MailboxDisplayName       = $MailboxInfo.MailboxDisplayName
                     MailboxType              = $MailboxInfo.MailboxType
                     PermissionCount          = $_.Count
-                    Users                    = ($_.Group | Select-Object -ExpandProperty User | Sort-Object -Unique) -join '; '
-                    Permissions              = ($_.Group | ForEach-Object { "$($_.User) ($($_.AccessRights))" }) -join '; '
+                    Permissions              = $PermissionDetails
                     MailboxCacheTimestamp    = $MailboxCacheTimestamp
                     PermissionCacheTimestamp = $PermissionCacheTimestamp
                 }
