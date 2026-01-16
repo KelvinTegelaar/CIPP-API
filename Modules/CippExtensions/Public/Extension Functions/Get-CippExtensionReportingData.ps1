@@ -75,6 +75,14 @@ function Get-CippExtensionReportingData {
         $IntunePoliciesItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneDeviceCompliancePolicies' | Where-Object { $_.RowKey -notlike '*-Count' }
         $Return.DeviceCompliancePolicies = if ($IntunePoliciesItems) { $IntunePoliciesItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
 
+        # Secure Score
+        $SecureScoreItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SecureScore' | Where-Object { $_.RowKey -notlike '*-Count' }
+        $Return.SecureScore = if ($SecureScoreItems) { $SecureScoreItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
+
+        # Secure Score Control Profiles
+        $SecureScoreControlProfilesItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SecureScoreControlProfiles' | Where-Object { $_.RowKey -notlike '*-Count' }
+        $Return.SecureScoreControlProfiles = if ($SecureScoreControlProfilesItems) { $SecureScoreControlProfilesItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
+
         # Mailboxes (optional - requires separate cache run)
         if ($IncludeMailboxes) {
             $MailboxesItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -notlike '*-Count' }
