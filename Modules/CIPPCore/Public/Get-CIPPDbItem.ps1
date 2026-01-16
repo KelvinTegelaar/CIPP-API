@@ -37,13 +37,16 @@ function Get-CIPPDbItem {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
         if ($CountsOnly) {
-            if ($TenantFilter -eq 'allTenants') {
-                $Filter = $null
-            } else {
-                $Filter = "PartitionKey eq '{0}'" -f $TenantFilter
+            $Conditions = [System.Collections.Generic.List[string]]::new()
+            if ($TenantFilter -ne 'allTenants') {
+                $Conditions.Add("PartitionKey eq '{0}'" -f $TenantFilter)
             }
-            $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-            $Results = $Results | Where-Object { $_.RowKey -like '*-Count' }
+            if ($Type) {
+                $Conditions.Add("RowKey ge '{0}-' and RowKey lt '{0}.'" -f $Type)
+            }
+            $Filter = [string]::Join(' and ', $Conditions)
+            $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property 'PartitionKey', 'RowKey', 'DataCount', 'Timestamp'
+            $Results = $Results | Where-Object { $_.RowKey -like '*-Count' } | Select-Object PartitionKey, RowKey, DataCount, Timestamp
         } else {
             if (-not $Type) {
                 throw 'Type parameter is required when CountsOnly is not specified'
