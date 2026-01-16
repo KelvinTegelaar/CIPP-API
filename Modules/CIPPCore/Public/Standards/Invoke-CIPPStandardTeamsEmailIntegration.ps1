@@ -1,4 +1,4 @@
-Function Invoke-CIPPStandardTeamsEmailIntegration {
+function Invoke-CIPPStandardTeamsEmailIntegration {
     <#
     .FUNCTIONALITY
         Internal
@@ -33,8 +33,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEmailIntegration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsEmailIntegration'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEmailIntegration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -43,9 +42,8 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } |
-        Select-Object AllowEmailIntoChannel
-    }
-    catch {
+            Select-Object AllowEmailIntoChannel
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsEmailIntegration state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -85,12 +83,13 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
 
     if ($Settings.report -eq $true) {
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            AllowEmailIntoChannel = $CurrentState.AllowEmailIntoChannel
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            AllowEmailIntoChannel = $AllowEmailIntoChannel
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsEmailIntoChannel' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }

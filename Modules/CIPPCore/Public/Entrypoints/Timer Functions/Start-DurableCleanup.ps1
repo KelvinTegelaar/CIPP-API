@@ -19,7 +19,6 @@ function Start-DurableCleanup {
     )
 
     $WarningPreference = 'SilentlyContinue'
-    $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
     $TargetTime = (Get-Date).ToUniversalTime().AddSeconds(-$MaxDuration)
     $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage
     $InstancesTables = Get-AzDataTable -Context $Context | Where-Object { $_ -match 'Instances' }
@@ -34,7 +33,7 @@ function Start-DurableCleanup {
         $Table = Get-CippTable -TableName $Table
         $FunctionName = $Table.TableName -replace 'Instances', ''
         $Orchestrators = Get-CIPPAzDataTableEntity @Table -Filter "RuntimeStatus eq 'Running'" | Select-Object * -ExcludeProperty Input
-        $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
+        $Queues = Get-CIPPAzStorageQueue -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
         $LongRunningOrchestrators = $Orchestrators | Where-Object { $_.CreatedTime.DateTime -lt $TargetTime }
 
         if ($LongRunningOrchestrators.Count -gt 0) {

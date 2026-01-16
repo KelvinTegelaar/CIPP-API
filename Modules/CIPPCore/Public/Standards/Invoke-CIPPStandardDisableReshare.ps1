@@ -35,8 +35,7 @@ function Invoke-CIPPStandardDisableReshare {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableReshare' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableReshare'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableReshare' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -45,14 +44,13 @@ function Invoke-CIPPStandardDisableReshare {
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableReshare state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isResharingByExternalUsersEnabled) {
             try {
@@ -79,7 +77,15 @@ function Invoke-CIPPStandardDisableReshare {
 
     if ($Settings.report -eq $true) {
         $state = $CurrentInfo.isResharingByExternalUsersEnabled ? ($CurrentInfo | Select-Object isResharingByExternalUsersEnabled) : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableReshare' -FieldValue $state -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableReshare = $state
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableReshare = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableReshare' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
     }
 }

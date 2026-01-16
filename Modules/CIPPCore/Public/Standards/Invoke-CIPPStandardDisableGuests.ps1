@@ -91,8 +91,20 @@ function Invoke-CIPPStandardDisableGuests {
     }
     if ($Settings.report -eq $true) {
         $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled
-        $State = $Filtered ? $Filtered : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue $State -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            GuestsDisabledAfterDays      = $checkDays
+            GuestsDisabledAccountCount   = $Filtered.Count
+            GuestsDisabledAccountDetails = @($Filtered)
+        }
+
+        $ExpectedValue = [PSCustomObject]@{
+            GuestsDisabledAfterDays      = $checkDays
+            GuestsDisabledAccountCount   = 0
+            GuestsDisabledAccountDetails = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $Filtered -StoreAs json -Tenant $tenant
     }
 }

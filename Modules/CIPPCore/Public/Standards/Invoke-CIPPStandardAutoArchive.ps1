@@ -57,6 +57,13 @@ function Invoke-CIPPStandardAutoArchive {
 
     $CorrectState = $CurrentState -eq $DesiredThreshold
 
+    $ExpectedValue = [PSCustomObject]@{
+        AutoArchivingThresholdPercentage = $DesiredThreshold
+    }
+    $CurrentValue = [PSCustomObject]@{
+        AutoArchivingThresholdPercentage = $CurrentState
+    }
+
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
@@ -91,6 +98,6 @@ function Invoke-CIPPStandardAutoArchive {
         } else {
             $FieldValue = @{ CurrentThreshold = $CurrentState; DesiredThreshold = $DesiredThreshold }
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoArchive' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoArchive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

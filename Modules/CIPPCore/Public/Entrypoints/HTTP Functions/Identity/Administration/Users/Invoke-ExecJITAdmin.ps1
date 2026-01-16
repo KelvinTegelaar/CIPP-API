@@ -20,6 +20,39 @@ function Invoke-ExecJITAdmin {
     $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
     $Results = [System.Collections.Generic.List[object]]::new()
 
+    # Check maximum duration setting
+    try {
+        $ConfigTable = Get-CIPPTable -TableName Config
+        $Filter = "PartitionKey eq 'JITAdminSettings' and RowKey eq 'JITAdminSettings'"
+        $JITAdminConfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
+        
+        if ($JITAdminConfig -and ![string]::IsNullOrWhiteSpace($JITAdminConfig.MaxDuration)) {
+            # Calculate the duration between start and expiration
+            $RequestedDuration = $Expiration - $Start
+            
+            # Parse the max duration from ISO 8601 format
+            try {
+                $MaxDurationTimeSpan = [System.Xml.XmlConvert]::ToTimeSpan($JITAdminConfig.MaxDuration)
+                
+                if ($RequestedDuration -gt $MaxDurationTimeSpan) {
+                    $RequestedDays = $RequestedDuration.TotalDays.ToString('0.00')
+                    $MaxDays = $MaxDurationTimeSpan.TotalDays.ToString('0.00')
+                    $ErrorMessage = "Requested JIT Admin duration ($RequestedDays days) exceeds the maximum allowed duration of $($JITAdminConfig.MaxDuration) ($MaxDays days)"
+                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{'Results' = @($ErrorMessage) }
+                        })
+                }
+            } catch {
+                Write-Warning "Failed to parse MaxDuration setting: $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warning "Failed to check JIT Admin max duration setting: $($_.Exception.Message)"
+        # Continue execution if we can't check the setting
+    }
+
     if ($Request.Body.userAction -eq 'create') {
         $Domain = $Request.Body.Domain.value ? $Request.Body.Domain.value : $Request.Body.Domain
         $Username = "$($Request.Body.Username)@$($Domain)"
