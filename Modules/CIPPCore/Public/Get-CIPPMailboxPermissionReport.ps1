@@ -33,6 +33,28 @@ function Get-CIPPMailboxPermissionReport {
     try {
         Write-LogMessage -API 'MailboxPermissionReport' -tenant $TenantFilter -message 'Generating mailbox permission report' -sev Info
 
+        # Handle AllTenants
+        if ($TenantFilter -eq 'AllTenants') {
+            # Get all tenants that have mailbox data
+            $AllMailboxItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes'
+            $Tenants = @($AllMailboxItems | Where-Object { $_.RowKey -ne 'Mailboxes-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
+
+            $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
+            foreach ($Tenant in $Tenants) {
+                try {
+                    $TenantResults = Get-CIPPMailboxPermissionReport -TenantFilter $Tenant -ByUser:$ByUser
+                    foreach ($Result in $TenantResults) {
+                        # Add Tenant property to each result
+                        $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
+                        $AllResults.Add($Result)
+                    }
+                } catch {
+                    Write-LogMessage -API 'MailboxPermissionReport' -tenant $Tenant -message "Failed to get report for tenant: $($_.Exception.Message)" -sev Warning
+                }
+            }
+            return $AllResults
+        }
+
         # Get mailboxes from reporting DB
         $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes'
         if (-not $MailboxItems) {
@@ -162,6 +184,7 @@ function Get-CIPPMailboxPermissionReport {
                     UserMailboxType          = $UserMailboxType
                     MailboxCount             = $_.Count
                     Permissions              = $PermissionDetails
+                    Tenant                   = $TenantFilter
                     MailboxCacheTimestamp    = $MailboxCacheTimestamp
                     PermissionCacheTimestamp = $PermissionCacheTimestamp
                 }
@@ -186,6 +209,7 @@ function Get-CIPPMailboxPermissionReport {
                     MailboxType              = $MailboxInfo.MailboxType
                     PermissionCount          = $_.Count
                     Permissions              = $PermissionDetails
+                    Tenant                   = $TenantFilter
                     MailboxCacheTimestamp    = $MailboxCacheTimestamp
                     PermissionCacheTimestamp = $PermissionCacheTimestamp
                 }
