@@ -58,8 +58,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
             }
 
             return $StoredTemplate.JSON | ConvertFrom-Json
-        }
-        catch {
+        } catch {
             Write-LogMessage -API $APIName -tenant $Tenant -message "Failed to retrieve template $TemplateGUID. Error: $($_.Exception.Message)" -sev Error
             return $null
         }
@@ -75,8 +74,8 @@ function Invoke-CIPPStandardDeployContactTemplates {
 
         # Get templateIds array
         if (-not $Settings.templateIds -or $Settings.templateIds.Count -eq 0) {
-            Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: No template IDs found in settings" -sev Error
-            return "No template IDs found in settings"
+            Write-LogMessage -API $APIName -tenant $Tenant -message 'DeployContactTemplate: No template IDs found in settings' -sev Error
+            return 'No template IDs found in settings'
         }
 
         Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: Processing $($Settings.templateIds.Count) template(s)" -sev Info
@@ -91,7 +90,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 $TemplateGUID = $TemplateItem.value
 
                 if ([string]::IsNullOrWhiteSpace($TemplateGUID)) {
-                    Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: TemplateGUID cannot be empty." -sev Error
+                    Write-LogMessage -API $APIName -tenant $Tenant -message 'DeployContactTemplate: TemplateGUID cannot be empty.' -sev Error
                     continue
                 }
 
@@ -115,8 +114,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 # Validate email address format
                 try {
                     $null = [System.Net.Mail.MailAddress]::new($Template.email)
-                }
-                catch {
+                } catch {
                     Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: Invalid email address format: $($Template.email)" -sev Error
                     continue
                 }
@@ -127,39 +125,37 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 # If the contact exists, we'll overwrite it; if not, we'll create it
                 if ($ExistingContact) {
                     $StateIsCorrect = $false  # Always update existing contacts to match template
-                    $Action = "Update"
+                    $Action = 'Update'
                     $Missing = $false
-                }
-                else {
+                } else {
                     # Contact doesn't exist, needs to be created
                     $StateIsCorrect = $false
-                    $Action = "Create"
+                    $Action = 'Create'
                     $Missing = $true
                 }
 
                 [PSCustomObject]@{
-                    missing         = $Missing
-                    StateIsCorrect  = $StateIsCorrect
-                    Action          = $Action
-                    Template        = $Template
-                    TemplateGUID    = $TemplateGUID
+                    missing        = $Missing
+                    StateIsCorrect = $StateIsCorrect
+                    Action         = $Action
+                    Template       = $Template
+                    TemplateGUID   = $TemplateGUID
                 }
-            }
-            catch {
+            } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 $Message = "Failed to process template $TemplateGUID, Error: $ErrorMessage"
                 Write-LogMessage -API $APIName -tenant $tenant -message $Message -sev 'Error'
-                Return $Message
+                return $Message
             }
         }
 
         # Remediate each contact which needs to be created or updated
-        If ($RemediateEnabled) {
+        if ($RemediateEnabled) {
             $ContactsToProcess = $CompareList | Where-Object { $_.StateIsCorrect -eq $false }
 
             if ($ContactsToProcess.Count -gt 0) {
-                $ContactsToCreate = $ContactsToProcess | Where-Object { $_.Action -eq "Create" }
-                $ContactsToUpdate = $ContactsToProcess | Where-Object { $_.Action -eq "Update" }
+                $ContactsToCreate = $ContactsToProcess | Where-Object { $_.Action -eq 'Create' }
+                $ContactsToUpdate = $ContactsToProcess | Where-Object { $_.Action -eq 'Update' }
 
                 Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: Processing $($ContactsToCreate.Count) new contacts, $($ContactsToUpdate.Count) existing contacts" -sev Info
 
@@ -192,13 +188,12 @@ function Invoke-CIPPStandardDeployContactTemplates {
 
                         # Store contact info for second pass
                         $ProcessedContacts.Add([PSCustomObject]@{
-                            Contact = $Contact
-                            ContactObject = $NewContact
-                            Template = $Template
-                            IsNew = $true
-                        })
-                    }
-                    catch {
+                                Contact       = $Contact
+                                ContactObject = $NewContact
+                                Template      = $Template
+                                IsNew         = $true
+                            })
+                    } catch {
                         $ProcessingFailures++
                         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                         Write-LogMessage -API $APIName -tenant $tenant -message "Failed to create contact $($Template.displayName): $ErrorMessage" -sev 'Error'
@@ -213,7 +208,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
 
                         # Update MailContact properties (email address)
                         $UpdateMailContactParams = @{
-                            Identity = $ExistingContact.Identity
+                            Identity             = $ExistingContact.Identity
                             ExternalEmailAddress = $Template.email
                         }
 
@@ -242,13 +237,12 @@ function Invoke-CIPPStandardDeployContactTemplates {
 
                         # Store contact info for second pass
                         $ProcessedContacts.Add([PSCustomObject]@{
-                            Contact = $Contact
-                            ContactObject = $ExistingContact
-                            Template = $Template
-                            IsNew = $false
-                        })
-                    }
-                    catch {
+                                Contact       = $Contact
+                                ContactObject = $ExistingContact
+                                Template      = $Template
+                                IsNew         = $false
+                            })
+                    } catch {
                         $ProcessingFailures++
                         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                         Write-LogMessage -API $APIName -tenant $tenant -message "Failed to update contact $($Template.displayName): $ErrorMessage" -sev 'Error'
@@ -326,8 +320,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                                     $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
                                 }
                             }
-                        }
-                        catch {
+                        } catch {
                             $UpdateFailures++
                             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                             Write-LogMessage -API $APIName -tenant $tenant -message "Failed to update additional fields for contact $($Template.displayName): $ErrorMessage" -sev 'Error'
@@ -357,25 +350,36 @@ function Invoke-CIPPStandardDeployContactTemplates {
                     if ($Contact.missing) {
                         $CurrentInfo = $Contact.Template | Select-Object -Property displayName, email, missing
                         Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
-                    }
-                    else {
-                        $CurrentInfo = $CurrentContacts | Where-Object -Property DisplayName -eq $Contact.Template.displayName | Select-Object -Property DisplayName, ExternalEmailAddress, FirstName, LastName
+                    } else {
+                        $CurrentInfo = $CurrentContacts | Where-Object -Property DisplayName -EQ $Contact.Template.displayName | Select-Object -Property DisplayName, ExternalEmailAddress, FirstName, LastName
                         Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) will be updated to match template." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
                     }
                 }
                 Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: $MissingContacts missing, $ExistingContacts to update" -sev Info
             } else {
-                Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: No contacts need processing" -sev Info
+                Write-LogMessage -API $APIName -tenant $Tenant -message 'DeployContactTemplate: No contacts need processing' -sev Info
             }
         }
 
         if ($ReportEnabled) {
-            foreach ($Contact in $CompareList) {
-                Set-CIPPStandardsCompareField -FieldName "standards.DeployContactTemplate" -FieldValue $Contact.StateIsCorrect -TenantFilter $Tenant
+            $ExpectedValue = [PSCustomObject]@{
+                state = 'Correctly configured'
             }
+            $CurrentValue = if ($CompareList.StateIsCorrect -eq $true) {
+                [PSCustomObject]@{ state = 'Correctly configured' }
+            } else {
+                [PSCustomObject]@{
+                    MissingContacts  = $CompareList | Where-Object { $_.missing } | ForEach-Object {
+                        $_.Template | Select-Object -Property displayName, Email
+                    }
+                    ContactsToUpdate = $CompareList | Where-Object { -not $_.missing } | ForEach-Object {
+                        $_.Template | Select-Object -Property displayName, Email
+                    }
+                }
+            }
+            Set-CIPPStandardsCompareField -FieldName 'standards.DeployContactTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API $APIName -tenant $tenant -message "Failed to create or update mail contact(s) from templates, Error: $ErrorMessage" -sev 'Error'
     }

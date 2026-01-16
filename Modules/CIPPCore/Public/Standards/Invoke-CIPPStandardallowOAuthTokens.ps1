@@ -42,6 +42,8 @@ function Invoke-CIPPStandardallowOAuthTokens {
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'enabled')
+    $CurrentValue = $CurrentState | Select-Object -Property state
+    $ExpectedValue = [PSCustomObject]@{state = 'enabled' }
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -65,6 +67,6 @@ function Invoke-CIPPStandardallowOAuthTokens {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.allowOAuthTokens' -FieldValue $StateIsCorrect -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.allowOAuthTokens' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
     }
 }

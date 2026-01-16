@@ -43,7 +43,6 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EXODisableAutoForwarding'
 
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -useSystemMailbox $true
@@ -75,8 +74,14 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ?? ($CurrentInfo | Select-Object AutoForwardingMode)
-        Set-CIPPStandardsCompareField -FieldName 'standards.EXODisableAutoForwarding' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = @{
+            AutoForwardingMode = $CurrentInfo.AutoForwardingMode
+        }
+        $ExpectedValue = @{
+            AutoForwardingMode = 'Off'
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EXODisableAutoForwarding' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoForwardingDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

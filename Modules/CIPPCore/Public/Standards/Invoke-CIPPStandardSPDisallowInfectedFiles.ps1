@@ -85,11 +85,12 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPDisallowInfectedFiles' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            DisallowInfectedFileDownload = $CurrentState.DisallowInfectedFileDownload
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisallowInfectedFiles' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            DisallowInfectedFileDownload = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisallowInfectedFiles' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

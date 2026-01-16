@@ -68,6 +68,19 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         $StateIsCorrect = $false
     }
 
+    $CurrentValue = $CurrentConfig | Select-Object -Property id, displayName, priority, showInstallationProgress, blockDeviceSetupRetryByUser, allowDeviceResetOnInstallFailure, allowLogCollectionOnInstallFailure, customErrorMessage, installProgressTimeoutInMinutes, allowDeviceUseOnInstallFailure, trackInstallProgressForAutopilotOnly, installQualityUpdates
+    $ExpectedValue = [PSCustomObject]@{
+        installProgressTimeoutInMinutes      = $Settings.TimeOutInMinutes
+        customErrorMessage                   = $Settings.ErrorMessage
+        showInstallationProgress             = $Settings.ShowProgress
+        allowLogCollectionOnInstallFailure   = $Settings.EnableLog
+        trackInstallProgressForAutopilotOnly = $Settings.OBEEOnly
+        blockDeviceSetupRetryByUser          = !$Settings.BlockDevice
+        installQualityUpdates                = $InstallWindowsUpdates
+        allowDeviceResetOnInstallFailure     = $Settings.AllowReset
+        allowDeviceUseOnInstallFailure       = $Settings.AllowFail
+    }
+
     # Remediate if the state is not correct
     if ($Settings.remediate -eq $true) {
         try {
@@ -91,8 +104,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
 
     # Report
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect -eq $true ? $true : $CurrentConfig
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotStatusPage' -FieldValue $FieldValue -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotStatusPage' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutopilotStatusPage' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 

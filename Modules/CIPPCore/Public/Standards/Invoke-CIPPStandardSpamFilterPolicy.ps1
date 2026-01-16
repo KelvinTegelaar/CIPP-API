@@ -64,10 +64,9 @@ function Invoke-CIPPStandardSpamFilterPolicy {
 
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
-    }
-    catch {
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object -Property *
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpamFilterPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -130,8 +129,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         ($CurrentState.EnableRegionBlockList -eq $Settings.EnableRegionBlockList) -and
         ((($null -eq $CurrentState.RegionBlockList -or $CurrentState.RegionBlockList.Count -eq 0) -and ($null -eq $Settings.RegionBlockList.value)) -or ($null -ne $CurrentState.RegionBlockList -and $CurrentState.RegionBlockList.Count -gt 0 -and $null -ne $Settings.RegionBlockList.value -and !(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
         ((($null -eq $CurrentState.AllowedSenderDomains -or $CurrentState.AllowedSenderDomains.Count -eq 0) -and ($null -eq ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains))) -or ($null -ne $CurrentState.AllowedSenderDomains -and $CurrentState.AllowedSenderDomains.Count -gt 0 -and $null -ne ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains) -and !(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains))))
-    }
-    catch {
+    } catch {
         $StateIsCorrect = $false
     }
 
@@ -260,11 +258,58 @@ function Invoke-CIPPStandardSpamFilterPolicy {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $StateIsCorrect -eq $true ? $true : ($CurrentState ?? @{ state = 'Spam filter policy not found' })
+        $CurrentValue = @{
+            Name                             = $CurrentState.Name
+            SpamAction                       = $CurrentState.SpamAction
+            SpamQuarantineTag                = $CurrentState.SpamQuarantineTag
+            HighConfidenceSpamAction         = $CurrentState.HighConfidenceSpamAction
+            HighConfidenceSpamQuarantineTag  = $CurrentState.HighConfidenceSpamQuarantineTag
+            BulkSpamAction                   = $CurrentState.BulkSpamAction
+            BulkQuarantineTag                = $CurrentState.BulkQuarantineTag
+            PhishSpamAction                  = $CurrentState.PhishSpamAction
+            PhishQuarantineTag               = $CurrentState.PhishQuarantineTag
+            HighConfidencePhishQuarantineTag = $CurrentState.HighConfidencePhishQuarantineTag
+            BulkThreshold                    = $CurrentState.BulkThreshold
+            IncreaseScoreWithImageLinks      = $CurrentState.IncreaseScoreWithImageLinks
+            IncreaseScoreWithBizOrInfoUrls   = $CurrentState.IncreaseScoreWithBizOrInfoUrls
+            MarkAsSpamFramesInHtml           = $CurrentState.MarkAsSpamFramesInHtml
+            MarkAsSpamObjectTagsInHtml       = $CurrentState.MarkAsSpamObjectTagsInHtml
+            MarkAsSpamEmbedTagsInHtml        = $CurrentState.MarkAsSpamEmbedTagsInHtml
+            MarkAsSpamFormTagsInHtml         = $CurrentState.MarkAsSpamFormTagsInHtml
+            MarkAsSpamWebBugsInHtml          = $CurrentState.MarkAsSpamWebBugsInHtml
+            MarkAsSpamSensitiveWordList      = $CurrentState.MarkAsSpamSensitiveWordList
+            EnableLanguageBlockList          = $CurrentState.EnableLanguageBlockList
+            LanguageBlockList                = $CurrentState.LanguageBlockList
+            EnableRegionBlockList            = $CurrentState.EnableRegionBlockList
+            RegionBlockList                  = $CurrentState.RegionBlockList
+            AllowedSenderDomains             = $CurrentState.AllowedSenderDomains
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            Name                             = $PolicyName
+            SpamAction                       = $SpamAction
+            SpamQuarantineTag                = $SpamQuarantineTag
+            HighConfidenceSpamAction         = $HighConfidenceSpamAction
+            HighConfidenceSpamQuarantineTag  = $HighConfidenceSpamQuarantineTag
+            BulkSpamAction                   = $BulkSpamAction
+            BulkQuarantineTag                = $BulkQuarantineTag
+            PhishSpamAction                  = $PhishSpamAction
+            PhishQuarantineTag               = $PhishQuarantineTag
+            HighConfidencePhishQuarantineTag = $HighConfidencePhishQuarantineTag
+            BulkThreshold                    = [int]$Settings.BulkThreshold
+            IncreaseScoreWithImageLinks      = $IncreaseScoreWithImageLinks
+            IncreaseScoreWithBizOrInfoUrls   = $IncreaseScoreWithBizOrInfoUrls
+            MarkAsSpamFramesInHtml           = $MarkAsSpamFramesInHtml
+            MarkAsSpamObjectTagsInHtml       = $MarkAsSpamObjectTagsInHtml
+            MarkAsSpamEmbedTagsInHtml        = $MarkAsSpamEmbedTagsInHtml
+            MarkAsSpamFormTagsInHtml         = $MarkAsSpamFormTagsInHtml
+            MarkAsSpamWebBugsInHtml          = $MarkAsSpamWebBugsInHtml
+            MarkAsSpamSensitiveWordList      = $MarkAsSpamSensitiveWordList
+            EnableLanguageBlockList          = $Settings.EnableLanguageBlockList
+            LanguageBlockList                = if ($Settings.EnableLanguageBlockList -eq $true) { $Settings.LanguageBlockList.value } else { @() }
+            EnableRegionBlockList            = $Settings.EnableRegionBlockList
+            RegionBlockList                  = if ($Settings.EnableRegionBlockList -eq $true) { $Settings.RegionBlockList.value } else { @() }
+            AllowedSenderDomains             = $Settings.AllowedSenderDomains.value ?? @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }
