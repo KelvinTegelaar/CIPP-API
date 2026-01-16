@@ -11,7 +11,7 @@ function Invoke-ListTenantGroups {
     param($Request, $TriggerMetadata)
 
     $groupFilter = $Request.Query.groupId ?? $Request.Body.groupId
-    $TenantGroups = (Get-TenantGroups -GroupId $groupFilter) ?? @()
+    $TenantGroups = (Get-TenantGroups -GroupId $groupFilter -SkipCache) ?? @()
     $Body = @{ Results = @($TenantGroups) }
 
     return ([HttpResponseContext]@{

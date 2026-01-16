@@ -44,8 +44,9 @@ function Invoke-HuduExtensionSync {
         $CIPPURL = 'https://{0}' -f $Config.Value
         $EnableCIPP = $true
 
-        # Get Hudu Extension Cache
-        $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Tenant.defaultDomainName
+        # Get CIPP Extension Reporting Data (from new CippReportingDB)
+        # Include mailboxes if needed for Hudu sync
+        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Tenant.defaultDomainName -IncludeMailboxes
         $company_id = $TenantMap.IntegrationId
 
         # If tenant not found in mapping table, return error
@@ -166,8 +167,8 @@ function Invoke-HuduExtensionSync {
 
 
         $Roles = foreach ($Role in $AllRoles) {
-            # Get members from cache
-            $Members = ($ExtensionCache."AllRoles_$($Role.id)")
+            # Members are now inline with each role object
+            $Members = $Role.members
             [PSCustomObject]@{
                 ID            = $Role.id
                 DisplayName   = $Role.displayName
@@ -254,7 +255,9 @@ function Invoke-HuduExtensionSync {
         $DeviceCompliancePolicies = $ExtensionCache.DeviceCompliancePolicies
 
         $DeviceComplianceDetails = foreach ($Policy in $DeviceCompliancePolicies) {
-            $DeviceStatuses = $ExtensionCache."DeviceCompliancePolicies_$($Policy.id)"
+            # Device statuses are cached per policy with new naming: IntuneDeviceCompliancePolicies_{policyId}
+            $DeviceStatusItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type "IntuneDeviceCompliancePolicies_$($Policy.id)" | Where-Object { $_.RowKey -notlike '*-Count' }
+            $DeviceStatuses = if ($DeviceStatusItems) { $DeviceStatusItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
             [pscustomobject]@{
                 ID             = $Policy.id
                 DisplayName    = $Policy.displayName
@@ -265,7 +268,8 @@ function Invoke-HuduExtensionSync {
         $AllGroups = $ExtensionCache.Groups
 
         $Groups = foreach ($Group in $AllGroups) {
-            $Members = $ExtensionCache."Groups_$($Group.id)"
+            # Members are now inline with each group object
+            $Members = $Group.members
             [pscustomobject]@{
                 ID          = $Group.id
                 DisplayName = $Group.displayName

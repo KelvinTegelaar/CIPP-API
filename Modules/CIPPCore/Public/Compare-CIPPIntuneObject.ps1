@@ -58,6 +58,13 @@ function Compare-CIPPIntuneObject {
                 [int]$MaxDepth = 20
             )
 
+            # Check for arrays at the start of every recursive call - this catches arrays at any nesting level
+            $isObj1Array = $Object1 -is [Array] -or $Object1 -is [System.Collections.IList]
+            $isObj2Array = $Object2 -is [Array] -or $Object2 -is [System.Collections.IList]
+            if ($isObj1Array -or $isObj2Array) {
+                return
+            }
+
             if ($Depth -ge $MaxDepth) {
                 $result.Add([PSCustomObject]@{
                         Property      = $PropertyPath
@@ -153,34 +160,78 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
-                $allPropertyNames = @(
-                    $Object1.PSObject.Properties | Select-Object -ExpandProperty Name
-                    $Object2.PSObject.Properties | Select-Object -ExpandProperty Name
-                ) | Select-Object -Unique
+                # Skip comparison if either object is an array - arrays can't have custom properties set
+                $isObj1Array = $Object1 -is [Array] -or $Object1 -is [System.Collections.IList]
+                $isObj2Array = $Object2 -is [Array] -or $Object2 -is [System.Collections.IList]
+                if ($isObj1Array -or $isObj2Array) {
+                    return
+                }
+                
+                # Safely get property names - ensure objects are not arrays before accessing PSObject.Properties
+                $allPropertyNames = @()
+                try {
+                    if (-not ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList])) {
+                        $allPropertyNames += $Object1.PSObject.Properties | Select-Object -ExpandProperty Name
+                    }
+                    if (-not ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
+                        $allPropertyNames += $Object2.PSObject.Properties | Select-Object -ExpandProperty Name
+                    }
+                    $allPropertyNames = $allPropertyNames | Select-Object -Unique
+                } catch {
+                    return
+                }
 
                 foreach ($propName in $allPropertyNames) {
                     if (ShouldSkipProperty -PropertyName $propName) { continue }
 
                     $newPath = if ($PropertyPath) { "$PropertyPath.$propName" } else { $propName }
-                    $prop1Exists = $Object1.PSObject.Properties.Name -contains $propName
-                    $prop2Exists = $Object2.PSObject.Properties.Name -contains $propName
+                    # Safely check if properties exist - ensure objects are not arrays
+                    $prop1Exists = $false
+                    $prop2Exists = $false
+                    try {
+                        if (-not ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList])) {
+                            $prop1Exists = $Object1.PSObject.Properties.Name -contains $propName
+                        }
+                        if (-not ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
+                            $prop2Exists = $Object2.PSObject.Properties.Name -contains $propName
+                        }
+                    } catch {
+                        continue
+                    }
 
                     if ($prop1Exists -and $prop2Exists) {
-                        if ($Object1.$propName -and $Object2.$propName) {
-                            Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                        try {
+                            # Double-check arrays before accessing properties
+                            if (($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) -or 
+                                ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
+                                continue
+                            }
+                            if ($Object1.$propName -and $Object2.$propName) {
+                                Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                            }
+                        } catch {
+                            throw
                         }
                     } elseif ($prop1Exists) {
-                        $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = $Object1.$propName
-                                ReceivedValue = ''
-                            })
+                        try {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = $Object1.$propName
+                                    ReceivedValue = ''
+                                })
+                        } catch {
+                            throw
+                        }
                     } else {
-                        $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = ''
-                                ReceivedValue = $Object2.$propName
-                            })
+                        try {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = ''
+                                    ReceivedValue = $Object2.$propName
+                                })
+                        } catch {
+                            throw
+                        }
                     }
                 }
             } else {

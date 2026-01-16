@@ -41,13 +41,11 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableOutlookAddins'
 
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' |
-        Where-Object { $_.IsDefault -eq $true }
-    }
-    catch {
+            Where-Object { $_.IsDefault -eq $true }
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableOutlookAddins state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -97,8 +95,15 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     }
     if ($Settings.report -eq $true) {
         $State = if ($RolesToRemove) { $false } else { $true }
-        $StateForCompare = if ($RolesToRemove) { @{ AllowedApps = $RolesToRemove } } else { $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -FieldValue $StateForCompare -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisabledOutlookAddins = $State
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisabledOutlookAddins = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

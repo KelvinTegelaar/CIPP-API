@@ -28,9 +28,9 @@ function Invoke-ExecBECRemediate {
             $AllResults.Add($PasswordResult)
         } catch {
             $AllResults.Add([pscustomobject]@{
-                resultText = "Failed to reset password: $($_.Exception.Message)"
-                state      = 'error'
-            })
+                    resultText = "Failed to reset password: $($_.Exception.Message)"
+                    state      = 'error'
+                })
         }
 
         # Step 2: Disable Account
@@ -38,14 +38,14 @@ function Invoke-ExecBECRemediate {
         try {
             $DisableResult = Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
             $AllResults.Add([pscustomobject]@{
-                resultText = $DisableResult
-                state      = if ($DisableResult -like "*WARNING*") { 'warning' } else { 'success' }
-            })
+                    resultText = $DisableResult
+                    state      = if ($DisableResult -like '*WARNING*') { 'warning' } else { 'success' }
+                })
         } catch {
             $AllResults.Add([pscustomobject]@{
-                resultText = "Failed to disable account: $($_.Exception.Message)"
-                state      = 'error'
-            })
+                    resultText = "Failed to disable account: $($_.Exception.Message)"
+                    state      = 'error'
+                })
         }
 
         # Step 3: Revoke Sessions
@@ -53,14 +53,14 @@ function Invoke-ExecBECRemediate {
         try {
             $SessionResult = Revoke-CIPPSessions -userid $SuspectUser -username $Username -Headers $Headers -APIName $APIName -tenantFilter $TenantFilter
             $AllResults.Add([pscustomobject]@{
-                resultText = $SessionResult
-                state      = if ($SessionResult -like "*Failed*") { 'error' } else { 'success' }
-            })
+                    resultText = $SessionResult
+                    state      = if ($SessionResult -like '*Failed*') { 'error' } else { 'success' }
+                })
         } catch {
             $AllResults.Add([pscustomobject]@{
-                resultText = "Failed to revoke sessions: $($_.Exception.Message)"
-                state      = 'error'
-            })
+                    resultText = "Failed to revoke sessions: $($_.Exception.Message)"
+                    state      = 'error'
+                })
         }
 
         # Step 4: Remove MFA methods
@@ -68,14 +68,14 @@ function Invoke-ExecBECRemediate {
         try {
             $MFAResult = Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
             $AllResults.Add([pscustomobject]@{
-                resultText = $MFAResult
-                state      = if ($MFAResult -like "*No MFA methods*") { 'info' } elseif ($MFAResult -like "*Successfully*") { 'success' } else { 'error' }
-            })
+                    resultText = $MFAResult
+                    state      = if ($MFAResult -like '*No MFA methods*') { 'info' } elseif ($MFAResult -like '*Successfully*') { 'success' } else { 'error' }
+                })
         } catch {
             $AllResults.Add([pscustomobject]@{
-                resultText = "Failed to remove MFA methods: $($_.Exception.Message)"
-                state      = 'error'
-            })
+                    resultText = "Failed to remove MFA methods: $($_.Exception.Message)"
+                    state      = 'error'
+                })
         }
 
         # Step 5: Disable Inbox Rules
@@ -92,9 +92,9 @@ function Invoke-ExecBECRemediate {
             if (($Rules | Measure-Object).Count -eq 0) {
                 # No rules exist at all
                 $AllResults.Add([pscustomobject]@{
-                    resultText = "No Inbox Rules found for $Username."
-                    state      = 'info'
-                })
+                        resultText = "No Inbox Rules found for $Username."
+                        state      = 'info'
+                    })
             } else {
                 # Rules exist, filter and process them
                 $ProcessableRules = $Rules | Where-Object {
@@ -107,9 +107,9 @@ function Invoke-ExecBECRemediate {
                     $SystemRulesCount = ($Rules | Measure-Object).Count - $DelegateRulesSkipped
                     if ($SystemRulesCount -gt 0) {
                         $AllResults.Add([pscustomobject]@{
-                            resultText = "Found $(($Rules | Measure-Object).Count) inbox rules for $Username, but none require disabling (only system rules found)."
-                            state      = 'info'
-                        })
+                                resultText = "Found $(($Rules | Measure-Object).Count) inbox rules for $Username, but none require disabling (only system rules found)."
+                                state      = 'info'
+                            })
                     }
                 } else {
                     # Process the filterable rules
@@ -118,7 +118,7 @@ function Invoke-ExecBECRemediate {
                         Write-LogMessage -headers $Headers -API $APIName -message "Processing rule: Name='$($CurrentRule.Name)', Identity='$($CurrentRule.Identity)'" -Sev 'Info' -tenant $TenantFilter
 
                         try {
-                            Set-CIPPMailboxRule -Username $Username -TenantFilter $TenantFilter -RuleId $CurrentRule.Identity -RuleName $CurrentRule.Name -Disable -APIName $APIName -Headers $Headers
+                            Set-CIPPMailboxRule -Username $Username -UserId $Username -TenantFilter $TenantFilter -RuleId $CurrentRule.Identity -RuleName $CurrentRule.Name -Disable -APIName $APIName -Headers $Headers
 
                             Write-LogMessage -headers $Headers -API $APIName -message "Successfully disabled rule: $($CurrentRule.Name)" -Sev 'Info' -tenant $TenantFilter
                             $RuleDisabled++
@@ -140,29 +140,29 @@ function Invoke-ExecBECRemediate {
                     # Report results
                     if ($RuleDisabled -gt 0) {
                         $AllResults.Add([pscustomobject]@{
-                            resultText = "Successfully disabled $RuleDisabled inbox rules for $Username"
-                            state      = 'success'
-                        })
+                                resultText = "Successfully disabled $RuleDisabled inbox rules for $Username"
+                                state      = 'success'
+                            })
                     } elseif ($DelegateRulesSkipped -gt 0 -and $RuleDisabled -eq 0 -and $RuleFailed -eq 0) {
                         # Only system rules were found, report as no processable rules
                         $AllResults.Add([pscustomobject]@{
-                            resultText = "No processable inbox rules found for $Username"
-                            state      = 'info'
-                        })
+                                resultText = "No processable inbox rules found for $Username"
+                                state      = 'info'
+                            })
                     }
 
                     if ($RuleFailed -gt 0) {
                         $AllResults.Add([pscustomobject]@{
-                            resultText = "Failed to process $RuleFailed inbox rules for $Username"
-                            state      = 'warning'
-                        })
+                                resultText = "Failed to process $RuleFailed inbox rules for $Username"
+                                state      = 'warning'
+                            })
 
                         # Add individual rule failure messages as objects
                         foreach ($RuleMessage in $RuleMessages) {
                             $AllResults.Add([pscustomobject]@{
-                                resultText = $RuleMessage
-                                state      = 'error'
-                            })
+                                    resultText = $RuleMessage
+                                    state      = 'error'
+                                })
                         }
                     }
                 }
@@ -175,9 +175,9 @@ function Invoke-ExecBECRemediate {
             $ErrorMsg = "Failed to process inbox rules: $($_.Exception.Message)"
             Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Error' -tenant $TenantFilter
             $AllResults.Add([pscustomobject]@{
-                resultText = $ErrorMsg
-                state      = 'error'
-            })
+                    resultText = $ErrorMsg
+                    state      = 'error'
+                })
         }
 
         $StatusCode = [HttpStatusCode]::OK
@@ -190,9 +190,9 @@ function Invoke-ExecBECRemediate {
         $ErrorMessage = Get-CippException -Exception $_
         $ErrorList = [System.Collections.Generic.List[object]]::new()
         $ErrorList.Add([pscustomobject]@{
-            resultText = "Failed to execute remediation at step '$Step'. $($ErrorMessage.NormalizedError)"
-            state      = 'error'
-        })
+                resultText = "Failed to execute remediation at step '$Step'. $($ErrorMessage.NormalizedError)"
+                state      = 'error'
+            })
         Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username failed at the $Step step" -sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
 

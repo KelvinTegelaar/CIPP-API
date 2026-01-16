@@ -25,7 +25,7 @@
             @{
                 id     = 'ManagedAppPolicies'
                 method = 'GET'
-                url    = '/deviceAppManagement/managedAppPolicies?$expand=assignments&$orderby=displayName'
+                url    = '/deviceAppManagement/managedAppPolicies?$orderby=displayName'
             }
             @{
                 id     = 'MobileAppConfigurations'
@@ -41,60 +41,58 @@
 
         $GraphRequest = [System.Collections.Generic.List[object]]::new()
 
-        # Process Managed App Policies - these need separate assignment lookups
+        # Process Managed App Policies - these need separate assignment lookups as the ManagedAppPolicies endpoint does not support $expand
         $ManagedAppPolicies = ($BulkResults | Where-Object { $_.id -eq 'ManagedAppPolicies' }).body.value
         if ($ManagedAppPolicies) {
-            # Build bulk requests for assignments of policies that support them
-            $AssignmentRequests = [System.Collections.Generic.List[object]]::new()
-            foreach ($Policy in $ManagedAppPolicies) {
-                # Only certain policy types support assignments endpoint
-                $odataType = $Policy.'@odata.type'
-                if ($odataType -match 'androidManagedAppProtection|iosManagedAppProtection|windowsManagedAppProtection|targetedManagedAppConfiguration') {
-                    $urlSegment = switch -Wildcard ($odataType) {
-                        '*androidManagedAppProtection*' { 'androidManagedAppProtections' }
-                        '*iosManagedAppProtection*' { 'iosManagedAppProtections' }
-                        '*windowsManagedAppProtection*' { 'windowsManagedAppProtections' }
-                        '*targetedManagedAppConfiguration*' { 'targetedManagedAppConfigurations' }
-                    }
-                    if ($urlSegment) {
-                        $AssignmentRequests.Add(@{
-                                id     = $Policy.id
-                                method = 'GET'
-                                url    = "/deviceAppManagement/$urlSegment('$($Policy.id)')/assignments"
-                            })
+            # Get all @odata.type and deduplicate them
+            $OdataTypes = ($ManagedAppPolicies | Select-Object -ExpandProperty '@odata.type' -Unique) -replace '#microsoft.graph.', ''
+            $ManagedAppPoliciesBulkRequests = foreach ($type in $OdataTypes) {
+                # Translate to URL segments
+                $urlSegment = switch ($type) {
+                    'androidManagedAppProtection' { 'androidManagedAppProtections' }
+                    'iosManagedAppProtection' { 'iosManagedAppProtections' }
+                    'mdmWindowsInformationProtectionPolicy' { 'mdmWindowsInformationProtectionPolicies' }
+                    'windowsManagedAppProtection' { 'windowsManagedAppProtections' }
+                    'targetedManagedAppConfiguration' { 'targetedManagedAppConfigurations' }
+                    default { $null }
+                }
+                Write-Information "Type: $type => URL Segment: $urlSegment"
+                if ($urlSegment) {
+                    @{
+                        id     = $type
+                        method = 'GET'
+                        url    = "/deviceAppManagement/${urlSegment}?`$expand=assignments&`$orderby=displayName"
                     }
                 }
             }
 
-            # Fetch assignments in bulk if we have any
-            $AssignmentResults = @{}
-            if ($AssignmentRequests.Count -gt 0) {
-                $AssignmentBulkResults = New-GraphBulkRequest -Requests $AssignmentRequests -tenantid $TenantFilter
-                foreach ($result in $AssignmentBulkResults) {
-                    if ($result.body.value) {
-                        $AssignmentResults[$result.id] = $result.body.value
-                    }
-                }
+            $ManagedAppPoliciesBulkResults = New-GraphBulkRequest -Requests $ManagedAppPoliciesBulkRequests -tenantid $TenantFilter
+            # Do this horriblenes as a workaround, as the results dont return with a odata.type property
+            $ManagedAppPolicies = $ManagedAppPoliciesBulkResults | ForEach-Object {
+                $URLName = $_.id
+                $_.body.value | Add-Member -NotePropertyName 'URLName' -NotePropertyValue $URLName -Force
+                $_.body.value
             }
 
+
+
             foreach ($Policy in $ManagedAppPolicies) {
-                $policyType = switch -Wildcard ($Policy.'@odata.type') {
-                    '*androidManagedAppProtection*' { 'Android App Protection' }
-                    '*iosManagedAppProtection*' { 'iOS App Protection' }
-                    '*windowsManagedAppProtection*' { 'Windows App Protection' }
-                    '*mdmWindowsInformationProtectionPolicy*' { 'Windows Information Protection (MDM)' }
-                    '*windowsInformationProtectionPolicy*' { 'Windows Information Protection' }
-                    '*targetedManagedAppConfiguration*' { 'App Configuration (MAM)' }
-                    '*defaultManagedAppProtection*' { 'Default App Protection' }
+                $policyType = switch ($Policy.'URLName') {
+                    'androidManagedAppProtection' { 'Android App Protection'; break }
+                    'iosManagedAppProtection' { 'iOS App Protection'; break }
+                    'windowsManagedAppProtection' { 'Windows App Protection'; break }
+                    'mdmWindowsInformationProtectionPolicy' { 'Windows Information Protection (MDM)'; break }
+                    'windowsInformationProtectionPolicy' { 'Windows Information Protection'; break }
+                    'targetedManagedAppConfiguration' { 'App Configuration (MAM)'; break }
+                    'defaultManagedAppProtection' { 'Default App Protection'; break }
                     default { 'App Protection Policy' }
                 }
 
                 # Process assignments
                 $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
                 $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                $Assignments = $AssignmentResults[$Policy.id]
-                if ($Assignments) {
-                    foreach ($Assignment in $Assignments) {
+                if ($Policy.assignments) {
+                    foreach ($Assignment in $Policy.assignments) {
                         $target = $Assignment.target
                         switch ($target.'@odata.type') {
                             '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
@@ -112,7 +110,7 @@
                 }
 
                 $Policy | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-                $Policy | Add-Member -NotePropertyName 'URLName' -NotePropertyValue 'managedAppPolicies' -Force
+                # $Policy | Add-Member -NotePropertyName 'URLName' -NotePropertyValue 'managedAppPolicies' -Force
                 $Policy | Add-Member -NotePropertyName 'PolicySource' -NotePropertyValue 'AppProtection' -Force
                 $Policy | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
                 $Policy | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force

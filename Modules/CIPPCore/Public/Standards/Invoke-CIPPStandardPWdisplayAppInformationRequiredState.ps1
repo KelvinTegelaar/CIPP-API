@@ -42,8 +42,7 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PWdisplayAppInformationRequiredState state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -75,11 +74,16 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'PWdisplayAppInformationRequiredState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            state                              = $CurrentState.state
+            numberMatchingRequiredState        = $CurrentState.featureSettings.numberMatchingRequiredState.state
+            displayAppInformationRequiredState = $CurrentState.featureSettings.displayAppInformationRequiredState.state
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.PWdisplayAppInformationRequiredState' -FieldValue $FieldValue -Tenant $tenant
+        $ExpectedValue = @{
+            state                              = 'enabled'
+            numberMatchingRequiredState        = 'enabled'
+            displayAppInformationRequiredState = 'enabled'
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PWdisplayAppInformationRequiredState' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

@@ -1,7 +1,7 @@
-Function Invoke-ExecUniversalSearch {
+function Invoke-ExecUniversalSearch {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
@@ -41,8 +41,8 @@ Function Invoke-ExecUniversalSearch {
         $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
     }
     return [HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @($GraphRequest)
-        }
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    }
 
 }

@@ -55,5 +55,5 @@ function Set-CIPPUserLicense {
     }
 
     Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned licenses to user $UserId. Added: $AddLicenses; Removed: $RemoveLicenses" -Sev 'Info'
-    return 'Set licenses successfully'
+    return "Successfully set licenses for $UserId. It may take 2–5 minutes before the changes become visible."
 }

@@ -30,7 +30,6 @@ function Invoke-CIPPStandardEnablePronouns {
     #>
 
     param ($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnablePronouns'
 
     $Uri = 'https://graph.microsoft.com/v1.0/admin/people/pronouns'
     try {
@@ -38,7 +37,7 @@ function Invoke-CIPPStandardEnablePronouns {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Return
+        return
     }
 
     if ($Settings.remediate -eq $true) {
@@ -70,7 +69,14 @@ function Invoke-CIPPStandardEnablePronouns {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnablePronouns' -FieldValue $CurrentState.isEnabledInOrganization -Tenant $tenant
+        $CurrentValue = [PSCustomObject]@{
+            EnablePronouns = $CurrentState.isEnabledInOrganization
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnablePronouns = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnablePronouns' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }

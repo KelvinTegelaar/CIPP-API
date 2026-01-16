@@ -172,7 +172,7 @@ function Invoke-EditUser {
     if ($AddToGroups) {
         $AddToGroups | ForEach-Object {
 
-            $GroupType = $_.addedFields.calculatedGroupType
+            $GroupType = $_.addedFields.groupType
             $GroupID = $_.value
             $GroupName = $_.label
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
@@ -204,7 +204,7 @@ function Invoke-EditUser {
     if ($RemoveFromGroups) {
         $RemoveFromGroups | ForEach-Object {
 
-            $GroupType = $_.addedFields.calculatedGroupType
+            $GroupType = $_.addedFields.groupType
             $GroupID = $_.value
             $GroupName = $_.label
             Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"

@@ -16,9 +16,9 @@ function Push-CIPPStandard {
     Write-Information "We'll be running $FunctionName"
 
     if ($Standard -in @('IntuneTemplate', 'ConditionalAccessTemplate')) {
-        $API = "$($Standard)_$($Item.templateId)_$($Item.Settings.TemplateList.value)"
+        $API = "$($Standard)_$($Item.TemplateId)_$($Item.Settings.TemplateList.value)"
     } else {
-        $API = "$($Standard)_$($Item.templateId)"
+        $API = "$($Standard)_$($Item.TemplateId)"
     }
 
     $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
@@ -31,7 +31,7 @@ function Push-CIPPStandard {
 
     $StandardInfo = @{
         Standard           = $Standard
-        StandardTemplateId = $Item.templateId
+        StandardTemplateId = $Item.TemplateId
     }
     if ($Standard -eq 'IntuneTemplate') {
         $StandardInfo.IntuneTemplateId = $Item.Settings.TemplateList.value
@@ -64,7 +64,7 @@ function Push-CIPPStandard {
             InvocationId = $invocationId
             Tenant       = $Tenant
             Standard     = $Standard
-            TemplateId   = $Item.templateId
+            TemplateId   = $Item.TemplateId
             API          = $API
             FunctionName = $FunctionName
         } | ConvertTo-Json -Compress)
@@ -83,7 +83,7 @@ function Push-CIPPStandard {
         $metadata = @{
             Standard     = $Standard
             Tenant       = $Tenant
-            TemplateId   = $Item.templateId
+            TemplateId   = $Item.TemplateId
             FunctionName = $FunctionName
             TriggerType  = 'Standard'
         }
@@ -118,7 +118,7 @@ function Push-CIPPStandard {
                 InvocationId = $invocationId
                 Tenant       = $Tenant
                 Standard     = $Standard
-                TemplateId   = $Item.templateId
+                TemplateId   = $Item.TemplateId
                 API          = $API
                 FunctionName = $FunctionName
                 Result       = $result

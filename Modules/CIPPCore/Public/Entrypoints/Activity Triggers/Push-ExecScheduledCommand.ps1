@@ -20,6 +20,9 @@ function Push-ExecScheduledCommand {
     # Handle tenant resolution - support both direct tenant and group-expanded tenants
     $Tenant = $Item.Parameters.TenantFilter ?? $Item.TaskInfo.Tenant
 
+    # Detect if this is a multi-tenant task that should store results per-tenant
+    $IsMultiTenantTask = ($task.Tenant -eq 'AllTenants' -or $task.TenantGroup)
+
     # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
     # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
@@ -30,10 +33,52 @@ function Push-ExecScheduledCommand {
         Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
-    if ($CurrentTask.TaskState -eq 'Completed') {
+    if ($CurrentTask.TaskState -eq 'Completed' -and !$IsMultiTenantTask) {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) is already completed. Skipping execution."
         Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
+    }
+    # Task should be 'Pending' (queued by orchestrator) or 'Running' (retry/recovery)
+    # We accept both to handle edge cases
+
+    # Check for rerun protection - prevent duplicate executions within the recurrence interval
+    if ($task.Recurrence -and $task.Recurrence -ne '0') {
+        # Calculate interval in seconds from recurrence string
+        $IntervalSeconds = switch -Regex ($task.Recurrence) {
+            '^(\d+)$' { [int64]$matches[1] * 86400 }  # Plain number = days
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { 0 }
+        }
+
+        if ($IntervalSeconds -gt 0) {
+            # Round down to nearest 15-minute interval (900 seconds) since that's when orchestrator runs
+            # This prevents rerun blocking issues due to slight timing variations
+            $FifteenMinutes = 900
+            $AdjustedInterval = [Math]::Floor($IntervalSeconds / $FifteenMinutes) * $FifteenMinutes
+
+            # Ensure we have at least one 15-minute interval
+            if ($AdjustedInterval -lt $FifteenMinutes) {
+                $AdjustedInterval = $FifteenMinutes
+            }
+            # Use task RowKey as API identifier for rerun cache
+            $RerunParams = @{
+                TenantFilter = $Tenant
+                Type         = 'ScheduledTask'
+                API          = $task.RowKey
+                Interval     = $AdjustedInterval
+                BaseTime     = [int64]$task.ScheduledTime
+                Headers      = $Headers
+            }
+
+            $IsRerun = Test-CIPPRerun @RerunParams
+            if ($IsRerun) {
+                Write-Information "Scheduled task $($task.Name) for tenant $Tenant was recently executed. Skipping to prevent duplicate execution."
+                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+                return
+            }
+        }
     }
 
     if ($task.Trigger) {
@@ -220,7 +265,7 @@ function Push-ExecScheduledCommand {
             }
         }
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
-        if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants' -or $task.TenantGroup) {
+        if ($StoredResults.Length -gt 64000 -or $IsMultiTenantTask) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
                 PartitionKey = $task.RowKey

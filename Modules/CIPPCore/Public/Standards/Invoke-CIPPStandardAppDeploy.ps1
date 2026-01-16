@@ -39,6 +39,8 @@ function Invoke-CIPPStandardAppDeploy {
     $AppExists = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant
     $Mode = $Settings.mode ?? 'copy'
 
+    $ExpectedValue = [PSCustomObject]@{ state = 'Configured correctly' }
+
     if ($Mode -eq 'template') {
         # For template mode, we need to check each template individually
         # since Gallery Templates and Enterprise Apps have different deployment methods
@@ -105,6 +107,9 @@ function Invoke-CIPPStandardAppDeploy {
             }
         }
     }
+
+    $CurrentValue = if ($MissingApps.Count -eq 0) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingApps' = $MissingApps } }
+
     if ($Settings.remediate -eq $true) {
         if ($Mode -eq 'copy') {
             foreach ($App in $AppsToAdd) {
@@ -279,7 +284,7 @@ function Invoke-CIPPStandardAppDeploy {
 
     if ($Settings.report -eq $true) {
         $StateIsCorrect = $MissingApps.Count -eq 0 ? $true : @{ 'Missing Apps' = $MissingApps -join ',' }
-        Set-CIPPStandardsCompareField -FieldName 'standards.AppDeploy' -FieldValue $StateIsCorrect -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AppDeploy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AppDeploy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

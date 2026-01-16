@@ -52,18 +52,26 @@ function Invoke-CIPPStandardCloudMessageRecall {
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
-    if ($Settings.report -eq $true) {
-        # Default is not set, not set means it's enabled
-        if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -FieldValue $StateIsCorrect -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
-    }
-
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'CloudMessageRecall: Invalid state parameter set' -sev Error
         return
     }
+
+    $CurrentValue = [PSCustomObject]@{
+        MessageRecallEnabled = $CurrentState
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        MessageRecallEnabled = $WantedState
+    }
+
+    if ($Settings.report -eq $true) {
+        # Default is not set, not set means it's enabled
+        if ($null -eq $CurrentState ) { $CurrentState = $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
+    }
+
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
