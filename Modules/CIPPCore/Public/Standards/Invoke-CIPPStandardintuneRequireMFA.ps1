@@ -29,7 +29,6 @@ function Invoke-CIPPStandardintuneRequireMFA {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
 
     try {
         $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
@@ -69,7 +68,14 @@ function Invoke-CIPPStandardintuneRequireMFA {
 
     if ($Settings.report -eq $true) {
         $RequireMFA = if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $true } else { $false }
-        Set-CIPPStandardsCompareField -FieldName 'standards.intuneRequireMFA' -FieldValue $RequireMFA -Tenant $Tenant
+
+        $CurrentValue = @{
+            multiFactorAuthConfiguration = $PreviousSetting.multiFactorAuthConfiguration
+        }
+        $ExpectedValue = @{
+            multiFactorAuthConfiguration = 'required'
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneRequireMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue $RequireMFA -StoreAs bool -Tenant $Tenant
     }
 }

@@ -1,4 +1,4 @@
-Function Invoke-ListmailboxPermissions {
+function Invoke-ListmailboxPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,8 +10,31 @@ Function Invoke-ListmailboxPermissions {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.userId
+    $UseReportDB = $Request.Query.UseReportDB
+    $ByUser = $Request.Query.ByUser
 
     try {
+        # If UseReportDB is specified and no specific UserID, retrieve from report database
+        if ($UseReportDB -eq 'true' -and -not $UserID) {
+
+            # Call the report function with proper parameters
+            $ReportParams = @{
+                TenantFilter = $TenantFilter
+            }
+            if ($ByUser -eq 'true') {
+                $ReportParams.ByUser = $true
+            }
+
+            $GraphRequest = Get-CIPPMailboxPermissionReport @ReportParams
+            $StatusCode = [HttpStatusCode]::OK
+
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
+        # Original live query logic for specific user
         $Requests = @(
             @{
                 CmdletInput = @{

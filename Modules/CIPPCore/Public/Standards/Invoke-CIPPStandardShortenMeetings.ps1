@@ -45,9 +45,8 @@ function Invoke-CIPPStandardShortenMeetings {
 
     try {
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' |
-        Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
-    }
-    catch {
+            Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ShortenMeetings state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -96,11 +95,16 @@ function Invoke-CIPPStandardShortenMeetings {
             Add-CIPPBPAField @BPAField -StoreAs json
         }
 
-        if ($CorrectState -eq $true) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            ShortenEventScopeDefault            = $CurrentState.ShortenEventScopeDefault
+            DefaultMinutesToReduceShortEventsBy = $CurrentState.DefaultMinutesToReduceShortEventsBy
+            DefaultMinutesToReduceLongEventsBy  = $CurrentState.DefaultMinutesToReduceLongEventsBy
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.ShortenMeetings' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            ShortenEventScopeDefault            = $scopeDefault
+            DefaultMinutesToReduceShortEventsBy = $Settings.DefaultMinutesToReduceShortEventsBy
+            DefaultMinutesToReduceLongEventsBy  = $Settings.DefaultMinutesToReduceLongEventsBy
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.ShortenMeetings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

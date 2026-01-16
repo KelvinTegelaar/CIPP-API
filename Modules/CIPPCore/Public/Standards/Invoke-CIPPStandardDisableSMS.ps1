@@ -34,19 +34,17 @@ function Invoke-CIPPStandardDisableSMS {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSMS'
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/SMS' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSMS state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'disabled')
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMS authentication method is already disabled.' -sev Info
         } else {
@@ -67,7 +65,15 @@ function Invoke-CIPPStandardDisableSMS {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSMS' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableSMS = $StateIsCorrect
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableSMS = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSMS' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableSMS' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

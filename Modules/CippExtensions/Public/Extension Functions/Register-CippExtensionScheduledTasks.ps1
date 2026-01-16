@@ -16,6 +16,15 @@ function Register-CIPPExtensionScheduledTasks {
     $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
+    # Remove all legacy Sync-CippExtensionData tasks (now deprecated - extensions use CippReportingDB)
+    Write-Information "Removing $($ScheduledTasks.Count) legacy Sync-CippExtensionData scheduled tasks"
+    foreach ($Task in $ScheduledTasks) {
+        Write-Information "Removing legacy task: $($Task.Name) for tenant $($Task.Tenant)"
+        $Entity = $Task | Select-Object -Property PartitionKey, RowKey
+        Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+    }
+    $ScheduledTasks = @() # Clear the list since we removed them all
+
     $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
@@ -24,7 +33,7 @@ function Register-CIPPExtensionScheduledTasks {
                 $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json
-                    if ($Mapping.sourceType.value -eq 'extensionSync') {
+                    if ($Mapping.sourceType.value -eq 'reportingDb' -or $Mapping.sourceType.value -eq 'extensionSync') {
                         $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
                             $Tenants
                         } else {
@@ -68,31 +77,9 @@ function Register-CIPPExtensionScheduledTasks {
                     continue
                 }
                 $MappedTenants.Add($Tenant.defaultDomainName)
-                foreach ($SyncType in $SyncTypes) {
-                    $ExistingTask = $ScheduledTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $SyncType }
-                    if (!$ExistingTask) {
-                        $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-                        $Task = [pscustomobject]@{
-                            Name          = "Extension Sync - $SyncType"
-                            Command       = @{
-                                value = 'Sync-CippExtensionData'
-                                label = 'Sync-CippExtensionData'
-                            }
-                            Parameters    = [pscustomobject]@{
-                                TenantFilter = $Tenant.defaultDomainName
-                                SyncType     = $SyncType
-                            }
-                            Recurrence    = '1d'
-                            ScheduledTime = $unixtime
-                            TenantFilter  = $Tenant.defaultDomainName
-                        }
-                        if ($ExistingTask) {
-                            $Task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingTask.RowKey -Force
-                        }
-                        $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $SyncType
-                        Write-Information "Creating $SyncType task for tenant $($Tenant.defaultDomainName)"
-                    }
-                }
+                
+                # Legacy Sync-CippExtensionData tasks are no longer needed - extensions now use CippReportingDB
+                # All cache data is now collected by Push-CIPPDBCacheData scheduled tasks
 
                 $ExistingPushTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
                 if ((!$ExistingPushTask -or $Reschedule.IsPresent) -and $Extension -ne 'NinjaOne') {

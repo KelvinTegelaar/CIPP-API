@@ -42,15 +42,14 @@ function Invoke-CIPPStandardPerUserMFA {
 
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,accountEnabled,perUserMfaState&`$filter=userType eq 'Member' and accountEnabled eq true and displayName ne 'On-Premises Directory Synchronization Service Account'&`$count=true" -tenantid $Tenant -ComplexFilter
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PerUserMFA state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $UsersWithoutMFA = $GraphRequest | Where-Object -Property perUserMfaState -NE 'enforced' | Select-Object -Property userPrincipalName, displayName, accountEnabled, perUserMfaState
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if (($UsersWithoutMFA | Measure-Object).Count -gt 0) {
             try {
                 $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -userId @($UsersWithoutMFA.userPrincipalName) -State 'enforced'
@@ -70,8 +69,13 @@ function Invoke-CIPPStandardPerUserMFA {
         }
     }
     if ($Settings.report -eq $true) {
-        $State = $UsersWithoutMFA ? $UsersWithoutMFA : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.PerUserMFA' -FieldValue $State -Tenant $tenant
+        $CurrentValue = @{
+            UsersWithoutMFA = @($UsersWithoutMFA)
+        }
+        $ExpectedValue = @{
+            UsersWithoutMFA = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PerUserMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }
