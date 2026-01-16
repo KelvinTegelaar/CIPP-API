@@ -109,11 +109,14 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SendReceiveLimit' -FieldValue $NotSetCorrectly -StoreAs json -Tenant $tenant
 
-        if ($NotSetCorrectly.Count -eq 0) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $NotSetCorrectly
+        $CurrentValue = @{
+            SendLimit    = $Settings.SendLimit
+            ReceiveLimit = $Settings.ReceiveLimit
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SendReceiveLimitTenant' -FieldValue $FieldValue -Tenant $tenant
+        $ExpectedValue = @{
+            SendLimit    = $Settings.SendLimit
+            ReceiveLimit = $Settings.ReceiveLimit
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SendReceiveLimitTenant' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

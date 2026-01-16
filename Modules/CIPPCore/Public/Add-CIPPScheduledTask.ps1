@@ -46,8 +46,14 @@ function Add-CIPPScheduledTask {
                 return "Could not run task: $ErrorMessage"
             }
         } else {
+            if (!$Task.RowKey) {
+                $RowKey = (New-Guid).Guid
+            } else {
+                $RowKey = $Task.RowKey
+            }
+
             if ($DisallowDuplicateName) {
-                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)'"
+                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)' and TaskState ne 'Completed' and TaskState ne 'Failed'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
                 if ($ExistingTask) {
                     return "Task with name $($Task.Name) already exists"
@@ -110,11 +116,7 @@ function Add-CIPPScheduledTask {
             }
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
             if ($Parameters -eq 'null') { $Parameters = '' }
-            if (!$Task.RowKey) {
-                $RowKey = (New-Guid).Guid
-            } else {
-                $RowKey = $Task.RowKey
-            }
+
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
                 $task.Recurrence
@@ -258,7 +260,46 @@ function Add-CIPPScheduledTask {
                 return "Error - Could not add task: $ErrorMessage"
             }
             Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Added task $($entity.Name) with ID $($entity.RowKey)" -Sev 'Info' -Tenant $tenantFilter
-            return "Successfully added task: $($entity.Name)"
+
+            # Calculate relative time for next run
+            $scheduledEpoch = [int64]$entity.ScheduledTime
+            $currentTime = [datetime]::UtcNow
+
+            if ($scheduledEpoch -eq 0 -or $scheduledEpoch -le ([int64](($currentTime) - (Get-Date '1/1/1970')).TotalSeconds)) {
+                # Task will run at next 15-minute interval - calculate efficiently
+                $minutesToAdd = 15 - ($currentTime.Minute % 15)
+                $nextRunTime = $currentTime.AddMinutes($minutesToAdd).AddSeconds(-$currentTime.Second).AddMilliseconds(-$currentTime.Millisecond)
+                $timeUntilRun = $nextRunTime - $currentTime
+            } else {
+                # Task is scheduled for a specific time in the future
+                $scheduledTime = [datetime]'1/1/1970' + [TimeSpan]::FromSeconds($scheduledEpoch)
+                $timeUntilRun = $scheduledTime - $currentTime
+            }
+
+            # Format relative time
+            $relativeTime = switch ($timeUntilRun.TotalMinutes) {
+                { $_ -ge 1440 } {
+                    $days = [Math]::Floor($timeUntilRun.TotalDays)
+                    $hours = $timeUntilRun.Hours
+                    $result = "$days day$(if ($days -ne 1) { 's' })"
+                    if ($hours -gt 0) { $result += " and $hours hour$(if ($hours -ne 1) { 's' })" }
+                    $result
+                    break
+                }
+                { $_ -ge 60 } {
+                    $hours = [Math]::Floor($timeUntilRun.TotalHours)
+                    $minutes = $timeUntilRun.Minutes
+                    $result = "$hours hour$(if ($hours -ne 1) { 's' })"
+                    if ($minutes -gt 0) { $result += " and $minutes minute$(if ($minutes -ne 1) { 's' })" }
+                    $result
+                    break
+                }
+                { $_ -ge 2 } { "about $([Math]::Round($_)) minutes"; break }
+                { $_ -ge 1 } { 'about 1 minute'; break }
+                default { 'less than a minute' }
+            }
+
+            return "Successfully added task: $($entity.Name). It will run in $relativeTime."
         }
     } catch {
         Write-Warning "Failed to add scheduled task: $($_.Exception.Message)"

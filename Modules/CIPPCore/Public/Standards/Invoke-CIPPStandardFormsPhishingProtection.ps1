@@ -44,7 +44,7 @@ function Invoke-CIPPStandardFormsPhishingProtection {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get current Forms settings. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Return
+        return
     }
 
     if ($Settings.remediate -eq $true) {
@@ -82,7 +82,14 @@ function Invoke-CIPPStandardFormsPhishingProtection {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.FormsPhishingProtection' -FieldValue $CurrentState -Tenant $Tenant
+        $CurrentValue = @{
+            isInOrgFormsPhishingScanEnabled = $CurrentState
+        }
+        $ExpectedValue = @{
+            isInOrgFormsPhishingScanEnabled = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.FormsPhishingProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'FormsPhishingProtection' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 }

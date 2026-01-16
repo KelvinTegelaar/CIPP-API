@@ -31,7 +31,7 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEnrollUser' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEnrollUser' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     # Get EnrollUserOverride value using null-coalescing operator
 
@@ -43,9 +43,8 @@ function Invoke-CIPPStandardTeamsEnrollUser {
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -cmdParams @{Identity = 'Global' } |
-        Select-Object EnrollUserOverride
-    }
-    catch {
+            Select-Object EnrollUserOverride
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsEnrollUser state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -84,11 +83,12 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsEnrollUser' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            EnrollUserOverride = $CurrentState.EnrollUserOverride
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEnrollUser' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            EnrollUserOverride = $enrollUserOverride
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEnrollUser' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

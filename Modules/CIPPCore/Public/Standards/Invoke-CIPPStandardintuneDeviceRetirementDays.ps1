@@ -33,7 +33,6 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
 
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceRetirementDays' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneDeviceRetirementDays'
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -42,8 +41,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
 
     try {
         $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupRules' -tenantid $Tenant)
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneDeviceRetirementDays state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -84,8 +82,13 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $CurrentInfo.DeviceInactivityBeforeRetirementInDays
-        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRetirementDays' -FieldValue $state -Tenant $tenant
+        $CurrentValue = @{
+            deviceInactivityBeforeRetirementInDays = $CurrentInfo.DeviceInactivityBeforeRetirementInDays
+        }
+        $ExpectedValue = @{
+            deviceInactivityBeforeRetirementInDays = $Settings.days
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRetirementDays' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
