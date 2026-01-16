@@ -23,10 +23,6 @@ function Invoke-ExecCIPPDBCache {
             throw 'TenantFilter parameter is required'
         }
 
-        if ($TenantFilter -eq 'AllTenants') {
-            throw 'TenantFilter cannot be AllTenants for this operation'
-        }
-
         # Validate the function exists
         $FunctionName = "Set-CIPPDBCache$Name"
         $Function = Get-Command -Name $FunctionName -ErrorAction SilentlyContinue
@@ -36,15 +32,35 @@ function Invoke-ExecCIPPDBCache {
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name" -sev Info
 
-        # Start orchestrator to run the cache function
-        $InputObject = [PSCustomObject]@{
-            Batch            = @([PSCustomObject]@{
+        # Handle AllTenants - create a batch for each tenant
+        if ($TenantFilter -eq 'AllTenants') {
+            $TenantList = Get-Tenants -IncludeErrors
+            $Batch = $TenantList | ForEach-Object {
+                [PSCustomObject]@{
                     FunctionName = 'ExecCIPPDBCache'
                     Name         = $Name
-                    TenantFilter = $TenantFilter
-                })
-            OrchestratorName = "CIPPDBCache_${Name}_$TenantFilter"
-            SkipLog          = $false
+                    TenantFilter = $_.defaultDomainName
+                }
+            }
+            
+            $InputObject = [PSCustomObject]@{
+                Batch            = @($Batch)
+                OrchestratorName = "CIPPDBCache_${Name}_AllTenants"
+                SkipLog          = $false
+            }
+            
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name across $($TenantList.Count) tenants" -sev Info
+        } else {
+            # Single tenant
+            $InputObject = [PSCustomObject]@{
+                Batch            = @([PSCustomObject]@{
+                        FunctionName = 'ExecCIPPDBCache'
+                        Name         = $Name
+                        TenantFilter = $TenantFilter
+                    })
+                OrchestratorName = "CIPPDBCache_${Name}_$TenantFilter"
+                SkipLog          = $false
+            }
         }
 
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
@@ -52,7 +68,7 @@ function Invoke-ExecCIPPDBCache {
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Started CIPP DB cache orchestrator for $Name with instance ID: $InstanceId" -sev Info
 
         $Body = [PSCustomObject]@{
-            Results  = "Successfully started cache operation for $Name on tenant $TenantFilter"
+            Results  = "Successfully started cache operation for $Name$(if ($TenantFilter -eq 'AllTenants') { ' for all tenants' } else { " on tenant $TenantFilter" })"
             Metadata = @{
                 Name       = $Name
                 Tenant     = $TenantFilter
