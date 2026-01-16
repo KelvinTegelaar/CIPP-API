@@ -21,8 +21,8 @@ function Search-CIPPDbData {
         Groups, Roles, LicenseOverview, IntuneDeviceCompliancePolicies, SecureScore,
         SecureScoreControlProfiles, Mailboxes, CASMailbox, MailboxPermissions, OneDriveUsage, MailboxUsage
 
-    .PARAMETER CaseSensitive
-        If specified, performs case-sensitive search
+    .PARAMETER MatchAll
+        If specified, all search terms must be found. Default is false (any term matches).
 
     .PARAMETER MaxResultsPerType
         Maximum number of results to return per type. Default is unlimited (0)
@@ -60,7 +60,7 @@ function Search-CIPPDbData {
         [string[]]$Types,
 
         [Parameter(Mandatory = $false)]
-        [switch]$CaseSensitive,
+        [switch]$MatchAll,
 
         [Parameter(Mandatory = $false)]
         [int]$MaxResultsPerType = 0
@@ -112,16 +112,20 @@ function Search-CIPPDbData {
                             # Check if any search term matches in the JSON string
                             $IsMatch = $false
 
-                            foreach ($SearchTerm in $SearchTerms) {
-                                # Use -match operator with escaped search term
-                                $SearchPattern = [regex]::Escape($SearchTerm)
-
-                                if ($CaseSensitive) {
-                                    if ($Item.Data -cmatch $SearchPattern) {
-                                        $IsMatch = $true
+                            if ($MatchAll) {
+                                # All terms must match
+                                $IsMatch = $true
+                                foreach ($SearchTerm in $SearchTerms) {
+                                    $SearchPattern = [regex]::Escape($SearchTerm)
+                                    if ($Item.Data -notmatch $SearchPattern) {
+                                        $IsMatch = $false
                                         break
                                     }
-                                } else {
+                                }
+                            } else {
+                                # Any term can match (default)
+                                foreach ($SearchTerm in $SearchTerms) {
+                                    $SearchPattern = [regex]::Escape($SearchTerm)
                                     if ($Item.Data -match $SearchPattern) {
                                         $IsMatch = $true
                                         break
