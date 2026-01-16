@@ -62,7 +62,7 @@ function New-CIPPCATemplate {
     $isArray = $hasConditionsUsers -and ($JSON.conditions.users -is [Array] -or $JSON.conditions.users -is [System.Collections.IList])
     $isPSCustomObject = $hasConditionsUsers -and -not $isArray -and ($JSON.conditions.users -is [PSCustomObject] -or ($JSON.conditions.users.PSObject.Properties.Count -gt 0 -and -not $isArray))
     $hasIncludeUsers = $isPSCustomObject -and ($null -ne $JSON.conditions.users.includeUsers)
-    
+
     if ($isPSCustomObject -and $hasIncludeUsers) {
         $JSON.conditions.users.includeUsers = @($JSON.conditions.users.includeUsers | ForEach-Object {
                 $originalID = $_
@@ -106,7 +106,9 @@ function New-CIPPCATemplate {
         $AllLocations.Add($Location)
     }
 
-    $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($AllLocations | Select-Object -Unique) -Force
+    # Remove duplicates based on displayName to avoid Select-Object -Unique issues with complex objects
+    $UniqueLocations = $AllLocations | Group-Object -Property displayName | ForEach-Object { $_.Group[0] }
+    $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($UniqueLocations) -Force
     $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject $JSON)
     return $JSON
 }
