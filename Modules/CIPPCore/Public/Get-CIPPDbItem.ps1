@@ -51,7 +51,11 @@ function Get-CIPPDbItem {
             if (-not $Type) {
                 throw 'Type parameter is required when CountsOnly is not specified'
             }
-            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}.'" -f $TenantFilter, $Type
+            if ($TenantFilter -ne 'allTenants') {
+                $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}.'" -f $TenantFilter, $Type
+            } else {
+                $Filter = "RowKey ge '{0}-' and RowKey lt '{0}.'" -f $Type
+            }
             $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         }
 
