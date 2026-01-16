@@ -20,6 +20,9 @@ function Push-ExecScheduledCommand {
     # Handle tenant resolution - support both direct tenant and group-expanded tenants
     $Tenant = $Item.Parameters.TenantFilter ?? $Item.TaskInfo.Tenant
 
+    # Detect if this is a multi-tenant task that should store results per-tenant
+    $IsMultiTenantTask = ($task.Tenant -eq 'AllTenants' -or $task.TenantGroup)
+
     # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
     # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
@@ -30,7 +33,7 @@ function Push-ExecScheduledCommand {
         Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
-    if ($CurrentTask.TaskState -eq 'Completed') {
+    if ($CurrentTask.TaskState -eq 'Completed' -and !$IsMultiTenantTask) {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) is already completed. Skipping execution."
         Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
@@ -262,7 +265,7 @@ function Push-ExecScheduledCommand {
             }
         }
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
-        if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants' -or $task.TenantGroup) {
+        if ($StoredResults.Length -gt 64000 -or $IsMultiTenantTask) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
                 PartitionKey = $task.RowKey
