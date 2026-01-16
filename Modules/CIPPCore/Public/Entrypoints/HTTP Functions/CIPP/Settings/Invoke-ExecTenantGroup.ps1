@@ -45,7 +45,7 @@ function Invoke-ExecTenantGroup {
                 }
                 $GroupEntity | Add-Member -NotePropertyName 'GroupType' -NotePropertyValue $groupType -Force
                 if ($groupType -eq 'dynamic' -and $dynamicRules) {
-                    $GroupEntity.DynamicRules = "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)"
+                    $GroupEntity | Add-Member -NotePropertyName 'DynamicRules' -NotePropertyValue "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)" -Force
                     $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $ruleLogic -Force
                 } else {
                     $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $null -Force

@@ -41,6 +41,9 @@ function Invoke-CIPPStandardAnonReportDisable {
         return
     }
 
+    $CurrentValue = $CurrentInfo | Select-Object -Property displayConcealedNames
+    $ExpectedValue = [PSCustomObject]@{displayConcealedNames = $false }
+
     if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.displayConcealedNames -eq $false) {
@@ -65,8 +68,7 @@ function Invoke-CIPPStandardAnonReportDisable {
         }
     }
     if ($Settings.report -eq $true) {
-        $StateIsCorrect = $CurrentInfo.displayConcealedNames ? $false : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.AnonReportDisable' -FieldValue $StateIsCorrect -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AnonReportDisable' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue $CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
     }
 }

@@ -7,7 +7,7 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     .SYNOPSIS
         (Label) Set Exchange Outbound Spam Limits
     .DESCRIPTION
-        (Helptext) Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. 
+        (Helptext) Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.
         (DocsDescription) Configures the Exchange Online outbound spam recipient limits for external per hour, internal per hour, and per day, along with the action to take (e.g., BlockUser, Alert) when these limits are exceeded. This helps prevent abuse and manage email flow. Microsoft's recommendations can be found [here.](https://learn.microsoft.com/en-us/defender-office-365/recommended-settings-for-eop-and-office365#eop-outbound-spam-policy-settings) The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.
     .NOTES
         CAT
@@ -72,9 +72,8 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
     # Get current settings
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{Identity = 'Default' } -Select 'RecipientLimitExternalPerHour, RecipientLimitInternalPerHour, RecipientLimitPerDay, ActionWhenThresholdReached' -useSystemMailbox $true |
-        Select-Object -ExcludeProperty *data.type*
-    }
-    catch {
+            Select-Object -ExcludeProperty *data.type*
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EXOOutboundSpamLimits state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -82,12 +81,12 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
 
     # Check if settings are already correct
     $StateIsCorrect = ($CurrentInfo.RecipientLimitExternalPerHour -eq $Settings.RecipientLimitExternalPerHour) -and
-                        ($CurrentInfo.RecipientLimitInternalPerHour -eq $Settings.RecipientLimitInternalPerHour) -and
-                        ($CurrentInfo.RecipientLimitPerDay -eq $Settings.RecipientLimitPerDay) -and
-                        ($CurrentInfo.ActionWhenThresholdReached -eq $ActionWhenThresholdReached)
+    ($CurrentInfo.RecipientLimitInternalPerHour -eq $Settings.RecipientLimitInternalPerHour) -and
+    ($CurrentInfo.RecipientLimitPerDay -eq $Settings.RecipientLimitPerDay) -and
+    ($CurrentInfo.ActionWhenThresholdReached -eq $ActionWhenThresholdReached)
 
     # Remediation
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $false) {
             try {
@@ -121,8 +120,20 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
 
     # Report
     if ($Settings.report -eq $true) {
-        $State = $StateIsCorrect ? $true : $CurrentInfo
-        Set-CIPPStandardsCompareField -FieldName 'standards.EXOOutboundSpamLimits' -FieldValue $State -TenantFilter $Tenant
+        $CurrentValue = @{
+            RecipientLimitExternalPerHour = $CurrentInfo.RecipientLimitExternalPerHour
+            RecipientLimitInternalPerHour = $CurrentInfo.RecipientLimitInternalPerHour
+            RecipientLimitPerDay          = $CurrentInfo.RecipientLimitPerDay
+            ActionWhenThresholdReached    = $CurrentInfo.ActionWhenThresholdReached
+        }
+        $ExpectedValue = @{
+            RecipientLimitExternalPerHour = [Int32]$Settings.RecipientLimitExternalPerHour
+            RecipientLimitInternalPerHour = [Int32]$Settings.RecipientLimitInternalPerHour
+            RecipientLimitPerDay          = [Int32]$Settings.RecipientLimitPerDay
+            ActionWhenThresholdReached    = $ActionWhenThresholdReached
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EXOOutboundSpamLimits' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'OutboundSpamLimitsConfigured' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

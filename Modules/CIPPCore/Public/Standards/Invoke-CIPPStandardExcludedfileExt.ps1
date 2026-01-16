@@ -31,8 +31,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ExcludedfileExt' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExcludedfileExt'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ExcludedfileExt' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -41,8 +40,7 @@ function Invoke-CIPPStandardExcludedfileExt {
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ExcludedfileExt state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -61,7 +59,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     Write-Host "MissingExclusions: $($MissingExclusions)"
 
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         # If the number of extensions in the settings does not match the number of extensions in the current settings, we need to update the settings
         $MissingExclusions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclusions }
@@ -92,8 +90,14 @@ function Invoke-CIPPStandardExcludedfileExt {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $MissingExclusions ? (@{ ext = $CurrentInfo.excludedFileExtensionsForSyncApp -join ',' }): $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.ExcludedfileExt' -FieldValue $state -Tenant $tenant
+        $CurrentValue = [PSCustomObject]@{
+            Extensions = @($CurrentInfo.excludedFileExtensionsForSyncApp)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            Extensions = @($Exts)
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.ExcludedfileExt' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }

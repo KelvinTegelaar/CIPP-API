@@ -41,12 +41,10 @@ function Invoke-CIPPStandardEnableMailTips {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableMailTips'
 
     try {
         $MailTipsState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' | Select-Object MailTipsAllTipsEnabled, MailTipsExternalRecipientsTipsEnabled, MailTipsGroupMetricsEnabled, MailTipsLargeAudienceThreshold
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableMailTips state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -79,8 +77,15 @@ function Invoke-CIPPStandardEnableMailTips {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $MailTipsState
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailTips' -FieldValue $State -Tenant $tenant
+        $CurrentValue = $MailTipsState
+        $ExpectedValue = [PSCustomObject]@{
+            MailTipsAllTipsEnabled                = $true
+            MailTipsExternalRecipientsTipsEnabled = $true
+            MailTipsGroupMetricsEnabled           = $true
+            MailTipsLargeAudienceThreshold        = $Settings.MailTipsLargeAudienceThreshold
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailTips' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
