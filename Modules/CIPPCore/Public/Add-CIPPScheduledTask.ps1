@@ -53,7 +53,7 @@ function Add-CIPPScheduledTask {
             }
 
             if ($DisallowDuplicateName) {
-                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)'"
+                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)' and TaskState ne 'Completed' and TaskState ne 'Failed'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
                 if ($ExistingTask) {
                     return "Task with name $($Task.Name) already exists"
