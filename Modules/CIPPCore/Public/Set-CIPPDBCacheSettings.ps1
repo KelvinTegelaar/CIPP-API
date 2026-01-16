@@ -13,12 +13,12 @@ function Set-CIPPDBCacheSettings {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching directory settings' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching directory settings' -sev Debug
 
         $Settings = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/settings?$top=999' -tenantid $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Settings' -Data $Settings
         $Settings = $null
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory settings successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory settings successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `

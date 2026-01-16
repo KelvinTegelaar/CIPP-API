@@ -13,7 +13,7 @@ function Set-CIPPDBCacheRiskDetections {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching risk detections from Identity Protection' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching risk detections from Identity Protection' -sev Debug
 
         # Requires P2 licensing
         $RiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskDetections' -tenantid $TenantFilter
@@ -21,9 +21,9 @@ function Set-CIPPDBCacheRiskDetections {
         if ($RiskDetections) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskDetections.Count) risk detections successfully" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskDetections.Count) risk detections successfully" -sev Debug
         } else {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risk detections found or Identity Protection not available' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risk detections found or Identity Protection not available' -sev Debug
         }
 
     } catch {

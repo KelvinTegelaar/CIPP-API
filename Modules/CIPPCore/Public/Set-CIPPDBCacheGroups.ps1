@@ -13,7 +13,7 @@ function Set-CIPPDBCacheGroups {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Debug
 
         $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,groupTypes,mail,mailEnabled,securityEnabled,membershipRule,onPremisesSyncEnabled' -tenantid $TenantFilter
 
@@ -29,7 +29,7 @@ function Set-CIPPDBCacheGroups {
         }
 
         if ($MemberRequests) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching group members' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching group members' -sev Debug
             $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
 
             # Add members to each group object
@@ -49,7 +49,7 @@ function Set-CIPPDBCacheGroups {
             $Groups = $null
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached groups with members successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached groups with members successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `

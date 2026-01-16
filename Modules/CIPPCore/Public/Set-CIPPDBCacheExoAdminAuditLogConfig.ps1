@@ -13,7 +13,7 @@ function Set-CIPPDBCacheExoAdminAuditLogConfig {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Admin Audit Log configuration' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Admin Audit Log configuration' -sev Debug
 
         $AuditConfig = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AdminAuditLogConfig'
 
@@ -22,7 +22,7 @@ function Set-CIPPDBCacheExoAdminAuditLogConfig {
             $AuditConfigArray = @($AuditConfig)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Admin Audit Log configuration' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Admin Audit Log configuration' -sev Debug
         }
         $AuditConfig = $null
 
