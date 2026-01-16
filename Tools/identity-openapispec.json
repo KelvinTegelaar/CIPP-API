@@ -178,9 +178,13 @@
                   "UserEmail": {
                     "type": "string",
                     "description": "User Principal Name"
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant to filter by"
                   }
                 },
-                "required": ["UserEmail"]
+                "required": ["UserEmail","tenantFilter"]
               }
             }
           }
