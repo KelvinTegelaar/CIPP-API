@@ -367,6 +367,16 @@ function Push-CIPPDBCacheData {
                     try { Set-CIPPDBCacheMailboxes -TenantFilter $TenantFilter } catch {
                         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Mailboxes collection failed: $($_.Exception.Message)" -sev Error
                     }
+
+                    Write-Host 'Getting cache for MailboxUsage'
+                    try { Set-CIPPDBCacheMailboxUsage -TenantFilter $TenantFilter } catch {
+                        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "MailboxUsage collection failed: $($_.Exception.Message)" -sev Error
+                    }
+
+                    Write-Host 'Getting cache for OneDriveUsage'
+                    try { Set-CIPPDBCacheOneDriveUsage -TenantFilter $TenantFilter } catch {
+                        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "OneDriveUsage collection failed: $($_.Exception.Message)" -sev Error
+                    }
                 } else {
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Mailboxes data collection - tenant does not have required Exchange license' -sev Info
                 }
