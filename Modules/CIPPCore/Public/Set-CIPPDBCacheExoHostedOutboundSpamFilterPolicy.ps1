@@ -13,13 +13,13 @@ function Set-CIPPDBCacheExoHostedOutboundSpamFilterPolicy {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Hosted Outbound Spam Filter policies' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Hosted Outbound Spam Filter policies' -sev Debug
 
         $HostedOutboundSpamFilterPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-HostedOutboundSpamFilterPolicy'
         if ($HostedOutboundSpamFilterPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedOutboundSpamFilterPolicy' -Data $HostedOutboundSpamFilterPolicies
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedOutboundSpamFilterPolicy' -Data $HostedOutboundSpamFilterPolicies -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($HostedOutboundSpamFilterPolicies.Count) Hosted Outbound Spam Filter policies" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($HostedOutboundSpamFilterPolicies.Count) Hosted Outbound Spam Filter policies" -sev Debug
         }
         $HostedOutboundSpamFilterPolicies = $null
 

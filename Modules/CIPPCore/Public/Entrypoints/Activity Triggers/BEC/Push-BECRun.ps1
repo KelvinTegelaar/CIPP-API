@@ -157,7 +157,7 @@ function Push-BECRun {
             NewRules                 = @($RulesLog)
             MailboxPermissionChanges = @($PermissionsLog)
             NewUsers                 = @($NewUsers)
-            MFADevices               = @($MFADevices)
+            MFADevices               = @($MFADevices | Where-Object { $_.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod' })
             ChangedPasswords         = @($PasswordChanges)
             ExtractedAt              = (Get-Date)
             ExtractResult            = $ExtractResult
