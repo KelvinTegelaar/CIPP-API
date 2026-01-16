@@ -13,7 +13,7 @@ function Set-CIPPDBCacheExoTenantAllowBlockList {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Tenant Allow/Block List items' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Tenant Allow/Block List items' -sev Debug
 
         $SenderItems = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{ListType = 'Sender' }
         $UrlItems = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{ListType = 'Url' }
@@ -34,12 +34,12 @@ function Set-CIPPDBCacheExoTenantAllowBlockList {
         if ($AllItems.Count -gt 0) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTenantAllowBlockList' -Data $AllItems
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTenantAllowBlockList' -Data $AllItems -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllItems.Count) Tenant Allow/Block List items" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllItems.Count) Tenant Allow/Block List items" -sev Debug
         } else {
             # Even if empty, store an empty array so test knows cache was populated
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTenantAllowBlockList' -Data @()
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoTenantAllowBlockList' -Data @() -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached empty Tenant Allow/Block List' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached empty Tenant Allow/Block List' -sev Debug
         }
         $SenderItems = $null
         $UrlItems = $null

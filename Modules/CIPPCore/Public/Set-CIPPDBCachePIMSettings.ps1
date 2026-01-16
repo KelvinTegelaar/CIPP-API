@@ -16,11 +16,11 @@ function Set-CIPPDBCachePIMSettings {
         $TestResult = Test-CIPPStandardLicense -StandardName 'PIMSettingsCache' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
 
         if ($TestResult -eq $false) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium P2 license, skipping PIM' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium P2 license, skipping PIM' -sev Debug
             return
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching PIM settings' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching PIM settings' -sev Debug
 
         try {
             $PIMRoleSettings = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/roleManagementPolicyAssignments?$top=999' -tenantid $TenantFilter
@@ -28,7 +28,7 @@ function Set-CIPPDBCachePIMSettings {
             if ($PIMRoleSettings) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings -Count
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMRoleSettings.Count) PIM role settings" -sev Info
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMRoleSettings.Count) PIM role settings" -sev Debug
             }
             $PIMRoleSettings = $null
         } catch {
@@ -41,14 +41,14 @@ function Set-CIPPDBCachePIMSettings {
             if ($PIMAssignments) {
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments -Count
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMAssignments.Count) PIM assignments" -sev Info
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMAssignments.Count) PIM assignments" -sev Debug
             }
             $PIMAssignments = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache PIM assignments: $($_.Exception.Message)" -sev Warning
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached PIM settings successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached PIM settings successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache PIM settings: $($_.Exception.Message)" -sev Error

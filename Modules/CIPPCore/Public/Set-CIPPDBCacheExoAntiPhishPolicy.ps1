@@ -13,13 +13,13 @@ function Set-CIPPDBCacheExoAntiPhishPolicy {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Anti-Phish policies (detailed)' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Anti-Phish policies (detailed)' -sev Debug
 
         $AntiPhishPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AntiPhishPolicy'
         if ($AntiPhishPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicy' -Data $AntiPhishPolicies
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicy' -Data $AntiPhishPolicies -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AntiPhishPolicies.Count) Anti-Phish policies (detailed)" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AntiPhishPolicies.Count) Anti-Phish policies (detailed)" -sev Debug
         }
         $AntiPhishPolicies = $null
 

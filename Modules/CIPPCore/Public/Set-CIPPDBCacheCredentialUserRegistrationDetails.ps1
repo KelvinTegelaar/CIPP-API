@@ -13,14 +13,14 @@ function Set-CIPPDBCacheCredentialUserRegistrationDetails {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching credential user registration details' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching credential user registration details' -sev Debug
 
         $CredentialUserRegistrationDetails = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter
 
         if ($CredentialUserRegistrationDetails) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CredentialUserRegistrationDetails' -Data $CredentialUserRegistrationDetails
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CredentialUserRegistrationDetails' -Data $CredentialUserRegistrationDetails -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($CredentialUserRegistrationDetails.Count) credential user registration details" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($CredentialUserRegistrationDetails.Count) credential user registration details" -sev Debug
         }
         $CredentialUserRegistrationDetails = $null
 

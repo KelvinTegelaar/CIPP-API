@@ -13,7 +13,7 @@ function Set-CIPPDBCacheSecureScore {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching secure score' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching secure score' -sev Debug
 
         # Cache secure score history (last 14 days)
         $SecureScore = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/secureScores?$top=14' -tenantid $TenantFilter -noPagination $true
@@ -27,7 +27,7 @@ function Set-CIPPDBCacheSecureScore {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SecureScoreControlProfiles' -Data $SecureScoreControlProfiles -Count
         $SecureScoreControlProfiles = $null
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached secure score and control profiles successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached secure score and control profiles successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache secure score: $($_.Exception.Message)" -sev Error

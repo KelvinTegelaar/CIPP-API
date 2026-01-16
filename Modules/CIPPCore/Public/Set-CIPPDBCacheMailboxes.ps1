@@ -13,7 +13,7 @@ function Set-CIPPDBCacheMailboxes {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Debug
 
         # Get mailboxes with select properties
         $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
@@ -40,20 +40,20 @@ function Set-CIPPDBCacheMailboxes {
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes -Count
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Mailboxes.Count) mailboxes successfully" -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Mailboxes.Count) mailboxes successfully" -sev Debug
 
         # Get CAS mailboxes
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Debug
         $CASMailboxes = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/CasMailbox" -Tenantid $TenantFilter -scope 'ExchangeOnline' -noPagination $true
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxes
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxes -Count
         $CASMailboxes = $null
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Debug
 
         # Start orchestrator to cache mailbox permissions in batches
         $MailboxCount = ($Mailboxes | Measure-Object).Count
         if ($MailboxCount -gt 0) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Starting mailbox permission caching for $MailboxCount mailboxes" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Starting mailbox permission caching for $MailboxCount mailboxes" -sev Debug
             
             # Create batches of 10 mailboxes each
             $BatchSize = 10
@@ -86,9 +86,9 @@ function Set-CIPPDBCacheMailboxes {
                 }
             }
             Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started mailbox permission caching orchestrator with $($Batches.Count) batches" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started mailbox permission caching orchestrator with $($Batches.Count) batches" -sev Debug
         } else {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No mailboxes found to cache permissions for' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No mailboxes found to cache permissions for' -sev Debug
         }
 
     } catch {
