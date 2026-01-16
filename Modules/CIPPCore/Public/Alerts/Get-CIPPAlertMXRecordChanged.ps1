@@ -18,8 +18,10 @@ function Get-CIPPAlertMXRecordChanged {
 
         $ChangedDomains = foreach ($Domain in $DomainData) {
             $PreviousDomain = $PreviousResults | Where-Object { $_.Domain -eq $Domain.Domain }
-            if ($PreviousDomain -and $PreviousDomain.ActualMXRecords -ne $Domain.ActualMXRecords) {
-                "$($Domain.Domain): MX records changed from [$($PreviousDomain.ActualMXRecords -join ', ')] to [$($Domain.ActualMXRecords -join ', ')]"
+            $PreviousRecords = $PreviousDomain.ActualMXRecords -split ',' | Sort-Object
+            $CurrentRecords = $Domain.ActualMXRecords.Hostname | Sort-Object
+            if ($PreviousDomain -and $PreviousRecords -ne $CurrentRecords) {
+                "$($Domain.Domain): MX records changed from [$($PreviousRecords -join ', ')] to [$($CurrentRecords -join ', ')]"
             }
         }
 
@@ -29,11 +31,12 @@ function Get-CIPPAlertMXRecordChanged {
 
         # Update cache with current data
         foreach ($Domain in $DomainData) {
+            $CurrentRecords = $Domain.ActualMXRecords.Hostname | Sort-Object
             $CacheEntity = @{
                 PartitionKey    = [string]$TenantFilter
                 RowKey          = [string]$Domain.Domain
                 Domain          = [string]$Domain.Domain
-                ActualMXRecords = [string]$Domain.ActualMXRecords
+                ActualMXRecords = [string]($CurrentRecords -join ',')
                 LastRefresh     = [string]$Domain.LastRefresh
                 MailProvider    = [string]$Domain.MailProvider
             }

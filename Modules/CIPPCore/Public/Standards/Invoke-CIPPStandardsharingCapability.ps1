@@ -36,7 +36,7 @@ function Invoke-CIPPStandardsharingCapability {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'sharingCapability' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'sharingCapability' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -45,8 +45,7 @@ function Invoke-CIPPStandardsharingCapability {
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the sharingCapability state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -96,11 +95,12 @@ function Invoke-CIPPStandardsharingCapability {
     }
 
     if ($Settings.report -eq $true) {
-        if ($CurrentInfo.sharingCapability -eq $level) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentInfo | Select-Object -Property sharingCapability
+        $CurrentValue = @{
+            sharingCapability = $CurrentInfo.sharingCapability
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.sharingCapability' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            sharingCapability = $level
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.sharingCapability' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

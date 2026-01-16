@@ -53,13 +53,29 @@ function Invoke-ListStandardsCompare {
             $FieldValue = [string]$FieldValue
         }
 
+        # Parse CurrentValue and ExpectedValue from JSON if they are JSON strings
+        $ParsedCurrentValue = if ($Standard.CurrentValue -and (Test-Json -Json $Standard.CurrentValue -ErrorAction SilentlyContinue)) {
+            ConvertFrom-Json -InputObject $Standard.CurrentValue -ErrorAction SilentlyContinue
+        } else {
+            $Standard.CurrentValue
+        }
+
+        $ParsedExpectedValue = if ($Standard.ExpectedValue -and (Test-Json -Json $Standard.ExpectedValue -ErrorAction SilentlyContinue)) {
+            ConvertFrom-Json -InputObject $Standard.ExpectedValue -ErrorAction SilentlyContinue
+        } else {
+            $Standard.ExpectedValue
+        }
+
         if (-not $TenantStandards.ContainsKey($Tenant)) {
             $TenantStandards[$Tenant] = @{}
         }
         $TenantStandards[$Tenant][$FieldName] = @{
-            Value       = $FieldValue
-            LastRefresh = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-            TemplateId  = $Standard.TemplateId
+            Value            = $FieldValue
+            LastRefresh      = $Standard.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            TemplateId       = $Standard.TemplateId
+            LicenseAvailable = $Standard.LicenseAvailable
+            CurrentValue     = $ParsedCurrentValue
+            ExpectedValue    = $ParsedExpectedValue
         }
     }
 

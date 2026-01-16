@@ -56,10 +56,16 @@ function Invoke-CIPPStandardAutoAddProxy {
     }
 
     $StateIsCorrect = $MissingProxies -eq 0
+    $ExpectedValue = [PSCustomObject]@{
+        MissingProxies = 0
+    }
+    $CurrentValue = [PSCustomObject]@{
+        MissingProxies = $MissingProxies
+    }
+
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $MissingProxies
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoAddProxy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 

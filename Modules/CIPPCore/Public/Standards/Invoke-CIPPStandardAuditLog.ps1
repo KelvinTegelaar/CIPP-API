@@ -46,6 +46,13 @@ function Invoke-CIPPStandardAuditLog {
     Write-Host ($Settings | ConvertTo-Json)
     $AuditLogEnabled = [bool](New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
 
+    $CurrentValue = [PSCustomObject]@{
+        UnifiedAuditLogIngestionEnabled = $AuditLogEnabled
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        UnifiedAuditLogIngestionEnabled = $true
+    }
+
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
@@ -85,7 +92,7 @@ function Invoke-CIPPStandardAuditLog {
 
     if ($Settings.report -eq $true) {
         $state = $AuditLogEnabled -eq $true ? $true : $AuditLogEnabled
-        Set-CIPPStandardsCompareField -FieldName 'standards.AuditLog' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuditLog' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }
