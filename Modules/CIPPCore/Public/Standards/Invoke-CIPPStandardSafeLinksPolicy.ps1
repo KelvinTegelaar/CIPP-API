@@ -75,10 +75,9 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
         try {
             $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
-            Where-Object -Property Name -EQ $PolicyName |
-            Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
-        }
-        catch {
+                Where-Object -Property Name -EQ $PolicyName |
+                Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
+        } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
             return
@@ -188,12 +187,36 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
         if ($Settings.report -eq $true) {
             Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
-            if ($StateIsCorrect) {
-                $FieldValue = $true
-            } else {
-                $FieldValue = $CurrentState
+
+            $CurrentValue = @{
+                Name                       = $CurrentState.Name
+                EnableSafeLinksForEmail    = $CurrentState.EnableSafeLinksForEmail
+                EnableSafeLinksForTeams    = $CurrentState.EnableSafeLinksForTeams
+                EnableSafeLinksForOffice   = $CurrentState.EnableSafeLinksForOffice
+                TrackClicks                = $CurrentState.TrackClicks
+                AllowClickThrough          = $CurrentState.AllowClickThrough
+                ScanUrls                   = $CurrentState.ScanUrls
+                EnableForInternalSenders   = $CurrentState.EnableForInternalSenders
+                DeliverMessageAfterScan    = $CurrentState.DeliverMessageAfterScan
+                DisableUrlRewrite          = $CurrentState.DisableUrlRewrite
+                EnableOrganizationBranding = $CurrentState.EnableOrganizationBranding
+                DoNotRewriteUrls           = $CurrentState.DoNotRewriteUrls
             }
-            Set-CIPPStandardsCompareField -FieldName 'standards.SafeLinksPolicy' -FieldValue $FieldValue -Tenant $Tenant
+            $ExpectedValue = @{
+                Name                       = $PolicyName
+                EnableSafeLinksForEmail    = $true
+                EnableSafeLinksForTeams    = $true
+                EnableSafeLinksForOffice   = $true
+                TrackClicks                = $true
+                AllowClickThrough          = $Settings.AllowClickThrough
+                ScanUrls                   = $true
+                EnableForInternalSenders   = $true
+                DeliverMessageAfterScan    = $true
+                DisableUrlRewrite          = $Settings.DisableUrlRewrite
+                EnableOrganizationBranding = $Settings.EnableOrganizationBranding
+                DoNotRewriteUrls           = $Settings.DoNotRewriteUrls.value ?? @()
+            }
+            Set-CIPPStandardsCompareField -FieldName 'standards.SafeLinksPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         }
     } else {
         if ($Settings.remediate -eq $true) {

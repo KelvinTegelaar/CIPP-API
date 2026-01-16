@@ -35,7 +35,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SPEmailAttestation' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPEmailAttestation' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -44,9 +44,8 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property _ObjectIdentity_, TenantFilter, EmailAttestationReAuthDays, EmailAttestationRequired
-    }
-    catch {
+            Select-Object -Property _ObjectIdentity_, TenantFilter, EmailAttestationReAuthDays, EmailAttestationRequired
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPEmailAttestation state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -91,11 +90,15 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPEmailAttestation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+
+        $CurrentValue = @{
+            EmailAttestationReAuthDays = $CurrentState.EmailAttestationReAuthDays
+            EmailAttestationRequired   = $CurrentState.EmailAttestationRequired
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPEmailAttestation' -FieldValue $FieldValue -TenantFilter $Tenant
+        $ExpectedValue = @{
+            EmailAttestationReAuthDays = [int]$Settings.Days
+            EmailAttestationRequired   = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPEmailAttestation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 }

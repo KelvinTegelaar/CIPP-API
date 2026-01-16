@@ -33,7 +33,6 @@ function Invoke-CIPPStandardPhishProtection {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
@@ -100,7 +99,13 @@ function Invoke-CIPPStandardPhishProtection {
     }
     if ($Settings.report -eq $true) {
         if ($currentBody -like "*$CSS*") { $authState = $true } else { $authState = $false }
+        $CurrentValue = @{
+            PhishingCSSEnabled = $authState
+        }
+        $ExpectedValue = @{
+            PhishingCSSEnabled = $true
+        }
         Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authState -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -FieldValue $authState -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

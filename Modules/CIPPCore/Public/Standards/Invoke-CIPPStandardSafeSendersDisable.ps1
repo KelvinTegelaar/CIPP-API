@@ -72,7 +72,13 @@ function Invoke-CIPPStandardSafeSendersDisable {
 
     if ($Settings.report -eq $true) {
         #This script always returns true, as it only disables the Safe Senders list
-        Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -FieldValue $true -Tenant $Tenant
+        $CurrentValue = @{
+            SafeSendersDisabled = $true
+        }
+        $ExpectedValue = @{
+            SafeSendersDisabled = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 
 }

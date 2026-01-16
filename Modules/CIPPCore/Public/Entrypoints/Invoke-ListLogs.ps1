@@ -92,12 +92,8 @@ function Invoke-ListLogs {
             $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
 
             if ($StartDate -and $EndDate) {
-                # Collect logs for each partition key date in range
-                $PartitionKeys = for ($Date = [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null); $Date -le [datetime]::ParseExact($EndDate, 'yyyyMMdd', $null); $Date = $Date.AddDays(1)) {
-                    $PartitionKey = $Date.ToString('yyyyMMdd')
-                    "PartitionKey eq '$PartitionKey'"
-                }
-                $Filter = $PartitionKeys -join ' or '
+                # Collect logs for date range
+                $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
             } elseif ($StartDate) {
                 $Filter = "PartitionKey eq '{0}'" -f $StartDate
             } else {

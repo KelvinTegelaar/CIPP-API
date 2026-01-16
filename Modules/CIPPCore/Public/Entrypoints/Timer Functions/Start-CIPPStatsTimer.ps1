@@ -43,7 +43,12 @@ function Start-CIPPStatsTimer {
             CFZTNA              = $RawExt.CFZTNA.Enabled
             GitHub              = $RawExt.GitHub.Enabled
         } | ConvertTo-Json
-
-        Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
+        try {
+            Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
+        } catch {
+            $rand = Get-Random -Minimum 0.5 -Maximum 5.5
+            Start-Sleep -Seconds $rand
+            Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
+        }
     }
 }

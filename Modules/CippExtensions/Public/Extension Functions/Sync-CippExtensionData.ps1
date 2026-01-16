@@ -9,6 +9,10 @@ function Sync-CippExtensionData {
         $SyncType
     )
 
+    # Legacy cache system is deprecated - all extensions now use CippReportingDB
+    Write-Warning "Sync-CippExtensionData is deprecated. This scheduled task should be removed. Extensions now use Push-CIPPDBCacheData and Get-CippExtensionReportingData."
+    return
+
     $Table = Get-CIPPTable -TableName ExtensionSync
     $Extensions = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($SyncType)'"
     $LastSync = $Extensions | Where-Object { $_.RowKey -eq $TenantFilter }

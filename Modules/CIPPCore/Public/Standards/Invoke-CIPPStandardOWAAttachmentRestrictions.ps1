@@ -119,19 +119,18 @@ function Invoke-CIPPStandardOWAAttachmentRestrictions {
     }
 
     if ($Settings.report -eq $true) {
-        if ($StateIsCorrect) {
-            Set-CIPPStandardsCompareField -FieldName 'standards.OWAAttachmentRestrictions' -FieldValue $true -TenantFilter $Tenant
-            Add-CIPPBPAField -FieldName 'OWAAttachmentRestrictions' -FieldValue $true -StoreAs bool -Tenant $Tenant
-        } else {
-            $ReportData = @{
-                CurrentPolicy  = $CurrentPolicy.ConditionalAccessPolicy
-                RequiredPolicy = $Settings.ConditionalAccessPolicy.value
-                PolicyName     = $CurrentPolicy.Name
-                IsCompliant    = $false
-                Description    = 'OWA attachment restrictions not properly configured for unmanaged devices'
-            }
-            Set-CIPPStandardsCompareField -FieldName 'standards.OWAAttachmentRestrictions' -FieldValue $ReportData -TenantFilter $Tenant
-            Add-CIPPBPAField -FieldName 'OWAAttachmentRestrictions' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
+        $CurrentValue = @{
+            ConditionalAccessPolicy = $CurrentPolicy.ConditionalAccessPolicy
+            PolicyName              = $CurrentPolicy.Name
+            IsCompliant             = $StateIsCorrect
         }
+        $ExpectedValue = @{
+            ConditionalAccessPolicy = $Settings.ConditionalAccessPolicy.value
+            PolicyName              = 'OwaMailboxPolicy-Default'
+            IsCompliant             = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.OWAAttachmentRestrictions' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'OWAAttachmentRestrictions' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

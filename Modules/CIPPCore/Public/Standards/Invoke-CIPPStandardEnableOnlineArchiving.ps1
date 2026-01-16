@@ -38,7 +38,6 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableOnlineArchiving'
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
     $MailboxesNoArchive = $MailboxPlans | ForEach-Object {
@@ -46,7 +45,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         Write-Host "Getting mailboxes without Online Archiving for plan $_"
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($null -eq $MailboxesNoArchive) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Online Archiving already enabled for all accounts' -sev Info
@@ -90,8 +89,16 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, ArchiveGuid
-        $stateReport = $filtered ? $filtered : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -FieldValue $stateReport -TenantFilter $Tenant
+        $stateReport = $filtered ? $filtered : @()
+
+        $CurrentValue = [PSCustomObject]@{
+            ArchiveNotEnabled = @($stateReport)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            ArchiveNotEnabled = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

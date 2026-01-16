@@ -29,10 +29,9 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingRecordingExpiration'
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingRecordingExpiration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingRecordingExpiration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     # Input validation
 
@@ -48,8 +47,7 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
 
     try {
         $CurrentExpirationDays = (New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }).NewMeetingRecordingExpirationDays
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMeetingRecordingExpiration state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -90,7 +88,12 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
         Add-CIPPBPAField -FieldName 'TeamsMeetingRecordingExpiration' -FieldValue $CurrentExpirationDays -StoreAs string -Tenant $Tenant
 
         $CurrentExpirationDays = if ($StateIsCorrect) { $true } else { $CurrentExpirationDays }
-
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingRecordingExpiration' -FieldValue $CurrentExpirationDays -Tenant $Tenant
+        $CurrentValue = @{
+            MeetingRecordingExpirationDays = $CurrentExpirationDays
+        }
+        $ExpectedValue = @{
+            MeetingRecordingExpirationDays = $ExpirationDays
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingRecordingExpiration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

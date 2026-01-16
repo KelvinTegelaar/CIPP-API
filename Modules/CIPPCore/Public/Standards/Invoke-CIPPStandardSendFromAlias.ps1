@@ -40,8 +40,7 @@ function Invoke-CIPPStandardSendFromAlias {
 
     try {
         $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendFromAlias state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -73,6 +72,12 @@ function Invoke-CIPPStandardSendFromAlias {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -FieldValue $CurrentInfo -Tenant $tenant
+        $CurrentValue = @{
+            SendFromAliasEnabled = $CurrentInfo
+        }
+        $ExpectedValue = @{
+            SendFromAliasEnabled = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

@@ -65,13 +65,18 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     $ChromePolicyName = 'Deploy Check Chrome Extension (Chrome)'
     $EdgePolicyName = 'Deploy Check Chrome Extension (Edge)'
 
+    # CIPP Url
+    $CippConfigTable = Get-CippTable -tablename Config
+    $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+    $CIPPURL = 'https://{0}' -f $CippConfig.Value
+
     # Get configuration values with defaults
     $ShowNotifications = $Settings.showNotifications ?? $true
     $EnableValidPageBadge = $Settings.enableValidPageBadge ?? $true
     $EnablePageBlocking = $Settings.enablePageBlocking ?? $true
     $EnableCippReporting = $Settings.enableCippReporting ?? $true
-    $CippServerUrl = $Settings.cippServerUrl
-    $CippTenantId = $Settings.cippTenantId
+    $CippServerUrl = $CIPPURL
+    $CippTenantId = $Tenant
     $CustomRulesUrl = $Settings.customRulesUrl
     $UpdateInterval = $Settings.updateInterval ?? 24
     $EnableDebugLogging = $Settings.enableDebugLogging ?? $false
@@ -212,7 +217,16 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
 
         if ($Settings.report -eq $true) {
             $StateIsCorrect = $ChromePolicyExists -and $EdgePolicyExists
-            Set-CIPPStandardsCompareField -FieldName 'standards.DeployCheckChromeExtension' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+
+            $ExpectedValue = [PSCustomObject]@{
+                ChromePolicyDeployed = $true
+                EdgePolicyDeployed   = $true
+            }
+            $CurrentValue = [PSCustomObject]@{
+                ChromePolicyDeployed = $ChromePolicyExists
+                EdgePolicyDeployed   = $EdgePolicyExists
+            }
+            Set-CIPPStandardsCompareField -FieldName 'standards.DeployCheckChromeExtension' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
             Add-CIPPBPAField -FieldName 'DeployCheckChromeExtension' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         }
 

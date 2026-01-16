@@ -47,15 +47,23 @@ function Invoke-CIPPStandardDelegateSentItems {
 
     if ($Settings.IncludeUserMailboxes -eq $true) {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     } else {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     }
 
+    $CurrentValue = if (!$Mailboxes) {
+        [PSCustomObject]@{ state = 'Configured correctly' }
+    } else {
+        [PSCustomObject]@{ NonCompliantMailboxes = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled }
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        state = 'Configured correctly'
+    }
 
     Write-Host "Mailboxes: $($Mailboxes.Count)"
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
         if ($Mailboxes) {
@@ -97,8 +105,7 @@ function Invoke-CIPPStandardDelegateSentItems {
 
     if ($Settings.report -eq $true) {
         $Filtered = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
-        $CurrentState = if ($null -eq $Mailboxes) { $true } else { $Filtered }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -FieldValue $CurrentState -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }
 }

@@ -34,8 +34,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
 
     try {
         $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true" -tenantid $Tenant -ComplexFilter
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the UserPreferredLanguage state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -77,11 +76,16 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'IncorrectUsers' -FieldValue $IncorrectUsers -StoreAs json -Tenant $Tenant
 
-        if ($IncorrectUsers.userPrincipalName) {
-            $FieldValue = $IncorrectUsers | Select-Object -Property userPrincipalName, displayName, preferredLanguage, userType
-        } else {
-            $FieldValue = $true
+        if ($IncorrectUsers.userPrincipalName) { $FieldValue = $IncorrectUsers | Select-Object -Property userPrincipalName, displayName, preferredLanguage, userType } else { $FieldValue = @() }
+
+        $CurrentValue = @{
+            preferredLanguage = $preferredLanguage
+            incorrectUsers    = $FieldValue
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.UserPreferredLanguage' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            preferredLanguage = $preferredLanguage
+            incorrectUsers    = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.UserPreferredLanguage' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

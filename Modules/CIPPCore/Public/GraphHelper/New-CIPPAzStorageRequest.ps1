@@ -475,7 +475,13 @@ function New-CIPPAzStorageRequest {
 
         # Do not force JSON Accept on blob/queue; service returns XML for list ops
         if (-not $RequestHeaders.ContainsKey('Accept')) {
-            $RequestHeaders['Accept'] = 'application/xml'
+            if ($Service -eq 'blob') {
+                $isList = (($Component -eq 'list') -or ($Uri.Query -match 'comp=list'))
+                if ($isList) { $RequestHeaders['Accept'] = 'application/xml' }
+            } elseif ($Service -eq 'queue') {
+                $RequestHeaders['Accept'] = 'application/xml'
+            }
+            # For Azure Files, avoid forcing Accept; binary downloads should be raw bytes
         }
 
         # Merge user-provided headers (these override defaults)
@@ -498,6 +504,41 @@ function New-CIPPAzStorageRequest {
 
         if ($Method -in @('PUT', 'POST', 'PATCH')) {
             $RequestHeaders['Content-Length'] = $ContentLength.ToString()
+        }
+
+        # Blob upload: default to BlockBlob when performing a simple Put Blob (no comp parameter)
+        if ($Service -eq 'blob') {
+            $isCompSpecified = ($Component) -or ($Uri.Query -match 'comp=')
+            if ($Method -eq 'PUT' -and -not $isCompSpecified) {
+                if (-not $RequestHeaders.ContainsKey('x-ms-blob-type')) { $RequestHeaders['x-ms-blob-type'] = 'BlockBlob' }
+            }
+        }
+
+        # Azure Files specific conveniences and validations
+        if ($Service -eq 'file') {
+            # Create file: PUT to file path without comp=range should specify x-ms-type and x-ms-content-length; body typically empty
+            $isRangeOp = ($Component -eq 'range') -or ($Uri.Query -match 'comp=range')
+            if ($Method -eq 'PUT' -and -not $isRangeOp) {
+                if (-not $RequestHeaders.ContainsKey('x-ms-type')) { $RequestHeaders['x-ms-type'] = 'file' }
+                # x-ms-content-length is required for create; if not provided by caller, try to infer from header Content-Length when body is empty
+                if (-not $RequestHeaders.ContainsKey('x-ms-content-length')) {
+                    if ($ContentLength -eq 0) {
+                        # Caller must supply x-ms-content-length for file size; fail fast for correctness
+                        Write-Error 'Azure Files create operation requires header x-ms-content-length specifying file size in bytes.'
+                        return
+                    } else {
+                        # If body present, assume immediate range upload is intended; advise using comp=range
+                        Write-Verbose 'Body detected on Azure Files PUT without comp=range; consider using comp=range for content upload.'
+                    }
+                }
+            } elseif ($Method -eq 'PUT' -and $isRangeOp) {
+                # Range upload must include x-ms-write and x-ms-range
+                if (-not $RequestHeaders.ContainsKey('x-ms-write')) { $RequestHeaders['x-ms-write'] = 'update' }
+                if (-not $RequestHeaders.ContainsKey('x-ms-range')) {
+                    Write-Error 'Azure Files range upload requires header x-ms-range (e.g., bytes=0-<end>).'
+                    return
+                }
+            }
         }
 
         # Build canonicalized headers (x-ms-*)
@@ -557,9 +598,46 @@ function New-CIPPAzStorageRequest {
     } elseif ($Method -eq 'DELETE') {
         # For other DELETE operations across services, prefer capturing headers/status
         $UseInvokeWebRequest = $true
+    } elseif ($Service -eq 'file' -and $Method -eq 'GET' -and -not (($Component -eq 'list') -or ($Uri.Query -match 'comp=list') -or ($Uri.Query -match 'comp=properties') -or ($Uri.Query -match 'comp=metadata'))) {
+        # For Azure Files binary downloads, use Invoke-WebRequest and return bytes
+        $UseInvokeWebRequest = $true
+    } elseif ($Service -eq 'blob' -and $Method -eq 'GET' -and -not (($Component -eq 'list') -or ($Uri.Query -match 'comp=list') -or ($Uri.Query -match 'comp=metadata') -or ($Uri.Query -match 'comp=properties'))) {
+        # For Blob binary downloads, use Invoke-WebRequest and return bytes (memory stream, no filesystem)
+        $UseInvokeWebRequest = $true
     }
     do {
         try {
+            # Blob: binary GET returns bytes from RawContentStream
+            if ($UseInvokeWebRequest -and $Service -eq 'blob' -and $Method -eq 'GET' -and -not (($Component -eq 'list') -or ($Uri.Query -match 'comp=list') -or ($Uri.Query -match 'comp=metadata') -or ($Uri.Query -match 'comp=properties'))) {
+                Write-Verbose 'Processing Blob binary download'
+                $resp = Invoke-WebRequest @RestMethodParams
+                $RequestSuccessful = $true
+                $ms = [System.IO.MemoryStream]::new()
+                try { $resp.RawContentStream.CopyTo($ms) } catch { }
+                $bytes = $ms.ToArray()
+                $hdrHash = @{}
+                if ($resp -and $resp.Headers) { foreach ($key in $resp.Headers.Keys) { $hdrHash[$key] = $resp.Headers[$key] } }
+                $reqUri = $null
+                try { if ($resp -and $resp.BaseResponse -and $resp.BaseResponse.ResponseUri) { $reqUri = $resp.BaseResponse.ResponseUri.AbsoluteUri } } catch { $reqUri = $Uri.AbsoluteUri }
+                return [PSCustomObject]@{ Bytes = $bytes; Length = $bytes.Length; Headers = $hdrHash; Uri = $reqUri }
+            }
+            # Azure Files: binary GET returns bytes
+            if ($UseInvokeWebRequest -and $Service -eq 'file' -and $Method -eq 'GET' -and -not (($Component -eq 'list') -or ($Uri.Query -match 'comp=list') -or ($Uri.Query -match 'comp=properties') -or ($Uri.Query -match 'comp=metadata'))) {
+                Write-Verbose 'Processing Azure Files binary download'
+                $tmp = [System.IO.Path]::GetTempFileName()
+                try {
+                    $resp = Invoke-WebRequest @RestMethodParams -OutFile $tmp
+                    $RequestSuccessful = $true
+                    $bytes = [System.IO.File]::ReadAllBytes($tmp)
+                    $hdrHash = @{}
+                    if ($resp -and $resp.Headers) { foreach ($key in $resp.Headers.Keys) { $hdrHash[$key] = $resp.Headers[$key] } }
+                    $reqUri = $null
+                    try { if ($resp -and $resp.BaseResponse -and $resp.BaseResponse.ResponseUri) { $reqUri = $resp.BaseResponse.ResponseUri.AbsoluteUri } } catch { $reqUri = $Uri.AbsoluteUri }
+                    return [PSCustomObject]@{ Bytes = $bytes; Length = $bytes.Length; Headers = $hdrHash; Uri = $reqUri }
+                } finally {
+                    try { if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue } } catch {}
+                }
+            }
             # For queue comp=metadata, capture headers-only and return a compact object
             if ($UseInvokeWebRequest -and $Service -eq 'queue' -and (($Component -eq 'metadata') -or ($Uri.Query -match 'comp=metadata'))) {
                 Write-Verbose 'Processing queue metadata response headers'

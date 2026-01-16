@@ -34,22 +34,21 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
     # Define the legacy add-ins to remove
     $LegacyAddins = @(
         @{
-            AssetId = 'WA200002469'
+            AssetId   = 'WA200002469'
             ProductId = '3f32746a-0586-4c54-b8ce-d3b611c5b6c8'
-            Name = 'Report Phishing'
+            Name      = 'Report Phishing'
         },
         @{
-            AssetId = 'WA104381180'
+            AssetId   = 'WA104381180'
             ProductId = '6046742c-3aee-485e-a4ac-92ab7199db2e'
-            Name = 'Report Message'
+            Name      = 'Report Message'
         }
     )
 
     try {
         $CurrentApps = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/addins/api/apps?workloads=AzureActiveDirectory,WXPO,MetaOS,Teams,SharePoint'
         $InstalledApps = $CurrentApps.apps
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the installed add-ins for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -64,11 +63,11 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
         if ($InstalledAddin) {
             $InstalledLegacyAddins.Add($LegacyAddin.Name)
             $AddinsToRemove.Add([PSCustomObject]@{
-                AppsourceAssetID = $LegacyAddin.AssetId
-                ProductID = $LegacyAddin.ProductId
-                Command = 'UNDEPLOY'
-                Workload = 'WXPO'
-            })
+                    AppsourceAssetID = $LegacyAddin.AssetId
+                    ProductID        = $LegacyAddin.ProductId
+                    Command          = 'UNDEPLOY'
+                    Workload         = 'WXPO'
+                })
         }
     }
 
@@ -82,18 +81,18 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
             foreach ($AddinToRemove in $AddinsToRemove) {
                 try {
                     $Body = @{
-                        Locale = 'en-US'
+                        Locale                 = 'en-US'
                         WorkloadManagementList = @($AddinToRemove)
                     } | ConvertTo-Json -Depth 10 -Compress
 
                     $GraphRequest = @{
-                        tenantID = $Tenant
-                        uri = 'https://admin.microsoft.com/fd/addins/api/apps'
-                        scope = 'https://admin.microsoft.com/.default'
-                        AsApp = $false
-                        Type = 'POST'
+                        tenantID    = $Tenant
+                        uri         = 'https://admin.microsoft.com/fd/addins/api/apps'
+                        scope       = 'https://admin.microsoft.com/.default'
+                        AsApp       = $false
+                        Type        = 'POST'
                         ContentType = 'application/json; charset=utf-8'
-                        Body = $Body
+                        Body        = $Body
                     }
 
                     $Response = New-GraphPostRequest @GraphRequest
@@ -126,8 +125,7 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
             # Use fresh state for reporting/alerting
             $StateIsCorrect = ($FreshInstalledLegacyAddins.Count -eq 0)
             $InstalledLegacyAddins = $FreshInstalledLegacyAddins
-        }
-        catch {
+        } catch {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get fresh add-in state after remediation for $Tenant" -Sev Warning
         }
     }
@@ -143,15 +141,14 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
     }
 
     if ($Settings.report -eq $true) {
-        $ReportData = if ($StateIsCorrect) {
-            $true
-        } else {
-            @{
-                InstalledLegacyAddins = $InstalledLegacyAddins
-                Status = 'Legacy add-ins still installed'
-            }
+        $CurrentValue = @{
+            InstalledLegacyAddins = $InstalledLegacyAddins
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.LegacyEmailReportAddins' -FieldValue $ReportData -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'LegacyEmailReportAddins' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        $ExpectedValue = @{
+            InstalledLegacyAddins = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.LegacyEmailReportAddins' -Tenant $Tenant -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue
+        Add-CIPPBPAField -FieldName 'LegacyEmailReportAddins' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

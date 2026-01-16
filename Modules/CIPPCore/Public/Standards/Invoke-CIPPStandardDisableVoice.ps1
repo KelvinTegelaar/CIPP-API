@@ -34,19 +34,17 @@ function Invoke-CIPPStandardDisableVoice {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableVoice'
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Voice' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableVoice state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'disabled')
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Voice authentication method is already disabled.' -sev Info
         } else {
@@ -67,7 +65,14 @@ function Invoke-CIPPStandardDisableVoice {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableVoice' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            DisableVoice = $StateIsCorrect
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableVoice = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableVoice' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

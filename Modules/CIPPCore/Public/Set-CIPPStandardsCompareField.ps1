@@ -2,15 +2,19 @@ function Set-CIPPStandardsCompareField {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         $FieldName,
-        $FieldValue,
+        $FieldValue, #FieldValue is here for backward compatibility.
+        $CurrentValue, #The latest actual value in raw json
+        $ExpectedValue, #The expected value - e.g. the settings object from our standard
         $TenantFilter,
+        [Parameter()]
+        [bool]$LicenseAvailable = $true,
         [Parameter()]
         [array]$BulkFields
     )
     $Table = Get-CippTable -tablename 'CippStandardsReports'
     $TenantName = Get-Tenants -TenantFilter $TenantFilter
 
-    # Helper function to normalize field values
+    # Helper function to normalize field values. This can go in a couple of releases tbh.
     function ConvertTo-NormalizedFieldValue {
         param($Value)
         if ($Value -is [System.Boolean]) {
@@ -21,6 +25,13 @@ function Set-CIPPStandardsCompareField {
             $JsonValue = ConvertTo-Json -Compress -InputObject @($Value) -Depth 10 | Out-String
             return [string]$JsonValue
         }
+    }
+
+    if ($CurrentValue -and $CurrentValue -isnot [string]) {
+        $CurrentValue = [string](ConvertTo-Json -InputObject $CurrentValue -Depth 10 -Compress)
+    }
+    if ($ExpectedValue -and $ExpectedValue -isnot [string]) {
+        $ExpectedValue = [string](ConvertTo-Json -InputObject $ExpectedValue -Depth 10 -Compress)
     }
 
     # Handle bulk operations
@@ -34,20 +45,26 @@ function Set-CIPPStandardsCompareField {
 
         # Build array of entities to insert/update
         $EntitiesToProcess = [System.Collections.Generic.List[object]]::new()
-        
+
         foreach ($Field in $BulkFields) {
             $NormalizedValue = ConvertTo-NormalizedFieldValue -Value $Field.FieldValue
-            
+
             if ($ExistingHash.ContainsKey($Field.FieldName)) {
                 $Entity = $ExistingHash[$Field.FieldName]
                 $Entity.Value = $NormalizedValue
                 $Entity | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
+                $Entity | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$Field.LicenseAvailable) -Force
+                $Entity | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$Field.CurrentValue) -Force
+                $Entity | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$Field.ExpectedValue) -Force
             } else {
                 $Entity = [PSCustomObject]@{
-                    PartitionKey = [string]$TenantName.defaultDomainName
-                    RowKey       = [string]$Field.FieldName
-                    Value        = $NormalizedValue
-                    TemplateId   = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                    PartitionKey     = [string]$TenantName.defaultDomainName
+                    RowKey           = [string]$Field.FieldName
+                    Value            = $NormalizedValue
+                    TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                    LicenseAvailable = [bool]$Field.LicenseAvailable
+                    CurrentValue     = [string]$Field.CurrentValue
+                    ExpectedValue    = [string]$Field.ExpectedValue
                 }
             }
             $EntitiesToProcess.Add($Entity)
@@ -72,13 +89,19 @@ function Set-CIPPStandardsCompareField {
                 if ($Existing) {
                     $Existing.Value = $NormalizedValue
                     $Existing | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
+                    $Existing | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$LicenseAvailable) -Force
+                    $Existing | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$CurrentValue) -Force
+                    $Existing | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$ExpectedValue) -Force
                     Add-CIPPAzDataTableEntity @Table -Entity $Existing -Force
                 } else {
                     $Result = [PSCustomObject]@{
-                        PartitionKey = [string]$TenantName.defaultDomainName
-                        RowKey       = [string]$FieldName
-                        Value        = $NormalizedValue
-                        TemplateId   = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                        PartitionKey     = [string]$TenantName.defaultDomainName
+                        RowKey           = [string]$FieldName
+                        Value            = $NormalizedValue
+                        TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                        LicenseAvailable = [bool]$LicenseAvailable
+                        CurrentValue     = [string]$CurrentValue
+                        ExpectedValue    = [string]$ExpectedValue
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Result -Force
                 }

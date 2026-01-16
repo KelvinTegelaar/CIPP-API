@@ -31,7 +31,6 @@ function Invoke-CIPPStandardGroupTemplate {
     #>
     param($Tenant, $Settings)
 
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
     $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
 
     $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
@@ -242,12 +241,15 @@ function Invoke-CIPPStandardGroupTemplate {
             }
         }
 
-        if ($MissingGroups.Count -eq 0) {
-            $fieldValue = $true
-        } else {
-            $fieldValue = $MissingGroups -join ', '
+        $CurrentValue = @{
+            ExistingGroups = $existingGroups.displayName
+            MissingGroups  = @($MissingGroups)
+        }
+        $ExpectedValue = @{
+            ExistingGroups = $GroupTemplates.displayName
+            MissingGroups  = @()
         }
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -FieldValue $fieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 }

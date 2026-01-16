@@ -44,10 +44,9 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
 
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-        Where-Object { $_.Name -eq $PolicyName } |
-        Select-Object -Property *
-    }
-    catch {
+            Where-Object { $_.Name -eq $PolicyName } |
+            Select-Object -Property *
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the sharingCapability state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -115,8 +114,17 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
     }
 
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : $CompareField
-        Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -FieldValue $FieldValue -TenantFilter $Tenant
+        $CurrentValue = @{
+            Threshold  = $CurrentState.Threshold
+            TimeWindow = $CurrentState.TimeWindow
+            NotifyUser = @($CurrentState.NotifyUser)
+        }
+        $ExpectedValue = @{
+            Threshold  = $Settings.Threshold
+            TimeWindow = $Settings.TimeWindow
+            NotifyUser = @($Settings.NotifyUser.value)
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

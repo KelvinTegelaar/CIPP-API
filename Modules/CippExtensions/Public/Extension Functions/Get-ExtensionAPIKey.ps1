@@ -12,7 +12,7 @@ function Get-ExtensionAPIKey {
 
     $Var = "Ext_$Extension"
     $APIKey = Get-Item -Path "env:$Var" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value
-    if ($APIKey) {
+    if ($APIKey -and -not $Force) {
         Write-Information "Using cached API Key for $Extension"
     } else {
         Write-Information "Retrieving API Key for $Extension"

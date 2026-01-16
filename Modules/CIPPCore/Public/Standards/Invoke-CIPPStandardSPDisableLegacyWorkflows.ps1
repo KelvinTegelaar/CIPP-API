@@ -29,7 +29,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDisableLegacyWorkflows' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDisableLegacyWorkflows' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -38,9 +38,8 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property *
-    }
-    catch {
+            Select-Object -Property *
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDisableLegacyWorkflows state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -82,11 +81,17 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPDisableLegacyWorkflows' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+
+        $CurrentValue = @{
+            StopNew2010Workflows = $CurrentState.StopNew2010Workflows
+            StopNew2013Workflows = $CurrentState.StopNew2013Workflows
+            DisableBackToClassic = $CurrentState.DisableBackToClassic
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisableLegacyWorkflows' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            StopNew2010Workflows = $true
+            StopNew2013Workflows = $true
+            DisableBackToClassic = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisableLegacyWorkflows' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

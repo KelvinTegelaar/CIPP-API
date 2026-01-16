@@ -53,7 +53,9 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ActivityBasedTimeout state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
-    $StateIsCorrect = if ($CurrentState.definition -like "*$timeout*") { $true } else { $false }
+    $CurrentValue = ($CurrentState.definition | ConvertFrom-Json -ErrorAction SilentlyContinue).activitybasedtimeoutpolicy.ApplicationPolicies | Select-Object -First 1 -Property WebSessionIdleTimeout
+    $StateIsCorrect = if ($CurrentValue.WebSessionIdleTimeout -eq $timeout) { $true } else { $false }
+    $ExpectedValue = [PSCustomObject]@{WebSessionIdleTimeout = $timeout }
 
     if ($Settings.remediate -eq $true) {
         try {
@@ -97,7 +99,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.ActivityBasedTimeout' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.ActivityBasedTimeout' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'ActivityBasedTimeout' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 

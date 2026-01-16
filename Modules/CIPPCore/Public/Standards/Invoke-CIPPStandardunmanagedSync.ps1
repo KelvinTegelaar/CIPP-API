@@ -36,7 +36,6 @@ function Invoke-CIPPStandardunmanagedSync {
 
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'unmanagedSync' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'unmanagedSync'
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -45,9 +44,8 @@ function Invoke-CIPPStandardunmanagedSync {
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
-    }
-    catch {
+            Select-Object _ObjectIdentity_, TenantFilter, ConditionalAccessPolicy
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the unmanagedSync state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -83,9 +81,13 @@ function Invoke-CIPPStandardunmanagedSync {
     }
 
     if ($Settings.report -eq $true) {
-
-        $State = $StateIsCorrect ? $true : $CurrentState.ConditionalAccessPolicy
-        Set-CIPPStandardsCompareField -FieldName 'standards.unmanagedSync' -FieldValue $State -Tenant $Tenant
+        $CurrentValue = @{
+            ConditionalAccessPolicy = $CurrentState.ConditionalAccessPolicy
+        }
+        $ExpectedValue = @{
+            ConditionalAccessPolicy = $WantedState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.unmanagedSync' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

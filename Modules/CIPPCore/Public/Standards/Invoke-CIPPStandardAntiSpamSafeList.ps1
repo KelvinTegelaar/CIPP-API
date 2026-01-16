@@ -56,9 +56,15 @@ function Invoke-CIPPStandardAntiSpamSafeList {
     }
     $WantedState = $State -eq $true ? $true : $false
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
+    $CurrentValue = [PSCustomObject]@{
+        EnableSafeList = $CurrentState
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        EnableSafeList = $WantedState
+    }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.AntiSpamSafeList' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiSpamSafeList' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AntiSpamSafeList' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 

@@ -95,8 +95,14 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ?? @{UsersWithPowerShellEnabled = $PowerShellEnabledCount }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableExchangeOnlinePowerShell' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            UsersWithPowerShellEnabled = $PowerShellEnabledCount
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            UsersWithPowerShellEnabled = 0
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableExchangeOnlinePowerShell' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'ExchangeOnlinePowerShellDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

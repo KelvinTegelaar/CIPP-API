@@ -203,6 +203,14 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     }
 
     if ($Settings.report -eq $true) {
+        $ExpectedValue = @{
+            Status            = 'Configured'
+            Enabled           = $true
+            WordCount         = $BannedWordsList.Count
+            Compliant         = $true
+            MissingInputWords = @()
+        }
+
         if ($null -eq $ExistingSettings) {
             $BannedPasswordState = @{
                 Status            = 'Not Configured'
@@ -229,7 +237,7 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
             }
         }
 
-        Add-CIPPBPAField -FieldName 'CustomBannedPasswordList' -FieldValue $BannedPasswordState -StoreAs json -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'CustomBannedPasswordList' -CurrentValue $BannedPasswordState -ExpectedValue $ExpectedValue -StoreAs json -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.CustomBannedPasswordList' -FieldValue $BannedPasswordState.Compliant -Tenant $tenant
     }
 

@@ -3,7 +3,6 @@ function Start-TableCleanup {
     .SYNOPSIS
     Start the Table Cleanup Timer
     #>
-    [CmdletBinding(SupportsShouldProcess = $true)]
     param()
 
     $Batch = @(
@@ -60,7 +59,7 @@ function Start-TableCleanup {
         @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
-            Tables       = @('knownlocationdb')
+            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync')
         }
     )
 

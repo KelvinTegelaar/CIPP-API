@@ -33,7 +33,6 @@ function Invoke-CIPPStandardintuneDeviceReg {
 
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceReg' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneDeviceReg'
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -42,15 +41,14 @@ function Invoke-CIPPStandardintuneDeviceReg {
 
     try {
         $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneDeviceReg state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $true } else { $false }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($PreviousSetting.userDeviceQuota -eq $Settings.max) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is already set to $($Settings.max)" -sev Info
@@ -78,8 +76,13 @@ function Invoke-CIPPStandardintuneDeviceReg {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $PreviousSetting.userDeviceQuota
-        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceReg' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = @{
+            userDeviceQuota = $PreviousSetting.userDeviceQuota
+        }
+        $ExpectedValue = @{
+            userDeviceQuota = $Settings.max
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceReg' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

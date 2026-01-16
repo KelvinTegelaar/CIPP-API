@@ -47,8 +47,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
 
     try {
         $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the StaleEntraDevices state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -98,6 +97,16 @@ function Invoke-CIPPStandardStaleEntraDevices {
         } else {
             $FieldValue = $true
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.StaleEntraDevices' -FieldValue $FieldValue -Tenant $Tenant
+        $CurrentValue = @{
+            StaleDevicesCount  = $StaleDevices.Count
+            StaleDevices       = @($FieldValue)
+            DeviceAgeThreshold = [int]$Settings.deviceAgeThreshold
+        }
+        $ExpectedValue = @{
+            StaleDevicesCount  = 0
+            StaleDevices       = @()
+            DeviceAgeThreshold = [int]$Settings.deviceAgeThreshold
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.StaleEntraDevices' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

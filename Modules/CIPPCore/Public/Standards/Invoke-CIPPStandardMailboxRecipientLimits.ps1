@@ -48,8 +48,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     # Get mailbox plans first
     try {
         $MailboxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' -cmdParams @{ ResultSize = 'Unlimited' }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MailboxRecipientLimits state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -259,11 +258,14 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         }
         Add-CIPPBPAField -FieldName 'MailboxRecipientLimits' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
 
-        if ($MailboxesToUpdate.Count -eq 0 -and $MailboxesWithPlanIssues.Count -eq 0) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $ReportData
+        $CurrentValue = @{
+            MailboxesToUpdate       = @($MailboxesToUpdate)
+            MailboxesWithPlanIssues = @($MailboxesWithPlanIssues)
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            MailboxesToUpdate       = @()
+            MailboxesWithPlanIssues = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }
