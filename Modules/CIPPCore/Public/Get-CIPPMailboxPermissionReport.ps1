@@ -58,7 +58,7 @@ function Get-CIPPMailboxPermissionReport {
         # Get mailboxes from reporting DB
         $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes'
         if (-not $MailboxItems) {
-            throw 'No mailbox data found in reporting database. Run Set-CIPPDBCacheMailboxes first.'
+            throw 'No mailbox data found in reporting database. Run a scan first. '
         }
 
         # Get the most recent mailbox cache timestamp
@@ -87,7 +87,7 @@ function Get-CIPPMailboxPermissionReport {
         # Get mailbox permissions from reporting DB
         $PermissionItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions'
         if (-not $PermissionItems) {
-            throw 'No mailbox permission data found in reporting database. Run Set-CIPPDBCacheMailboxes first.'
+            throw 'No mailbox permission data found in reporting database. Run a scan first.'
         }
 
         # Get the most recent permission cache timestamp
