@@ -222,5 +222,23 @@
     "Priority": 21,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
+    "Command": "Start-CIPPDBCacheOrchestrator",
+    "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
+    "Cron": "0 0 3 * * *",
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
+    "Id": "1f2e3d4c-5b6a-7c8d-9e0f-1a2b3c4d5e6f",
+    "Command": "Start-TestsOrchestrator",
+    "Description": "Timer to run security and compliance tests against cached data",
+    "Cron": "0 0 4 * * *",
+    "Priority": 23,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]

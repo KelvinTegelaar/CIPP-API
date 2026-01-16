@@ -46,6 +46,13 @@ function Invoke-CIPPStandardAutoExpandArchive {
         return
     }
 
+    $ExpectedValue = [PSCustomObject]@{
+        AutoExpandingArchive = $true
+    }
+    $CurrentValue = [PSCustomObject]@{
+        AutoExpandingArchive = $CurrentState
+    }
+
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
@@ -73,8 +80,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $CurrentState -eq $true ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

@@ -83,8 +83,13 @@
     }
 
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : @{isMdmEnrollmentDuringRegistrationDisabled = $CurrentState; desiredState = $DesiredState }
-        Set-CIPPStandardsCompareField -FieldName 'standards.MDMEnrollmentDuringRegistration' -FieldValue $FieldValue -TenantFilter $Tenant
+        $CurrentValue = @{
+            isMdmEnrollmentDuringRegistrationDisabled = $CurrentState
+        }
+        $ExpectedValue = @{
+            isMdmEnrollmentDuringRegistrationDisabled = $DesiredState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MDMEnrollmentDuringRegistration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'MDMEnrollmentDuringRegistration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

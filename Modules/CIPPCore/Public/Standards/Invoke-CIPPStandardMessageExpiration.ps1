@@ -34,12 +34,10 @@ function Invoke-CIPPStandardMessageExpiration {
         Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MessageExpiration'
 
     try {
         $MessageExpiration = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig').messageExpiration
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MessageExpiration state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -70,8 +68,13 @@ function Invoke-CIPPStandardMessageExpiration {
         }
     }
     if ($Settings.report -eq $true) {
-        if ($MessageExpiration -ne '12:00:00') { $MessageExpiration = $false } else { $MessageExpiration = $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.MessageExpiration' -FieldValue $MessageExpiration -TenantFilter $Tenant
+        $CurrentValue = @{
+            MessageExpiration = $MessageExpiration
+        }
+        $ExpectedValue = @{
+            MessageExpiration = '12:00:00'
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MessageExpiration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }

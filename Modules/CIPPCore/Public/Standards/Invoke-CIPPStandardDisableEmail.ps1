@@ -32,19 +32,17 @@ function Invoke-CIPPStandardDisableEmail {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableEmail'
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Email' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableEmail state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'disabled')
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is already disabled.' -sev Info
         } else {
@@ -65,8 +63,14 @@ function Invoke-CIPPStandardDisableEmail {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect -eq $true ? $true :  $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableEmail' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            DisableEmail = $CurrentState.state -eq 'disabled'
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableEmail = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableEmail' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

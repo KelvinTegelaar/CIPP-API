@@ -31,7 +31,7 @@ function Invoke-CIPPStandardTeamsGuestAccess {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsGuestAccess' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsGuestAccess' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -40,9 +40,8 @@ function Invoke-CIPPStandardTeamsGuestAccess {
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } |
-        Select-Object AllowGuestUser
-    }
-    catch {
+            Select-Object AllowGuestUser
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsGuestAccess state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -81,12 +80,13 @@ function Invoke-CIPPStandardTeamsGuestAccess {
     }
 
     if ($Settings.report -eq $true) {
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            AllowGuestUser = $CurrentState.AllowGuestUser
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGuestAccess' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            AllowGuestUser = $AllowGuestUser
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGuestAccess' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGuestAccess' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }
