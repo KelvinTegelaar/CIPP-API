@@ -13,13 +13,13 @@ function Set-CIPPDBCacheUsers {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching users' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching users' -sev Debug
 
         $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Users' -Data $Users
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Users' -Data $Users -Count
         $Users = $null
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached users successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached users successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache users: $($_.Exception.Message)" -sev Error

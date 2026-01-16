@@ -13,12 +13,12 @@ function Set-CIPPDBCacheRoleManagementPolicies {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching role management policies' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching role management policies' -sev Debug
         $RoleManagementPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/roleManagementPolicies' -tenantid $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RoleManagementPolicies' -Data @($RoleManagementPolicies)
         $RoleManagementPolicies = $null
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached role management policies successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached role management policies successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache role management policies: $($_.Exception.Message)" -sev Error

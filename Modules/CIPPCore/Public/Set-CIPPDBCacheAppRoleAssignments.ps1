@@ -13,7 +13,7 @@ function Set-CIPPDBCacheAppRoleAssignments {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching app role assignments' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching app role assignments' -sev Debug
 
         # Get all service principals first
         $ServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$select=id,appId,displayName&$top=999&expand=appRoleAssignments' -tenantid $TenantFilter
@@ -37,7 +37,7 @@ function Set-CIPPDBCacheAppRoleAssignments {
         if ($AllAppRoleAssignments.Count -gt 0) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllAppRoleAssignments.Count) app role assignments" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllAppRoleAssignments.Count) app role assignments" -sev Debug
         }
         $AllAppRoleAssignments = $null
 
