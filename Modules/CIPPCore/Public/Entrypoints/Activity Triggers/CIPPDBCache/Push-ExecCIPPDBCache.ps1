@@ -16,7 +16,7 @@ function Push-ExecCIPPDBCache {
     $TenantFilter = $Item.TenantFilter
 
     try {
-        Write-Information "Colllecting $Name for tenant $TenantFilter"
+        Write-Information "Collecting $Name for tenant $TenantFilter"
 
         # Build the full function name
         $FullFunctionName = "Set-CIPPDBCache$Name"
