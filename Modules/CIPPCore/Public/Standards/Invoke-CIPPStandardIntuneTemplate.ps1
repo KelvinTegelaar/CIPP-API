@@ -37,7 +37,6 @@ function Invoke-CIPPStandardIntuneTemplate {
     #>
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
 
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
@@ -94,42 +93,42 @@ function Invoke-CIPPStandardIntuneTemplate {
         if ($Compare) {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
             [PSCustomObject]@{
-                MatchFailed            = $true
-                displayname            = $displayname
-                description            = $description
-                compare                = $Compare
-                rawJSON                = $RawJSON
-                body                   = $Request.body
-                assignTo               = $Template.AssignTo
-                excludeGroup           = $Template.excludeGroup
-                remediate              = $Template.remediate
-                alert                  = $Template.alert
-                report                 = $Template.report
-                existingPolicyId       = $ExistingPolicy.id
-                templateId             = $Template.TemplateList.value
-                customGroup            = $Template.customGroup
-                assignmentFilter       = $Template.assignmentFilter
-                assignmentFilterType   = $Template.assignmentFilterType
+                MatchFailed          = $true
+                displayname          = $displayname
+                description          = $description
+                compare              = $Compare
+                rawJSON              = $RawJSON
+                body                 = $Request.body
+                assignTo             = $Template.AssignTo
+                excludeGroup         = $Template.excludeGroup
+                remediate            = $Template.remediate
+                alert                = $Template.alert
+                report               = $Template.report
+                existingPolicyId     = $ExistingPolicy.id
+                templateId           = $Template.TemplateList.value
+                customGroup          = $Template.customGroup
+                assignmentFilter     = $Template.assignmentFilter
+                assignmentFilterType = $Template.assignmentFilterType
             }
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No differences found."
             [PSCustomObject]@{
-                MatchFailed            = $false
-                displayname            = $displayname
-                description            = $description
-                compare                = $false
-                rawJSON                = $RawJSON
-                body                   = $Request.body
-                assignTo               = $Template.AssignTo
-                excludeGroup           = $Template.excludeGroup
-                remediate              = $Template.remediate
-                alert                  = $Template.alert
-                report                 = $Template.report
-                existingPolicyId       = $ExistingPolicy.id
-                templateId             = $Template.TemplateList.value
-                customGroup            = $Template.customGroup
-                assignmentFilter       = $Template.assignmentFilter
-                assignmentFilterType   = $Template.assignmentFilterType
+                MatchFailed          = $false
+                displayname          = $displayname
+                description          = $description
+                compare              = $false
+                rawJSON              = $RawJSON
+                body                 = $Request.body
+                assignTo             = $Template.AssignTo
+                excludeGroup         = $Template.excludeGroup
+                remediate            = $Template.remediate
+                alert                = $Template.alert
+                report               = $Template.report
+                existingPolicyId     = $ExistingPolicy.id
+                templateId           = $Template.TemplateList.value
+                customGroup          = $Template.customGroup
+                assignmentFilter     = $Template.assignmentFilter
+                assignmentFilterType = $Template.assignmentFilterType
             }
         }
     }
@@ -140,15 +139,15 @@ function Invoke-CIPPStandardIntuneTemplate {
             Write-Host "working on template deploy: $($TemplateFile.displayname)"
             try {
                 $TemplateFile.customGroup ? ($TemplateFile.AssignTo = $TemplateFile.customGroup) : $null
-                
+
                 $PolicyParams = @{
-                    TemplateType  = $TemplateFile.body.Type
-                    Description   = $TemplateFile.description
-                    DisplayName   = $TemplateFile.displayname
-                    RawJSON       = $templateFile.rawJSON
-                    AssignTo      = $TemplateFile.AssignTo
-                    ExcludeGroup  = $TemplateFile.excludeGroup
-                    tenantFilter  = $Tenant
+                    TemplateType = $TemplateFile.body.Type
+                    Description  = $TemplateFile.description
+                    DisplayName  = $TemplateFile.displayname
+                    RawJSON      = $templateFile.rawJSON
+                    AssignTo     = $TemplateFile.AssignTo
+                    ExcludeGroup = $TemplateFile.excludeGroup
+                    tenantFilter = $Tenant
                 }
 
                 # Add assignment filter if specified
@@ -188,9 +187,18 @@ function Invoke-CIPPStandardIntuneTemplate {
         foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
             Write-Host "working on template report: $($Template.displayname)"
             $id = $Template.templateId
-            $CompareObj = $Template.compare
-            $state = $CompareObj ? $CompareObj : $true
-            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
+
+            $CurrentValue = @{
+                displayName = $Template.displayname
+                description = $Template.description
+                isCompliant = if ($Template.compare) { $false } else { $true }
+            }
+            $ExpectedValue = @{
+                displayName = $Template.displayname
+                description = $Template.description
+                isCompliant = $true
+            }
+            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
