@@ -34,7 +34,6 @@ function Invoke-CIPPStandardMailContacts {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MailContacts'
 
     try {
         $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
@@ -107,8 +106,17 @@ function Invoke-CIPPStandardMailContacts {
 
     }
     if ($Settings.report -eq $true) {
-        $ReportState = $state ? $true : ($CurrentInfo | Select-Object marketingNotificationEmails, technicalNotificationMails, privacyProfile)
-        Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -FieldValue $ReportState -Tenant $tenant
+        $CurrentValue = @{
+            marketingNotificationEmails = $CurrentInfo.marketingNotificationEmails
+            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails)
+            contactEmail                = $CurrentInfo.privacyProfile.contactEmail
+        }
+        $ExpectedValue = @{
+            marketingNotificationEmails = $Contacts.MarketingContact
+            technicalNotificationMails  = @($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null }
+            contactEmail                = $Contacts.GeneralContact
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

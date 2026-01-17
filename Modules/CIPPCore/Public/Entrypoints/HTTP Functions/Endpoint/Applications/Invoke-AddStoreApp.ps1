@@ -1,4 +1,4 @@
-Function Invoke-AddStoreApp {
+function Invoke-AddStoreApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,7 +13,7 @@ Function Invoke-AddStoreApp {
 
 
     $WinGetApp = $Request.Body
-    $assignTo = $Request.body.AssignTo
+    $assignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
 
     if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $WinGetData = [ordered]@{

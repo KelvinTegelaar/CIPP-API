@@ -24,13 +24,12 @@ function Invoke-ExecAppInsightsQuery {
     try {
         $LogData = Get-ApplicationInsightsQuery -Query $Query
 
-        $Body = @{
+        $Body = ConvertTo-Json -Depth 10 -Compress -InputObject @{
             Results  = @($LogData)
             Metadata = @{
                 Query = $Query
             }
-        } | ConvertTo-Json -Depth 10 -Compress
-
+        }
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body

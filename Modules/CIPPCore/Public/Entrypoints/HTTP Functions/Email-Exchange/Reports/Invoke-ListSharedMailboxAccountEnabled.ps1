@@ -19,7 +19,7 @@ function Invoke-ListSharedMailboxAccountEnabled {
             # Match the User
             $User = $AllUsersInfo | Where-Object { $_.userPrincipalName -eq $SharedMailbox.userPrincipalName } | Select-Object -First 1
 
-            if ($User) {
+            if ($User.accountEnabled) {
                 # Return all shared mailboxes with license information
                 [PSCustomObject]@{
                     UserPrincipalName     = $User.userPrincipalName

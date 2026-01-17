@@ -30,7 +30,6 @@ function Invoke-CIPPStandardDisableViva {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableViva'
 
     try {
         # TODO This does not work without Global Admin permissions for some reason. Throws an "EXCEPTION: Tenant admin role is required" error. -Bobby
@@ -38,10 +37,10 @@ function Invoke-CIPPStandardDisableViva {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to get Viva insights settings. Error: $ErrorMessage" -sev Error
-        Return
+        return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
 
         if ($CurrentSetting.isEnabledInOrganization -eq $false) {
@@ -68,8 +67,14 @@ function Invoke-CIPPStandardDisableViva {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $CurrentSetting.isEnabledInOrganization ? $true : ($CurrentSetting | Select-Object isEnabledInOrganization)
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableViva' -FieldValue $State -Tenant $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            DisableViva = -not $CurrentSetting.isEnabledInOrganization
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableViva = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableViva' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $Tenant
     }
 

@@ -102,6 +102,12 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         } else {
             $FieldValue = $AuthenticatorFeaturesState.featureSettings.companionAppAllowedState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.PWcompanionAppAllowedState' -FieldValue $FieldValue -Tenant $Tenant
+        $CurrentValue = @{
+            companionAppAllowedState = $AuthenticatorFeaturesState.featureSettings.companionAppAllowedState.state
+        }
+        $ExpectedValue = @{
+            companionAppAllowedState = $WantedState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PWcompanionAppAllowedState' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }
