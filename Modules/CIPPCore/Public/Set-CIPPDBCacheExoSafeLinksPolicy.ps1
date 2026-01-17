@@ -13,13 +13,13 @@ function Set-CIPPDBCacheExoSafeLinksPolicy {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Safe Links policies (detailed)' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Safe Links policies (detailed)' -sev Debug
 
         $SafeLinksPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeLinksPolicy'
         if ($SafeLinksPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeLinksPolicy' -Data $SafeLinksPolicies
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeLinksPolicy' -Data $SafeLinksPolicies -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SafeLinksPolicies.Count) Safe Links policies (detailed)" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SafeLinksPolicies.Count) Safe Links policies (detailed)" -sev Debug
         }
         $SafeLinksPolicies = $null
 

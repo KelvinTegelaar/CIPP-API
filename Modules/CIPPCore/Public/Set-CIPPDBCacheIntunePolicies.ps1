@@ -16,11 +16,11 @@ function Set-CIPPDBCacheIntunePolicies {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntunePoliciesCache' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
 
         if ($TestResult -eq $false) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping' -sev Debug
             return
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune policies' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune policies' -sev Debug
 
         $PolicyTypes = @(
             @{ Type = 'DeviceCompliancePolicies'; Uri = '/deviceManagement/deviceCompliancePolicies?$top=999&$expand=assignments'; FetchDeviceStatuses = $true }
@@ -36,7 +36,7 @@ function Set-CIPPDBCacheIntunePolicies {
         )
 
         # Build bulk requests for all policy types
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching all policy types using bulk request' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching all policy types using bulk request' -sev Debug
         $PolicyRequests = foreach ($PolicyType in $PolicyTypes) {
             [PSCustomObject]@{
                 id     = $PolicyType.Type
@@ -98,11 +98,11 @@ function Set-CIPPDBCacheIntunePolicies {
 
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies
                 Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies -Count
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Policies.Count) $($PolicyType.Type)" -sev Info
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Policies.Count) $($PolicyType.Type)" -sev Debug
 
                 # Fetch device statuses for compliance policies using bulk requests
                 if ($PolicyType.FetchDeviceStatuses -and ($Policies | Measure-Object).Count -gt 0) {
-                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching device statuses for $($Policies.Count) compliance policies using bulk request" -sev Info
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching device statuses for $($Policies.Count) compliance policies using bulk request" -sev Debug
 
                     $BaseUri = ($PolicyType.Uri -split '\?')[0]
                     # Build bulk request array
@@ -140,7 +140,7 @@ function Set-CIPPDBCacheIntunePolicies {
             }
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Intune policies successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Intune policies successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Intune policies: $($_.Exception.Message)" -sev Error
