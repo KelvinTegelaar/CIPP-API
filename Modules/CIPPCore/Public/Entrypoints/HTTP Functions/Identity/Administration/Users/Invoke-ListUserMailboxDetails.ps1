@@ -57,6 +57,12 @@ function Invoke-ListUserMailboxDetails {
                     CmdletName = 'Get-RecipientPermission'
                     Parameters = @{ Identity = $UserID }
                 }
+            },
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-MailboxAuditBypassAssociation'
+                    Parameters = @{ Identity = $UserID }
+                }
             }
         )
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
@@ -71,6 +77,7 @@ function Invoke-ListUserMailboxDetails {
         $ArchiveSizeRequest = $Results.'Get-MailboxStatistics'
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
+        $AuditBypass = $Results.'Get-MailboxAuditBypassAssociation'
 
         $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
 
@@ -263,6 +270,11 @@ function Invoke-ListUserMailboxDetails {
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
         RetentionPolicy          = $MailboxDetailedRequest.RetentionPolicy
+        AuditBypassEnabled       = $AuditBypass.AuditBypassEnabled
+        OrganizationConfig       = @{
+            AuditDisabled = $OrgConfig.AuditDisabled
+            AuditLogAgeLimit = $OrgConfig.AuditLogAgeLimit
+        }
         MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
             @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
