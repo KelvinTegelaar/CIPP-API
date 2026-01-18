@@ -166,7 +166,7 @@ function Compare-CIPPIntuneObject {
                 if ($isObj1Array -or $isObj2Array) {
                     return
                 }
-                
+
                 # Safely get property names - ensure objects are not arrays before accessing PSObject.Properties
                 $allPropertyNames = @()
                 try {
@@ -202,7 +202,7 @@ function Compare-CIPPIntuneObject {
                     if ($prop1Exists -and $prop2Exists) {
                         try {
                             # Double-check arrays before accessing properties
-                            if (($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) -or 
+                            if (($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) -or
                                 ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
                                 continue
                             }
@@ -297,7 +297,7 @@ function Compare-CIPPIntuneObject {
                             foreach ($groupValue in $child.groupSettingCollectionValue) {
                                 if ($groupValue.children) {
                                     $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollection $IntuneCollection
-                                    $results.AddRange($nestedResults)
+                                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                                 }
                             }
                         }
@@ -383,7 +383,7 @@ function Compare-CIPPIntuneObject {
                 # Also process any children within choice setting values
                 if ($child.choiceSettingValue?.children) {
                     $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollection $IntuneCollection
-                    $results.AddRange($nestedResults)
+                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                 }
             }
 
@@ -401,7 +401,7 @@ function Compare-CIPPIntuneObject {
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
                                 $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollection $intuneCollection
-                                $groupResults.AddRange($childResults)
+                                foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
                         # Return the results from the recursive processing
@@ -473,7 +473,7 @@ function Compare-CIPPIntuneObject {
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
                                 $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollection $intuneCollection
-                                $groupResults.AddRange($childResults)
+                                foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
                         # Return the results from the recursive processing
