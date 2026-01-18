@@ -73,8 +73,9 @@ function Invoke-ListMFAUsers {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })
+
 
 }
