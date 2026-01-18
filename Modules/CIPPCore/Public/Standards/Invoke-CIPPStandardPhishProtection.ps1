@@ -50,7 +50,6 @@ function Invoke-CIPPStandardPhishProtection {
     background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=https://$($CIPPUrl));
 }
 "@
-
     if ($Settings.remediate -eq $true) {
 
         $malformedCSSPattern = '\.ext-sign-in-box\s*\{\s*background-image:\s*url\(https://clone\.cipp\.app/api/PublicPhishingCheck\?Tenantid=[^&]*&URL=\);\s*\}'
