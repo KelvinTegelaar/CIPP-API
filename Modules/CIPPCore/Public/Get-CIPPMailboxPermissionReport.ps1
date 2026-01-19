@@ -39,6 +39,9 @@ function Get-CIPPMailboxPermissionReport {
             $AllMailboxItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes'
             $Tenants = @($AllMailboxItems | Where-Object { $_.RowKey -ne 'Mailboxes-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
 
+            $TenantList = Get-Tenants -IncludeErrors
+            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($Tenant in $Tenants) {
                 try {
