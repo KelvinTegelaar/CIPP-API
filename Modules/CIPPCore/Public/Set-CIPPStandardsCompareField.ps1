@@ -26,12 +26,13 @@ function Set-CIPPStandardsCompareField {
             return [string]$JsonValue
         }
     }
-   function ConvertTo-NormalizedJson {
+    function ConvertTo-NormalizedJson {
         param([string]$JsonString)
 
         if ([string]::IsNullOrEmpty($JsonString)) {
             return $JsonString
         }
+        #Replace quoted numbers with unquoted numbers for consistent comparison
         $JsonString = $JsonString -replace ':"(\d+)"([,}])', ':$1$2'
         return $JsonString
     }
