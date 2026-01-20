@@ -117,7 +117,10 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 if (!$Compare) {
                     Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $true -Tenant $Tenant
                 } else {
-                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -CurrentValue $CompareObj -ExpectedValue $policy -Tenant $Tenant
+                    #this can still be prettified but is for later.
+                    $ExpectedValue = @{ 'Differences' = @() }
+                    $CurrentValue = @{ 'Differences' = $Compare }
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
                 }
             }
         }
