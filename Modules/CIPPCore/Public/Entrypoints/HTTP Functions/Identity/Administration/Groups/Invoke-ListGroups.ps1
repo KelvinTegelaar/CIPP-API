@@ -102,8 +102,8 @@ function Invoke-ListGroups {
                     }
                 },
                 @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
-                members                = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value | Sort-Object displayName
-                owners                 = ($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value | Sort-Object displayName
+                members                = @(($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value | Sort-Object displayName)
+                owners                 = @(($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value | Sort-Object displayName)
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
