@@ -72,7 +72,7 @@ function Get-CIPPMFAStateReport {
             $AllMFAState.Add($MFAUser)
         }
 
-        return $AllMFAState
+        return $AllMFAState | Sort-Object -Property DisplayName
 
     } catch {
         Write-LogMessage -API 'MFAStateReport' -tenant $TenantFilter -message "Failed to generate MFA state report: $($_.Exception.Message)" -sev Error
