@@ -26,12 +26,29 @@ function Set-CIPPStandardsCompareField {
             return [string]$JsonValue
         }
     }
+   function ConvertTo-NormalizedJson {
+        param([string]$JsonString)
+
+        if ([string]::IsNullOrEmpty($JsonString)) {
+            return $JsonString
+        }
+        $JsonString = $JsonString -replace ':"(\d+)"([,}])', ':$1$2'
+        return $JsonString
+    }
 
     if ($CurrentValue -and $CurrentValue -isnot [string]) {
         $CurrentValue = [string](ConvertTo-Json -InputObject $CurrentValue -Depth 10 -Compress)
     }
     if ($ExpectedValue -and $ExpectedValue -isnot [string]) {
         $ExpectedValue = [string](ConvertTo-Json -InputObject $ExpectedValue -Depth 10 -Compress)
+    }
+
+    # Normalize both values for consistent comparison (handle quoted numbers)
+    if ($CurrentValue) {
+        $CurrentValue = ConvertTo-NormalizedJson -JsonString $CurrentValue
+    }
+    if ($ExpectedValue) {
+        $ExpectedValue = ConvertTo-NormalizedJson -JsonString $ExpectedValue
     }
 
     # Handle bulk operations
