@@ -47,7 +47,7 @@ function Get-CIPPMFAStateReport {
         }
 
         # Get MFA state from reporting DB
-        $MFAItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MFAState'
+        $MFAItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MFAState' | Where-Object { $_.RowKey -ne 'MFAState-Count' }
         if (-not $MFAItems) {
             throw 'No MFA state data found in reporting database. Sync the report data first.'
         }

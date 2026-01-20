@@ -14,8 +14,14 @@ function Invoke-ListMFAUsers {
     try {
         # If UseReportDB is specified, retrieve from report database
         if ($UseReportDB -eq 'true') {
-            $GraphRequest = Get-CIPPMFAStateReport -TenantFilter $TenantFilter
-            $StatusCode = [HttpStatusCode]::OK
+            try {
+                $GraphRequest = Get-CIPPMFAStateReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                Write-Host "Error retrieving MFA state from report database: $($_.Exception.Message)"
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
 
             return ([HttpResponseContext]@{
                     StatusCode = $StatusCode

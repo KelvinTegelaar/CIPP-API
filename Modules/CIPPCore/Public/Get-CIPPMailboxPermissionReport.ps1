@@ -59,7 +59,7 @@ function Get-CIPPMailboxPermissionReport {
         }
 
         # Get mailboxes from reporting DB
-        $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes'
+        $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
         if (-not $MailboxItems) {
             throw 'No mailbox data found in reporting database. Sync the mailbox permissions first. '
         }
