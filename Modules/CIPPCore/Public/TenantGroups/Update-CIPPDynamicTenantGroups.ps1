@@ -49,6 +49,9 @@ function Update-CIPPDynamicTenantGroups {
         $script:TenantGroupMembersCache = @{}
         $AllGroupMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member'"
         foreach ($Member in $AllGroupMembers) {
+            if (-not $Member.GroupId) {
+                continue
+            }
             if (-not $script:TenantGroupMembersCache.ContainsKey($Member.GroupId)) {
                 $script:TenantGroupMembersCache[$Member.GroupId] = [system.collections.generic.list[string]]::new()
             }
