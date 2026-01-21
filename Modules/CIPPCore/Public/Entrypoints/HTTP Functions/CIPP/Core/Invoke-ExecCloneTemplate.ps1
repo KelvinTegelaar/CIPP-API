@@ -21,8 +21,12 @@ function Invoke-ExecCloneTemplate {
             $NewGuid = [guid]::NewGuid().ToString()
             $Template.RowKey = $NewGuid
             $Template.JSON = $Template.JSON -replace $GUID, $NewGuid
-            $Template.Package = $null
-            $Template.SHA = $null
+            if ($Template.Package) {
+                $Template.Package = $null
+            }
+            if ($Template.SHA) {
+                $Template.SHA = $null
+            }
             try {
                 Add-CIPPAzDataTableEntity @Table -Entity $Template
                 $body = @{

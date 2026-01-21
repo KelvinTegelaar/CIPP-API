@@ -17,13 +17,15 @@ function Invoke-ListExternalTenantInfo {
             $Tenant = $Request.Query.tenant
 
             # Normalize to tenantid and determine if tenant exists
-            $TenantId = (Invoke-RestMethod -Method GET "https://login.windows.net/$Tenant/.well-known/openid-configuration").token_endpoint.Split('/')[3]
+            $OpenIdConfig = Invoke-RestMethod -Method GET "https://login.windows.net/$Tenant/.well-known/openid-configuration"
+            $TenantId = $OpenIdConfig.token_endpoint.Split('/')[3]
 
             if ($TenantId) {
                 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$TenantId')" -NoAuthCheck $true -tenantid $env:TenantID
                 $StatusCode = [HttpStatusCode]::OK
                 $HttpResponse.Body = [PSCustomObject]@{
                     GraphRequest = $GraphRequest
+                    OpenIdConfig = $OpenIdConfig
                 }
             } else {
                 $HttpResponse.StatusCode = [HttpStatusCode]::BadRequest

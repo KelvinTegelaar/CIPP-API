@@ -24,9 +24,13 @@ function Invoke-ListmailboxPermissions {
             if ($ByUser -eq 'true') {
                 $ReportParams.ByUser = $true
             }
-
-            $GraphRequest = Get-CIPPMailboxPermissionReport @ReportParams
-            $StatusCode = [HttpStatusCode]::OK
+            try {
+                $GraphRequest = Get-CIPPMailboxPermissionReport @ReportParams
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
 
             return ([HttpResponseContext]@{
                     StatusCode = $StatusCode

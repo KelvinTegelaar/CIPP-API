@@ -80,7 +80,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
 
         $CurrentValue = @{
             preferredLanguage = $preferredLanguage
-            incorrectUsers    = $FieldValue
+            incorrectUsers    = @($FieldValue)
         }
         $ExpectedValue = @{
             preferredLanguage = $preferredLanguage
