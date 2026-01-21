@@ -42,11 +42,15 @@ function Get-CIPPDbItem {
                 $Conditions.Add("PartitionKey eq '{0}'" -f $TenantFilter)
             }
             if ($Type) {
-                $Conditions.Add("RowKey ge '{0}-' and RowKey lt '{0}.'" -f $Type)
+                # Exact match for count row when type is specified
+                $Conditions.Add("RowKey eq '{0}-Count'" -f $Type)
+            } else {
+                # Filter by DataCount property to get only count rows (server-side filtering)
+                $Conditions.Add('DataCount ge 0')
             }
             $Filter = [string]::Join(' and ', $Conditions)
             $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property 'PartitionKey', 'RowKey', 'DataCount', 'Timestamp'
-            $Results = $Results | Where-Object { $_.RowKey -like '*-Count' } | Select-Object PartitionKey, RowKey, DataCount, Timestamp
+            $Results = $Results | Select-Object PartitionKey, RowKey, DataCount, Timestamp
         } else {
             if (-not $Type) {
                 throw 'Type parameter is required when CountsOnly is not specified'

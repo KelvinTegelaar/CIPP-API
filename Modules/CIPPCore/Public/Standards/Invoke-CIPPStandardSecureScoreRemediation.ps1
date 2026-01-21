@@ -181,12 +181,10 @@ function Invoke-CIPPStandardSecureScoreRemediation {
                     })
             }
         }
-        if ($ReportData.count -eq 0) {
-            $ReportData = $true
-        }
+
 
         $CurrentValue = @{
-            ControlsToUpdate = $ReportData
+            ControlsToUpdate = $ReportData ?? @()
         }
         $ExpectedValue = @{
             ControlsToUpdate = @()
