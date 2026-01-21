@@ -337,7 +337,7 @@ function Get-CIPPDrift {
                         standardName        = $PolicyKey
                         standardDisplayName = "Conditional Access - $($TenantCAPolicy.displayName)"
                         expectedValue       = 'This policy only exists in the tenant, not in the template.'
-                        receivedValue       = $TenantCAPolicy | Out-String
+                        receivedValue       = (ConvertTo-Json -InputObject $TenantCAPolicy -Depth 10 -Compress)
                         state               = 'current'
                         Status              = $Status
                         Reason              = $reason
