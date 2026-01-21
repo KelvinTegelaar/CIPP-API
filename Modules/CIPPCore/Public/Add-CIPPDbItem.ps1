@@ -69,19 +69,36 @@ function Add-CIPPDbItem {
             if ($ExistingEntities) {
                 Remove-AzDataTableEntity @Table -Entity $ExistingEntities -Force | Out-Null
             }
-            $Entities = foreach ($Item in $Data) {
-                $ItemId = $Item.id ?? $Item.ExternalDirectoryObjectId ?? $Item.Identity ?? $Item.skuId
-                @{
-                    PartitionKey = $TenantFilter
-                    RowKey       = Format-RowKey "$Type-$ItemId"
-                    Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
-                    Type         = $Type
+
+            # Process in batches to avoid memory issues with large datasets
+            $BatchSize = 1000
+            $TotalCount = $Data.Count
+            $ProcessedCount = 0
+            Write-Information "Adding $TotalCount items of type $Type to CIPP Reporting DB for tenant $TenantFilter in batches of $BatchSize"
+            for ($i = 0; $i -lt $TotalCount; $i += $BatchSize) {
+                $BatchEnd = [Math]::Min($i + $BatchSize, $TotalCount)
+                $Batch = $Data[$i..($BatchEnd - 1)]
+
+                $Entities = foreach ($Item in $Batch) {
+                    $ItemId = $Item.id ?? $Item.ExternalDirectoryObjectId ?? $Item.Identity ?? $Item.skuId
+                    @{
+                        PartitionKey = $TenantFilter
+                        RowKey       = Format-RowKey "$Type-$ItemId"
+                        Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
+                        Type         = $Type
+                    }
                 }
+
+                Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force | Out-Null
+                $ProcessedCount += $Batch.Count
+
+                # Clear batch variables to free memory
+                $Entities = $null
+                $Batch = $null
+                [System.GC]::Collect()
             }
-            Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force | Out-Null
 
         }
-
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $($Data.Count) items of type $Type$(if ($Count) { ' (count mode)' })" -sev Debug
 
     } catch {
