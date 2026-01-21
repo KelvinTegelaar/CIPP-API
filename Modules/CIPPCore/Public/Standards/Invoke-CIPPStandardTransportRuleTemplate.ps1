@@ -80,7 +80,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
 
         $CurrentValue = @{
             DeployedTransportRules = $existingRules.DisplayName | Where-Object { $rules.displayname -contains $_ } | Sort-Object
-            MissingTransportRules  = $MissingRules
+            MissingTransportRules  = $MissingRules ? @($MissingRules) : @()
         }
         $ExpectedValue = @{
             DeployedTransportRules = $rules.displayname | Sort-Object
