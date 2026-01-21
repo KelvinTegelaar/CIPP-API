@@ -178,6 +178,7 @@ function Push-CIPPDBCacheData {
             OrchestratorName = "CIPPDBCacheTenant_$TenantFilter"
             Batch            = @($Batch)
             SkipLog          = $true
+            DurableMode      = 'Sequence'
         }
 
         if ($Item.TestRun -eq $true) {
