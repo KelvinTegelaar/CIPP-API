@@ -1,7 +1,7 @@
 function Invoke-ListAvailableTests {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Dashboard.Read
     #>
