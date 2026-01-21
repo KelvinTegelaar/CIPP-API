@@ -94,12 +94,11 @@ function Invoke-CIPPStandardStaleEntraDevices {
 
         if ($StaleDevices.Count -gt 0) {
             $FieldValue = $StaleDevices | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType
-        } else {
-            $FieldValue = $true
         }
+
         $CurrentValue = @{
             StaleDevicesCount  = $StaleDevices.Count
-            StaleDevices       = @($FieldValue)
+            StaleDevices       = ($FieldValue ? @($FieldValue) :@())
             DeviceAgeThreshold = [int]$Settings.deviceAgeThreshold
         }
         $ExpectedValue = @{

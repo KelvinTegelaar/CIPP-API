@@ -67,6 +67,9 @@ function Get-TenantGroups {
         $script:TenantGroupsCache.MembersByGroup = @{}
         foreach ($Member in $script:TenantGroupsCache.Members) {
             $GId = $Member.GroupId
+            if (-not $GId) {
+                continue
+            }
             if (-not $script:TenantGroupsCache.MembersByGroup.ContainsKey($GId)) {
                 $script:TenantGroupsCache.MembersByGroup[$GId] = [System.Collections.Generic.List[object]]::new()
             }

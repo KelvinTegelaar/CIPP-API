@@ -89,7 +89,7 @@ function Invoke-ExecExchangeRoleRepair {
         }
     }
 
-    returns ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::OK
             Body       = $Results
         })
