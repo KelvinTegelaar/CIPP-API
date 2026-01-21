@@ -29,7 +29,8 @@ function Compare-CIPPIntuneObject {
             'qualityUpdatesPauseStartDate',
             'featureUpdatesPauseStartDate'
             'wslDistributions',
-            'lastSuccessfulSyncDateTime'
+            'lastSuccessfulSyncDateTime',
+            'tenantFilter'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
@@ -57,13 +58,6 @@ function Compare-CIPPIntuneObject {
                 [int]$Depth = 0,
                 [int]$MaxDepth = 20
             )
-
-            # Check for arrays at the start of every recursive call - this catches arrays at any nesting level
-            $isObj1Array = $Object1 -is [Array] -or $Object1 -is [System.Collections.IList]
-            $isObj2Array = $Object2 -is [Array] -or $Object2 -is [System.Collections.IList]
-            if ($isObj1Array -or $isObj2Array) {
-                return
-            }
 
             if ($Depth -ge $MaxDepth) {
                 $result.Add([PSCustomObject]@{
@@ -97,7 +91,7 @@ function Compare-CIPPIntuneObject {
             }
 
             # Short-circuit recursion for primitive types
-            $primitiveTypes = @([double], [decimal], [datetime], [timespan], [guid] )
+            $primitiveTypes = @([string], [int], [long], [bool], [double], [decimal], [datetime], [timespan], [guid] )
             foreach ($type in $primitiveTypes) {
                 if ($Object1 -is $type -and $Object2 -is $type) {
                     if ($Object1 -ne $Object2) {
@@ -166,7 +160,7 @@ function Compare-CIPPIntuneObject {
                 if ($isObj1Array -or $isObj2Array) {
                     return
                 }
-                
+
                 # Safely get property names - ensure objects are not arrays before accessing PSObject.Properties
                 $allPropertyNames = @()
                 try {
@@ -202,7 +196,7 @@ function Compare-CIPPIntuneObject {
                     if ($prop1Exists -and $prop2Exists) {
                         try {
                             # Double-check arrays before accessing properties
-                            if (($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) -or 
+                            if (($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) -or
                                 ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
                                 continue
                             }
@@ -316,11 +310,11 @@ function Compare-CIPPIntuneObject {
                         }
 
                         $results.Add([PSCustomObject]@{
-                            Key    = "GroupChild-$($child.settingDefinitionId)"
-                            Label  = $childLabel
-                            Value  = $childValue
-                            Source = $Source
-                        })
+                                Key    = "GroupChild-$($child.settingDefinitionId)"
+                                Label  = $childLabel
+                                Value  = $childValue
+                                Source = $Source
+                            })
                     }
                     '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance' {
                         $childValue = $null
@@ -329,11 +323,11 @@ function Compare-CIPPIntuneObject {
                         }
 
                         $results.Add([PSCustomObject]@{
-                            Key    = "GroupChild-$($child.settingDefinitionId)"
-                            Label  = $childLabel
-                            Value  = $childValue
-                            Source = $Source
-                        })
+                                Key    = "GroupChild-$($child.settingDefinitionId)"
+                                Label  = $childLabel
+                                Value  = $childValue
+                                Source = $Source
+                            })
                     }
                     '#microsoft.graph.deviceManagementConfigurationChoiceSettingCollectionInstance' {
                         if ($child.choiceSettingCollectionValue) {
@@ -352,11 +346,11 @@ function Compare-CIPPIntuneObject {
                             $childValue = $values -join ', '
 
                             $results.Add([PSCustomObject]@{
-                                Key    = "GroupChild-$($child.settingDefinitionId)"
-                                Label  = $childLabel
-                                Value  = $childValue
-                                Source = $Source
-                            })
+                                    Key    = "GroupChild-$($child.settingDefinitionId)"
+                                    Label  = $childLabel
+                                    Value  = $childValue
+                                    Source = $Source
+                                })
                         }
                     }
                     '#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance' {
@@ -368,11 +362,11 @@ function Compare-CIPPIntuneObject {
                             $childValue = $values -join ', '
 
                             $results.Add([PSCustomObject]@{
-                                Key    = "GroupChild-$($child.settingDefinitionId)"
-                                Label  = $childLabel
-                                Value  = $childValue
-                                Source = $Source
-                            })
+                                    Key    = "GroupChild-$($child.settingDefinitionId)"
+                                    Label  = $childLabel
+                                    Value  = $childValue
+                                    Source = $Source
+                                })
                         }
                     }
                     default {

@@ -14,8 +14,14 @@ function Invoke-ListMFAUsers {
     try {
         # If UseReportDB is specified, retrieve from report database
         if ($UseReportDB -eq 'true') {
-            $GraphRequest = Get-CIPPMFAStateReport -TenantFilter $TenantFilter
-            $StatusCode = [HttpStatusCode]::OK
+            try {
+                $GraphRequest = Get-CIPPMFAStateReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                Write-Host "Error retrieving MFA state from report database: $($_.Exception.Message)"
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
 
             return ([HttpResponseContext]@{
                     StatusCode = $StatusCode
@@ -54,11 +60,15 @@ function Invoke-ListMFAUsers {
                 }
             } else {
                 $Rows = foreach ($Row in $Rows) {
-                    if ($Row.CAPolicies) {
-                        $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { $Row.CAPolicies }
+                    if ($Row.CAPolicies -and $Row.CAPolicies -is [string]) {
+                        $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { @() }
+                    } elseif (-not $Row.CAPolicies) {
+                        $Row.CAPolicies = @()
                     }
-                    if ($Row.MFAMethods) {
-                        $Row.MFAMethods = try { $Row.MFAMethods | ConvertFrom-Json } catch { $Row.MFAMethods }
+                    if ($Row.MFAMethods -and $Row.MFAMethods -is [string]) {
+                        $Row.MFAMethods = try { $Row.MFAMethods | ConvertFrom-Json } catch { @() }
+                    } elseif (-not $Row.MFAMethods) {
+                        $Row.MFAMethods = @()
                     }
                     $Row
                 }
@@ -73,8 +83,9 @@ function Invoke-ListMFAUsers {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })
+
 
 }
