@@ -32,12 +32,6 @@ function Set-CIPPDBCacheUsers {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached users successfully' -sev Debug
 
     } catch {
-        # Cleanup on error to prevent memory leak
-        if ($null -ne $Users) { 
-            $Users.Clear()
-            $Users = $null
-        }
-        $UsersResponse = $null
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache users: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
 }

@@ -65,11 +65,11 @@ function Add-CIPPAzDataTableEntity {
             try {
                 # Ensure all property values are not null for string properties
                 if ($SingleEnt -is [hashtable]) {
-                    $keysToRemove = @($SingleEnt.Keys | Where-Object { $null -eq $SingleEnt[$_] })
-                    foreach ($key in $keysToRemove) {
-                        $SingleEnt.Remove($key)
+                    foreach ($key in @($SingleEnt.Keys)) {
+                        if ($null -eq $SingleEnt[$key]) {
+                            $SingleEnt.Remove($key)
+                        }
                     }
-                    $keysToRemove = $null
                 } elseif ($SingleEnt -is [PSCustomObject]) {
                     $propsToRemove = [system.Collections.Generic.List[string]]::new()
                     foreach ($prop in $SingleEnt.PSObject.Properties) {
