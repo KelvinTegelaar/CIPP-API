@@ -60,11 +60,15 @@ function Invoke-ListMFAUsers {
                 }
             } else {
                 $Rows = foreach ($Row in $Rows) {
-                    if ($Row.CAPolicies) {
-                        $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { $Row.CAPolicies }
+                    if ($Row.CAPolicies -and $Row.CAPolicies -is [string]) {
+                        $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { @() }
+                    } elseif (-not $Row.CAPolicies) {
+                        $Row.CAPolicies = @()
                     }
-                    if ($Row.MFAMethods) {
-                        $Row.MFAMethods = try { $Row.MFAMethods | ConvertFrom-Json } catch { $Row.MFAMethods }
+                    if ($Row.MFAMethods -and $Row.MFAMethods -is [string]) {
+                        $Row.MFAMethods = try { $Row.MFAMethods | ConvertFrom-Json } catch { @() }
+                    } elseif (-not $Row.MFAMethods) {
+                        $Row.MFAMethods = @()
                     }
                     $Row
                 }

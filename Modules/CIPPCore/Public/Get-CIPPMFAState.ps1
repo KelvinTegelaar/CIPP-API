@@ -47,6 +47,7 @@ function Get-CIPPMFAState {
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
+        $CAError = "MFA registration not available - licensing required for Conditional Access reporting"
         if ($_.Exception.Message -ne "Tenant is not a B2C tenant and doesn't have premium licenses") {
             $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
         }
@@ -340,7 +341,7 @@ function Get-CIPPMFAState {
             MFACapable      = if ($null -ne $MFARegUser) { [bool]$MFARegUser.isMfaCapable } else { $null }
             MFAMethods      = if ($null -ne $MFARegUser) { @($MFARegUser.methodsRegistered) } else { @() }
             CoveredByCA     = $CoveredByCA
-            CAPolicies      = $UserCAState
+            CAPolicies      = @($UserCAState)
             CoveredBySD     = $SecureDefaultsState
             IsAdmin         = $IsAdmin
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
