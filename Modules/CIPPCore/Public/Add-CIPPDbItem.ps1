@@ -70,11 +70,25 @@ function Add-CIPPDbItem {
                 Remove-AzDataTableEntity @Table -Entity $ExistingEntities -Force | Out-Null
             }
 
-            # Process in batches to avoid memory issues with large datasets
-            $BatchSize = 1000
+            # Calculate batch size based on available memory
+            $AvailableMemory = [System.GC]::GetTotalMemory($false)
+            $AvailableMemoryMB = [math]::Round($AvailableMemory / 1MB, 2)
+
+            # Estimate item size from first item (with fallback)
+            $EstimatedItemSizeBytes = 1KB # Default assumption
+            if ($Data.Count -gt 0) {
+                $SampleJson = $Data[0] | ConvertTo-Json -Depth 10 -Compress
+                $EstimatedItemSizeBytes = [System.Text.Encoding]::UTF8.GetByteCount($SampleJson)
+            }
+
+            # Use 25% of available memory for batch processing, with min/max bounds
+            $TargetBatchMemoryMB = [Math]::Max(50, $AvailableMemoryMB * 0.25)
+            $CalculatedBatchSize = [Math]::Floor(($TargetBatchMemoryMB * 1MB) / $EstimatedItemSizeBytes)
+            $BatchSize = [Math]::Max(100, [Math]::Min(2000, $CalculatedBatchSize))
+
             $TotalCount = $Data.Count
             $ProcessedCount = 0
-            Write-Information "Adding $TotalCount items of type $Type to CIPP Reporting DB for tenant $TenantFilter in batches of $BatchSize"
+            Write-Information "Adding $TotalCount items of type $Type to CIPP Reporting DB for tenant $TenantFilter | Available Memory: ${AvailableMemoryMB}MB | Batch Size: $BatchSize (est. item size: $([math]::Round($EstimatedItemSizeBytes/1KB, 2))KB)"
             for ($i = 0; $i -lt $TotalCount; $i += $BatchSize) {
                 $BatchEnd = [Math]::Min($i + $BatchSize, $TotalCount)
                 $Batch = $Data[$i..($BatchEnd - 1)]
@@ -102,7 +116,7 @@ function Add-CIPPDbItem {
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $($Data.Count) items of type $Type$(if ($Count) { ' (count mode)' })" -sev Debug
 
     } catch {
-        Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Failed to add items of type $Type : $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Failed to add items of type $Type : $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
         throw
     }
 }
