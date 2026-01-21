@@ -19,17 +19,12 @@ function Invoke-ExecTestRun {
                 TenantFilter = $TenantFilter
                 QueueId      = $Queue.RowKey
                 QueueName    = "Cache - $TenantFilter"
+                TestRun      = $true
             }
         )
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'TestDataCollectionAndRun'
             Batch            = $Batch
-            PostExecution    = @{
-                FunctionName = 'CIPPTestsRun'
-                Parameters   = @{
-                    TenantFilter = $TenantFilter
-                }
-            }
             SkipLog          = $false
         }
 

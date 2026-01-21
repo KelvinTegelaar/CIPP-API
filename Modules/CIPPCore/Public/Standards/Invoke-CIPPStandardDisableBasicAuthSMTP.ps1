@@ -46,7 +46,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
 
         $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } |
-            Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
+        Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableBasicAuthSMTP state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -110,7 +110,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
 
             $CurrentValue = [PSCustomObject]@{
                 SmtpClientAuthenticationDisabled = $CurrentInfo.SmtpClientAuthenticationDisabled
-                UsersWithSmtpAuthEnabled         = @($SMTPusers.PrimarySmtpAddress)
+                UsersWithSmtpAuthEnabled         = $SMTPusers.PrimarySmtpAddress ? @($SMTPusers.PrimarySmtpAddress) : @()
             }
             $ExpectedValue = [PSCustomObject]@{
                 SmtpClientAuthenticationDisabled = $true

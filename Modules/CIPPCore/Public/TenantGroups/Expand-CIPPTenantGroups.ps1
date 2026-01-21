@@ -17,7 +17,8 @@ function Expand-CIPPTenantGroups {
         $FilterValue = $_
         # Group lookup
         if ($_.type -eq 'Group') {
-            $members = (Get-TenantGroups -GroupId $_.value).members
+            $GroupResult = Get-TenantGroups -GroupId $_.value
+            $members = if ($GroupResult) { $GroupResult.members } else { @() }
             $TenantList | Where-Object -Property customerId -In $members.customerId | ForEach-Object {
                 $GroupMember = $_
                 [PSCustomObject]@{

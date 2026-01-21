@@ -31,7 +31,7 @@ function Invoke-CIPPTestsRun {
             $TenantsWithData
         } else {
             $DbCounts = Get-CIPPDbItem -TenantFilter $TenantFilter -CountsOnly
-            if (($DbCounts | Measure-Object -Property Count -Sum).Sum -gt 0) {
+            if (($DbCounts | Measure-Object -Property DataCount -Sum).Sum -gt 0) {
                 @($TenantFilter)
             } else {
                 Write-LogMessage -API 'Tests' -tenant $TenantFilter -message 'Tenant has no data in database. Skipping tests.' -sev Info
@@ -55,7 +55,7 @@ function Invoke-CIPPTestsRun {
             }
         }
 
-        Write-Information "Built batch of $($Batch.Count) test activities ($($AllTests.Count) tests × $($AllTenantsList.Count) tenants)"
+        Write-Information "Built batch of $($Batch.Count) test activities ($($AllTests.Count) tests x $($AllTenantsList.Count) tenants)"
 
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'TestsRun'
