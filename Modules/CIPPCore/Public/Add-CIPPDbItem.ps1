@@ -110,7 +110,20 @@ function Add-CIPPDbItem {
                 # Clear batch variables to free memory
                 $Entities = $null
                 $Batch = $null
-                [System.GC]::Collect()
+
+                # Capture memory before GC
+                $MemoryBeforeGC = [System.GC]::GetTotalMemory($false)
+
+                # Force GC between batches to prevent accumulation
+                [System.GC]::Collect([System.GC]::MaxGeneration, [System.GCCollectionMode]::Forced)
+                [System.GC]::WaitForPendingFinalizers()
+                [System.GC]::Collect([System.GC]::MaxGeneration, [System.GCCollectionMode]::Forced)
+
+                # Log memory usage after GC
+                $MemoryAfterGC = [System.GC]::GetTotalMemory($false)
+                $FreedMB = [math]::Round(($MemoryBeforeGC - $MemoryAfterGC) / 1MB, 2)
+                $CurrentMemoryMB = [math]::Round($MemoryAfterGC / 1MB, 2)
+                Write-Information "Batch $([Math]::Ceiling($ProcessedCount / $BatchSize))/$([Math]::Ceiling($TotalCount / $BatchSize)) complete. Processed: $ProcessedCount/$TotalCount | Memory: ${CurrentMemoryMB}MB | Freed: ${FreedMB}MB"
             }
 
         }
