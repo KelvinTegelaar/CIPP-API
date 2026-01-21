@@ -108,7 +108,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing
                 $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject $templateResult
                 try {
-                    $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CompareObj
+                    $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CompareObj -CompareType 'ca'
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error comparing CA policy: $($_.Exception.Message)" -sev Error
                     Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Error comparing policy: $($_.Exception.Message)" -Tenant $Tenant
@@ -117,7 +117,10 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 if (!$Compare) {
                     Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $true -Tenant $Tenant
                 } else {
-                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue $Compare -Tenant $Tenant
+                    #this can still be prettified but is for later.
+                    $ExpectedValue = @{ 'Differences' = @() }
+                    $CurrentValue = @{ 'Differences' = $Compare }
+                    Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
                 }
             }
         }

@@ -24,19 +24,19 @@ function Set-CIPPDBCacheMailboxes {
             Select    = $Select
         }
         $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
-            @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
-            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
-            @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
-            @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
-            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-            @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
-            @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
-            DeliverToMailboxAndForward,
-            HiddenFromAddressListsEnabled,
-            ExternalDirectoryObjectId,
-            MessageCopyForSendOnBehalfEnabled,
-            MessageCopyForSentAsEnabled
+        @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+        @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+        @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+        @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
+        @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
+        @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+        @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+        @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+        DeliverToMailboxAndForward,
+        HiddenFromAddressListsEnabled,
+        ExternalDirectoryObjectId,
+        MessageCopyForSendOnBehalfEnabled,
+        MessageCopyForSentAsEnabled
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes -Count
@@ -54,28 +54,45 @@ function Set-CIPPDBCacheMailboxes {
         $MailboxCount = ($Mailboxes | Measure-Object).Count
         if ($MailboxCount -gt 0) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Starting mailbox permission caching for $MailboxCount mailboxes" -sev Debug
-            
-            # Create batches of 10 mailboxes each
+
+            # Create batches of 10 mailboxes each for both mailbox and calendar permissions
             $BatchSize = 10
             $Batches = [System.Collections.Generic.List[object]]::new()
-            
+            $TotalBatches = [Math]::Ceiling($Mailboxes.Count / $BatchSize)
+
             for ($i = 0; $i -lt $Mailboxes.Count; $i += $BatchSize) {
                 $BatchMailboxes = $Mailboxes[$i..[Math]::Min($i + $BatchSize - 1, $Mailboxes.Count - 1)]
-                
+
                 # Only send UPN to batch function to reduce payload size
                 $BatchMailboxUPNs = $BatchMailboxes | Select-Object -ExpandProperty UPN
-                
+                $BatchNumber = [Math]::Floor($i / $BatchSize) + 1
+
+                # Add mailbox permissions batch
                 $Batches.Add([PSCustomObject]@{
-                    FunctionName = 'GetMailboxPermissionsBatch'
-                    TenantFilter = $TenantFilter
-                    Mailboxes    = $BatchMailboxUPNs
-                    BatchNumber  = [Math]::Floor($i / $BatchSize) + 1
-                    TotalBatches = [Math]::Ceiling($Mailboxes.Count / $BatchSize)
-                })
+                        FunctionName = 'GetMailboxPermissionsBatch'
+                        TenantFilter = $TenantFilter
+                        Mailboxes    = $BatchMailboxUPNs
+                        BatchNumber  = $BatchNumber
+                        TotalBatches = $TotalBatches
+                    })
+
+                # Add calendar permissions batch for the same mailboxes
+                $Batches.Add([PSCustomObject]@{
+                        FunctionName = 'GetCalendarPermissionsBatch'
+                        TenantFilter = $TenantFilter
+                        Mailboxes    = $BatchMailboxUPNs
+                        BatchNumber  = $BatchNumber
+                        TotalBatches = $TotalBatches
+                    })
             }
-            
+
+            # Split batches into mailbox and calendar permissions for separate post-execution
+            $MailboxPermBatches = $Batches | Where-Object { $_.FunctionName -eq 'GetMailboxPermissionsBatch' }
+            $CalendarPermBatches = $Batches | Where-Object { $_.FunctionName -eq 'GetCalendarPermissionsBatch' }
+
+            # Start single orchestrator for both mailbox and calendar permissions
             $InputObject = [PSCustomObject]@{
-                Batch            = $Batches
+                Batch            = @($Batches)
                 OrchestratorName = "MailboxPermissions_$TenantFilter"
                 DurableMode      = 'Sequence'
                 PostExecution    = @{
@@ -86,7 +103,7 @@ function Set-CIPPDBCacheMailboxes {
                 }
             }
             Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started mailbox permission caching orchestrator with $($Batches.Count) batches" -sev Debug
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started mailbox and calendar permission caching orchestrator with $($Batches.Count) batches" -sev Debug
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No mailboxes found to cache permissions for' -sev Debug
         }
