@@ -84,11 +84,12 @@ function Add-CIPPDbItem {
             # Use 25% of available memory for batch processing, with min/max bounds
             $TargetBatchMemoryMB = [Math]::Max(50, $AvailableMemoryMB * 0.25)
             $CalculatedBatchSize = [Math]::Floor(($TargetBatchMemoryMB * 1MB) / $EstimatedItemSizeBytes)
-            $BatchSize = [Math]::Max(100, [Math]::Min(2000, $CalculatedBatchSize))
+            # Reduce max to 500 to prevent OOM with large datasets
+            $BatchSize = [Math]::Max(100, [Math]::Min(500, $CalculatedBatchSize))
 
             $TotalCount = $Data.Count
             $ProcessedCount = 0
-            Write-Information "Adding $TotalCount items of type $Type to CIPP Reporting DB for tenant $TenantFilter | Available Memory: ${AvailableMemoryMB}MB | Batch Size: $BatchSize (est. item size: $([math]::Round($EstimatedItemSizeBytes/1KB, 2))KB)"
+            Write-Information "Adding $TotalCount items of type $Type to CIPP Reporting DB for tenant $TenantFilter | Available Memory: ${AvailableMemoryMB}MB | Target Memory: ${TargetBatchMemoryMB}MB | Calculated: $CalculatedBatchSize | Batch Size: $BatchSize (est. item size: $([math]::Round($EstimatedItemSizeBytes/1KB, 2))KB)"
             for ($i = 0; $i -lt $TotalCount; $i += $BatchSize) {
                 $BatchEnd = [Math]::Min($i + $BatchSize, $TotalCount)
                 $Batch = $Data[$i..($BatchEnd - 1)]
