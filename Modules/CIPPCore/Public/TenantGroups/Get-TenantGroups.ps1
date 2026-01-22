@@ -159,6 +159,7 @@ function Get-TenantGroups {
             if ($GroupMembers) {
                 foreach ($Member in $GroupMembers) {
                     # Use indexed lookup instead of Where-Object
+                    if (!$Member.customerId) { continue }
                     $Tenant = $TenantByCustomerId[$Member.customerId]
                     if ($Tenant) {
                         $MembersList.Add(@{
