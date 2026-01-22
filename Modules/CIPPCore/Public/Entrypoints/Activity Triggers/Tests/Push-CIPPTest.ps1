@@ -22,6 +22,8 @@ function Push-CIPPTest {
 
         Write-Information "Executing $FunctionName for $TenantFilter"
         & $FunctionName -Tenant $TenantFilter
+        Write-Host "Returning true, test has run for $tenantFilter"
+        return @{ testRun = $true }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

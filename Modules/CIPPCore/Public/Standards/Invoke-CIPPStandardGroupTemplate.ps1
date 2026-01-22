@@ -242,12 +242,10 @@ function Invoke-CIPPStandardGroupTemplate {
         }
 
         $CurrentValue = @{
-            ExistingGroups = $existingGroups.displayName
-            MissingGroups  = @($MissingGroups)
+            MissingGroups = $MissingGroups ? @($MissingGroups) : @()
         }
         $ExpectedValue = @{
-            ExistingGroups = $GroupTemplates.displayName
-            MissingGroups  = @()
+            MissingGroups = @()
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GroupTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
