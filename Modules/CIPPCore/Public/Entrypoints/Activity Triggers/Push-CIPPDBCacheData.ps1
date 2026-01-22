@@ -183,7 +183,7 @@ function Push-CIPPDBCacheData {
 
         if ($Item.TestRun -eq $true) {
             $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
-                FunctionName = 'CIPPTestsRun'
+                FunctionName = 'CIPPDBTestsRun'
                 Parameters   = @{
                     TenantFilter = $TenantFilter
                 }

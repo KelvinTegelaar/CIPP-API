@@ -11,6 +11,6 @@ function Start-TestsOrchestrator {
 
     if ($PSCmdlet.ShouldProcess('Start-TestsOrchestrator', 'Starting Tests Orchestrator')) {
         Write-LogMessage -API 'Tests' -message 'Starting Tests Schedule' -sev Info
-        Invoke-CIPPTestsRun -TenantFilter 'allTenants'
+        Invoke-CIPPDBTestsRun -TenantFilter 'allTenants'
     }
 }

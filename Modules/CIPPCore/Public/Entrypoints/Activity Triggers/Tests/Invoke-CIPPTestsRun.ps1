@@ -1,4 +1,4 @@
-function Invoke-CIPPTestsRun {
+function Invoke-CIPPDBTestsRun {
     <#
     .FUNCTIONALITY
         Entrypoint
