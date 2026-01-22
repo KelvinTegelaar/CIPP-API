@@ -139,7 +139,7 @@ function Invoke-CIPPStandardSpoofWarn {
         }
         $ExpectedValue = @{
             Enabled     = $IsEnabled
-            AllowList   = @($Settings.AllowListAdd.value ?? $Settings.AllowListAdd ?? @())
+            AllowList   = $Settings.AllowListAdd.value ? @($Settings.AllowListAdd.value) : @()
             IsCompliant = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpoofWarn' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
