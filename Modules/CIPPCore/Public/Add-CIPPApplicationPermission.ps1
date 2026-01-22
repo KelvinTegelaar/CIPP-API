@@ -59,6 +59,7 @@ function Add-CIPPApplicationPermission {
         }
     }
 
+    Write-Information "Adding application permissions to application $ApplicationId in tenant $TenantFilter"
 
     $ServicePrincipalList = [System.Collections.Generic.List[object]]::new()
     $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
@@ -123,7 +124,7 @@ function Add-CIPPApplicationPermission {
     $Grants = foreach ($App in $RequiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
         if (!$svcPrincipalId) { continue }
-        
+
         foreach ($SingleResource in $App.ResourceAccess | Where-Object -Property Type -EQ 'Role') {
             if ($SingleResource.id -in $CurrentRoles.appRoleId) { continue }
             [pscustomobject]@{
