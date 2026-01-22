@@ -1,4 +1,4 @@
-function Push-CIPPTestsRun {
+function Push-CIPPDBTestsRun {
     <#
     .SYNOPSIS
         PostExecution function to run tests after data collection completes
@@ -13,7 +13,7 @@ function Push-CIPPTestsRun {
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message 'Starting test run after data collection' -sev Info
 
         # Call the test run function
-        $Result = Invoke-CIPPTestsRun -TenantFilter $TenantFilter
+        $Result = Invoke-CIPPDBTestsRun -TenantFilter $TenantFilter
 
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Test run started. Instance ID: $($Result.InstanceId)" -sev Info
         Write-Information "PostExecution: Tests started with Instance ID: $($Result.InstanceId)"
