@@ -49,11 +49,16 @@ function Update-CIPPDynamicTenantGroups {
         $script:TenantGroupMembersCache = @{}
         $AllGroupMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member'"
         foreach ($Member in $AllGroupMembers) {
+            if (-not $Member.GroupId) {
+                continue
+            }
             if (-not $script:TenantGroupMembersCache.ContainsKey($Member.GroupId)) {
                 $script:TenantGroupMembersCache[$Member.GroupId] = [system.collections.generic.list[string]]::new()
             }
             $script:TenantGroupMembersCache[$Member.GroupId].Add($Member.customerId)
-        }        foreach ($Group in $DynamicGroups) {
+        }
+
+        foreach ($Group in $DynamicGroups) {
             try {
                 Write-LogMessage -API 'TenantGroups' -message "Processing dynamic group: $($Group.Name)" -sev Info
                 $Rules = @($Group.DynamicRules | ConvertFrom-Json)
@@ -96,12 +101,34 @@ function Update-CIPPDynamicTenantGroups {
                             }
                         }
                         'tenantGroupMember' {
-                            # Get members of the referenced tenant group
-                            $ReferencedGroupId = $Value.value
-                            if ($Operator -eq 'in') {
-                                "`$_.customerId -in `$script:TenantGroupMembersCache['$ReferencedGroupId']"
+                            # Get members of the referenced tenant group(s)
+                            if ($Operator -in @('in', 'notin')) {
+                                # Handle array of group IDs
+                                $ReferencedGroupIds = @($Value.value)
+
+                                # Collect all unique member customerIds from all referenced groups
+                                $AllMembers = [System.Collections.Generic.HashSet[string]]::new()
+                                foreach ($GroupId in $ReferencedGroupIds) {
+                                    if ($script:TenantGroupMembersCache.ContainsKey($GroupId)) {
+                                        foreach ($MemberId in $script:TenantGroupMembersCache[$GroupId]) {
+                                            [void]$AllMembers.Add($MemberId)
+                                        }
+                                    }
+                                }
+
+                                # Convert to array string for condition
+                                $MemberArray = $AllMembers | ForEach-Object { "'$_'" }
+                                $MemberArrayString = $MemberArray -join ', '
+
+                                if ($Operator -eq 'in') {
+                                    "`$_.customerId -in @($MemberArrayString)"
+                                } else {
+                                    "`$_.customerId -notin @($MemberArrayString)"
+                                }
                             } else {
-                                "`$_.customerId -notin `$script:TenantGroupMembersCache['$ReferencedGroupId']"
+                                # Single value with other operators
+                                $ReferencedGroupId = $Value.value
+                                "`$_.customerId -$Operator `$script:TenantGroupMembersCache['$ReferencedGroupId']"
                             }
                         }
                         'customVariable' {

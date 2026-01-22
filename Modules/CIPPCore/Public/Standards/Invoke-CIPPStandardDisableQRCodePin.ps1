@@ -63,7 +63,15 @@ function Invoke-CIPPStandardDisableQRCodePin {
 
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect -eq $true ? $true :  $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableQRCodePin' -FieldValue $state -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableQRCodePin = $state
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableQRCodePin = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableQRCodePin' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableQRCodePin' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

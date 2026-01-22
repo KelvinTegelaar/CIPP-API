@@ -10,7 +10,6 @@ function Invoke-CIPPStandardDisableEntraPortal {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun -Type Standard -Tenant $Tenant -API 'allowOTPTokens' -Settings $Settings
     #This standard is still unlisted due to MS fixing some permissions. This will be added to the list once it is fixed.
     try {
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/admin/entra/uxSetting' -tenantid $Tenant

@@ -41,18 +41,16 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableAppConsentRequests'
 
     try {
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableAppConsentRequests state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             # Get current state
 
@@ -121,8 +119,17 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
     }
     if ($Settings.report -eq $true) {
-        $state = $CurrentInfo.isEnabled ? $true : $CurrentInfo
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -FieldValue $state -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableAppConsentRequests = $CurrentInfo.isEnabled
+            ReviewerCount            = $CurrentInfo.reviewers.count
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableAppConsentRequests = $true
+            ReviewerCount            = ($Settings.ReviewerRoles.value).count
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

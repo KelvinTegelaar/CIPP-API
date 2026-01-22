@@ -37,8 +37,7 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableSharePointLegacyAuth' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSharePointLegacyAuth'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableSharePointLegacyAuth' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."
@@ -47,14 +46,13 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharePointLegacyAuth state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isLegacyAuthProtocolsEnabled) {
             try {
@@ -80,8 +78,14 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         }
     }
     if ($Settings.report -eq $true) {
-        $state = $CurrentInfo.isLegacyAuthProtocolsEnabled ? ($CurrentInfo | Select-Object isLegacyAuthProtocolsEnabled) : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharePointLegacyAuth' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            DisableSharePointLegacyAuth = $CurrentInfo.isLegacyAuthProtocolsEnabled -eq $false
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableSharePointLegacyAuth = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharePointLegacyAuth' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue $CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
     }
 }

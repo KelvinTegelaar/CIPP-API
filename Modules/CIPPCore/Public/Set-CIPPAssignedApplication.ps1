@@ -88,11 +88,11 @@ function Set-CIPPAssignedApplication {
                     $resolvedGroupIds = $GroupIds
                 } else {
                     $GroupNames = $GroupName.Split(',')
-                    $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter | ForEach-Object {
+                    $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
                         $Group = $_
                         foreach ($SingleName in $GroupNames) {
-                            if ($_.displayName -like $SingleName) {
-                                $group.id
+                            if ($Group.displayName -like $SingleName) {
+                                $Group.id
                             }
                         }
                     }
@@ -177,7 +177,6 @@ function Set-CIPPAssignedApplication {
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
             Start-Sleep -Seconds 1
-            # Write-Information (ConvertTo-Json $DefaultAssignmentObject -Depth 10)
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
             Write-LogMessage -headers $Headers -API $APIName -message "Assigned Application $ApplicationId to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }

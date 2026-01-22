@@ -55,8 +55,15 @@ function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the BitLockerKeysForOwnedDevice state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
-    $CurrentValue = [bool]$CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice
-    $StateIsCorrect = ($CurrentValue -eq $DesiredValue)
+    $CurrentStateValue = [bool]$CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice
+    $StateIsCorrect = ($CurrentStateValue -eq $DesiredValue)
+
+    $CurrentValue = [PSCustomObject]@{
+        allowedToReadBitLockerKeysForOwnedDevice = $CurrentStateValue
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        allowedToReadBitLockerKeysForOwnedDevice = $DesiredValue
+    }
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -72,7 +79,7 @@ function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
 
                 # Update current state variables to reflect the change immediately if running remediate and report/alert together
                 $CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice = $DesiredValue
-                $CurrentValue = $DesiredValue
+                $CurrentStateValue = $DesiredValue
                 $StateIsCorrect = $true
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -85,7 +92,7 @@ function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Users are $DesiredLabel to recover BitLocker keys for their owned devices as configured." -sev Info
         } else {
-            $CurrentLabel = if ($CurrentValue) { 'allowed' } else { 'restricted' }
+            $CurrentLabel = if ($CurrentStateValue) { 'allowed' } else { 'restricted' }
             $AlertMessage = "Users are $CurrentLabel to recover BitLocker keys for their owned devices but should be $DesiredLabel."
             Write-StandardsAlert -message $AlertMessage -object $CurrentState -tenant $tenant -standardName 'BitLockerKeysForOwnedDevice' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Info
@@ -93,7 +100,7 @@ function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.BitLockerKeysForOwnedDevice' -FieldValue $StateIsCorrect -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.BitLockerKeysForOwnedDevice' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'BitLockerKeysForOwnedDevice' -FieldValue $CurrentValue -StoreAs bool -Tenant $tenant
     }
 }

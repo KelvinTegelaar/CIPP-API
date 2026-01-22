@@ -31,11 +31,22 @@ function Invoke-ExecListBackup {
                     Items        = $properties.Name
                 }
             } else {
+                # Prefer stored indicator (BackupIsBlob) to avoid reading Backup field
+                $isBlob = $false
+                if ($null -ne $item.PSObject.Properties['BackupIsBlob']) {
+                    try { $isBlob = [bool]$item.BackupIsBlob } catch { $isBlob = $false }
+                } else {
+                    # Fallback heuristic for legacy rows if property missing
+                    if ($null -ne $item.PSObject.Properties['Backup']) {
+                        $b = $item.Backup
+                        if ($b -is [string] -and ($b -like 'https://*' -or $b -like 'http://*')) { $isBlob = $true }
+                    }
+                }
                 [PSCustomObject]@{
                     BackupName = $item.RowKey
                     Timestamp  = $item.Timestamp
+                    Source     = if ($isBlob) { 'blob' } else { 'table' }
                 }
-
             }
         }
         $Result = $Processed | Sort-Object Timestamp -Descending

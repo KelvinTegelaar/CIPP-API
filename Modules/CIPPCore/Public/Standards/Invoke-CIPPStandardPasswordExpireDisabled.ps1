@@ -37,8 +37,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
 
     try {
         $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PasswordExpireDisabled state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -82,11 +81,13 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainsWithoutPassExpire -StoreAs json -Tenant $tenant
-        if ($DomainsWithoutPassExpire) {
-            $FieldValue = $DomainsWithoutPassExpire
-        } else {
-            $FieldValue = $true
+
+        $CurrentValue = @{
+            DomainsWithoutPassExpire = @($DomainsWithoutPassExpire)
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.PasswordExpireDisabled' -FieldValue $FieldValue -Tenant $tenant
+        $ExpectedValue = @{
+            DomainsWithoutPassExpire = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PasswordExpireDisabled' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

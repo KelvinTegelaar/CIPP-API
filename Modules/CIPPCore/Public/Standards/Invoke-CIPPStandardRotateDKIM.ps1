@@ -42,8 +42,7 @@ function Invoke-CIPPStandardRotateDKIM {
 
     try {
         $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -eq 1024 -and $_.Enabled -eq $true }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DKIM state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -78,10 +77,13 @@ function Invoke-CIPPStandardRotateDKIM {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
-        if ($DKIM) {
-            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $DKIM -Tenant $tenant
-        } else {
-            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $true -Tenant $tenant
+
+        $CurrentValue = @{
+            domainsWith1024BitDKIM = @(@($DKIM.Identity) | Where-Object { $_ })
         }
+        $ExpectedValue = @{
+            domainsWith1024BitDKIM = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

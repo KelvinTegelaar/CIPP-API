@@ -12,13 +12,26 @@ function Invoke-ExecRestoreBackup {
     try {
 
         if ($Request.Body.BackupName -like 'CippBackup_*') {
-            $Table = Get-CippTable -tablename 'CIPPBackup'
-            $Backup = Get-CippAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.BackupName)' or OriginalEntityId eq '$($Request.Body.BackupName)'"
+            # Use Get-CIPPBackup which already handles fetching from blob storage
+            $Backup = Get-CIPPBackup -Type 'CIPP' -Name $Request.Body.BackupName
             if ($Backup) {
-                $BackupData = $Backup.Backup | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty ETag, Timestamp
+                $raw = $Backup.Backup
+                $BackupData = $null
+
+                # Get-CIPPBackup already fetches blob content, so raw should be JSON string
+                try {
+                    if ($raw -is [string]) {
+                        $BackupData = $raw | ConvertFrom-Json -ErrorAction Stop
+                    } else {
+                        $BackupData = $raw | Select-Object * -ExcludeProperty ETag, Timestamp
+                    }
+                } catch {
+                    throw "Failed to parse backup JSON: $($_.Exception.Message)"
+                }
+
                 $BackupData | ForEach-Object {
                     $Table = Get-CippTable -tablename $_.table
-                    $ht2 = @{ }
+                    $ht2 = @{}
                     $_.psobject.properties | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
                     $Table.Entity = $ht2
                     Add-CIPPAzDataTableEntity @Table -Force

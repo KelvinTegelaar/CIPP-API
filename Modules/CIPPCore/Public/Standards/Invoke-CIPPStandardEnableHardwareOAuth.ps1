@@ -30,19 +30,17 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableHardwareOAuth'
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/HardwareOath' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableHardwareOAuth state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'enabled')
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is already enabled.' -sev Info
         } else {
@@ -57,14 +55,22 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is enabled' -sev Info
         } else {
-            Write-StandardsAlert -message "HardwareOAuth Support is not enabled" -object $CurrentState -tenant $tenant -standardName 'EnableHardwareOAuth' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'HardwareOAuth Support is not enabled' -object $CurrentState -tenant $tenant -standardName 'EnableHardwareOAuth' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableHardwareOAuth' -FieldValue $state -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableHardwareOAuth = $state
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableHardwareOAuth = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableHardwareOAuth' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableHardwareOAuth' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

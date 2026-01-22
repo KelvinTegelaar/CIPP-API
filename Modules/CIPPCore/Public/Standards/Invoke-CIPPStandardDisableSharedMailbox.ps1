@@ -35,19 +35,17 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSharedMailbox'
 
     try {
         $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true&$count=true' -Tenantid $Tenant -ComplexFilter
-        $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -EQ 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' -and $_.UserPrincipalName -in $UserList.UserPrincipalName })
-    }
-    catch {
+        $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' -and $_.UserPrincipalName -in $UserList.UserPrincipalName })
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($SharedMailboxList) {
             $SharedMailboxList | ForEach-Object {
@@ -75,8 +73,16 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     }
 
     if ($Settings.report -eq $true) {
-        $State = $SharedMailboxList ? $SharedMailboxList : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharedMailbox' -FieldValue $State -Tenant $Tenant
+        $State = $SharedMailboxList ? $SharedMailboxList : @()
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableSharedMailbox = @($State)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableSharedMailbox = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharedMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $Tenant
     }
 }

@@ -10,8 +10,11 @@ function Start-UserTasksOrchestrator {
     param()
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Running' and Timestamp lt datetime'$1HourAgo'))"
+    $30MinutesAgo = (Get-Date).AddMinutes(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    # Pending = orchestrator queued, Running = actively executing
+    # Pick up: Planned, Failed-Planned, stuck Pending (>30min), or stuck Running (>4hr for large AllTenants tasks)
+    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$30MinutesAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo'))"
     $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     $RateLimitTable = Get-CIPPTable -tablename 'SchedulerRateLimits'
@@ -49,11 +52,14 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
+                # Update task state to 'Pending' immediately to prevent concurrent orchestrator runs from picking it up
+                # 'Pending' = orchestrator has picked it up and is queuing commands
+                # 'Running' = actual execution is happening (set by Push-ExecScheduledCommand)
                 $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Planned'
+                    TaskState    = 'Pending'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json

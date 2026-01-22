@@ -34,8 +34,7 @@ function Invoke-CIPPStandardSecurityDefaults {
 
     try {
         $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the Security Defaults state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -70,6 +69,12 @@ function Invoke-CIPPStandardSecurityDefaults {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SecurityDefaults' -FieldValue $SecureDefaultsState.IsEnabled -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.SecurityDefaults' -FieldValue $SecureDefaultsState.IsEnabled -Tenant $tenant
+        $CurrentData = @{
+            SecurityDefaultsEnabled = $SecureDefaultsState.IsEnabled
+        }
+        $ExpectedData = @{
+            SecurityDefaultsEnabled = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SecurityDefaults' -CurrentValue $CurrentData -ExpectedValue $ExpectedData -Tenant $tenant
     }
 }

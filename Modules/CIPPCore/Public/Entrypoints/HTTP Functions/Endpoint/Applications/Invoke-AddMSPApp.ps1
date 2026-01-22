@@ -13,7 +13,7 @@ function Invoke-AddMSPApp {
 
 
     $RMMApp = $Request.Body
-    $AssignTo = $Request.Body.AssignTo
+    $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
     $intuneBody = Get-Content "AddMSPApp\$($RMMApp.RMMName.value).app.json" | ConvertFrom-Json
     $intuneBody.displayName = $RMMApp.DisplayName
 
