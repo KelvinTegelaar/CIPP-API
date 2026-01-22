@@ -4,7 +4,7 @@ function Invoke-ListTestReports {
         Lists all available test reports from JSON files and database
 
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
 
     .ROLE
         Tenant.Reports.Read
