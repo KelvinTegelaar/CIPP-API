@@ -97,7 +97,6 @@ function Set-CIPPDBCacheMailboxes {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batches)
                 OrchestratorName = "MailboxPermissions_$TenantFilter"
-                DurableMode      = 'Sequence'
                 PostExecution    = @{
                     FunctionName = 'StoreMailboxPermissions'
                     Parameters   = @{
