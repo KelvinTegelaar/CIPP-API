@@ -121,7 +121,7 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     if ($Settings.report -eq $true) {
 
         $CurrentValue = [PSCustomObject]@{
-            EnableAppConsentRequests = $CurrentInfo.isEnabled
+            EnableAppConsentRequests = [bool]$CurrentInfo.isEnabled
             ReviewerCount            = $CurrentInfo.reviewers.count
         }
         $ExpectedValue = [PSCustomObject]@{
