@@ -13,6 +13,14 @@ function Invoke-CIPPTestsRun {
 
     Write-Information "Starting tests run for tenant: $TenantFilter"
 
+    Write-Host 'Checking rerun protection'
+    $RerunParams = @{
+        TenantFilter = $TenantFilter
+        Type         = 'CippTests'
+        API          = 'CippTests'
+    }
+    $Rerun = Test-CIPPRerun @RerunParams
+    if ($Rerun -eq $true) { return $true }
     try {
         $AllTests = Get-Command -Name 'Invoke-CippTest*' -Module CIPPCore | Select-Object -ExpandProperty Name | ForEach-Object {
             $_ -replace '^Invoke-CippTest', ''

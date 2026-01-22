@@ -20,6 +20,7 @@ function Test-CIPPRerun {
         $EstimatedDifference = switch ($Type) {
             'Standard' { 9800 } # 2 hours 45 minutes ish.
             'BPA' { 85000 } # 24 hours ish.
+            'CippTests' { 85000 } # 24 hours ish.
             default { throw "Unknown type: $Type" }
         }
     }
