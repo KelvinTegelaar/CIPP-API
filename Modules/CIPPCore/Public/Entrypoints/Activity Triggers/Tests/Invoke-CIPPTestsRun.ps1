@@ -20,7 +20,10 @@ function Invoke-CIPPTestsRun {
         API          = 'CippTests'
     }
     $Rerun = Test-CIPPRerun @RerunParams
-    if ($Rerun -eq $true) { return $true }
+    if ($Rerun -eq $true) {
+        Write-Host "rerun is true for $($TenantFilter)"
+        return $true
+    }
     try {
         $AllTests = Get-Command -Name 'Invoke-CippTest*' -Module CIPPCore | Select-Object -ExpandProperty Name | ForEach-Object {
             $_ -replace '^Invoke-CippTest', ''
