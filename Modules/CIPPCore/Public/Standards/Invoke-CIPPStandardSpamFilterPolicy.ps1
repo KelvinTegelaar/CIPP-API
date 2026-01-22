@@ -284,7 +284,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             RegionBlockList                  = $CurrentState.RegionBlockList
             AllowedSenderDomains             = $CurrentState.AllowedSenderDomains
         }
-        $ExpectedValue = @{
+        $ExpectedValue = [pscustomobject]@{
             Name                             = $PolicyName
             SpamAction                       = $SpamAction
             SpamQuarantineTag                = $SpamQuarantineTag
@@ -308,7 +308,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             LanguageBlockList                = $Settings.EnableLanguageBlockList ? @($Settings.EnableLanguageBlockList) : @()
             EnableRegionBlockList            = $Settings.EnableRegionBlockList
             RegionBlockList                  = $Settings.RegionBlockList.value ? @($Settings.RegionBlockList.value) : @()
-            AllowedSenderDomains             = $Settings.AllowedSenderDomains.value ?? @()
+            AllowedSenderDomains             = $Settings.AllowedSenderDomains.value ? @($Settings.AllowedSenderDomains.value) : @()
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
