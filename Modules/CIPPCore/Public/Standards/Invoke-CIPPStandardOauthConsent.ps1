@@ -104,7 +104,7 @@ function Invoke-CIPPStandardOauthConsent {
             permissionGrantPolicyIdsAssignedToDefaultUserRole = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
         }
         $ExpectedValue = @{
-            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('managePermissionGrantsForSelf.cipp-consent-policy')
+            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.cipp-consent-policy')
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }

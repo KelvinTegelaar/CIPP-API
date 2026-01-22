@@ -99,6 +99,7 @@ function Push-CIPPDBCacheData {
                 'ExoPresetSecurityPolicy'
                 'ExoTenantAllowBlockList'
                 'Mailboxes'
+                'CASMailboxes'
                 'MailboxUsage'
                 'OneDriveUsage'
             )
@@ -178,12 +179,11 @@ function Push-CIPPDBCacheData {
             OrchestratorName = "CIPPDBCacheTenant_$TenantFilter"
             Batch            = @($Batch)
             SkipLog          = $true
-            DurableMode      = 'Sequence'
         }
 
         if ($Item.TestRun -eq $true) {
             $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
-                FunctionName = 'CIPPTestsRun'
+                FunctionName = 'CIPPDBTestsRun'
                 Parameters   = @{
                     TenantFilter = $TenantFilter
                 }
