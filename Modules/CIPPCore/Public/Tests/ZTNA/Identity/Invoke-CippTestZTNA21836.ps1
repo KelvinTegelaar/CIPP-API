@@ -20,7 +20,7 @@ function Invoke-CippTestZTNA21836 {
         $WorkloadIdentitiesWithPrivilegedRoles = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Role in $PrivilegedRoles) {
-            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleId $Role.id
+            $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.id
 
             foreach ($Member in $RoleMembers) {
                 if ($Member.'@odata.type' -eq '#microsoft.graph.servicePrincipal') {

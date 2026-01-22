@@ -76,8 +76,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
         try {
             $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-                Where-Object -Property Name -EQ $PolicyName |
-                Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -94,8 +94,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
         $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
-            Where-Object -Property Name -EQ $RuleName |
-            Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
+        Where-Object -Property Name -EQ $RuleName |
+        Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
 
         $RuleStateIsCorrect = ($RuleState.Name -eq $RuleName) -and
         ($RuleState.SafeAttachmentPolicy -eq $PolicyName) -and
@@ -186,13 +186,13 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
                 redirectAddress = $CurrentState.RedirectAddress
             }
 
-            $ExpectedValue = @{
+            $ExpectedValue = [pscustomobject]@{
                 name            = $PolicyName
                 enable          = $true
                 action          = $Settings.SafeAttachmentAction
                 quarantineTag   = $Settings.QuarantineTag
                 redirect        = $Settings.Redirect
-                redirectAddress = $Settings.RedirectAddress
+                redirectAddress = "$($Settings.RedirectAddress)"
             }
             Set-CIPPStandardsCompareField -FieldName 'standards.SafeAttachmentPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         }
