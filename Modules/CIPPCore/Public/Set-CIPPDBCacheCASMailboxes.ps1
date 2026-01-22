@@ -16,19 +16,11 @@ function Set-CIPPDBCacheCASMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Debug
 
         # Use Generic List for better memory efficiency with large datasets
-        $CASMailboxList = [System.Collections.Generic.List[PSObject]]::new()
-        $CASMailboxesResponse = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox'
-        foreach ($Mailbox in $CASMailboxesResponse) {
-            $CASMailboxList.Add($Mailbox)
-        }
+        $CASMailboxList = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox'
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxList.ToArray()
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data @{ Count = $CASMailboxList.Count } -Count
-
-        $CASMailboxesResponse = $null
-        $CASMailboxList.Clear()
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxList
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxList -Count
         $CASMailboxList = $null
-        [System.GC]::Collect()
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Debug
 
