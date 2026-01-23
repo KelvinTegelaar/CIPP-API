@@ -99,19 +99,19 @@ function Add-CIPPDbItem {
                 $MemoryAfterGC = [System.GC]::GetTotalMemory($false)
                 $FreedMB = [math]::Round(($MemoryBeforeGC - $MemoryAfterGC) / 1MB, 2)
                 $CurrentMemoryMB = [math]::Round($MemoryAfterGC / 1MB, 2)
-                Write-Debug "Batch $($State.BatchNumber): ${flushDuration}s total (write: ${writeDuration}s, gc: ${gcDuration}s) | Processed: $($State.TotalProcessed) | Memory: ${CurrentMemoryMB}MB | Freed: ${FreedMB}MB"
+                #Write-Debug "Batch $($State.BatchNumber): ${flushDuration}s total (write: ${writeDuration}s, gc: ${gcDuration}s) | Processed: $($State.TotalProcessed) | Memory: ${CurrentMemoryMB}MB | Freed: ${FreedMB}MB"
             }
         }
 
         if (-not $Count.IsPresent) {
             # Delete existing entries for this type
             $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
-            $ExistingEntities = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+            $ExistingEntities = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag
             if ($ExistingEntities) {
                 Remove-AzDataTableEntity @Table -Entity $ExistingEntities -Force | Out-Null
             }
             $AllocatedMemoryMB = [math]::Round([System.GC]::GetTotalMemory($false) / 1MB, 2)
-            Write-Debug "Starting $Type import for $TenantFilter | Allocated Memory: ${AllocatedMemoryMB}MB | Batch Size: 500"
+            #Write-Debug "Starting $Type import for $TenantFilter | Allocated Memory: ${AllocatedMemoryMB}MB | Batch Size: 500"
         }
     }
 
@@ -184,7 +184,7 @@ function Add-CIPPDbItem {
             Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter `
                 -message "Failed to add items of type $Type : $($_.Exception.Message)" -sev Error `
                 -LogData (Get-CippException -Exception $_)
-            Write-Debug "[Add-CIPPDbItem] $TenantFilter - $(Get-CippException -Exception $_ | ConvertTo-Json -Depth 5 -Compress)"
+            #Write-Debug "[Add-CIPPDbItem] $TenantFilter - $(Get-CippException -Exception $_ | ConvertTo-Json -Depth 5 -Compress)"
             throw
         } finally {
             # Record count if AddCount was specified

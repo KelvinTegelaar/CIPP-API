@@ -40,12 +40,6 @@ function Add-CIPPAzDataTableEntity {
     $MaxRowSize = 500000 - 100
     $MaxSize = 30kb
 
-    $startTime = Get-Date
-    $entityCount = @($Entity).Count
-    $totalValidationTime = 0
-    $totalAddTime = 0
-    Write-Information "[Add-CIPPAzDataTableEntity] Processing $entityCount entities"
-
     foreach ($SingleEnt in @($Entity)) {
         try {
             # Skip null entities
@@ -68,7 +62,6 @@ function Add-CIPPAzDataTableEntity {
             }
 
             # Additional validation for AzBobbyTables compatibility
-            $validationStart = Get-Date
             try {
                 # Ensure all property values are not null for string properties
                 if ($SingleEnt -is [hashtable]) {
@@ -91,15 +84,8 @@ function Add-CIPPAzDataTableEntity {
             } catch {
                 Write-Warning "Error during entity validation: $($_.Exception.Message)"
             }
-            $validationEnd = Get-Date
-            $validationDuration = ($validationEnd - $validationStart).TotalMilliseconds
-            $totalValidationTime += $validationDuration
 
-            $addStart = Get-Date
             Add-AzDataTableEntity @Parameters -Entity $SingleEnt -ErrorAction Stop
-            $addEnd = Get-Date
-            $addDuration = ($addEnd - $addStart).TotalMilliseconds
-            $totalAddTime += $addDuration
 
         } catch [System.Exception] {
             if ($_.Exception.ErrorCode -in @('PropertyValueTooLarge', 'EntityTooLarge', 'RequestBodyTooLarge')) {
@@ -251,10 +237,4 @@ function Add-CIPPAzDataTableEntity {
             }
         }
     }
-
-    $endTime = Get-Date
-    $totalDuration = [math]::Round(($endTime - $startTime).TotalSeconds, 2)
-    $avgValidation = [math]::Round($totalValidationTime / $entityCount, 2)
-    $avgAdd = [math]::Round($totalAddTime / $entityCount, 2)
-    Write-Debug "[Add-CIPPAzDataTableEntity] Completed $entityCount entities in ${totalDuration}s (avg validation: ${avgValidation}ms, avg add: ${avgAdd}ms)"
 }
