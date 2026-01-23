@@ -69,8 +69,7 @@ function Push-StoreMailboxPermissions {
 
         # Store all permissions together as MailboxPermissions
         if ($AllPermissions.Count -gt 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions' -Data $AllPermissions
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions' -Data $AllPermissions -Count
+            $AllPermissions | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxPermissions' -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllPermissions.Count) mailbox permission records" -sev Info
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No mailbox permissions found to cache' -sev Info
@@ -78,8 +77,7 @@ function Push-StoreMailboxPermissions {
 
         # Store calendar permissions separately
         if ($AllCalendarPermissions.Count -gt 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -Data $AllCalendarPermissions
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -Data $AllCalendarPermissions -Count
+            $AllCalendarPermissions | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CalendarPermissions' -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllCalendarPermissions.Count) calendar permission records" -sev Info
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No calendar permissions found to cache' -sev Info
