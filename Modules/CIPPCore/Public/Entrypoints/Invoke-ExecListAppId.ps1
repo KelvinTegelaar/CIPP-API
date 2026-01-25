@@ -45,17 +45,44 @@ function Invoke-ExecListAppId {
                 url    = '/me?$select=displayName,userPrincipalName'
                 method = 'GET'
             }
+            @{
+                id     = 'application'
+                url    = "/applications(appId='$($env:ApplicationID)')?`$select=id,web"
+                method = 'GET'
+            }
         )
 
         $BulkResponse = New-GraphBulkRequest -Requests $BulkRequests -tenantid $env:TenantID -NoAuthCheck $true
         $OrgResponse = $BulkResponse | Where-Object { $_.id -eq 'organization' }
         $MeResponse = $BulkResponse | Where-Object { $_.id -eq 'me' }
+        $AppResponse = $BulkResponse | Where-Object { $_.id -eq 'application' }
         if ($MeResponse.body) {
             $AuthenticatedUserDisplayName = $MeResponse.body.displayName
             $AuthenticatedUserPrincipalName = $MeResponse.body.userPrincipalName
         }
         if ($OrgResponse.body.value -and $OrgResponse.body.value.Count -gt 0) {
             $OrgInfo = $OrgResponse.body.value[0]
+        }
+
+        if ($AppResponse.body) {
+            $AppWeb = $AppResponse.body.web
+            if ($AppWeb.redirectUris -and $AppWeb.redirectUris.Count -gt 0) {
+                # construct new redirect uri with current
+                $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+                $NewRedirectUri = "$($URL)/authredirect"
+                if ($AppWeb.redirectUris -notcontains $NewRedirectUri) {
+                    $RedirectUris = [system.collections.generic.list[string]]::new()
+                    $AppWeb.redirectUris | ForEach-Object { $RedirectUris.Add($_) }
+                    $RedirectUris.Add($NewRedirectUri)
+                    $AppUpdateBody = @{
+                        web = @{
+                            redirectUris = $RedirectUris
+                        }
+                    } | ConvertTo-Json -Depth 10
+                    Invoke-GraphRequest -Method PATCH -Url "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
+                    Write-LogMessage -message "Updated redirect URIs for application $($env:ApplicationID) to include $NewRedirectUri" -Sev 'Info'
+                }
+            }
         }
     } catch {
         Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
