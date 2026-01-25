@@ -5,15 +5,35 @@ function Get-CIPPHttpFunctions {
     )
 
     try {
-        $Functions = Get-Command -Module CIPPCore | Where-Object { $_.Visibility -eq 'Public' -and $_.Name -match 'Invoke-*' }
-        $Results = foreach ($Function in $Functions) {
-            $Help = Get-Help $Function
-            if ($Help.Functionality -notmatch 'Entrypoint') { continue }
-            if ($Help.Role -eq 'Public') { continue }
-            [PSCustomObject]@{
-                Function    = $Function.Name
-                Role        = $Help.Role
-                Description = $Help.Description
+        # Load function-metadata.json cache
+        $ModuleRoot = (Get-Module -Name CIPPCore).ModuleBase
+        $CIPPRoot = (Get-Item $ModuleRoot).Parent.Parent
+        $MetadataPath = Join-Path $CIPPRoot 'Config\function-metadata.json'
+        if (Test-Path $MetadataPath) {
+            $metadata = Get-Content -Path $MetadataPath -Raw | ConvertFrom-Json
+            $Functions = $metadata.Functions.PSObject.Properties | Where-Object { $_.Name -match '^Invoke-' }
+            $Results = foreach ($Function in $Functions) {
+                $Help = $Function.Value
+                if ($Help.Functionality -notmatch 'Entrypoint') { continue }
+                if ($Help.Role -eq 'Public') { continue }
+                [PSCustomObject]@{
+                    Function    = $Function.Name
+                    Role        = $Help.Role
+                    Description = $Help.Description
+                }
+            }
+        } else {
+            Write-Debug "Metadata file not found at $MetadataPath"
+            $Functions = Get-Command -Module CIPPCore | Where-Object { $_.Visibility -eq 'Public' -and $_.Name -match 'Invoke-*' }
+            $Results = foreach ($Function in $Functions) {
+                $Help = Get-Help $Function
+                if ($Help.Functionality -notmatch 'Entrypoint') { continue }
+                if ($Help.Role -eq 'Public') { continue }
+                [PSCustomObject]@{
+                    Function    = $Function.Name
+                    Role        = $Help.Role
+                    Description = $Help.Description
+                }
             }
         }
 

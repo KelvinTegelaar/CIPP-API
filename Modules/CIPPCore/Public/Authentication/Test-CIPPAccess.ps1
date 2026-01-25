@@ -8,27 +8,25 @@ function Test-CIPPAccess {
     $AccessTimings = @{}
     $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
     if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
-
-    # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
     $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
     if (-not $global:CIPPFunctionPermissions) {
         $CIPPCoreModule = Get-Module -Name CIPPCore
         if ($CIPPCoreModule) {
-            $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
-
-            if (Test-Path $PermissionsFileJson) {
+            $CIPPCoreModuleRoot = $CIPPCoreModule.ModuleBase
+            $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+            $MetadataPath = Join-Path $CIPPRoot 'Config\function-metadata.json'
+            if (Test-Path $MetadataPath) {
                 try {
-                    $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
-                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
-                    foreach ($key in $jsonData.Keys) {
-                        $global:CIPPFunctionPermissions[$key] = $jsonData[$key]
-                    }
-                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+                    $metadata = Get-Content -Path $MetadataPath -Raw | ConvertFrom-Json
+                    $global:CIPPFunctionPermissions = $metadata.Functions
+                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from metadata cache"
                 } catch {
-                    Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
+                    Write-Warning "Failed to load function permissions from metadata: $($_.Exception.Message)"
                 }
+            } else {
+                Write-Debug "Metadata file not found at $MetadataPath"
             }
         }
     }
@@ -36,24 +34,25 @@ function Test-CIPPAccess {
     $AccessTimings['FunctionPermissions'] = $SwPermissions.Elapsed.TotalMilliseconds
 
     if ($FunctionName -ne 'Invoke-me') {
-        $swHelp = [System.Diagnostics.Stopwatch]::StartNew()
+        $swMeta = [System.Diagnostics.Stopwatch]::StartNew()
         if ($global:CIPPFunctionPermissions -and $global:CIPPFunctionPermissions.ContainsKey($FunctionName)) {
             $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
-            $APIRole = $PermissionData['Role']
-            $Functionality = $PermissionData['Functionality']
-            Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            $APIRole = $PermissionData.Role
+            $Functionality = $PermissionData.Functionality
+            Write-Debug "Loaded function permission data from metadata for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
         } else {
+            Write-Debug "Function '$FunctionName' not found in metadata cache"
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
                 $APIRole = $Help.Role
                 $Functionality = $Help.Functionality
                 Write-Debug "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
             } catch {
-                Write-Warning "Function '$FunctionName' not found"
+                Write-Warning "Function '$FunctionName' not found in metadata cache or via Get-Help"
             }
         }
-        $swHelp.Stop()
-        $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
+        $swMeta.Stop()
+        $AccessTimings['MetadataLookup'] = $swMeta.Elapsed.TotalMilliseconds
     }
 
     # Get default roles from config
@@ -120,6 +119,13 @@ function Test-CIPPAccess {
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
+            $swApiClient.Stop()
+            $AccessTotalSw.Stop()
+            $AccessTimings['ApiClientBranch'] = $swApiClient.Elapsed.TotalMilliseconds
+            $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
@@ -180,6 +186,13 @@ function Test-CIPPAccess {
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 
             if (!$User.userRoles) {
+                $swUserBranch.Stop()
+                $AccessTotalSw.Stop()
+                $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
+                $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+                $AccessTimingsRounded = [ordered]@{}
+                foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+                Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = (
@@ -206,6 +219,13 @@ function Test-CIPPAccess {
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
             $swPermsMe.Stop()
             $AccessTimings['GetPermissions(me)'] = $swPermsMe.Elapsed.TotalMilliseconds
+            $swUserBranch.Stop()
+            $AccessTotalSw.Stop()
+            $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
+            $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
