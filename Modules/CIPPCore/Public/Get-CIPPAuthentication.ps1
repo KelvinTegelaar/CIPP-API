@@ -2,7 +2,8 @@
 function Get-CIPPAuthentication {
     [CmdletBinding()]
     param (
-        $APIName = 'Get Keyvault Authentication'
+        $APIName = 'Get Keyvault Authentication',
+        [switch]$Force
     )
     $Variables = @('ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken')
 
@@ -42,6 +43,12 @@ function Get-CIPPAuthentication {
             if ($tenants) {
                 $tenants | ForEach-Object {
                     $name = $_.customerId
+
+                    # if environment variable already set, skip unless force switch is set
+                    if ((Get-Item -Path env:$name -ErrorAction SilentlyContinue) -and -not $Force.IsPresent) {
+                        return
+                    }
+
                     $secret = Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $name -AsPlainText -ErrorAction Stop
                     if ($secret) {
                         Set-Item -Path env:$name -Value $secret -Force
