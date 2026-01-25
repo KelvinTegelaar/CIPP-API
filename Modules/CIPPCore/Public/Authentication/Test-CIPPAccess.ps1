@@ -14,24 +14,23 @@ function Test-CIPPAccess {
 
     $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
     if (-not $global:CIPPFunctionPermissions) {
-        $CIPPCoreModule = Get-Module -Name CIPPCore
-        if ($CIPPCoreModule) {
-            $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
+        $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+        $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+        $PermissionsFileJson = Join-Path $CIPPRoot 'Config\function-metadata.json'
 
-            if (Test-Path $PermissionsFileJson) {
-                try {
-                    $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
-                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
-                    foreach ($key in $jsonData.Functions.Keys) {
-                        $global:CIPPFunctionPermissions[$key] = $jsonData.Functions[$key]
-                    }
-                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
-                } catch {
-                    Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
+        if (Test-Path $PermissionsFileJson) {
+            try {
+                $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
+                $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+                foreach ($key in $jsonData.Functions.Keys) {
+                    $global:CIPPFunctionPermissions[$key] = $jsonData.Functions[$key]
                 }
-            } else {
-                Write-Debug "JSON file not found at $PermissionsFileJson"
+                Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+            } catch {
+                Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
             }
+        } else {
+            Write-Debug "JSON file not found at $PermissionsFileJson"
         }
     }
     $SwPermissions.Stop()
