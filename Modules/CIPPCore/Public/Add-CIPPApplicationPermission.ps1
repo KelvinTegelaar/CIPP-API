@@ -7,12 +7,10 @@ function Add-CIPPApplicationPermission {
         $TenantFilter
     )
     if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
-        #return @('Cannot modify application permissions for CIPP-SAM on partner tenant')
         $RequiredResourceAccess = 'CIPPDefaults'
     }
     Set-Location (Get-Item $PSScriptRoot).FullName
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
-        #$RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
 
         $Permissions = Get-CippSamPermissions -NoDiff
         $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
