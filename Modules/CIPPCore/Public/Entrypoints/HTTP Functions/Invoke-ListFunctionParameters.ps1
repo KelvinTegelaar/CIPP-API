@@ -26,7 +26,7 @@ function Invoke-ListFunctionParameters {
                     $cacheData = Get-Content $CachePath -Raw | ConvertFrom-Json
                     # Keep as PSCustomObject - don't convert to hashtable to preserve property order
                     $script:_FunctionParametersCache = $cacheData.Functions
-                    Write-Information "Loaded function parameter cache:"
+                    Write-Debug "Loaded function parameter cache:"
                 } catch {
                     Write-Warning "Failed to load cache: $_"
                     $script:_FunctionParametersCache = [PSCustomObject]@{}
@@ -83,7 +83,7 @@ function Invoke-ListFunctionParameters {
             $UseCache = $true
         }
 
-        Write-Information "Processing $($Functions.Count) functions (UseCache: $UseCache)"
+        Write-Debug "Processing $($Functions.Count) functions (UseCache: $UseCache)"
 
         $Results = foreach ($Func in $Functions) {
             $FunctionName = if ($Func.Name) { $Func.Name } else { $Func.ToString() }
@@ -170,7 +170,7 @@ function Invoke-ListFunctionParameters {
         $StatusCode = [HttpStatusCode]::OK
         # Sort results by Function name before returning
         $SortedResults = $Results | Sort-Object Function
-        Write-Information "Returning $($SortedResults.Count) functions (sorted)"
+        Write-Debug "Returning $($SortedResults.Count) functions (sorted)"
         $SortedResults
 
     } catch {
