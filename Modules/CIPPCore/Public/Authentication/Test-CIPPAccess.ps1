@@ -368,7 +368,7 @@ function Test-CIPPAccess {
                     return @($LimitedTenantList | Sort-Object -Unique)
                 } elseif ($GroupList.IsPresent) {
                     $swGroupList = [System.Diagnostics.Stopwatch]::StartNew()
-                    Write-Debug "Getting allowed groups for roles: $($CustomRoles -join ', ')"
+                    Write-Information "Getting allowed groups for roles: $($CustomRoles -join ', ')"
                     $LimitedGroupList = foreach ($Permission in $PermissionSet) {
                         if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
                             @('AllGroups')
