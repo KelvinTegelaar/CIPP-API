@@ -19,9 +19,12 @@ function Test-CIPPAccess {
             $MetadataPath = Join-Path $CIPPRoot 'Config\function-metadata.json'
             if (Test-Path $MetadataPath) {
                 try {
-                    $metadata = Get-Content -Path $MetadataPath -Raw | ConvertFrom-Json
-                    $global:CIPPFunctionPermissions = $metadata.Functions
-                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from metadata cache"
+                    $metadata = Get-Content -Path $MetadataPath -Raw | ConvertFrom-Json -AsHashtable
+                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new()
+                    foreach ($key in $metadata.Functions.PSObject.Properties) {
+                        $global:CIPPFunctionPermissions[$key.Name] = $key.Value
+                    }
+                    Write-Information "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from metadata cache"
                 } catch {
                     Write-Warning "Failed to load function permissions from metadata: $($_.Exception.Message)"
                 }
@@ -34,7 +37,7 @@ function Test-CIPPAccess {
     $AccessTimings['FunctionPermissions'] = $SwPermissions.Elapsed.TotalMilliseconds
 
     if ($FunctionName -ne 'Invoke-me') {
-        $swMeta = [System.Diagnostics.Stopwatch]::StartNew()
+        $swHelp = [System.Diagnostics.Stopwatch]::StartNew()
         if ($global:CIPPFunctionPermissions -and $global:CIPPFunctionPermissions.ContainsKey($FunctionName)) {
             $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
             $APIRole = $PermissionData.Role
@@ -51,8 +54,8 @@ function Test-CIPPAccess {
                 Write-Warning "Function '$FunctionName' not found in metadata cache or via Get-Help"
             }
         }
-        $swMeta.Stop()
-        $AccessTimings['MetadataLookup'] = $swMeta.Elapsed.TotalMilliseconds
+        $swHelp.Stop()
+        $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
     }
 
     # Get default roles from config
