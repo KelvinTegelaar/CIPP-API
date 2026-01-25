@@ -20,11 +20,11 @@ function Test-CIPPAccess {
             if (Test-Path $MetadataPath) {
                 try {
                     $metadata = Get-Content -Path $MetadataPath -Raw | ConvertFrom-Json -AsHashtable
-                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new()
-                    foreach ($key in $metadata.Functions.PSObject.Properties) {
-                        $global:CIPPFunctionPermissions[$key.Name] = $key.Value
+                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+                    foreach ($key in $metadata.Functions.Keys) {
+                        $global:CIPPFunctionPermissions[$key] = $metadata.Functions[$key]
                     }
-                    Write-Information "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from metadata cache"
+                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from metadata cache"
                 } catch {
                     Write-Warning "Failed to load function permissions from metadata: $($_.Exception.Message)"
                 }
@@ -60,9 +60,13 @@ function Test-CIPPAccess {
 
     # Get default roles from config
     $swRolesLoad = [System.Diagnostics.Stopwatch]::StartNew()
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
+    if (-not $global:CIPPBaseRoles) {
+        $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+        $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+        $global:CIPPBaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
+        Write-Debug "Loaded base roles from cipp-roles.json"
+    }
+    $BaseRoles = $global:CIPPBaseRoles
     $swRolesLoad.Stop()
     $AccessTimings['LoadBaseRoles'] = $swRolesLoad.Elapsed.TotalMilliseconds
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly', 'anonymous', 'authenticated')
@@ -81,7 +85,7 @@ function Test-CIPPAccess {
 
         $Client = Get-CippApiClient -AppId $Request.Headers.'x-ms-client-principal-name'
         if ($Client) {
-            Write-Information "API Access: AppName=$($Client.AppName), AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            Write-Debug "API Access: AppName=$($Client.AppName), AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
             $IPMatched = $false
             if ($Client.IPRange -notcontains 'Any') {
                 foreach ($Range in $Client.IPRange) {
@@ -118,7 +122,7 @@ function Test-CIPPAccess {
             }
         } else {
             $CustomRoles = @('cipp-api')
-            Write-Information "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            Write-Debug "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
@@ -292,7 +296,7 @@ function Test-CIPPAccess {
 
     # Check custom role permissions for limitations on api calls or tenants
     if ($null -eq $BaseRole.Name -and $Type -eq 'User' -and ($CustomRoles | Measure-Object).Count -eq 0) {
-        Write-Information $BaseRole.Name
+        Write-Debug $BaseRole.Name
         throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
     } elseif (($CustomRoles | Measure-Object).Count -gt 0) {
         if (@('admin', 'superadmin') -contains $BaseRole.Name) {
@@ -363,7 +367,7 @@ function Test-CIPPAccess {
                     return @($LimitedTenantList | Sort-Object -Unique)
                 } elseif ($GroupList.IsPresent) {
                     $swGroupList = [System.Diagnostics.Stopwatch]::StartNew()
-                    Write-Information "Getting allowed groups for roles: $($CustomRoles -join ', ')"
+                    Write-Debug "Getting allowed groups for roles: $($CustomRoles -join ', ')"
                     $LimitedGroupList = foreach ($Permission in $PermissionSet) {
                         if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
                             @('AllGroups')
