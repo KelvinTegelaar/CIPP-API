@@ -36,7 +36,26 @@ function Invoke-ExecUpdateRefreshToken {
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
                 # Set environment variable to make it immediately available
                 Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
-                $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
+
+                # Trigger CPV refresh for partner tenant only
+                try {
+                    $Queue = New-CippQueueEntry -Name 'Update Permissions - Partner Tenant' -TotalTasks 1
+                    $TenantBatch = @([PSCustomObject]@{
+                            defaultDomainName = 'PartnerTenant'
+                            customerId        = $env:TenantID
+                            displayName       = '*Partner Tenant'
+                            FunctionName      = 'UpdatePermissionsQueue'
+                            QueueId           = $Queue.RowKey
+                        })
+                    $InputObject = [PSCustomObject]@{
+                        OrchestratorName = 'UpdatePermissionsOrchestrator'
+                        Batch            = @($TenantBatch)
+                    }
+                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                    Write-Information 'Started permissions update orchestrator for Partner Tenant'
+                } catch {
+                    Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"
+                }
             } else {
                 Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
                 $name = $Request.body.tenantId
