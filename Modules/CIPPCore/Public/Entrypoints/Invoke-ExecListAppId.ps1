@@ -71,36 +71,39 @@ function Invoke-ExecListAppId {
                 $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
                 $NewRedirectUri = "$($URL)/authredirect"
                 if ($AppWeb.redirectUris -notcontains $NewRedirectUri) {
-                    $RedirectUris = [system.collections.generic.list[string]]::new()
-                    $AppWeb.redirectUris | ForEach-Object { $RedirectUris.Add($_) }
-                    $RedirectUris.Add($NewRedirectUri)
-                    $AppUpdateBody = @{
-                        web = @{
-                            redirectUris = $RedirectUris
-                        }
-                    } | ConvertTo-Json -Depth 10
-                    Invoke-GraphRequest -Method PATCH -Url "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
-                    Write-LogMessage -message "Updated redirect URIs for application $($env:ApplicationID) to include $NewRedirectUri" -Sev 'Info'
+                    try {
+                        $RedirectUris = [system.collections.generic.list[string]]::new()
+                        $AppWeb.redirectUris | ForEach-Object { $RedirectUris.Add($_) }
+                        $RedirectUris.Add($NewRedirectUri)
+                        $AppUpdateBody = @{
+                            web = @{
+                                redirectUris = $RedirectUris
+                            }
+                        } | ConvertTo-Json -Depth 10
+                        Invoke-GraphRequest -Method PATCH -Url "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
+                        Write-LogMessage -message "Updated redirect URIs for application $($env:ApplicationID) to include $NewRedirectUri" -Sev 'Info'
+                    } catch {
+                        Write-LogMessage -message "Failed to update redirect URIs for application $($env:ApplicationID)" -LogData (Get-CippException -Exception $_) -Sev 'Warning'
+                    }
                 }
             }
+        } catch {
+            Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
         }
-    } catch {
-        Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
-    }
 
-    $Results = @{
-        applicationId                  = $env:ApplicationID
-        tenantId                       = $env:TenantID
-        orgName                        = $OrgInfo.displayName
-        authenticatedUserDisplayName   = $AuthenticatedUserDisplayName
-        authenticatedUserPrincipalName = $AuthenticatedUserPrincipalName
-        isPartnerTenant                = !!$OrgInfo.partnerTenantType
-        partnerTenantType              = $OrgInfo.partnerTenantType
-        refreshUrl                     = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
-    }
-    return [HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $Results
-    }
+        $Results = @{
+            applicationId                  = $env:ApplicationID
+            tenantId                       = $env:TenantID
+            orgName                        = $OrgInfo.displayName
+            authenticatedUserDisplayName   = $AuthenticatedUserDisplayName
+            authenticatedUserPrincipalName = $AuthenticatedUserPrincipalName
+            isPartnerTenant                = !!$OrgInfo.partnerTenantType
+            partnerTenantType              = $OrgInfo.partnerTenantType
+            refreshUrl                     = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
+        }
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Results
+        }
 
-}
+    }
