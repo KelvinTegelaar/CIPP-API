@@ -8,6 +8,8 @@ function Test-CIPPAccess {
     $AccessTimings = @{}
     $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
     if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
+
+    # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
 
     $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
@@ -15,12 +17,13 @@ function Test-CIPPAccess {
         $CIPPCoreModule = Get-Module -Name CIPPCore
         if ($CIPPCoreModule) {
             $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
+
             if (Test-Path $PermissionsFileJson) {
                 try {
                     $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
                     $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
                     foreach ($key in $jsonData.Functions.Keys) {
-                        $global:CIPPFunctionPermissions[$key] = $metadata.Functions[$key]
+                        $global:CIPPFunctionPermissions[$key] = $jsonData.Functions[$key]
                     }
                     Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
                 } catch {
@@ -40,16 +43,16 @@ function Test-CIPPAccess {
             $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
             $APIRole = $PermissionData.Role
             $Functionality = $PermissionData.Functionality
-            Write-Debug "Loaded function permission data from metadata for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            Write-Debug "Loaded function permission data from JSON for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
         } else {
-            Write-Debug "Function '$FunctionName' not found in metadata cache"
+            Write-Debug "Function '$FunctionName' not found in JSON cache"
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
                 $APIRole = $Help.Role
                 $Functionality = $Help.Functionality
                 Write-Debug "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
             } catch {
-                Write-Warning "Function '$FunctionName' not found in metadata cache or via Get-Help"
+                Write-Warning "Function '$FunctionName' not found in JSON cache or via Get-Help"
             }
         }
         $swHelp.Stop()
@@ -83,7 +86,7 @@ function Test-CIPPAccess {
 
         $Client = Get-CippApiClient -AppId $Request.Headers.'x-ms-client-principal-name'
         if ($Client) {
-            Write-Debug "API Access: AppName=$($Client.AppName), AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            Write-Information "API Access: AppName=$($Client.AppName), AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
             $IPMatched = $false
             if ($Client.IPRange -notcontains 'Any') {
                 foreach ($Range in $Client.IPRange) {
@@ -120,7 +123,7 @@ function Test-CIPPAccess {
             }
         } else {
             $CustomRoles = @('cipp-api')
-            Write-Debug "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
+            Write-Information "API Access: AppId=$($Request.Headers.'x-ms-client-principal-name'), IP=$IPAddress"
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
@@ -294,7 +297,7 @@ function Test-CIPPAccess {
 
     # Check custom role permissions for limitations on api calls or tenants
     if ($null -eq $BaseRole.Name -and $Type -eq 'User' -and ($CustomRoles | Measure-Object).Count -eq 0) {
-        Write-Debug $BaseRole.Name
+        Write-Information $BaseRole.Name
         throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
     } elseif (($CustomRoles | Measure-Object).Count -gt 0) {
         if (@('admin', 'superadmin') -contains $BaseRole.Name) {
