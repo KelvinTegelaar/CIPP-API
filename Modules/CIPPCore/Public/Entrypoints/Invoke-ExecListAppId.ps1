@@ -66,7 +66,7 @@ function Invoke-ExecListAppId {
 
         if ($AppResponse.body) {
             $AppWeb = $AppResponse.body.web
-            if ($AppWeb.redirectUris -and $AppWeb.redirectUris.Count -gt 0) {
+            if ($AppWeb.redirectUris) {
                 # construct new redirect uri with current
                 $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
                 $NewRedirectUri = "$($URL)/authredirect"
@@ -87,23 +87,24 @@ function Invoke-ExecListAppId {
                     }
                 }
             }
-        } catch {
-            Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
         }
-
-        $Results = @{
-            applicationId                  = $env:ApplicationID
-            tenantId                       = $env:TenantID
-            orgName                        = $OrgInfo.displayName
-            authenticatedUserDisplayName   = $AuthenticatedUserDisplayName
-            authenticatedUserPrincipalName = $AuthenticatedUserPrincipalName
-            isPartnerTenant                = !!$OrgInfo.partnerTenantType
-            partnerTenantType              = $OrgInfo.partnerTenantType
-            refreshUrl                     = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
-        }
-        return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        }
-
+    } catch {
+        Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
     }
+
+    $Results = @{
+        applicationId                  = $env:ApplicationID
+        tenantId                       = $env:TenantID
+        orgName                        = $OrgInfo.displayName
+        authenticatedUserDisplayName   = $AuthenticatedUserDisplayName
+        authenticatedUserPrincipalName = $AuthenticatedUserPrincipalName
+        isPartnerTenant                = !!$OrgInfo.partnerTenantType
+        partnerTenantType              = $OrgInfo.partnerTenantType
+        refreshUrl                     = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
+    }
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Results
+    }
+
+}
