@@ -72,7 +72,7 @@ foreach ($file in $functionFiles) {
         # Extract help content
         $help = $functionDef.GetHelpContent()
 
-        # Build function metadata (only Role and Functionality)
+        # Build function metadata (Role, Functionality, and Description if present)
         $funcMeta = [ordered]@{}
         if ($help.Role) {
             $funcMeta.Role = $help.Role.Trim()
@@ -82,6 +82,19 @@ foreach ($file in $functionFiles) {
             $funcMeta.Functionality = $help.Functionality.Trim()
             $stats.Functionality++
         }
+        # Add description if it exists (robust handling)
+        $desc = $null
+        if ($help.Description) {
+            if ($help.Description -is [string]) {
+                $desc = $help.Description.Trim()
+            } elseif ($help.Description.Text) {
+                $desc = $help.Description.Text.Trim()
+            }
+        }
+        if ($desc -and $desc -notmatch "^\s*$") {
+            $funcMeta.Description = $desc
+        }
+
         if ($funcMeta.Count -gt 0) {
             $metadata.Functions[$functionName] = $funcMeta
         }
@@ -96,64 +109,6 @@ foreach ($file in $functionFiles) {
 }
 
 Write-Progress -Activity "Parsing functions" -Completed
-
-# Helper functions
-function ConvertTo-Psd1String {
-    param([string]$Value)
-    if ([string]::IsNullOrEmpty($Value)) {
-        return "''"
-    }
-    return "'" + ($Value -replace "'", "''") + "'"
-}
-
-function Write-HashtableContent {
-    param(
-        [object]$Hashtable,
-        [int]$IndentLevel = 0
-    )
-
-    $indent = '    ' * $IndentLevel
-    $content = @()
-
-    foreach ($entry in $Hashtable.GetEnumerator()) {
-        $key = $entry.Key
-        $value = $entry.Value
-
-        if ($value -is [hashtable] -or $value -is [System.Collections.Specialized.OrderedDictionary]) {
-            if ($value.Count -gt 0) {
-                $content += "$indent    '$key' = @{"
-                $content += Write-HashtableContent -Hashtable $value -IndentLevel ($IndentLevel + 1)
-                $content += "$indent    }"
-            }
-        } elseif ($value -is [array]) {
-            if ($value.Count -gt 0) {
-                $arrayValues = ($value | ForEach-Object {
-                    if ($_ -is [hashtable] -or $_ -is [System.Collections.Specialized.OrderedDictionary]) {
-                        "@{$((Write-HashtableContent -Hashtable $_ -IndentLevel 0) -join '; ')}"
-                    } else {
-                        ConvertTo-Psd1String $_
-                    }
-                }) -join ', '
-                $content += "$indent    '$key' = @($arrayValues)"
-            }
-        } elseif ($value -is [bool]) {
-            $content += "$indent    '$key' = `$$value"
-        } elseif ($value -is [int] -or $value -is [long]) {
-            $content += "$indent    '$key' = $value"
-        } elseif ($value -is [string]) {
-            if (![string]::IsNullOrEmpty($value)) {
-                $content += "$indent    '$key' = $(ConvertTo-Psd1String $value)"
-            }
-        } else {
-            if ($null -ne $value) {
-                $content += "$indent    '$key' = $(ConvertTo-Psd1String ($value.ToString()))"
-            }
-        }
-    }
-
-    return $content
-}
-
 
 # Write output as JSON
 $outputDir = Split-Path -Path $OutputPath -Parent

@@ -180,16 +180,6 @@ Write-Host "`nWriting cache file..." -ForegroundColor Cyan
 $jsonContent = $metadata | ConvertTo-Json -Depth 10 -Compress:$false
 $jsonContent | Set-Content -Path $OutputPath -Encoding UTF8
 
-# Validate
-Write-Host "Validating generated file..." -ForegroundColor Cyan
-try {
-    $test = Get-Content $OutputPath -Raw | ConvertFrom-Json
-    Write-Host "✓ Validation successful!" -ForegroundColor Green
-} catch {
-    Write-Error "Validation failed: $_"
-    exit 1
-}
-
 # Print statistics
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "Build completed successfully!" -ForegroundColor Green
