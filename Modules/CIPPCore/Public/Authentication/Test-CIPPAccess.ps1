@@ -14,22 +14,23 @@ function Test-CIPPAccess {
 
     $SwPermissions = [System.Diagnostics.Stopwatch]::StartNew()
     if (-not $global:CIPPFunctionPermissions) {
-        $CIPPCoreModule = Get-Module -Name CIPPCore
-        if ($CIPPCoreModule) {
-            $PermissionsFileJson = Join-Path $CIPPCoreModule.ModuleBase 'lib' 'data' 'function-permissions.json'
+        $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+        $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+        $PermissionsFileJson = Join-Path $CIPPRoot 'Config\function-metadata.json'
 
-            if (Test-Path $PermissionsFileJson) {
-                try {
-                    $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
-                    $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
-                    foreach ($key in $jsonData.Keys) {
-                        $global:CIPPFunctionPermissions[$key] = $jsonData[$key]
-                    }
-                    Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
-                } catch {
-                    Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
+        if (Test-Path $PermissionsFileJson) {
+            try {
+                $jsonData = Get-Content -Path $PermissionsFileJson -Raw | ConvertFrom-Json -AsHashtable
+                $global:CIPPFunctionPermissions = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+                foreach ($key in $jsonData.Functions.Keys) {
+                    $global:CIPPFunctionPermissions[$key] = $jsonData.Functions[$key]
                 }
+                Write-Debug "Loaded $($global:CIPPFunctionPermissions.Count) function permissions from JSON cache"
+            } catch {
+                Write-Warning "Failed to load function permissions from JSON: $($_.Exception.Message)"
             }
+        } else {
+            Write-Debug "JSON file not found at $PermissionsFileJson"
         }
     }
     $SwPermissions.Stop()
@@ -39,17 +40,18 @@ function Test-CIPPAccess {
         $swHelp = [System.Diagnostics.Stopwatch]::StartNew()
         if ($global:CIPPFunctionPermissions -and $global:CIPPFunctionPermissions.ContainsKey($FunctionName)) {
             $PermissionData = $global:CIPPFunctionPermissions[$FunctionName]
-            $APIRole = $PermissionData['Role']
-            $Functionality = $PermissionData['Functionality']
-            Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            $APIRole = $PermissionData.Role
+            $Functionality = $PermissionData.Functionality
+            Write-Debug "Loaded function permission data from JSON for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
         } else {
+            Write-Debug "Function '$FunctionName' not found in JSON cache"
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
                 $APIRole = $Help.Role
                 $Functionality = $Help.Functionality
                 Write-Debug "Loaded function permission data via Get-Help for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
             } catch {
-                Write-Warning "Function '$FunctionName' not found"
+                Write-Warning "Function '$FunctionName' not found in JSON cache or via Get-Help"
             }
         }
         $swHelp.Stop()
@@ -58,9 +60,13 @@ function Test-CIPPAccess {
 
     # Get default roles from config
     $swRolesLoad = [System.Diagnostics.Stopwatch]::StartNew()
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
+    if (-not $global:CIPPBaseRoles) {
+        $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+        $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+        $global:CIPPBaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
+        Write-Debug "Loaded base roles from cipp-roles.json"
+    }
+    $BaseRoles = $global:CIPPBaseRoles
     $swRolesLoad.Stop()
     $AccessTimings['LoadBaseRoles'] = $swRolesLoad.Elapsed.TotalMilliseconds
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly', 'anonymous', 'authenticated')
@@ -120,6 +126,13 @@ function Test-CIPPAccess {
         }
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             $Permissions = Get-CippAllowedPermissions -UserRoles $CustomRoles
+            $swApiClient.Stop()
+            $AccessTotalSw.Stop()
+            $AccessTimings['ApiClientBranch'] = $swApiClient.Elapsed.TotalMilliseconds
+            $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (
@@ -180,6 +193,13 @@ function Test-CIPPAccess {
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 
             if (!$User.userRoles) {
+                $swUserBranch.Stop()
+                $AccessTotalSw.Stop()
+                $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
+                $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+                $AccessTimingsRounded = [ordered]@{}
+                foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+                Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = (
@@ -206,6 +226,13 @@ function Test-CIPPAccess {
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
             $swPermsMe.Stop()
             $AccessTimings['GetPermissions(me)'] = $swPermsMe.Elapsed.TotalMilliseconds
+            $swUserBranch.Stop()
+            $AccessTotalSw.Stop()
+            $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds
+            $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = (

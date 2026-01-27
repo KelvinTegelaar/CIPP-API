@@ -3,7 +3,11 @@
     OutputDirectory          = '../../Output'
     VersionedOutputDirectory = $false
     CopyPaths                = @(
-        'lib'
+        'lib',
+        'Public/Tests/'
+    )
+    ExcludePaths             = @(
+        'Public/Tests'
     )
     Encoding                 = 'UTF8'
     Prefix                   = $null

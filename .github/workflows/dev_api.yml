@@ -26,6 +26,88 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Setup PowerShell module cache
+        id: cacher
+        uses: actions/cache@v3
+        with:
+          path: "~/.local/share/powershell/Modules"
+          key: ${{ runner.os }}-ModuleBuilder
+
+      - name: Install ModuleBuilder
+        if: steps.cacher.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module ModuleBuilder -AllowClobber -Force
+
+      - name: Build Permissions and Functions Caches
+        shell: pwsh
+        run: |
+          Write-Host "Building Permission Cache"
+          # Build the Permission Cache
+          $ScriptPath = Join-Path $env:GITHUB_WORKSPACE "Tools/Build-PermissionsCache.ps1"
+          & $ScriptPath -SourcePath (Join-Path $env:GITHUB_WORKSPACE "Modules/CIPPCore") -OutputPath (Join-Path $env:GITHUB_WORKSPACE "Config/function-metadata.json")
+
+          Write-Host "Building Function Cache"
+          # Build the Function Cache
+          $ScriptPath = Join-Path $env:GITHUB_WORKSPACE "Tools/Build-FunctionParametersCache.ps1"
+          & $ScriptPath -SourcePath (Join-Path $env:GITHUB_WORKSPACE "Modules/CIPPCore") -OutputPath (Join-Path $env:GITHUB_WORKSPACE "Config/function-parameters.json")
+
+      - name: Build CIPPCore Module
+        shell: pwsh
+        run: |
+          $ModulePath = Join-Path $env:GITHUB_WORKSPACE "Modules/CIPPCore"
+          $OutputPath = Join-Path $env:GITHUB_WORKSPACE "Output"
+          $TestsSource = Join-Path $ModulePath "Tests"
+          $PublicPath = Join-Path $ModulePath "Public"
+
+          Write-Host "Building module from: $ModulePath"
+          Write-Host "Output directory: $OutputPath"
+
+          # Build the module using ModuleBuilder
+          Build-Module -SourcePath $ModulePath -OutputDirectory $OutputPath -Verbose
+
+          # Move Tests folder into Public
+          if (Test-Path $TestsSource) {
+            if (!(Test-Path $PublicPath)) {
+              New-Item -Path $PublicPath -ItemType Directory | Out-Null
+            }
+            Move-Item -Path $TestsSource -Destination $PublicPath -Force
+            Write-Host "Moved Tests folder into Public."
+          } else {
+            Write-Host "No Tests folder found to move."
+          }
+
+          # Replace the source module with the built module
+          Remove-Item -Path $ModulePath -Recurse -Force
+          Copy-Item -Path (Join-Path $OutputPath "CIPPCore") -Destination $ModulePath -Recurse -Force
+
+          Write-Host "Module built and replaced successfully"
+
+          # Clean up output directory
+          Remove-Item -Path $OutputPath -Recurse -Force
+
+      - name: Build CippExtensions Module
+        shell: pwsh
+        run: |
+          $ModulePath = Join-Path $env:GITHUB_WORKSPACE "Modules/CippExtensions"
+          $OutputPath = Join-Path $env:GITHUB_WORKSPACE "Output"
+
+          Write-Host "Building module from: $ModulePath"
+          Write-Host "Output directory: $OutputPath"
+
+          # Build the module using ModuleBuilder
+          Build-Module -SourcePath $ModulePath -OutputDirectory $OutputPath -Verbose
+
+          # Replace the source module with the built module
+          Remove-Item -Path $ModulePath -Recurse -Force
+          Copy-Item -Path (Join-Path $OutputPath "CippExtensions") -Destination $ModulePath -Recurse -Force
+
+          Write-Host "Module built and replaced successfully"
+
+          # Clean up output directory
+          Remove-Item -Path $OutputPath -Recurse -Force
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
