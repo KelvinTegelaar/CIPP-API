@@ -89,7 +89,7 @@ function Invoke-ExecExchangeRoleRepair {
         }
     }
 
-    Push-OutputBinding -Name 'Response' -Value ([HttpResponseContext]@{
+    return ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::OK
             Body       = $Results
         })

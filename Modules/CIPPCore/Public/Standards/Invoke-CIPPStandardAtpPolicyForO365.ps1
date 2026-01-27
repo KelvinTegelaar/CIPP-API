@@ -51,6 +51,13 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     ($CurrentState.EnableSafeDocs -eq $true) -and
     ($CurrentState.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
 
+    $CurrentValue = $CurrentState | Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+    $ExpectedValue = [PSCustomObject]@{
+        EnableATPForSPOTeamsODB = $true
+        EnableSafeDocs          = $true
+        AllowSafeDocsOpen       = $Settings.AllowSafeDocsOpen
+    }
+
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 already set.' -sev Info
@@ -83,7 +90,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
 
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect -eq $true ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.AtpPolicyForO365' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AtpPolicyForO365' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

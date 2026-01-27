@@ -7,15 +7,26 @@ function Test-CIPPRerun {
         $Settings,
         $Headers,
         [switch]$Clear,
-        [switch]$ClearAll
+        [switch]$ClearAll,
+        [int64]$Interval = 0,  # Custom interval in seconds (for scheduled tasks)
+        [int64]$BaseTime = 0   # Base time to calculate from (defaults to current time)
     )
     $RerunTable = Get-CIPPTable -tablename 'RerunCache'
-    $EstimatedDifference = switch ($Type) {
-        'Standard' { 9800 } # 2 hours 45 minutes ish.
-        'BPA' { 85000 } # 24 hours ish.
-        default { throw "Unknown type: $Type" }
+
+    # Use custom interval if provided, otherwise use type-based defaults
+    if ($Interval -gt 0) {
+        $EstimatedDifference = $Interval
+    } else {
+        $EstimatedDifference = switch ($Type) {
+            'Standard' { 9800 } # 2 hours 45 minutes ish.
+            'BPA' { 85000 } # 24 hours ish.
+            'CippTests' { 85000 } # 24 hours ish.
+            default { throw "Unknown type: $Type" }
+        }
     }
-    $CurrentUnixTime = [int][double]::Parse((Get-Date -UFormat %s))
+
+    # Use BaseTime if provided, otherwise use current time
+    $CurrentUnixTime = if ($BaseTime -gt 0) { $BaseTime } else { [int][double]::Parse((Get-Date -UFormat %s)) }
     $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
 
     try {

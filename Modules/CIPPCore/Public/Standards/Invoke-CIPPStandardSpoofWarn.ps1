@@ -132,11 +132,16 @@ function Invoke-CIPPStandardSpoofWarn {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $Tenant
 
-        if ($AllowListCorrect -eq $true -and $CurrentInfo.Enabled -eq $IsEnabled) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentInfo | Select-Object Enabled, AllowList
+        $CurrentValue = @{
+            Enabled     = $CurrentInfo.Enabled
+            AllowList   = $CurrentInfo.AllowList
+            IsCompliant = $CurrentInfo.Enabled -eq $IsEnabled -and $AllowListCorrect
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SpoofWarn' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            Enabled     = $IsEnabled
+            AllowList   = $Settings.AllowListAdd.value ? @($Settings.AllowListAdd.value) : @()
+            IsCompliant = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SpoofWarn' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

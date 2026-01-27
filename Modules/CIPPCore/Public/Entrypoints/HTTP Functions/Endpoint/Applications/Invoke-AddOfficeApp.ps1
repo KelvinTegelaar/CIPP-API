@@ -13,7 +13,7 @@ function Invoke-AddOfficeApp {
     $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
-    $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
+    $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
 
     $Results = foreach ($Tenant in $Tenants) {
         try {

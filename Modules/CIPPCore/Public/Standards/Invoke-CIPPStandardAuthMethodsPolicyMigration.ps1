@@ -43,6 +43,11 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
         throw 'Failed to retrieve current authentication methods policy information'
     }
 
+    $CurrentValue = $CurrentInfo | Select-Object policyMigrationState
+    $ExpectedValue = [PSCustomObject]@{
+        policyMigrationState = 'migrationComplete'
+    }
+
     if ($Settings.remediate -eq $true) {
         if ($CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authentication methods policy migration is already complete.' -sev Info
@@ -66,7 +71,7 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
 
     if ($Settings.report -eq $true) {
         $migrationComplete = $CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState
-        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsPolicyMigration' -FieldValue $migrationComplete -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsPolicyMigration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AuthMethodsPolicyMigration' -FieldValue $migrationComplete -StoreAs bool -Tenant $tenant
     }
 

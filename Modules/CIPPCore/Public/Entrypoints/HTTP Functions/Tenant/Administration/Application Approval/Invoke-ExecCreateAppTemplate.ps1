@@ -27,44 +27,106 @@ function Invoke-ExecCreateAppTemplate {
             throw 'DisplayName is required'
         }
 
+        # Build initial bulk request to get app registration and all service principals
+        # The SP we need will be in the splist, so we don't need a separate call
+        $InitialBulkRequests = @(
+            [PSCustomObject]@{
+                id     = 'app'
+                method = 'GET'
+                url    = "/applications(appId='$AppId')?`$select=id,appId,displayName,requiredResourceAccess"
+            }
+            [PSCustomObject]@{
+                id     = 'splist'
+                method = 'GET'
+                url    = '/servicePrincipals?$top=999&$select=id,appId,displayName'
+            }
+        )
+
+        Write-Information "Retrieving app details for AppId: $AppId in tenant: $TenantFilter"
+        $InitialResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $InitialBulkRequests -NoAuthCheck $true -AsApp $true
+
+        $AppResult = $InitialResults | Where-Object { $_.id -eq 'app' } | Select-Object -First 1
+        $TenantInfo = ($InitialResults | Where-Object { $_.id -eq 'splist' }).body.value
+
+        # Find the specific service principal in the list
+        $SPResult = $TenantInfo | Where-Object { $_.appId -eq $AppId } | Select-Object -First 1
+
         # Get the app details based on type
         if ($Type -eq 'servicePrincipal') {
-            # For enterprise apps (service principals)
-            $AppDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$AppId'&`$select=id,appId,displayName,appRoles,oauth2PermissionScopes,requiredResourceAccess" -tenantid $TenantFilter
-
-            if (-not $AppDetails -or $AppDetails.Count -eq 0) {
+            if (-not $SPResult) {
                 throw "Service principal not found for AppId: $AppId"
             }
 
-            $App = $AppDetails[0]
+            $App = $SPResult
 
-            # Get the application registration to access requiredResourceAccess
-            try {
-                $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$filter=appId eq '$AppId'&`$select=id,appId,displayName,requiredResourceAccess" -tenantid $TenantFilter
-                if ($AppRegistration -and $AppRegistration.Count -gt 0) {
-                    $RequiredResourceAccess = $AppRegistration[0].requiredResourceAccess
-                } else {
-                    $RequiredResourceAccess = @()
-                }
-            } catch {
-                Write-LogMessage -headers $Request.headers -API $APINAME -message "Could not retrieve app registration for $AppId - will extract from service principal" -Sev 'Warning'
-                $RequiredResourceAccess = @()
-            }
-
-            # Use requiredResourceAccess if available, otherwise we can't create a proper template
-            if ($RequiredResourceAccess -and $RequiredResourceAccess.Count -gt 0) {
-                $Permissions = $RequiredResourceAccess
+            # Check if we got the app registration and it has permissions
+            if ($AppResult.status -eq 200 -and $AppResult.body.requiredResourceAccess -and $AppResult.body.requiredResourceAccess.Count -gt 0) {
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Retrieved requiredResourceAccess from app registration for $AppId" -Sev 'Info'
+                $Permissions = $AppResult.body.requiredResourceAccess
             } else {
-                # No permissions found - warn the user
-                Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId. The app registration may not have configured API permissions." -Sev 'Warning'
-                $Permissions = @()
+                # App registration not accessible or no permissions configured
+                # Build permissions from oauth2PermissionGrants and appRoleAssignments
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Could not retrieve app registration for $AppId - extracting from service principal grants and role assignments" -Sev 'Info'
+
+                # Bulk request to get grants and assignments
+                $GrantsBulkRequests = @(
+                    [PSCustomObject]@{
+                        id     = 'grants'
+                        method = 'GET'
+                        url    = "/servicePrincipals(appId='$AppId')/oauth2PermissionGrants"
+                    }
+                    [PSCustomObject]@{
+                        id     = 'assignments'
+                        method = 'GET'
+                        url    = "/servicePrincipals(appId='$AppId')/appRoleAssignments"
+                    }
+                )
+
+                $GrantsResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $GrantsBulkRequests -NoAuthCheck $true -AsApp $true
+
+                $DelegatePermissionGrants = ($GrantsResults | Where-Object { $_.id -eq 'grants' }).body.value
+                $AppRoleAssignments = ($GrantsResults | Where-Object { $_.id -eq 'assignments' }).body.value
+
+                $DelegateResourceAccess = $DelegatePermissionGrants | Group-Object -Property resourceId | ForEach-Object {
+                    [pscustomobject]@{
+                        resourceAppId  = ($TenantInfo | Where-Object -Property id -EQ $_.Name).appId
+                        resourceAccess = @($_.Group | ForEach-Object {
+                                [pscustomobject]@{
+                                    id   = $_.scope
+                                    type = 'Scope'
+                                }
+                            })
+                    }
+                }
+
+                $ApplicationResourceAccess = $AppRoleAssignments | Group-Object -Property ResourceId | ForEach-Object {
+                    [pscustomobject]@{
+                        resourceAppId  = ($TenantInfo | Where-Object -Property id -EQ $_.Name).appId
+                        resourceAccess = @($_.Group | ForEach-Object {
+                                [pscustomobject]@{
+                                    id   = $_.appRoleId
+                                    type = 'Role'
+                                }
+                            })
+                    }
+                }
+
+                # Combine both delegated and application permissions
+                $Permissions = @($DelegateResourceAccess) + @($ApplicationResourceAccess) | Where-Object { $_ -ne $null }
+
+                if ($Permissions.Count -eq 0) {
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId via any method" -Sev 'Warning'
+                } else {
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Extracted $($Permissions.Count) resource permission(s) from service principal grants" -Sev 'Info'
+                }
             }
         } else {
             # For app registrations (applications)
-            $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')" -tenantid $TenantFilter
-            if (-not $App -or $App.Count -eq 0) {
+            if ($AppResult.status -ne 200 -or -not $AppResult.body) {
                 throw "App registration not found for AppId: $AppId"
             }
+
+            $App = $AppResult.body
 
             $Tenant = Get-Tenants -TenantFilter $TenantFilter
             if ($Tenant.customerId -ne $env:TenantID) {
@@ -136,7 +198,7 @@ function Invoke-ExecCreateAppTemplate {
                     $Body = @{
                         appId = $AppId
                     }
-                    $NewSP = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -type POST -body ($Body | ConvertTo-Json -Depth 10)
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -type POST -body ($Body | ConvertTo-Json -Depth 10)
                     Write-LogMessage -headers $Request.headers -API $APINAME -message "App Registration $($AppDetails.displayName) copied to partner tenant" -Sev 'Info'
                 }
             }
@@ -152,21 +214,87 @@ function Invoke-ExecCreateAppTemplate {
         $PermissionSetName = "$DisplayName (Auto-created)"
 
         if ($Permissions -and $Permissions.Count -gt 0) {
+            # Build bulk requests to get all service principals efficiently using object IDs from cached list
+            $BulkRequests = [System.Collections.Generic.List[object]]::new()
+            $RequestIndex = 0
+            $AppIdToRequestId = @{}
+
+            foreach ($Resource in $Permissions) {
+                $ResourceAppId = $Resource.resourceAppId
+
+                # Find the service principal object ID from the cached list
+                $ResourceSPInfo = $TenantInfo | Where-Object { $_.appId -eq $ResourceAppId } | Select-Object -First 1
+
+                if ($ResourceSPInfo) {
+                    $RequestId = "sp-$RequestIndex"
+                    $AppIdToRequestId[$ResourceAppId] = $RequestId
+
+                    # Use object ID to fetch full details with appRoles and oauth2PermissionScopes
+                    $BulkRequests.Add([PSCustomObject]@{
+                            id     = $RequestId
+                            method = 'GET'
+                            url    = "/servicePrincipals/$($ResourceSPInfo.id)?`$select=id,appId,displayName,appRoles,oauth2PermissionScopes"
+                        })
+                    $RequestIndex++
+                } else {
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found in tenant for appId: $ResourceAppId" -Sev 'Warning'
+                }
+            }
+
+            # Execute bulk request to get all service principals at once (only if we have requests)
+            if ($BulkRequests.Count -gt 0) {
+                Write-Information "Fetching $($BulkRequests.Count) service principal(s) via bulk request"
+                $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $BulkRequests -NoAuthCheck $true -AsApp $true
+
+                # Create lookup table for service principals by appId
+                $SPLookup = @{}
+                foreach ($Result in $BulkResults) {
+                    if ($Result.status -eq 200 -and $Result.body) {
+                        $SPLookup[$Result.body.appId] = $Result.body
+                    }
+                }
+            } else {
+                $SPLookup = @{}
+            }
+
+            # Now process permissions for each resource
             foreach ($Resource in $Permissions) {
                 $ResourceAppId = $Resource.resourceAppId
                 $AppPerms = [System.Collections.ArrayList]::new()
                 $DelegatedPerms = [System.Collections.ArrayList]::new()
 
-                foreach ($Access in $Resource.resourceAccess) {
-                    $PermObj = [PSCustomObject]@{
-                        id    = $Access.id
-                        value = $Access.id  # In the permission set format, both id and value are the permission ID
-                    }
+                $ResourceSP = $SPLookup[$ResourceAppId]
 
+                if (!$ResourceSP) {
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found for appId: $ResourceAppId - skipping permission translation" -Sev 'Warning'
+                    continue
+                }
+
+                foreach ($Access in $Resource.resourceAccess) {
                     if ($Access.type -eq 'Role') {
-                        [void]$AppPerms.Add($PermObj)
+                        # Look up application permission name from appRoles
+                        $AppRole = $ResourceSP.appRoles | Where-Object { $_.id -eq $Access.id } | Select-Object -First 1
+                        if ($AppRole) {
+                            $PermObj = [PSCustomObject]@{
+                                id    = $Access.id
+                                value = $AppRole.value  # Use the claim value name, not the GUID
+                            }
+                            [void]$AppPerms.Add($PermObj)
+                        } else {
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Application permission $($Access.id) not found in $ResourceAppId appRoles" -Sev 'Warning'
+                        }
                     } elseif ($Access.type -eq 'Scope') {
-                        [void]$DelegatedPerms.Add($PermObj)
+                        # Look up delegated permission name from oauth2PermissionScopes
+                        $PermissionScope = $ResourceSP.oauth2PermissionScopes | Where-Object { $_.id -eq $Access.id } | Select-Object -First 1
+                        if ($PermissionScope) {
+                            $PermObj = [PSCustomObject]@{
+                                id    = $Access.id
+                                value = $PermissionScope.value  # Use the claim value name, not the GUID
+                            }
+                            [void]$DelegatedPerms.Add($PermObj)
+                        } else {
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Delegated permission $($Access.id) not found in $ResourceAppId oauth2PermissionScopes" -Sev 'Warning'
+                        }
                     }
                 }
 

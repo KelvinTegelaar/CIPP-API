@@ -50,72 +50,84 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
 
     try {
         $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'SinglePlatformRestriction'" -tenantID $Tenant -AsApp $true |
-        Select-Object -Property id, androidForWorkRestriction, androidRestriction, iosRestriction, macOSRestriction, windowsRestriction
-    }
-    catch {
+            Select-Object -Property id, androidForWorkRestriction, androidRestriction, iosRestriction, macOSRestriction, windowsRestriction
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DefaultPlatformRestrictions state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
     $StateIsCorrect = ($CurrentState.androidForWorkRestriction.platformBlocked -eq $Settings.platformAndroidForWorkBlocked) -and
-        ($CurrentState.androidForWorkRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalAndroidForWorkBlocked) -and
-        ($CurrentState.androidRestriction.platformBlocked -eq $Settings.platformAndroidBlocked) -and
-        ($CurrentState.androidRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalAndroidBlocked) -and
-        ($CurrentState.iosRestriction.platformBlocked -eq $Settings.platformiOSBlocked) -and
-        ($CurrentState.iosRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personaliOSBlocked) -and
-        ($CurrentState.macOSRestriction.platformBlocked -eq $Settings.platformMacOSBlocked) -and
-        ($CurrentState.macOSRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalMacOSBlocked) -and
-        ($CurrentState.windowsRestriction.platformBlocked -eq $Settings.platformWindowsBlocked) -and
-        ($CurrentState.windowsRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalWindowsBlocked)
+    ($CurrentState.androidForWorkRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalAndroidForWorkBlocked) -and
+    ($CurrentState.androidRestriction.platformBlocked -eq $Settings.platformAndroidBlocked) -and
+    ($CurrentState.androidRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalAndroidBlocked) -and
+    ($CurrentState.iosRestriction.platformBlocked -eq $Settings.platformiOSBlocked) -and
+    ($CurrentState.iosRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personaliOSBlocked) -and
+    ($CurrentState.macOSRestriction.platformBlocked -eq $Settings.platformMacOSBlocked) -and
+    ($CurrentState.macOSRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalMacOSBlocked) -and
+    ($CurrentState.windowsRestriction.platformBlocked -eq $Settings.platformWindowsBlocked) -and
+    ($CurrentState.windowsRestriction.personalDeviceEnrollmentBlocked -eq $Settings.personalWindowsBlocked)
 
     $CompareField = [PSCustomObject]@{
-        platformAndroidForWorkBlocked   = $CurrentState.androidForWorkRestriction.platformBlocked
-        personalAndroidForWorkBlocked   = $CurrentState.androidForWorkRestriction.personalDeviceEnrollmentBlocked
-        platformAndroidBlocked          = $CurrentState.androidRestriction.platformBlocked
-        personalAndroidBlocked          = $CurrentState.androidRestriction.personalDeviceEnrollmentBlocked
-        platformiOSBlocked              = $CurrentState.iosRestriction.platformBlocked
-        personaliOSBlocked              = $CurrentState.iosRestriction.personalDeviceEnrollmentBlocked
-        platformMacOSBlocked            = $CurrentState.macOSRestriction.platformBlocked
-        personalMacOSBlocked            = $CurrentState.macOSRestriction.personalDeviceEnrollmentBlocked
-        platformWindowsBlocked          = $CurrentState.windowsRestriction.platformBlocked
-        personalWindowsBlocked          = $CurrentState.windowsRestriction.personalDeviceEnrollmentBlocked
+        platformAndroidForWorkBlocked = $CurrentState.androidForWorkRestriction.platformBlocked
+        personalAndroidForWorkBlocked = $CurrentState.androidForWorkRestriction.personalDeviceEnrollmentBlocked
+        platformAndroidBlocked        = $CurrentState.androidRestriction.platformBlocked
+        personalAndroidBlocked        = $CurrentState.androidRestriction.personalDeviceEnrollmentBlocked
+        platformiOSBlocked            = $CurrentState.iosRestriction.platformBlocked
+        personaliOSBlocked            = $CurrentState.iosRestriction.personalDeviceEnrollmentBlocked
+        platformMacOSBlocked          = $CurrentState.macOSRestriction.platformBlocked
+        personalMacOSBlocked          = $CurrentState.macOSRestriction.personalDeviceEnrollmentBlocked
+        platformWindowsBlocked        = $CurrentState.windowsRestriction.platformBlocked
+        personalWindowsBlocked        = $CurrentState.windowsRestriction.personalDeviceEnrollmentBlocked
     }
 
-    If ($Settings.remediate -eq $true) {
+    $ExpectedValue = [PSCustomObject]@{
+        platformAndroidForWorkBlocked = $Settings.platformAndroidForWorkBlocked
+        personalAndroidForWorkBlocked = $Settings.personalAndroidForWorkBlocked
+        platformAndroidBlocked        = $Settings.platformAndroidBlocked
+        personalAndroidBlocked        = $Settings.personalAndroidBlocked
+        platformiOSBlocked            = $Settings.platformiOSBlocked
+        personaliOSBlocked            = $Settings.personaliOSBlocked
+        platformMacOSBlocked          = $Settings.platformMacOSBlocked
+        personalMacOSBlocked          = $Settings.personalMacOSBlocked
+        platformWindowsBlocked        = $Settings.platformWindowsBlocked
+        personalWindowsBlocked        = $Settings.personalWindowsBlocked
+    }
+
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'DefaultPlatformRestrictions is already applied correctly.' -Sev Info
         } else {
             $cmdParam = @{
-                tenantid  = $Tenant
-                uri      = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($CurrentState.id)"
-                AsApp    = $false
-                Type     = 'PATCH'
+                tenantid    = $Tenant
+                uri         = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($CurrentState.id)"
+                AsApp       = $false
+                Type        = 'PATCH'
                 ContentType = 'application/json; charset=utf-8'
-                Body     = [PSCustomObject]@{
-                    "@odata.type" = "#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration"
+                Body        = [PSCustomObject]@{
+                    '@odata.type'             = '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration'
                     androidForWorkRestriction = [PSCustomObject]@{
-                        "@odata.type"                   = "microsoft.graph.deviceEnrollmentPlatformRestriction"
+                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
                         platformBlocked                 = $Settings.platformAndroidForWorkBlocked
                         personalDeviceEnrollmentBlocked = $Settings.personalAndroidForWorkBlocked
                     }
-                    androidRestriction = [PSCustomObject]@{
-                        "@odata.type"                   = "microsoft.graph.deviceEnrollmentPlatformRestriction"
+                    androidRestriction        = [PSCustomObject]@{
+                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
                         platformBlocked                 = $Settings.platformAndroidBlocked
                         personalDeviceEnrollmentBlocked = $Settings.personalAndroidBlocked
                     }
-                    iosRestriction = [PSCustomObject]@{
-                        "@odata.type"                   = "microsoft.graph.deviceEnrollmentPlatformRestriction"
+                    iosRestriction            = [PSCustomObject]@{
+                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
                         platformBlocked                 = $Settings.platformiOSBlocked
                         personalDeviceEnrollmentBlocked = $Settings.personaliOSBlocked
                     }
-                    macOSRestriction = [PSCustomObject]@{
-                        "@odata.type"                   = "microsoft.graph.deviceEnrollmentPlatformRestriction"
+                    macOSRestriction          = [PSCustomObject]@{
+                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
                         platformBlocked                 = $Settings.platformMacOSBlocked
                         personalDeviceEnrollmentBlocked = $Settings.personalMacOSBlocked
                     }
-                    windowsRestriction = [PSCustomObject]@{
-                        "@odata.type"                   = "microsoft.graph.deviceEnrollmentPlatformRestriction"
+                    windowsRestriction        = [PSCustomObject]@{
+                        '@odata.type'                   = 'microsoft.graph.deviceEnrollmentPlatformRestriction'
                         platformBlocked                 = $Settings.platformWindowsBlocked
                         personalDeviceEnrollmentBlocked = $Settings.personalWindowsBlocked
                     }
@@ -132,7 +144,7 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
 
     }
 
-    If ($Settings.alert -eq $true) {
+    if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'DefaultPlatformRestrictions is correctly set.' -Sev Info
         } else {
@@ -141,9 +153,8 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         }
     }
 
-    If ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : $CompareField
-        Set-CIPPStandardsCompareField -FieldName 'standards.DefaultPlatformRestrictions' -FieldValue $FieldValue -TenantFilter $Tenant
+    if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.DefaultPlatformRestrictions' -CurrentValue $CompareField -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DefaultPlatformRestrictions' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

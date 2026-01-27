@@ -30,11 +30,14 @@ function Get-TenantGroups {
     param(
         [string]$GroupId,
         [string]$TenantFilter,
-        [switch]$Dynamic
+        [switch]$Dynamic,
+        [switch]$SkipCache
     )
     $CacheKey = "$GroupId|$TenantFilter|$($Dynamic.IsPresent)"
 
-    if ($script:TenantGroupsResultCache.ContainsKey($CacheKey)) {
+    if ($SkipCache) {
+        Write-Verbose "Skipping cache for: $CacheKey"
+    } elseif ($script:TenantGroupsResultCache.ContainsKey($CacheKey)) {
         Write-Verbose "Returning cached result for: $CacheKey"
         return $script:TenantGroupsResultCache[$CacheKey]
     }
@@ -47,7 +50,7 @@ function Get-TenantGroups {
     }
 
     # Load table data into cache if not already loaded
-    if (-not $script:TenantGroupsCache.Groups -or -not $script:TenantGroupsCache.Members) {
+    if (-not $script:TenantGroupsCache.Groups -or -not $script:TenantGroupsCache.Members -or $SkipCache) {
         Write-Verbose 'Loading TenantGroups and TenantGroupMembers tables into cache'
 
         $GroupTable = Get-CippTable -tablename 'TenantGroups'
@@ -64,6 +67,9 @@ function Get-TenantGroups {
         $script:TenantGroupsCache.MembersByGroup = @{}
         foreach ($Member in $script:TenantGroupsCache.Members) {
             $GId = $Member.GroupId
+            if (-not $GId) {
+                continue
+            }
             if (-not $script:TenantGroupsCache.MembersByGroup.ContainsKey($GId)) {
                 $script:TenantGroupsCache.MembersByGroup[$GId] = [System.Collections.Generic.List[object]]::new()
             }
@@ -153,6 +159,7 @@ function Get-TenantGroups {
             if ($GroupMembers) {
                 foreach ($Member in $GroupMembers) {
                     # Use indexed lookup instead of Where-Object
+                    if (!$Member.customerId) { continue }
                     $Tenant = $TenantByCustomerId[$Member.customerId]
                     if ($Tenant) {
                         $MembersList.Add(@{

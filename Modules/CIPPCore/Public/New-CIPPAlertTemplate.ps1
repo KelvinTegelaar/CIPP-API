@@ -228,7 +228,7 @@ function New-CIPPAlertTemplate {
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
                 $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
-                $ButtonUrl = "$CIPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
+                $ButtonUrl = "$CIPPURL/tenant/administration/applications/enterprise-apps?tenantFilter=$Tenant"
                 $ButtonText = 'Enterprise Apps'
             }
             'Remove service principal.' {
@@ -240,8 +240,8 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
-                $ButtonUrl = "$CIPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
+                $IntroText = "$($data.ObjectId) has been removed by $($data.UserId)."
+                $ButtonUrl = "$CIPPURL/tenant/administration/applications/enterprise-apps?tenantFilter=$Tenant"
                 $ButtonText = 'Enterprise Apps'
             }
             'UserLoggedIn' {

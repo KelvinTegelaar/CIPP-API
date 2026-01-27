@@ -33,7 +33,6 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableCustomerLockbox'
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('CustomerLockbox')
 
     if ($TestResult -eq $false) {
@@ -43,8 +42,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
 
     try {
         $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableCustomerLockbox state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -81,7 +79,15 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
 
     if ($Settings.report -eq $true) {
         $state = $CustomerLockboxStatus ? $true : $false
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableCustomerLockbox' -FieldValue $state -Tenant $tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableCustomerLockbox = $CustomerLockboxStatus
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableCustomerLockbox = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableCustomerLockbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }
