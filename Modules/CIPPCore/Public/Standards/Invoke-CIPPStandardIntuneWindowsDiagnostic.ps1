@@ -40,9 +40,6 @@ Function Invoke-CIPPStandardIntuneWindowsDiagnostic {
         return $true
     }
 
-    write-host $Settings
-    write-host ($settings | ConvertTo-Json -Depth 10)
-
     # Example diagnostic logic for Intune Windows devices
     try {
 
