@@ -31,8 +31,14 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
     #>
     param($Tenant, $Settings)
 
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AssignmentFilterTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AssignmentFilterTemplate'
-    $existingFilters = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $tenant
+    $existingFilters = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters?$select=id,displayName,description,platform,rule,assignmentFilterManagementType' -tenantid $tenant
 
     $Settings.assignmentFilterTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.assignmentFilterTemplate) : $null
 

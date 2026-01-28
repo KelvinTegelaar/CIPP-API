@@ -31,6 +31,13 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     #>
 
     param($Tenant, $Settings)
+
+    $TestResult = Test-CIPPStandardLicense -StandardName 'CustomBannedPasswordList' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     $PasswordRuleTemplateId = '5cf42378-d67d-4f36-ba46-e8b86229381d'
     # Parse and validate banned words from input
     $BannedWordsInput = $Settings.BannedWords
