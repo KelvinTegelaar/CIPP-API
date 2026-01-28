@@ -50,10 +50,19 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     $MDOLicensed = $ServicePlans -contains 'ATP_ENTERPRISE'
 
     if ($MDOLicensed) {
+        # Cache all Safe Attachment Policies to avoid duplicate API calls
+        try {
+            $AllSafeAttachmentPolicies = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy'
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
+
         # Use custom name if provided, otherwise use default for backward compatibility
         $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Safe Attachment Policy' }
         $PolicyList = @($PolicyName, 'CIPP Default Safe Attachment Policy', 'Default Safe Attachment Policy')
-        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
+        $ExistingPolicy = $AllSafeAttachmentPolicies | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
         if ($null -eq $ExistingPolicy.Name) {
             # No existing policy - use the configured/default name
             $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Safe Attachment Policy' }
@@ -73,15 +82,9 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             $RuleName = $ExistingRule.Name
         }
 
-        try {
-            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
+        $CurrentState = $AllSafeAttachmentPolicies |
             Where-Object -Property Name -EQ $PolicyName |
             Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
-            return
-        }
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.Enable -eq $true) -and
