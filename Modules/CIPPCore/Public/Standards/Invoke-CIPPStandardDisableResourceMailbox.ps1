@@ -41,8 +41,13 @@ function Invoke-CIPPStandardDisableResourceMailbox {
 
     # Get all users that are able to be
     try {
-        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true&$select=id,userPrincipalName,userType' -Tenantid $Tenant -ComplexFilter |
-            Where-Object { $_.userType -eq 'Member' }
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $UserList = $AllUsers | Where-Object {
+            $_.accountEnabled -eq $true -and
+            $_.onPremisesSyncEnabled -ne $true -and
+            ($null -eq $_.assignedLicenses -or $_.assignedLicenses.Count -eq 0) -and
+            $_.userType -eq 'Member'
+        }
         $ResourceMailboxList = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'RoomMailbox' -or RecipientTypeDetails -eq 'EquipmentMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
             Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id }
     } catch {
@@ -83,6 +88,13 @@ function Invoke-CIPPStandardDisableResourceMailbox {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable resource mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+
+            # Refresh user cache after remediation
+            try {
+                Set-CIPPDBCacheUsers -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All Entra accounts for resource mailboxes are already disabled.' -sev Info

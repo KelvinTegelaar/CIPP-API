@@ -37,7 +37,11 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     param($Tenant, $Settings)
 
     try {
-        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true&$count=true&$select=id,userPrincipalName' -Tenantid $Tenant -ComplexFilter
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $UserList = $AllUsers | Where-Object {
+            $_.accountEnabled -eq $true -and
+            $_.onPremisesSyncEnabled -ne $true
+        }
         $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' -and $_.UserPrincipalName -in $UserList.UserPrincipalName })
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -77,6 +81,13 @@ function Invoke-CIPPStandardDisableSharedMailbox {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable shared mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+            
+            # Refresh user cache after remediation
+            try {
+                Set-CIPPDBCacheUsers -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All Entra accounts for shared mailboxes are already disabled.' -sev Info

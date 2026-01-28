@@ -33,7 +33,12 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     $preferredLanguage = $Settings.preferredLanguage.value
 
     try {
-        $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true" -tenantid $Tenant -ComplexFilter
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $IncorrectUsers = $AllUsers | Where-Object {
+            ($null -eq $_.preferredLanguage -or $_.preferredLanguage -ne $preferredLanguage) -and
+            $_.userType -eq 'Member' -and
+            $_.onPremisesSyncEnabled -ne $true
+        }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the UserPreferredLanguage state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -60,6 +65,13 @@ function Invoke-CIPPStandardUserPreferredLanguage {
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set preferred language to $preferredLanguage for all users." -sev Error -LogData $ErrorMessage
+            }
+
+            # Refresh user cache after remediation
+            try {
+                Set-CIPPDBCacheUsers -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         }
     }
