@@ -64,6 +64,15 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     $MDOLicensed = $ServicePlans -contains "ATP_ENTERPRISE"
     Write-Information "MDOLicensed: $MDOLicensed"
 
+    # Single data retrieval for Get-AntiPhishRule (used twice) with error handling
+    try {
+        $AllAntiPhishRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule'
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AntiPhishRule state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
     # Use custom name if provided, otherwise use default for backward compatibility
     $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Anti-Phishing Policy' }
     $PolicyList = @($PolicyName, 'CIPP Default Anti-Phishing Policy','Default Anti-Phishing Policy')
@@ -78,7 +87,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     # Derive rule name from policy name, but check for old names for backward compatibility
     $DesiredRuleName = "$PolicyName Rule"
     $RuleList = @($DesiredRuleName, 'CIPP Default Anti-Phishing Rule','CIPP Default Anti-Phishing Policy')
-    $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' | Where-Object -Property Name -In $RuleList | Select-Object -First 1
+    $ExistingRule = $AllAntiPhishRule | Where-Object -Property Name -In $RuleList | Select-Object -First 1
     if ($null -eq $ExistingRule.Name) {
         # No existing rule - use the derived name
         $RuleName = $DesiredRuleName
@@ -165,7 +174,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
-    $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' |
+    $RuleState = $AllAntiPhishRule |
         Where-Object -Property Name -EQ $RuleName |
         Select-Object Name, AntiPhishPolicy, Priority, RecipientDomainIs
 
