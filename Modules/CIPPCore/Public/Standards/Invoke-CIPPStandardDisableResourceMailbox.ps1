@@ -52,16 +52,37 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     }
 
     if ($Settings.remediate -eq $true) {
-
-        if ($ResourceMailboxList) {
-            foreach ($Mailbox in $ResourceMailboxList) {
-                try {
-                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($Mailbox.ExternalDirectoryObjectId)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName) disabled." -sev Info
-                } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        if ($ResourceMailboxList.Count -gt 0) {
+            $int = 0
+            $BulkRequests = foreach ($Mailbox in $ResourceMailboxList) {
+                @{
+                    id        = $int++
+                    method    = 'PATCH'
+                    url       = "users/$($Mailbox.ExternalDirectoryObjectId)"
+                    body      = @{ accountEnabled = $false }
+                    'headers' = @{
+                        'Content-Type' = 'application/json'
+                    }
                 }
+            }
+
+            try {
+                $BulkResults = New-GraphBulkRequest -tenantid $Tenant -Requests @($BulkRequests)
+
+                for ($i = 0; $i -lt $BulkResults.Count; $i++) {
+                    $result = $BulkResults[$i]
+                    $Mailbox = $ResourceMailboxList[$i]
+
+                    if ($result.status -eq 200 -or $result.status -eq 204) {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName) disabled." -sev Info
+                    } else {
+                        $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName): $errorMsg" -sev Error
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable resource mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All Entra accounts for resource mailboxes are already disabled.' -sev Info
