@@ -1846,9 +1846,6 @@ function Invoke-NinjaOneTenantSync {
 
             ### CIPP Applied Standards Cards
             Write-Information 'Applied Standards'
-            $ModuleBase = Get-Module CIPPExtensions | Select-Object -ExpandProperty ModuleBase
-            $CIPPRoot = (Get-Item $ModuleBase).Parent.Parent.FullName
-            Set-Location $CIPPRoot
 
             try {
                 $StandardsDefinitions = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/refs/heads/main/src/data/standards.json'
