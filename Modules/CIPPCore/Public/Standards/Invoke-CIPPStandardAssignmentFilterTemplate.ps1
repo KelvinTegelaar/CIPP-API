@@ -50,7 +50,6 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
     $CurrentValue = if ($MissingFilters.Count -eq 0) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingFilters' = @($MissingFilters) } }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $AssignmentFilterTemplates) {
             Write-Information "Processing template: $($Template.displayName)"
             try {

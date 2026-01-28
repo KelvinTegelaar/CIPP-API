@@ -95,8 +95,6 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Processing Secure Score control updates'
-
         foreach ($Control in $ControlsToUpdate) {
             # Skip if this is a Defender control (starts with scid_)
             if ($Control.ControlName -match '^scid_') {

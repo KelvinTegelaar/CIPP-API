@@ -48,8 +48,6 @@ function Invoke-CIPPStandardGroupTemplate {
 
     if ($Settings.remediate -eq $true) {
         #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
-
-        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $GroupTemplates) {
             Write-Information "Processing template: $($Template.displayName)"
             try {

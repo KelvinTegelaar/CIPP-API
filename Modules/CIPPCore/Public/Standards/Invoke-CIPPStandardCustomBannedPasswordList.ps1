@@ -31,7 +31,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     #>
 
     param($Tenant, $Settings)
-    Write-Host "All params received: $Tenant, $tenant, $($Settings | ConvertTo-Json -Depth 10 -Compress)"
     $PasswordRuleTemplateId = '5cf42378-d67d-4f36-ba46-e8b86229381d'
     # Parse and validate banned words from input
     $BannedWordsInput = $Settings.BannedWords
@@ -77,10 +76,7 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate Custom Banned Password List'
-
         if ($null -eq $ExistingSettings) {
-            Write-Host 'No existing Custom Banned Password List found, creating new one'
             # Create new directory setting with default values if it doesn't exist
             try {
                 $Body = @{
@@ -121,7 +117,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Custom Banned Password List: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
-            Write-Host 'Existing Custom Banned Password List found, updating it'
             # Update existing directory setting
             try {
                 # Get the current passwords and check if all the new words are already in the list
@@ -131,10 +126,8 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
                 # Check if the new words are already in the list
                 $NewBannedWords = $BannedWordsList | Where-Object { $CurrentBannedWords -notcontains $_ }
                 if ($NewBannedWords.Count -eq 0 -and ($ExistingSettings.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value -eq 'True') {
-                    Write-Host 'No new words to add'
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Custom Banned Password List is already configured with $($CurrentBannedWords.Count) words." -sev Info
                 } else {
-                    Write-Host "$($NewBannedWords.Count) new words to add"
                     $AllBannedWords = [System.Collections.Generic.List[string]]::new()
                     $NewBannedWords | ForEach-Object { $AllBannedWords.Add($_) }
                     $CurrentBannedWords | ForEach-Object { $AllBannedWords.Add($_) }

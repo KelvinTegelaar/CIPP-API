@@ -107,7 +107,6 @@ function Invoke-CIPPStandardAutoAddProxy {
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
                         $ErrorMessage = Get-CippException -Exception $_.error
-                        Write-Host "Failed to apply new email policy to $($_.target) Error: $($ErrorMessage.NormalizedError)"
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($_.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     }
                 }

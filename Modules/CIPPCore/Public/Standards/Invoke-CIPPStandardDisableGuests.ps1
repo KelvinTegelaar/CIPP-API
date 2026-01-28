@@ -40,7 +40,6 @@ function Invoke-CIPPStandardDisableGuests {
         $settings.TemplateList | ForEach-Object {
             Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
         }
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 

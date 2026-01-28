@@ -34,7 +34,6 @@ function Invoke-CIPPStandardDelegateSentItems {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DelegateSentItems' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
@@ -62,10 +61,7 @@ function Invoke-CIPPStandardDelegateSentItems {
         state = 'Configured correctly'
     }
 
-    Write-Host "Mailboxes: $($Mailboxes.Count)"
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($Mailboxes) {
             try {
                 $Request = $Mailboxes | ForEach-Object {
@@ -80,7 +76,6 @@ function Invoke-CIPPStandardDelegateSentItems {
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
                         $ErrorMessage = Get-CippException -Exception $_.error
-                        Write-Host "Failed to apply Delegate Sent Items Style to $($_.target) Error: $($ErrorMessage.NormalizedError)"
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Delegate Sent Items Style to $($_.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     }
                 }

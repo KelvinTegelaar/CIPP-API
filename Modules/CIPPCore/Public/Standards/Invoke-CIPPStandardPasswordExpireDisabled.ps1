@@ -53,7 +53,6 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
                 try {
                     if ( $null -eq $_.passwordNotificationWindowInDays ) {
                         $Body = '{"passwordValidityPeriodInDays": 2147483647, "passwordNotificationWindowInDays": 14 }'
-                        Write-Host "PasswordNotificationWindowInDays is null for $($_.id). Setting to the default of 14 days."
                     } else {
                         $Body = '{"passwordValidityPeriodInDays": 2147483647 }'
                     }

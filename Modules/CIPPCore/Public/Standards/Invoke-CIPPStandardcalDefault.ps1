@@ -37,7 +37,6 @@ function Invoke-CIPPStandardcalDefault {
     $TestResult = Test-CIPPStandardLicense -StandardName 'calDefault' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -68,9 +67,6 @@ function Invoke-CIPPStandardcalDefault {
         $SuccessCounter = if ($startIndex -eq 0) { 0 } else { [int64]$LastRun.currentSuccessCount }
         $processedMailboxes = $startIndex
         $Mailboxes = $Mailboxes[$startIndex..($TotalMailboxes - 1)]
-        Write-Host "CalDefaults Starting at index $startIndex"
-        Write-Host "CalDefaults success counter starting at $SuccessCounter"
-        Write-Host "CalDefaults Processing $($Mailboxes.Count) mailboxes"
         $Mailboxes | ForEach-Object {
             $Mailbox = $_
             try {
@@ -82,7 +78,6 @@ function Invoke-CIPPStandardcalDefault {
                             $SuccessCounter++
                         } catch {
                             $ErrorMessage = Get-CippException -Exception $_
-                            Write-Host "Setting cal failed: $ErrorMessage"
                             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                         }
                     }
@@ -100,7 +95,6 @@ function Invoke-CIPPStandardcalDefault {
                         currentSuccessCount = $SuccessCounter
                     }
                     Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
-                    Write-Host "Processed $processedMailboxes mailboxes"
                 }
             }
 

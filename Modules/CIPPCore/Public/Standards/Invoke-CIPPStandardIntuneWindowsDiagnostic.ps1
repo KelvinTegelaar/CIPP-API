@@ -36,12 +36,8 @@ Function Invoke-CIPPStandardIntuneWindowsDiagnostic {
     $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneWindowsDiagnostic' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     }
-
-    write-host $Settings
-    write-host ($settings | ConvertTo-Json -Depth 10)
 
     # Example diagnostic logic for Intune Windows devices
     try {

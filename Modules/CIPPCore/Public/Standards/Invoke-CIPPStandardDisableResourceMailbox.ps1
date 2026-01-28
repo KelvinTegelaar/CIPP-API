@@ -36,7 +36,6 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableResourceMailbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -53,11 +52,8 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
 
         if ($ResourceMailboxList) {
-            Write-Host "Resource Mailboxes to disable: $($ResourceMailboxList.Count)"
             $ResourceMailboxList | ForEach-Object {
                 try {
                     New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($_.ExternalDirectoryObjectId)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant

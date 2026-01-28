@@ -32,7 +32,6 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
     $TestResult = Test-CIPPStandardLicense -StandardName 'SPDisableLegacyWorkflows' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 

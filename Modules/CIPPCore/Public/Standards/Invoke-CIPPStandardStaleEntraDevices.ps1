@@ -41,7 +41,6 @@ function Invoke-CIPPStandardStaleEntraDevices {
     # Get all Entra devices
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -57,8 +56,6 @@ function Invoke-CIPPStandardStaleEntraDevices {
     $StaleDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $Date }
 
     if ($Settings.remediate -eq $true) {
-
-        Write-Host 'Remediation not implemented yet'
         # TODO: Implement remediation. For others in the future that want to try this:
         # Good MS guide on what to watch out for https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices#clean-up-stale-devices
         # https://learn.microsoft.com/en-us/graph/api/device-list?view=graph-rest-beta&tabs=http
