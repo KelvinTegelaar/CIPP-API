@@ -49,10 +49,26 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $MDOLicensed = $ServicePlans -contains 'ATP_ENTERPRISE'
 
     if ($MDOLicensed) {
+        # Single data retrieval calls with error handling
+        try {
+            $AllSafeLinksPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy'
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
+        try {
+            $AllSafeLinksRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule'
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksRule state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
+
         # Use custom name if provided, otherwise use default for backward compatibility
         $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
         $PolicyList = @($PolicyName, 'CIPP Default SafeLinks Policy', 'Default SafeLinks Policy')
-        $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
+        $ExistingPolicy = $AllSafeLinksPolicy | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
         if ($null -eq $ExistingPolicy.Name) {
             # No existing policy - use the configured/default name
             $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default SafeLinks Policy' }
@@ -63,7 +79,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         # Derive rule name from policy name, but check for old names for backward compatibility
         $DesiredRuleName = "$PolicyName Rule"
         $RuleList = @($DesiredRuleName, 'CIPP Default SafeLinks Rule', 'CIPP Default SafeLinks Policy')
-        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList | Select-Object -First 1
+        $ExistingRule = $AllSafeLinksRule | Where-Object -Property Name -In $RuleList | Select-Object -First 1
         if ($null -eq $ExistingRule.Name) {
             # No existing rule - use the derived name
             $RuleName = $DesiredRuleName
@@ -72,15 +88,9 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             $RuleName = $ExistingRule.Name
         }
 
-        try {
-            $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
-                Where-Object -Property Name -EQ $PolicyName |
-                Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeLinksPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
-            return
-        }
+        $CurrentState = $AllSafeLinksPolicy |
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
@@ -97,7 +107,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
-        $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
+        $RuleState = $AllSafeLinksRule |
             Where-Object -Property Name -EQ $RuleName |
             Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
 
