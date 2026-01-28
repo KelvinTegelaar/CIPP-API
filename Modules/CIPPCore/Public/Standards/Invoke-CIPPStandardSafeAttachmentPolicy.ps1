@@ -45,9 +45,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         return $true
     } #we're done.
 
-    $ServicePlans = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus?$select=servicePlans' -tenantid $Tenant
-    $ServicePlans = $ServicePlans.servicePlans.servicePlanName
-    $MDOLicensed = $ServicePlans -contains 'ATP_ENTERPRISE'
+    $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $Tenant
+    $MDOLicensed = $TenantCapabilities.ATP_ENTERPRISE -eq $true
 
     if ($MDOLicensed) {
         # Cache all Safe Attachment Policies to avoid duplicate API calls
