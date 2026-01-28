@@ -253,8 +253,10 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 if ($ProcessedCount -gt 0) {
                     Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: Successfully processed $ProcessedCount contacts" -sev Info
 
-                    # Wait for contacts to propagate before updating additional fields
-                    Start-Sleep -Seconds 1
+                    # Wait for contacts to propagate before updating additional fields (only needed for small batches)
+                    if ($ProcessedCount -le 3) {
+                        Start-Sleep -Seconds 1
+                    }
 
                     # Second pass: Update contacts with additional fields (only if needed)
                     $UpdateFailures = 0
