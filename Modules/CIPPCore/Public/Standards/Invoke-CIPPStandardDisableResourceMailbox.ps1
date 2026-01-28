@@ -41,7 +41,7 @@ function Invoke-CIPPStandardDisableResourceMailbox {
 
     # Get all users that are able to be
     try {
-        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true' -Tenantid $Tenant -ComplexFilter |
+        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true&$select=id,userPrincipalName,userType' -Tenantid $Tenant -ComplexFilter |
             Where-Object { $_.userType -eq 'Member' }
         $ResourceMailboxList = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'RoomMailbox' -or RecipientTypeDetails -eq 'EquipmentMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
             Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id }

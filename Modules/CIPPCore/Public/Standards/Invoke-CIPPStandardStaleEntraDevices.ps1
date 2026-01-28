@@ -45,7 +45,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
     } #we're done.
 
     try {
-        $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
+        $AllDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/devices?$select=id,displayName,approximateLastSignInDateTime,accountEnabled,enrollmentProfileName,operatingSystem,managementType,profileType' -tenantid $Tenant | Where-Object { $null -ne $_.approximateLastSignInDateTime }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the StaleEntraDevices state for $Tenant. Error: $ErrorMessage" -Sev Error

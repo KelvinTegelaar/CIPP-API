@@ -37,7 +37,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     param($Tenant, $Settings)
 
     try {
-        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true&$count=true' -Tenantid $Tenant -ComplexFilter
+        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true&$count=true&$select=id,userPrincipalName' -Tenantid $Tenant -ComplexFilter
         $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' -and $_.UserPrincipalName -in $UserList.UserPrincipalName })
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -36,7 +36,7 @@ function Invoke-CIPPStandardAppDeploy {
     Write-Information "Running AppDeploy standard for tenant $($Tenant)."
 
     $AppsToAdd = $Settings.appids -split ','
-    $AppExists = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant
+    $AppExists = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=id,appId,displayName,applicationTemplateId' -tenantid $Tenant
     $Mode = $Settings.mode ?? 'copy'
 
     $ExpectedValue = [PSCustomObject]@{ state = 'Configured correctly' }
