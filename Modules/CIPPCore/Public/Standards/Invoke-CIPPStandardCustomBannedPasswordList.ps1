@@ -42,12 +42,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     # Split input by commas, newlines, or semicolons and clean up
     $BannedWordsList = $BannedWordsInput -split '[,;\r\n]+' | ForEach-Object { ($_.Trim()) } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
 
-    # Validate word count
-    if ($BannedWordsList.Count -gt 1000) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Too many banned words provided ($($BannedWordsList.Count)). Maximum allowed is 1000." -sev Error
-        return
-    }
-
     # Validate word length (4-16 characters), remove duplicates and invalid words
     $ValidBannedWordsList = [System.Collections.Generic.List[string]]::new()
     $InvalidWords = [System.Collections.Generic.List[string]]::new()
@@ -64,6 +58,12 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     # Alert if invalid words are found
     if ($InvalidWords.Count -gt 0) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Invalid words found in input (must be 4-16 characters). Please remove the following words: $($InvalidWords -join ', ')" -sev Warning
+    }
+
+    # Validate word count after filtering
+    if ($BannedWordsList.Count -gt 1000) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Too many valid banned words ($($BannedWordsList.Count)). Maximum allowed is 1000." -sev Error
+        return
     }
 
     # Get existing directory settings for password rules
