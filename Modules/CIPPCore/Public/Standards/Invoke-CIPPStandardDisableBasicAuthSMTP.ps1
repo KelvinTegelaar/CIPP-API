@@ -65,14 +65,26 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication. Error: $ErrorMessage" -sev Error
             }
 
-            # Disable SMTP Basic Authentication for all users
-            foreach ($User in $SMTPusers) {
-                try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $User.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($User.DisplayName), $($User.PrimarySmtpAddress)" -sev Info
-                } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($User.DisplayName), $($User.PrimarySmtpAddress). Error: $ErrorMessage" -sev Error
+            # Disable SMTP Basic Authentication for all users using bulk request
+            if ($SMTPusers.Count -gt 0) {
+                $BulkRequest = foreach ($User in $SMTPusers) {
+                    @{
+                        CmdletInput = @{
+                            CmdletName = 'Set-CASMailbox'
+                            Parameters = @{ Identity = $User.Guid; SmtpClientAuthenticationDisabled = $null }
+                        }
+                    }
+                }
+                $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($BulkRequest) -useSystemMailbox $true
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-NormalizedError -Message $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($Result.target). Error: $ErrorMessage" -sev Error
+                    }
+                }
+                $SuccessCount = ($BatchResults | Where-Object { -not $_.error }).Count
+                if ($SuccessCount -gt 0) {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $SuccessCount users" -sev Info
                 }
             }
         }
