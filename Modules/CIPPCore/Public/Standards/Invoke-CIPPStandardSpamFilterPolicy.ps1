@@ -63,8 +63,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
 
     try {
         $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+            Where-Object -Property Name -EQ $PolicyName
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpamFilterPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -135,8 +134,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
     ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
