@@ -129,8 +129,8 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Custom Banned Password List is already configured with $($CurrentBannedWords.Count) words." -sev Info
                 } else {
                     $AllBannedWords = [System.Collections.Generic.List[string]]::new()
-                    $NewBannedWords | ForEach-Object { $AllBannedWords.Add($_) }
-                    $CurrentBannedWords | ForEach-Object { $AllBannedWords.Add($_) }
+                    foreach ($Word in $NewBannedWords) { $AllBannedWords.Add($Word) }
+                    foreach ($Word in $CurrentBannedWords) { $AllBannedWords.Add($Word) }
                     $AllBannedWords = $AllBannedWords | Select-Object -Unique -First 1000 | Where-Object { $_ -ne $null }
 
                     $Body = @{

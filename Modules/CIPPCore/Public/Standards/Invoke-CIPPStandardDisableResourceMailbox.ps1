@@ -54,13 +54,13 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     if ($Settings.remediate -eq $true) {
 
         if ($ResourceMailboxList) {
-            $ResourceMailboxList | ForEach-Object {
+            foreach ($Mailbox in $ResourceMailboxList) {
                 try {
-                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($_.ExternalDirectoryObjectId)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($_.RecipientTypeDetails), $($_.DisplayName), $($_.UserPrincipalName) disabled." -sev Info
+                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($Mailbox.ExternalDirectoryObjectId)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName) disabled." -sev Info
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($_.RecipientTypeDetails), $($_.DisplayName), $($_.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
         } else {

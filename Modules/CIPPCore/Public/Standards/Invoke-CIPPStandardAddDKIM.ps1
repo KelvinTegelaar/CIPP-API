@@ -60,10 +60,10 @@ function Invoke-CIPPStandardAddDKIM {
     # Check for errors in the batch results. Cannot continue if there are errors.
     $ErrorCounter = 0
     $ErrorMessages = [System.Collections.Generic.List[string]]::new()
-    $BatchResults | ForEach-Object {
-        if ($_.error) {
+    foreach ($Result in $BatchResults) {
+        if ($Result.error) {
             $ErrorCounter++
-            $ErrorMessage = Get-NormalizedError -Message $_.error
+            $ErrorMessage = Get-NormalizedError -Message $Result.error
             $ErrorMessages.Add($ErrorMessage)
         }
     }
@@ -88,8 +88,8 @@ function Invoke-CIPPStandardAddDKIM {
         '*.teams-sbc.dk'
     )
 
-    $AllDomains = ($BatchResults | Where-Object { $_.DomainName }).DomainName | ForEach-Object {
-        $Domain = $_
+    $AllDomains = foreach ($DomainName in ($BatchResults | Where-Object { $_.DomainName }).DomainName) {
+        $Domain = $DomainName
         foreach ($ExclusionDomain in $ExclusionDomains) {
             if ($Domain -like $ExclusionDomain) {
                 $Domain = $null
@@ -97,8 +97,8 @@ function Invoke-CIPPStandardAddDKIM {
         }
         if ($null -ne $Domain) { $Domain }
     }
-    $DKIM = $BatchResults | Where-Object { $_.Domain } | Select-Object Domain, Enabled, Status | ForEach-Object {
-        $Domain = $_
+    $DKIM = foreach ($DkimConfig in ($BatchResults | Where-Object { $_.Domain } | Select-Object Domain, Enabled, Status)) {
+        $Domain = $DkimConfig
         foreach ($ExclusionDomain in $ExclusionDomains) {
             if ($Domain.Domain -like $ExclusionDomain) {
                 $Domain = $null
@@ -131,37 +131,37 @@ function Invoke-CIPPStandardAddDKIM {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Trying to enable DKIM for:$($NewDomains -join ', ' ) $($SetDomains.Domain -join ', ')" -sev Info
 
             # New-domains
-            $Request = $NewDomains | ForEach-Object {
+            $Request = foreach ($Domain in $NewDomains) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'New-DkimSigningConfig'
-                        Parameters = @{ KeySize = 2048; DomainName = $_; Enabled = $true }
+                        Parameters = @{ KeySize = 2048; DomainName = $Domain; Enabled = $true }
                     }
                 }
             }
             if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request) -useSystemMailbox $true }
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
                     $ErrorCounter ++
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable DKIM. Error: $ErrorMessage" -sev Error
                 }
             }
 
             # Set-domains
-            $Request = $SetDomains | ForEach-Object {
+            $Request = foreach ($Domain in $SetDomains) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-DkimSigningConfig'
-                        Parameters = @{ Identity = $_.Domain; Enabled = $true }
+                        Parameters = @{ Identity = $Domain.Domain; Enabled = $true }
                     }
                 }
             }
             if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request) -useSystemMailbox $true }
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
                     $ErrorCounter ++
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set DKIM. Error: $ErrorMessage" -sev Error
                 }
             }

@@ -42,12 +42,12 @@ function Invoke-CIPPStandardSafeSendersDisable {
     if ($Settings.remediate -eq $true) {
         try {
             $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -select 'UserPrincipalName'
-            $Request = $Mailboxes | ForEach-Object {
+            $Request = foreach ($Mailbox in $Mailboxes) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-MailboxJunkEmailConfiguration'
                         Parameters = @{
-                            Identity                    = $_.UserPrincipalName
+                            Identity                    = $Mailbox.UserPrincipalName
                             TrustedRecipientsAndDomains = $null
                         }
                     }
@@ -55,10 +55,10 @@ function Invoke-CIPPStandardSafeSendersDisable {
             }
 
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($_.target). Error: $ErrorMessage" -sev Error
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($Result.target). Error: $ErrorMessage" -sev Error
                 }
             }
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Safe Senders disabled' -sev Info

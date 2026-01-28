@@ -104,10 +104,10 @@ function Invoke-CIPPStandardAutoAddProxy {
                     }
                 }
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($bulkRequest)
-                $BatchResults | ForEach-Object {
-                    if ($_.error) {
-                        $ErrorMessage = Get-CippException -Exception $_.error
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($_.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-CippException -Exception $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     }
                 }
             }

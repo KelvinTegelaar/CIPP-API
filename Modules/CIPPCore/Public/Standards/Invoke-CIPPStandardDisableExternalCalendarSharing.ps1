@@ -50,13 +50,13 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
 
     if ($Settings.remediate -eq $true) {
         if ($CurrentInfo.Enabled) {
-            $CurrentInfo | ForEach-Object {
+            foreach ($Policy in $CurrentInfo) {
                 try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SharingPolicy' -cmdParams @{ Identity = $_.Id ; Enabled = $false } -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully disabled external calendar sharing for the policy $($_.Name)" -sev Info
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SharingPolicy' -cmdParams @{ Identity = $Policy.Id ; Enabled = $false } -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully disabled external calendar sharing for the policy $($Policy.Name)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable external calendar sharing for the policy $($_.Name). Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable external calendar sharing for the policy $($Policy.Name). Error: $ErrorMessage" -sev Error
                 }
             }
         } else {

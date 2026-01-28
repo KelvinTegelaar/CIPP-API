@@ -66,13 +66,13 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
             }
 
             # Disable SMTP Basic Authentication for all users
-            $SMTPusers | ForEach-Object {
+            foreach ($User in $SMTPusers) {
                 try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress)" -sev Info
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $User.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($User.DisplayName), $($User.PrimarySmtpAddress)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress). Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($User.DisplayName), $($User.PrimarySmtpAddress). Error: $ErrorMessage" -sev Error
                 }
             }
         }

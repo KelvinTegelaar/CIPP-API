@@ -48,10 +48,10 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     if ($Settings.remediate -eq $true) {
 
         if ($SharedMailboxList) {
-            $SharedMailboxList | ForEach-Object {
+            foreach ($Mailbox in $SharedMailboxList) {
                 try {
-                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($_.ObjectKey)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($_.DisplayName) disabled." -sev Info
+                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($Mailbox.ObjectKey)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) disabled." -sev Info
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

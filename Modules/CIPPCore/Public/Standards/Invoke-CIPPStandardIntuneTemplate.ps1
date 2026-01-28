@@ -40,8 +40,8 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
-        $settings.TemplateList | ForEach-Object {
-            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$($_.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        foreach ($Template in $settings.TemplateList) {
+            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$($Template.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
         }
         return $true
     } #we're done.

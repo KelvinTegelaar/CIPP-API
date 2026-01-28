@@ -37,7 +37,7 @@ function Invoke-CIPPStandardDisableGuests {
 
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
-        $settings.TemplateList | ForEach-Object {
+        foreach ($Template in $settings.TemplateList) {
             Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
         }
         return $true
@@ -57,8 +57,8 @@ function Invoke-CIPPStandardDisableGuests {
         return
     }
 
-    $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-            ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
+    $AuditResults = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
+    $RecentlyReactivatedUsers = foreach ($AuditEntry in $AuditResults) { $AuditEntry.targetResources[0].id } | Select-Object -Unique
 
     $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
 

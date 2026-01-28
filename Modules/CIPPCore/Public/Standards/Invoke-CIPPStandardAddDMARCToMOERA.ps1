@@ -49,17 +49,17 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     try {
         $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property Name -Like '*.onmicrosoft.com'
 
-        $CurrentInfo = $Domains | ForEach-Object {
+        $CurrentInfo = foreach ($Domain in $Domains) {
             # Get current DNS records that matches _dmarc hostname and TXT type
-            $RecordsResponse = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($_.Name)"
+            $RecordsResponse = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($Domain.Name)"
             $AllRecords = $RecordsResponse | Select-Object -ExpandProperty DnsRecords
             $CurrentRecords = $AllRecords | Where-Object { $_.HostName -eq '_dmarc' -and $_.Type -eq 'TXT' }
-            Write-Information "Found $($CurrentRecords.count) DMARC records for domain $($_.Name)"
+            Write-Information "Found $($CurrentRecords.count) DMARC records for domain $($Domain.Name)"
 
             if ($CurrentRecords.count -eq 0) {
                 #record not found, return a model with Match set to false
                 [PSCustomObject]@{
-                    DomainName    = $_.Name
+                    DomainName    = $Domain.Name
                     Match         = $false
                     CurrentRecord = $null
                 }
@@ -76,13 +76,13 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
                     # Compare the current record with the expected record model
                     if (!(Compare-Object -ReferenceObject $RecordModel -DifferenceObject $CurrentRecordModel -Property HostName, TtlValue, Type, Value)) {
                         [PSCustomObject]@{
-                            DomainName    = $_.Name
+                            DomainName    = $Domain.Name
                             Match         = $true
                             CurrentRecord = $CurrentRecord
                         }
                     } else {
                         [PSCustomObject]@{
-                            DomainName    = $_.Name
+                            DomainName    = $Domain.Name
                             Match         = $false
                             CurrentRecord = $CurrentRecord
                         }

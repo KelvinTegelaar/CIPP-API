@@ -96,20 +96,20 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         # Disable audit bypass for all mailboxes that have it enabled
 
         $BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
-        $Request = $BypassMailboxes | ForEach-Object {
+        $Request = foreach ($Mailbox in $BypassMailboxes) {
             @{
                 CmdletInput = @{
                     CmdletName = 'Set-MailboxAuditBypassAssociation'
-                    Parameters = @{Identity = $_.Guid; AuditBypassEnabled = $false }
+                    Parameters = @{Identity = $Mailbox.Guid; AuditBypassEnabled = $false }
                 }
             }
         }
 
         $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-        $BatchResults | ForEach-Object {
-            if ($_.error) {
-                $ErrorMessage = Get-NormalizedError -Message $_.error
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($_.target). Error: $ErrorMessage" -sev Error
+        foreach ($Result in $BatchResults) {
+            if ($Result.error) {
+                $ErrorMessage = Get-NormalizedError -Message $Result.error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($Result.target). Error: $ErrorMessage" -sev Error
             }
         }
 

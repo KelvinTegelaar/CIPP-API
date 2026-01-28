@@ -57,21 +57,21 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
         if ($PowerShellEnabledCount -gt 0) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started disabling Exchange Online PowerShell for $PowerShellEnabledCount users." -sev Info
 
-            $Request = $UsersWithPowerShell | ForEach-Object {
+            $Request = foreach ($User in $UsersWithPowerShell) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $_.Guid; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $User.Guid; RemotePowerShellEnabled = $false }
                     }
                 }
             }
 
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
             $SuccessCount = 0
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $($_.target). Error: $ErrorMessage" -sev Error
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $($Result.target). Error: $ErrorMessage" -sev Error
                 } else {
                     $SuccessCount++
                 }
