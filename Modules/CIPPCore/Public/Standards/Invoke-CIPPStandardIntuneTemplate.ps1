@@ -36,150 +36,117 @@ function Invoke-CIPPStandardIntuneTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
-    if ($TestResult -eq $false) {
-        #writing to each item that the license is not present.
-        foreach ($Template in $settings.TemplateList) {
-            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$($Template.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
-        }
-        return $true
-    } #we're done.
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
-    $Request = @{body = $null }
-    $CompareList = foreach ($Template in $Settings) {
-        $Request.body = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Template.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if ($null -eq $Request.body) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Template.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
-            continue
-        }
 
-        $displayname = $request.body.Displayname
-        $description = $request.body.Description
-        $RawJSON = $Request.body.RawJSON
+    $Template = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Settings.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+    if ($null -eq $Template) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Settings.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
+        return $true
+    }
+
+    $displayname = $Template.Displayname
+    $description = $Template.Description
+    $RawJSON = $Template.RawJSON
+    $TemplateType = $Template.Type
+
+    try {
+        $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $TemplateType
+    } catch {
+        $ExistingPolicy = $null
+    }
+
+    if ($ExistingPolicy) {
         try {
-            $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $Request.body.Type
+            $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
+            $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
+            $JSONTemplate = $RawJSON | ConvertFrom-Json
+            #This might be a slow one.
+            $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
         } catch {
         }
-        if ($ExistingPolicy) {
-            try {
-                $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
-                $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
-                $JSONTemplate = $RawJSON | ConvertFrom-Json
-                $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $Request.body.Type -ErrorAction SilentlyContinue
-            } catch {
-            }
-        } else {
-            $compare = [pscustomobject]@{
-                MatchFailed = $true
-                Difference  = 'This policy does not exist in Intune.'
-            }
+    } else {
+        $compare = [pscustomobject]@{
+            MatchFailed = $true
+            Difference  = 'This policy does not exist in Intune.'
         }
-        if ($Compare) {
-            [PSCustomObject]@{
-                MatchFailed          = $true
-                displayname          = $displayname
-                description          = $description
-                compare              = $Compare
-                rawJSON              = $RawJSON
-                body                 = $Request.body
-                assignTo             = $Template.AssignTo
-                excludeGroup         = $Template.excludeGroup
-                remediate            = $Template.remediate
-                alert                = $Template.alert
-                report               = $Template.report
-                existingPolicyId     = $ExistingPolicy.id
-                templateId           = $Template.TemplateList.value
-                customGroup          = $Template.customGroup
-                assignmentFilter     = $Template.assignmentFilter
-                assignmentFilterType = $Template.assignmentFilterType
+    }
+    $CompareResult = [PSCustomObject]@{
+        MatchFailed          = [bool]$Compare
+        displayname          = $displayname
+        description          = $description
+        compare              = $Compare
+        rawJSON              = $RawJSON
+        templateType         = $TemplateType
+        assignTo             = $Settings.AssignTo
+        excludeGroup         = $Settings.excludeGroup
+        remediate            = $Settings.remediate
+        alert                = $Settings.alert
+        report               = $Settings.report
+        existingPolicyId     = $ExistingPolicy.id
+        templateId           = $Settings.TemplateList.value
+        customGroup          = $Settings.customGroup
+        assignmentFilter     = $Settings.assignmentFilter
+        assignmentFilterType = $Settings.assignmentFilterType
+    }
+
+    if ($Settings.remediate) {
+        try {
+            $CompareResult.customGroup ? ($CompareResult.AssignTo = $CompareResult.customGroup) : $null
+
+            $PolicyParams = @{
+                TemplateType = $CompareResult.templateType
+                Description  = $CompareResult.description
+                DisplayName  = $CompareResult.displayname
+                RawJSON      = $CompareResult.rawJSON
+                AssignTo     = $CompareResult.AssignTo
+                ExcludeGroup = $CompareResult.excludeGroup
+                tenantFilter = $Tenant
             }
-        } else {
-            [PSCustomObject]@{
-                MatchFailed          = $false
-                displayname          = $displayname
-                description          = $description
-                compare              = $false
-                rawJSON              = $RawJSON
-                body                 = $Request.body
-                assignTo             = $Template.AssignTo
-                excludeGroup         = $Template.excludeGroup
-                remediate            = $Template.remediate
-                alert                = $Template.alert
-                report               = $Template.report
-                existingPolicyId     = $ExistingPolicy.id
-                templateId           = $Template.TemplateList.value
-                customGroup          = $Template.customGroup
-                assignmentFilter     = $Template.assignmentFilter
-                assignmentFilterType = $Template.assignmentFilterType
+
+            # Add assignment filter if specified
+            if ($CompareResult.assignmentFilter) {
+                $PolicyParams.AssignmentFilterName = $CompareResult.assignmentFilter
+                $PolicyParams.AssignmentFilterType = $CompareResult.assignmentFilterType ?? 'include'
             }
+
+            Set-CIPPIntunePolicy @PolicyParams
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($CompareResult.displayname), Error: $ErrorMessage" -sev 'Error'
         }
     }
 
-    if ($true -in $Settings.remediate) {
-        foreach ($TemplateFile in $CompareList | Where-Object -Property remediate -EQ $true) {
-            try {
-                $TemplateFile.customGroup ? ($TemplateFile.AssignTo = $TemplateFile.customGroup) : $null
-
-                $PolicyParams = @{
-                    TemplateType = $TemplateFile.body.Type
-                    Description  = $TemplateFile.description
-                    DisplayName  = $TemplateFile.displayname
-                    RawJSON      = $templateFile.rawJSON
-                    AssignTo     = $TemplateFile.AssignTo
-                    ExcludeGroup = $TemplateFile.excludeGroup
-                    tenantFilter = $Tenant
-                }
-
-                # Add assignment filter if specified
-                if ($TemplateFile.assignmentFilter) {
-                    $PolicyParams.AssignmentFilterName = $TemplateFile.assignmentFilter
-                    $PolicyParams.AssignmentFilterType = $TemplateFile.assignmentFilterType ?? 'include'
-                }
-
-                Set-CIPPIntunePolicy @PolicyParams
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($TemplateFile.displayname), Error: $ErrorMessage" -sev 'Error'
-            }
-        }
-
-    }
-
-    if ($true -in $Settings.alert) {
-        foreach ($Template in $CompareList | Where-Object -Property alert -EQ $true) {
-            $AlertObj = $Template | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
-            if ($Template.compare) {
-                Write-StandardsAlert -message "Template $($Template.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) does not match the expected configuration. We've generated an alert" -sev info
+    if ($Settings.alert) {
+        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
+        if ($CompareResult.compare) {
+            Write-StandardsAlert -message "Template $($CompareResult.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) does not match the expected configuration. We've generated an alert" -sev info
+        } else {
+            if ($CompareResult.ExistingPolicyId) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) has the correct configuration." -sev Info
             } else {
-                if ($Template.ExistingPolicyId) {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) has the correct configuration." -sev Info
-                } else {
-                    Write-StandardsAlert -message "Template $($Template.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($Template.displayname) is missing." -sev info
-                }
+                Write-StandardsAlert -message "Template $($CompareResult.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) is missing." -sev info
             }
         }
     }
 
-    if ($true -in $Settings.report) {
-        foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
-            $id = $Template.templateId
+    if ($Settings.report -or $Settings.remediate) {
+        $id = $CompareResult.templateId
 
-            $CurrentValue = @{
-                displayName = $Template.displayname
-                description = $Template.description
-                isCompliant = if ($Template.compare) { $false } else { $true }
-            }
-            $ExpectedValue = @{
-                displayName = $Template.displayname
-                description = $Template.description
-                isCompliant = $true
-            }
-            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        $CurrentValue = @{
+            displayName = $CompareResult.displayname
+            description = $CompareResult.description
+            isCompliant = if ($CompareResult.compare) { $false } else { $true }
         }
+        $ExpectedValue = @{
+            displayName = $CompareResult.displayname
+            description = $CompareResult.description
+            isCompliant = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
 }
