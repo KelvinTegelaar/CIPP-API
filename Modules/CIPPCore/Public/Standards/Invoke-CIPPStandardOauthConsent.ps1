@@ -69,7 +69,6 @@ function Invoke-CIPPStandardOauthConsent {
 
                 foreach ($AllowedApp in $AllowedAppIdsForTenant) {
                     if ($AllowedApp -and ($AllowedApp -notin $ExistingAppIds)) {
-                        Write-Host "Adding missing approved app: $AllowedApp"
                         New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body ('{"permissionType": "delegated","clientApplicationIds": ["' + $AllowedApp + '"]}') -ContentType 'application/json'
                         New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body ('{ "permissionType": "Application", "clientApplicationIds": ["' + $AllowedApp + '"] }') -ContentType 'application/json'
                     }

@@ -8,8 +8,6 @@ function Invoke-PublicWebhooks {
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers
 
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $WebhookTable = Get-CIPPTable -TableName webhookTable
     $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable

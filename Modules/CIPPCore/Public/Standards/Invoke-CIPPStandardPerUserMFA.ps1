@@ -41,7 +41,12 @@ function Invoke-CIPPStandardPerUserMFA {
     param($Tenant, $Settings)
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,accountEnabled,perUserMfaState&`$filter=userType eq 'Member' and accountEnabled eq true and displayName ne 'On-Premises Directory Synchronization Service Account'&`$count=true" -tenantid $Tenant -ComplexFilter
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $GraphRequest = $AllUsers | Where-Object {
+            $_.userType -eq 'Member' -and
+            $_.accountEnabled -eq $true -and
+            $_.displayName -ne 'On-Premises Directory Synchronization Service Account'
+        }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PerUserMFA state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -57,6 +62,13 @@ function Invoke-CIPPStandardPerUserMFA {
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enforce MFA for all users: $ErrorMessage" -sev Error
+            }
+            
+            # Refresh user cache after remediation
+            try {
+                Set-CIPPDBCacheUsers -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         }
     }

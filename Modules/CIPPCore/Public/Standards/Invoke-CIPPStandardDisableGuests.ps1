@@ -37,47 +37,79 @@ function Invoke-CIPPStandardDisableGuests {
 
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
-        $settings.TemplateList | ForEach-Object {
+        foreach ($Template in $settings.TemplateList) {
             Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
         }
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     $checkDays = if ($Settings.days) { $Settings.days } else { 90 } # Default to 90 days if not set. Pre v8.5.0 compatibility
     $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
-    $Lookup = $Days.ToString('o')
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-            Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+
+        $GraphRequest = $AllUsers | Where-Object {
+            $_.userType -eq 'Guest' -and
+            $_.accountEnabled -eq $true -and
+            ($null -ne $_.createdDateTime -and [DateTime]$_.createdDateTime -le $Days) -and
+            ($null -eq $_.signInActivity -or $null -eq $_.signInActivity.lastSuccessfulSignInDateTime -or [DateTime]$_.signInActivity.lastSuccessfulSignInDateTime -le $Days)
+        }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-            ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
+    $AuditResults = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
+    $RecentlyReactivatedUsers = @(foreach ($AuditEntry in $AuditResults) { $AuditEntry.targetResources[0].id }) | Select-Object -Unique
 
     $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
 
     if ($Settings.remediate -eq $true) {
         if ($GraphRequest.Count -gt 0) {
-            foreach ($guest in $GraphRequest) {
-                try {
-                    $null = New-GraphPostRequest -type Patch -tenantid $tenant -uri "https://graph.microsoft.com/beta/users/$($guest.id)" -body '{"accountEnabled":"false"}'
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabling guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $($guest.signInActivity.lastSuccessfulSignInDateTime)" -sev Info
-                } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            $int = 0
+            $BulkRequests = foreach ($guest in $GraphRequest) {
+                @{
+                    id        = $int++
+                    method    = 'PATCH'
+                    url       = "users/$($guest.id)"
+                    body      = @{ accountEnabled = $false }
+                    'headers' = @{
+                        'Content-Type' = 'application/json'
+                    }
                 }
+            }
+
+            try {
+                $BulkResults = New-GraphBulkRequest -tenantid $tenant -Requests @($BulkRequests)
+
+                for ($i = 0; $i -lt $BulkResults.Count; $i++) {
+                    $result = $BulkResults[$i]
+                    $guest = $GraphRequest[$i]
+
+                    if ($result.status -eq 200 -or $result.status -eq 204) {
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $($guest.signInActivity.lastSuccessfulSignInDateTime)" -sev Info
+                    } else {
+                        $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $errorMsg" -sev Error
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to process bulk disable guests request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+
+            # Refresh user cache after remediation
+            try {
+                Set-CIPPDBCacheUsers -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
         }
-
     }
     if ($Settings.alert -eq $true) {
 
