@@ -44,13 +44,8 @@ function Set-CIPPDBCacheMailboxes {
                     MessageCopyForSentAsEnabled))
         }
 
-        $Mailboxes = $MailboxList.ToArray()
-        $RawMailboxes = $null
-        $MailboxList.Clear()
-        $MailboxList = $null
+        $Mailboxes | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes -Count
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Mailboxes.Count) mailboxes successfully" -sev Debug
 
         # Start orchestrator to cache mailbox permissions in batches

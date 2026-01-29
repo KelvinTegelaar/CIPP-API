@@ -54,8 +54,6 @@ function Invoke-CIPPStandardEXODirectSend {
 
     # Remediate if needed
     if ($Settings.remediate -eq $true) {
-
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Direct Send is already set to $DesiredStateName." -sev Info
         } else {

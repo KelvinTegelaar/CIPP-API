@@ -31,13 +31,35 @@ function Invoke-ExecAddTenant {
         } else {
             # Create new tenant entry
             try {
-                # Get tenant information from Microsoft Graph
+                # Get tenant information from Microsoft Graph using bulk request
                 $headers = @{ Authorization = "Bearer $($request.body.accessToken)" }
-                $Organization = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/organization' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
-                $displayName = $Organization.displayName
-                $Domains = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
-                $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+
+                $BulkRequests = @(
+                    @{
+                        id     = 'organization'
+                        method = 'GET'
+                        url    = '/organization?$select=id,displayName'
+                    }
+                    @{
+                        id     = 'domains'
+                        method = 'GET'
+                        url    = '/domains?$top=999'
+                    }
+                )
+
+                $BulkBody = @{
+                    requests = $BulkRequests
+                } | ConvertTo-Json -Depth 10
+
+                $BulkResponse = Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/$batch' -Headers $headers -Method POST -Body $BulkBody -ContentType 'application/json' -ErrorAction Stop
+
+                # Parse bulk response
+                $OrgResponse = ($BulkResponse.responses | Where-Object { $_.id -eq 'organization' }).body.value
+                $DomainsResponse = ($BulkResponse.responses | Where-Object { $_.id -eq 'domains' }).body.value
+
+                $displayName = $OrgResponse.displayName
+                $defaultDomainName = ($DomainsResponse | Where-Object { $_.isDefault -eq $true }).id
+                $initialDomainName = ($DomainsResponse | Where-Object { $_.isInitial -eq $true }).id
             } catch {
                 Write-LogMessage -API 'Add-Tenant' -message "Failed to get information for tenant $tenantId - $($_.Exception.Message)" -Sev 'Critical'
                 throw "Failed to get information for tenant $tenantId. Make sure the tenant is properly authenticated."
@@ -64,8 +86,29 @@ function Invoke-ExecAddTenant {
 
             # Add tenant to table
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $NewTenant -Force | Out-Null
-            $Results = @{'message' = "Successfully added tenant $displayName ($defaultDomainName) to the tenant list with Direct Tenant status."; 'severity' = 'success' }
-            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'Add-Tenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
+            $Results = @{'message' = "Successfully added tenant $displayName ($defaultDomainName) to the tenant list with Direct Tenant status. Permission refresh queued, the tenant will be available shortly."; 'severity' = 'success' }
+            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'NewTenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
+
+            # Trigger CPV refresh to push remaining permissions to this specific tenant
+            try {
+                $Queue = New-CippQueueEntry -Name "Update Permissions - $displayName" -TotalTasks 1
+                $TenantBatch = @([PSCustomObject]@{
+                        defaultDomainName = $defaultDomainName
+                        customerId        = $tenantId
+                        displayName       = $displayName
+                        FunctionName      = 'UpdatePermissionsQueue'
+                        QueueId           = $Queue.RowKey
+                    })
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'UpdatePermissionsOrchestrator'
+                    Batch            = @($TenantBatch)
+                }
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                Write-Information "Started permissions update orchestrator for $displayName"
+            } catch {
+                Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"
+            }
+
         }
     } catch {
         $Results = @{'message' = "Failed to add tenant: $($_.Exception.Message)"; 'state' = 'error'; 'severity' = 'error' }

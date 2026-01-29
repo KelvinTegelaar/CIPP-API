@@ -37,7 +37,6 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableBasicAuthSMTP' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableBasicAuthSMTP'
@@ -54,8 +53,6 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is already disabled' -sev Info
         } else {
@@ -68,14 +65,26 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication. Error: $ErrorMessage" -sev Error
             }
 
-            # Disable SMTP Basic Authentication for all users
-            $SMTPusers | ForEach-Object {
-                try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $_.Guid; SmtpClientAuthenticationDisabled = $null } -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress)" -sev Info
-                } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress). Error: $ErrorMessage" -sev Error
+            # Disable SMTP Basic Authentication for all users using bulk request
+            if ($SMTPusers.Count -gt 0) {
+                $BulkRequest = foreach ($User in $SMTPusers) {
+                    @{
+                        CmdletInput = @{
+                            CmdletName = 'Set-CASMailbox'
+                            Parameters = @{ Identity = $User.Guid; SmtpClientAuthenticationDisabled = $null }
+                        }
+                    }
+                }
+                $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($BulkRequest) -useSystemMailbox $true
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-NormalizedError -Message $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($Result.target). Error: $ErrorMessage" -sev Error
+                    }
+                }
+                $SuccessCount = ($BatchResults | Where-Object { -not $_.error }).Count
+                if ($SuccessCount -gt 0) {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $SuccessCount users" -sev Info
                 }
             }
         }
