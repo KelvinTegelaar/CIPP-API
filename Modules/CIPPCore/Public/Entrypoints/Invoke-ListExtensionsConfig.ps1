@@ -10,7 +10,7 @@ function Invoke-ListExtensionsConfig {
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Config = (Get-CIPPAzDataTableEntity @Table).config
-        if (Test-Json -Json $Config) {
+        if (Test-Json -Json $Config -ErrorAction SilentlyContinue) {
             $Body = $Config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
             if ($Body.HaloPSA.TicketType -and !$Body.HaloPSA.TicketType.value) {
                 # translate ticket type to autocomplete format

@@ -36,7 +36,7 @@ function Invoke-CIPPStandardAppDeploy {
     Write-Information "Running AppDeploy standard for tenant $($Tenant)."
 
     $AppsToAdd = $Settings.appids -split ','
-    $AppExists = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant
+    $AppExists = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
     $Mode = $Settings.mode ?? 'copy'
 
     $ExpectedValue = [PSCustomObject]@{ state = 'Configured correctly' }
@@ -270,6 +270,13 @@ function Invoke-CIPPStandardAppDeploy {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to deploy template $TemplateId. Error: $ErrorMessage" -sev Error
                 }
             }
+        }
+
+        # Refresh service principals cache after remediation
+        try {
+            Set-CIPPDBCacheServicePrincipals -TenantFilter $Tenant
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh service principals cache after remediation: $($_.Exception.Message)" -sev Warning
         }
     }
 

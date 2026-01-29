@@ -27,6 +27,9 @@ function Search-CIPPDbData {
     .PARAMETER MaxResultsPerType
         Maximum number of results to return per type. Default is unlimited (0)
 
+    .PARAMETER Limit
+        Maximum total number of results to return across all types. Default is unlimited (0)
+
     .EXAMPLE
         Search-CIPPDbData -TenantFilter 'contoso.onmicrosoft.com' -SearchTerms 'john.doe' -Types 'Users', 'Groups'
 
@@ -63,7 +66,10 @@ function Search-CIPPDbData {
         [switch]$MatchAll,
 
         [Parameter(Mandatory = $false)]
-        [int]$MaxResultsPerType = 0
+        [int]$MaxResultsPerType = 0,
+
+        [Parameter(Mandatory = $false)]
+        [int]$Limit = 0
     )
 
     try {
@@ -91,9 +97,9 @@ function Search-CIPPDbData {
         }
 
         # Process each data type
-        foreach ($Type in $Types) {
+        :typeLoop foreach ($Type in $Types) {
             Write-Verbose "Searching type: $Type"
-            $TypeResults = [System.Collections.Generic.List[object]]::new()
+            $TypeResultCount = 0
 
             # Search across all tenants
             foreach ($Tenant in $TenantsToSearch) {
@@ -145,10 +151,18 @@ function Search-CIPPDbData {
                                         Timestamp = $Item.Timestamp
                                     }
                                     $Results.Add($ResultItem)
+                                    $TypeResultCount++
+
+                                    # Check total limit first
+                                    if ($Limit -gt 0 -and $Results.Count -ge $Limit) {
+                                        Write-Verbose "Reached total limit of $Limit results"
+                                        break typeLoop
+                                    }
 
                                     # Check max results per type
-                                    if ($MaxResultsPerType -gt 0 -and $Results.Count -ge $MaxResultsPerType) {
-                                        break
+                                    if ($MaxResultsPerType -gt 0 -and $TypeResultCount -ge $MaxResultsPerType) {
+                                        Write-Verbose "Reached max results per type ($MaxResultsPerType) for type '$Type'"
+                                        continue typeLoop
                                     }
                                 } catch {
                                     Write-Verbose "Failed to parse JSON for $($Item.RowKey): $($_.Exception.Message)"

@@ -35,7 +35,6 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -51,8 +50,6 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate third-party storage services restriction'
-
         # Check if service principal is already disabled
         if ($CurrentState.accountEnabled -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Third-party storage services are already restricted (service principal is disabled).' -sev Info
