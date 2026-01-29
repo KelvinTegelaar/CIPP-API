@@ -38,11 +38,8 @@ function Invoke-CIPPStandardEnableNamePronunciation {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Name Pronunciation. Error: $($ErrorMessage.NormalizedError)" -sev Error
         return
     }
-    Write-Host $CurrentState
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Name Pronunciation is already enabled.' -sev Info
         } else {

@@ -41,8 +41,6 @@ function Invoke-CIPPStandardEnablePronouns {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are already enabled.' -sev Info
         } else {

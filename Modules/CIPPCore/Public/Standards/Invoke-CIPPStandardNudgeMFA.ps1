@@ -32,7 +32,7 @@ function Invoke-CIPPStandardNudgeMFA {
     #>
 
     param($Tenant, $Settings)
-    Write-Host "NudgeMFA: $($Settings | ConvertTo-Json -Compress)"
+
     # Get state value using null-coalescing operator
     $State = $Settings.state.value ?? $Settings.state
 

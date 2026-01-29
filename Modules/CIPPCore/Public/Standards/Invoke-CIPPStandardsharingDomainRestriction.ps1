@@ -38,7 +38,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     $TestResult = Test-CIPPStandardLicense -StandardName 'sharingDomainRestriction' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -65,7 +64,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             ($mode -eq 'blockList' -and ([string[]]($CurrentBlockedDomains | Sort-Object) -join ',') -eq ([string[]]($SelectedDomains | Sort-Object) -join ','))
         )
     }
-    Write-Host "StateIsCorrect: $StateIsCorrect"
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -88,8 +86,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
                 Type     = 'PATCH'
                 body     = ($Body | ConvertTo-Json)
             }
-
-            Write-Host ($cmdParams | ConvertTo-Json -Depth 5)
 
             try {
                 $null = New-GraphPostRequest @cmdParams

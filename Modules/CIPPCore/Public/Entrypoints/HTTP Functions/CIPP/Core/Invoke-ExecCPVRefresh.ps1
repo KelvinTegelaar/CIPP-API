@@ -16,8 +16,10 @@ function Invoke-ExecCPVRefresh {
     return @{
         StatusCode = [System.Net.HttpStatusCode]::OK
         Body       = @{
-            Results    = 'CPV Refresh has been triggered'
-            InstanceId = $InstanceId
+            Results  = 'CPV Refresh has been triggered'
+            Metadata = @{
+                InstanceId = $InstanceId
+            }
         }
     }
 }
