@@ -1,4 +1,4 @@
-Function Invoke-ExecDnsConfig {
+function Invoke-ExecDnsConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,7 +13,6 @@ Function Invoke-ExecDnsConfig {
     $ValidResolvers = @(
         'Google'
         'Cloudflare'
-        'Quad9'
     )
 
 

@@ -34,7 +34,6 @@ function Invoke-CIPPStandardAutoArchiveMailbox {
     $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchiveMailbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     }
 
@@ -65,8 +64,6 @@ function Invoke-CIPPStandardAutoArchiveMailbox {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CorrectState) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Auto enable archive mailbox is already set to $StateValue." -Sev Info
         } else {

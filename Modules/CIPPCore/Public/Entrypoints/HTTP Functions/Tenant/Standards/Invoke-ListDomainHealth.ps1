@@ -16,7 +16,7 @@ function Invoke-ListDomainHealth {
         $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
         $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
 
-        $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+        $ValidResolvers = @('Google', 'CloudFlare')
         if ($ValidResolvers -contains $Config.Resolver) {
             $Resolver = $Config.Resolver
         } else {

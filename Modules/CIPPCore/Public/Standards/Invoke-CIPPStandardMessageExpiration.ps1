@@ -31,7 +31,6 @@ function Invoke-CIPPStandardMessageExpiration {
     $TestResult = Test-CIPPStandardLicense -StandardName 'MessageExpiration' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -44,7 +43,6 @@ function Invoke-CIPPStandardMessageExpiration {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($MessageExpiration -ne '12:00:00') {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportConfig' -cmdParams @{MessageExpiration = '12:00:00' }

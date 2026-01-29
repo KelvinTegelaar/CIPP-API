@@ -45,7 +45,6 @@ function Invoke-CIPPStandardDisableTenantCreation {
     $StateIsCorrect = ($CurrentState.defaultUserRolePermissions.allowedToCreateTenants -eq $false)
 
     if ($Settings.remediate -eq $true) {
-        Write-Host "Time to remediate DisableTenantCreation standard for tenant $Tenant"
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Users are already disabled from creating tenants.' -sev Info
         } else {

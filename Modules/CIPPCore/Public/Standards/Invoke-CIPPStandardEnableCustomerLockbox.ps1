@@ -36,7 +36,6 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableCustomerLockbox' -TenantFilter $Tenant -RequiredCapabilities @('CustomerLockbox')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -49,7 +48,6 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         try {
 
             if ($CustomerLockboxStatus) {

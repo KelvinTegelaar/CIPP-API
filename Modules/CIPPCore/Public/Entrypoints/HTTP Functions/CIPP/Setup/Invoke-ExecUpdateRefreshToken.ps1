@@ -21,27 +21,54 @@ function Invoke-ExecUpdateRefreshToken {
 
             if ($env:TenantID -eq $Request.body.tenantId) {
                 $Secret | Add-Member -MemberType NoteProperty -Name 'RefreshToken' -Value $Request.body.refreshtoken -Force
+                # Set environment variable to make it immediately available
+                Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
             } else {
                 Write-Host "$($env:TenantID) does not match $($Request.body.tenantId)"
                 $name = $Request.body.tenantId -replace '-', '_'
                 $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
+                # Set environment variable to make it immediately available
+                Set-Item -Path env:$name -Value $Request.body.refreshtoken -Force
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
             if ($env:TenantID -eq $Request.body.tenantId) {
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                # Set environment variable to make it immediately available
+                Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
+
+                # Trigger CPV refresh for partner tenant only
+                try {
+                    $Queue = New-CippQueueEntry -Name 'Update Permissions - Partner Tenant' -TotalTasks 1
+                    $TenantBatch = @([PSCustomObject]@{
+                            defaultDomainName = 'PartnerTenant'
+                            customerId        = $env:TenantID
+                            displayName       = '*Partner Tenant'
+                            FunctionName      = 'UpdatePermissionsQueue'
+                            QueueId           = $Queue.RowKey
+                        })
+                    $InputObject = [PSCustomObject]@{
+                        OrchestratorName = 'UpdatePermissionsOrchestrator'
+                        Batch            = @($TenantBatch)
+                    }
+                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                    Write-Information 'Started permissions update orchestrator for Partner Tenant'
+                } catch {
+                    Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"
+                }
             } else {
                 Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
                 $name = $Request.body.tenantId
                 try {
                     Set-CippKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                    # Set environment variable to make it immediately available
+                    Set-Item -Path env:$name -Value $Request.body.refreshtoken -Force
                 } catch {
                     Write-Host "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
                     throw $_
                 }
             }
         }
-        $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
 
         if ($request.body.tenantId -eq $env:TenantID) {
             $TenantName = 'your partner tenant'

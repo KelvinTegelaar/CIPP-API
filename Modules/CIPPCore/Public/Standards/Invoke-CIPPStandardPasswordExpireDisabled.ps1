@@ -49,19 +49,18 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     if ($Settings.remediate -eq $true) {
 
         if ($DomainsWithoutPassExpire) {
-            $DomainsWithoutPassExpire | ForEach-Object {
+            foreach ($Domain in $DomainsWithoutPassExpire) {
                 try {
-                    if ( $null -eq $_.passwordNotificationWindowInDays ) {
+                    if ( $null -eq $Domain.passwordNotificationWindowInDays ) {
                         $Body = '{"passwordValidityPeriodInDays": 2147483647, "passwordNotificationWindowInDays": 14 }'
-                        Write-Host "PasswordNotificationWindowInDays is null for $($_.id). Setting to the default of 14 days."
                     } else {
                         $Body = '{"passwordValidityPeriodInDays": 2147483647 }'
                     }
-                    New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/v1.0/domains/$($_.id)" -body $Body
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Password Expiration for $($_.id)." -sev Info
+                    New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/v1.0/domains/$($Domain.id)" -body $Body
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Password Expiration for $($Domain.id)." -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($_.id). Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($Domain.id). Error: $ErrorMessage" -sev Error
                 }
             }
         } else {

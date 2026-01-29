@@ -76,19 +76,19 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All permissions for Application Consent already assigned.' -sev Info
         } else {
             try {
-                $missingPermissions | ForEach-Object {
+                foreach ($Permission in $missingPermissions) {
                     $GraphParam = @{
                         tenantid    = $tenant
                         Uri         = "https://graph.microsoft.com/beta/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications"
                         Type        = 'POST'
                         Body        = @{
-                            permissionName = $_
+                            permissionName = $Permission
                             classification = 'low'
                         } | ConvertTo-Json
                         ContentType = 'application/json'
                     }
                     $null = New-GraphPostRequest @GraphParam
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $_ has been added to low Application Consent" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $Permission has been added to low Application Consent" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

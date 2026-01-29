@@ -63,7 +63,6 @@ function Invoke-CIPPStandardMailContacts {
                     { $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.TechContact) -ErrorAction SilentlyContinue }
                     { $Contacts.GeneralContact } { $body | Add-Member -NotePropertyName privacyProfile -NotePropertyValue @{contactEmail = $Contacts.GeneralContact } }
                 }
-                Write-Host (ConvertTo-Json -InputObject $body)
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/v1.0/organization/$($TenantID.id)" -asApp $true -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails set.' -sev Info
             } catch {

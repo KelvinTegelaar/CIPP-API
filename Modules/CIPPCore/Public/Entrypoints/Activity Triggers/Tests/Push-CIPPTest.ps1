@@ -17,7 +17,7 @@ function Push-CIPPTest {
 
         if (-not (Get-Command $FunctionName -ErrorAction SilentlyContinue)) {
             Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Test function not found: $FunctionName" -sev Error
-            return
+            return @{ testRun = $false }
         }
 
         Write-Information "Executing $FunctionName for $TenantFilter"
@@ -28,5 +28,6 @@ function Push-CIPPTest {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Failed to run test $TestId $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        return @{ testRun = $false }
     }
 }
