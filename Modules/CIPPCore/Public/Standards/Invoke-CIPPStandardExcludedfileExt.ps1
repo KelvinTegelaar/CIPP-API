@@ -34,7 +34,6 @@ function Invoke-CIPPStandardExcludedfileExt {
     $TestResult = Test-CIPPStandardLicense -StandardName 'ExcludedfileExt' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -56,16 +55,11 @@ function Invoke-CIPPStandardExcludedfileExt {
         }
     }
 
-    Write-Host "MissingExclusions: $($MissingExclusions)"
-
-
     if ($Settings.remediate -eq $true) {
 
         # If the number of extensions in the settings does not match the number of extensions in the current settings, we need to update the settings
         $MissingExclusions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclusions }
         if ($MissingExclusions) {
-            Write-Host "CurrentInfo.excludedFileExtensionsForSyncApp: $($CurrentInfo.excludedFileExtensionsForSyncApp)"
-            Write-Host "Exts: $($Exts)"
             try {
                 $body = ConvertTo-Json -InputObject @{ excludedFileExtensionsForSyncApp = @($Exts) }
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'

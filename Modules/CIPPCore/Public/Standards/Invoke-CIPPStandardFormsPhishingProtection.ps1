@@ -48,8 +48,6 @@ function Invoke-CIPPStandardFormsPhishingProtection {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate Forms phishing protection'
-
         # Check if phishing protection is already enabled
         if ($CurrentState -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Forms internal phishing protection is already enabled.' -sev Info

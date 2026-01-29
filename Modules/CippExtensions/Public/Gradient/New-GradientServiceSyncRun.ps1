@@ -27,8 +27,8 @@ function New-GradientServiceSyncRun {
     }
 
 
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-    $ConvertTable = Import-Csv ConversionTable.csv
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
+    $ConvertTable = Import-Csv Resources\ConversionTable.csv
     $Table = Get-CIPPTable -TableName cachelicenses
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable

@@ -59,7 +59,8 @@ Function Invoke-EditRoomMailbox {
     $CalendarProperties = @(
         'AllowConflicts', 'AllowRecurringMeetings', 'BookingWindowInDays',
         'MaximumDurationInMinutes', 'ProcessExternalMeetingMessages', 'EnforceCapacity',
-        'ForwardRequestsToDelegates', 'ScheduleOnlyDuringWorkHours ', 'AutomateProcessing'
+        'ForwardRequestsToDelegates', 'ScheduleOnlyDuringWorkHours ', 'AutomateProcessing',
+        'AddOrganizerToSubject', 'DeleteSubject', 'RemoveCanceledMeetings'
     )
 
     foreach ($prop in $CalendarProperties) {

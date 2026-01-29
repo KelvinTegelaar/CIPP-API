@@ -24,7 +24,7 @@ function Invoke-ListCommunityRepos {
 
     if (!$Request.Query.WriteAccess) {
         $CIPPRoot = (Get-Item (Get-Module -Name CIPPCore).ModuleBase).Parent.Parent.FullName
-        $CommunityRepos = Join-Path -Path $CIPPRoot -ChildPath 'CommunityRepos.json'
+        $CommunityRepos = Join-Path -Path $CIPPRoot -ChildPath 'Resources\CommunityRepos.json'
         $DefaultCommunityRepos = Get-Content -Path $CommunityRepos -Raw | ConvertFrom-Json
 
         $DefaultsMissing = $false

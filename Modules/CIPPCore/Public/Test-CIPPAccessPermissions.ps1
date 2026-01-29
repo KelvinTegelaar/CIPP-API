@@ -25,7 +25,6 @@ function Test-CIPPAccessPermissions {
     }
     $Success = $true
     try {
-        Set-Location (Get-Item $PSScriptRoot).FullName
         $null = Get-CIPPAuthentication
         $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
         if ($GraphToken) {

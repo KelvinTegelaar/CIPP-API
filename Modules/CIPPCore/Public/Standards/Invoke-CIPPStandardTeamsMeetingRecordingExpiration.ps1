@@ -36,7 +36,6 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
     # Input validation
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     $ExpirationDays = try { [int64]$Settings.ExpirationDays } catch { Write-Warning "Invalid ExpirationDays value provided: $($Settings.ExpirationDays)"; return }
@@ -56,7 +55,6 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
     $StateIsCorrect = if ($CurrentExpirationDays -eq $ExpirationDays) { $true } else { $false }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Teams Meeting Recording Expiration Policy already set to $ExpirationDays days." -sev Info
         } else {
