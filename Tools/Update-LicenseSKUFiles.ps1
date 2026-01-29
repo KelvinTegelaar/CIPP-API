@@ -54,5 +54,28 @@ foreach ($File in $LicenseJSONFiles) {
     Write-Host "Updated $($File.FullName) with new license SKU data." -ForegroundColor Green
 }
 
+# Sync ExcludeSkuList.JSON names with the authoritative license data
+Set-Location $PSScriptRoot
+$ExcludeSkuListPath = Join-Path $PSScriptRoot '..\Config\ExcludeSkuList.JSON'
+if (Test-Path $ExcludeSkuListPath) {
+    Write-Host 'Syncing ExcludeSkuList.JSON product names...' -ForegroundColor Yellow
+    $GuidToName = @{}
+    foreach ($license in $LicenseData) {
+        if (-not $GuidToName.ContainsKey($license.GUID)) {
+            $GuidToName[$license.GUID] = $license.Product_Display_Name
+        }
+    }
+    $ExcludeSkuList = Get-Content -Path $ExcludeSkuListPath -Encoding utf8 | ConvertFrom-Json
+    $updatedCount = 0
+    foreach ($entry in $ExcludeSkuList) {
+        if ($GuidToName.ContainsKey($entry.GUID) -and $entry.Product_Display_Name -cne $GuidToName[$entry.GUID]) {
+            $entry.Product_Display_Name = $GuidToName[$entry.GUID]
+            $updatedCount++
+        }
+    }
+    $ExcludeSkuList | ConvertTo-Json -Depth 100 | Set-Content -Path $ExcludeSkuListPath -Encoding utf8
+    Write-Host "Updated $updatedCount product names in ExcludeSkuList.JSON." -ForegroundColor Green
+}
+
 # Clean up the temporary license SKU CSV file
 Remove-Item -Path $TempLicenseDataFile -Force

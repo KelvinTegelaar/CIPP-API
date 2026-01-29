@@ -40,7 +40,7 @@ function Get-CIPPTimerFunctions {
     }
 
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
+    $CippTimers = Get-Content -Path $CIPPRoot\Resources\CIPPTimers.json
 
     if ($ListAllTasks) {
         $Orchestrators = $CippTimers | ConvertFrom-Json | Sort-Object -Property Priority

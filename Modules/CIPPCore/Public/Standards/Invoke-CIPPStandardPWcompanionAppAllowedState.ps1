@@ -54,8 +54,6 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     }
 
     If ($Settings.remediate -eq $true) {
-        Write-Host "Remediating PWcompanionAppAllowedState for tenant $Tenant to $WantedState"
-
         if ($AuthStateCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "companionAppAllowedState is already set to the desired state of $WantedState." -sev Info
         } else {

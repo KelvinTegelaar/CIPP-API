@@ -1,0 +1,10 @@
+{
+    "Name": "Barracuda Email Gateway Defense",
+    "_MxComment": "https://campus.barracuda.com/product/emailgatewaydefense/doc/167976430/step-2-configure-microsoft-365-for-inbound-and-outbound-mail",
+    "MxMatch": "ess(?<Country>.[a-z]{2})?.barracudanetworks.com",
+    "_SpfComment": "https://campus.barracuda.com/product/emailgatewaydefense/doc/167976840/sender-policy-framework-for-outbound-mail",
+    "SpfInclude": "spf.ess{0}.barracudanetworks.com",
+    "SpfReplace": ["Country"],
+    "_DkimComment": "No configuration found",
+    "Selectors": [""]
+}

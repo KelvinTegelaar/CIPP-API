@@ -35,7 +35,6 @@ function Invoke-CIPPStandardDeletedUserRentention {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DeletedUserRetention'
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -78,8 +77,6 @@ function Invoke-CIPPStandardDeletedUserRentention {
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $WantedState) { $true } else { $false }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($StateSetCorrectly -eq $false) {
             try {
                 $body = [PSCustomObject]@{
