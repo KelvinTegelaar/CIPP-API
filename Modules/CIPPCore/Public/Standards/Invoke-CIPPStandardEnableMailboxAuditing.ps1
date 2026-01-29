@@ -95,7 +95,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
         # Disable audit bypass for all mailboxes that have it enabled
 
-        $BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
+        #$BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
         $Request = foreach ($Mailbox in $BypassMailboxes) {
             @{
                 CmdletInput = @{
