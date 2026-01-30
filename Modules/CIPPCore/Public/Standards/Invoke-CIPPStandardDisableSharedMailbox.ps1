@@ -50,6 +50,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     }
 
     if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
         if ($SharedMailboxList.Count -gt 0) {
             $int = 0
             $BulkRequests = foreach ($Mailbox in $SharedMailboxList) {
@@ -73,6 +74,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
 
                     if ($result.status -eq 200 -or $result.status -eq 204) {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)) disabled." -sev Info
+                        $UpdateDB = $true
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)): $errorMsg" -sev Error
@@ -82,12 +84,14 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable shared mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
-            
-            # Refresh user cache after remediation
-            try {
-                Set-CIPPDBCacheUsers -TenantFilter $Tenant
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
+
+            # Refresh user cache after remediation only if changes were made
+            if ($UpdateDB) {
+                try {
+                    Set-CIPPDBCacheUsers -TenantFilter $Tenant
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
+                }
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All Entra accounts for shared mailboxes are already disabled.' -sev Info
