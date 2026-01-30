@@ -111,6 +111,7 @@ function Invoke-CIPPStandardAppDeploy {
     $CurrentValue = if ($MissingApps.Count -eq 0) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingApps' = $MissingApps } }
 
     if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
         if ($Mode -eq 'copy') {
             foreach ($App in $AppsToAdd) {
                 $App = $App.Trim()
@@ -121,6 +122,7 @@ function Invoke-CIPPStandardAppDeploy {
                 try {
                     New-CIPPApplicationCopy -App $App -Tenant $Tenant
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application $($Application.displayName) ($App) to $Tenant and updated it's permissions" -sev Info
+                    $UpdateDB = $true
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app $($Application.displayName) ($App). Error: $ErrorMessage" -sev Error
@@ -175,6 +177,7 @@ function Invoke-CIPPStandardAppDeploy {
                         if ($InstantiateResult.application.appId) {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully deployed Gallery Template $($TemplateData.AppName) to tenant $Tenant. Application ID: $($InstantiateResult.application.appId)" -sev Info
                             New-CIPPApplicationCopy -App $InstantiateResult.application.appId -Tenant $Tenant
+                            $UpdateDB = $true
                         } else {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Gallery Template deployment completed but application ID not returned for $($TemplateData.AppName) in tenant $Tenant" -sev Warning
                         }
@@ -243,6 +246,7 @@ function Invoke-CIPPStandardAppDeploy {
                                     Add-CIPPDelegatedPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $Tenant
                                     Add-CIPPApplicationPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $Tenant
                                 }
+                                $UpdateDB = $true
                             } else {
                                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Application Manifest deployment failed - no application ID returned for $($TemplateData.AppName) in tenant $Tenant" -sev Error
                             }
@@ -263,6 +267,7 @@ function Invoke-CIPPStandardAppDeploy {
                         Add-CIPPApplicationPermission -TemplateId $TemplateId -TenantFilter $Tenant
                         Add-CIPPDelegatedPermission -TemplateId $TemplateId -TenantFilter $Tenant
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application $($TemplateData.AppName) from Enterprise App template and updated its permissions" -sev Info
+                        $UpdateDB = $true
                     }
 
                 } catch {
@@ -272,11 +277,13 @@ function Invoke-CIPPStandardAppDeploy {
             }
         }
 
-        # Refresh service principals cache after remediation
-        try {
-            Set-CIPPDBCacheServicePrincipals -TenantFilter $Tenant
-        } catch {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh service principals cache after remediation: $($_.Exception.Message)" -sev Warning
+        # Refresh service principals cache after remediation only if changes were made
+        if ($UpdateDB) {
+            try {
+                Set-CIPPDBCacheServicePrincipals -TenantFilter $Tenant
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh service principals cache after remediation: $($_.Exception.Message)" -sev Warning
+            }
         }
     }
 

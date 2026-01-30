@@ -24,7 +24,7 @@ function Push-CIPPStandard {
     $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
-        exit 0
+        return
     } else {
         Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
