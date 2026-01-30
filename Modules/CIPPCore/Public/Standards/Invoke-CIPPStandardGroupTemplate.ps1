@@ -31,7 +31,7 @@ function Invoke-CIPPStandardGroupTemplate {
     #>
     param($Tenant, $Settings)
 
-    $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenant
+    $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,description,membershipRule' -tenantid $tenant
 
     $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
 
@@ -48,8 +48,6 @@ function Invoke-CIPPStandardGroupTemplate {
 
     if ($Settings.remediate -eq $true) {
         #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
-
-        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $GroupTemplates) {
             Write-Information "Processing template: $($Template.displayName)"
             try {

@@ -37,7 +37,6 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableExchangeOnlinePowerShell' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableExchangeOnlinePowerShell'
@@ -58,22 +57,21 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
         if ($PowerShellEnabledCount -gt 0) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started disabling Exchange Online PowerShell for $PowerShellEnabledCount users." -sev Info
 
-            $Request = $UsersWithPowerShell | ForEach-Object {
+            $Request = foreach ($User in $UsersWithPowerShell) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $_.Guid; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $User.Guid; RemotePowerShellEnabled = $false }
                     }
                 }
             }
 
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
             $SuccessCount = 0
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-Host "Failed to disable Exchange Online PowerShell for $($_.target). Error: $ErrorMessage"
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $($_.target). Error: $ErrorMessage" -sev Error
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $($Result.target). Error: $ErrorMessage" -sev Error
                 } else {
                     $SuccessCount++
                 }

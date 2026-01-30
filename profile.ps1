@@ -8,7 +8,6 @@ if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTAT
     $hasAppInsights = $true
 }
 if ($hasAppInsights) {
-    Set-Location -Path $PSScriptRoot
     $SwAppInsights = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $AppInsightsDllPath = Join-Path $PSScriptRoot 'Shared\AppInsights\Microsoft.ApplicationInsights.dll'
@@ -97,6 +96,7 @@ $CurrentVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'version_latest.tx
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
 $global:CippVersion = $CurrentVersion
+$ENV:CurrentVersion = $CurrentVersion
 
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
