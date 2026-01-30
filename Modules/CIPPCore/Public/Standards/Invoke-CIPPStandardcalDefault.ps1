@@ -50,6 +50,7 @@ function Invoke-CIPPStandardcalDefault {
     }
 
     if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
         try {
             # Get calendar permissions from cache - this contains the calendar Identity we need
             $CalendarPermissions = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CalendarPermissions'
@@ -89,6 +90,7 @@ function Invoke-CIPPStandardcalDefault {
                     }
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default calendar permission for $($Calendar.Identity) to $permissionLevel" -sev Debug
                     $SuccessCounter++
+                    $UpdateDB = $true
                 } catch {
                     $ErrorCounter++
                     $ErrorMessage = Get-CippException -Exception $_
@@ -98,11 +100,13 @@ function Invoke-CIPPStandardcalDefault {
 
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter calendars. $ErrorCounter failed." -sev Info
 
-            # Refresh calendar permissions cache after remediation
-            try {
-                Set-CIPPDBCacheMailboxes -TenantFilter $Tenant
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh mailbox cache after remediation: $($_.Exception.Message)" -sev Warning
+            # Refresh calendar permissions cache after remediation only if changes were made
+            if ($UpdateDB) {
+                try {
+                    Set-CIPPDBCacheMailboxes -TenantFilter $Tenant
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh mailbox cache after remediation: $($_.Exception.Message)" -sev Warning
+                }
             }
 
         } catch {

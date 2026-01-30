@@ -8,6 +8,7 @@ function Add-CIPPDelegatedPermission {
         $TenantFilter
     )
     Write-Host 'Adding Delegated Permissions'
+    Set-Location (Get-Item $PSScriptRoot).FullName
 
     if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
         #return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')

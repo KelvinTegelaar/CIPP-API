@@ -46,6 +46,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     }
 
     if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
         if (($IncorrectUsers | Measure-Object).Count -gt 0) {
             try {
                 foreach ($user in $IncorrectUsers) {
@@ -61,17 +62,20 @@ function Invoke-CIPPStandardUserPreferredLanguage {
                     }
                     $null = New-GraphPOSTRequest @cmdParams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Preferred language for $($user.userPrincipalName) has been set to $preferredLanguage" -sev Info
+                    $UpdateDB = $true
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set preferred language to $preferredLanguage for all users." -sev Error -LogData $ErrorMessage
             }
 
-            # Refresh user cache after remediation
-            try {
-                Set-CIPPDBCacheUsers -TenantFilter $Tenant
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
+            # Refresh user cache after remediation only if changes were made
+            if ($UpdateDB) {
+                try {
+                    Set-CIPPDBCacheUsers -TenantFilter $Tenant
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
+                }
             }
         }
     }
