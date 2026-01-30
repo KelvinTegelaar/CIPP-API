@@ -45,17 +45,12 @@ function Invoke-CIPPStandardDisableGuests {
 
     $checkDays = if ($Settings.days) { $Settings.days } else { 90 } # Default to 90 days if not set. Pre v8.5.0 compatibility
     $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
+    $Lookup = $Days.ToString('o')
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
     try {
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
-
-        $GraphRequest = $AllUsers | Where-Object {
-            $_.userType -eq 'Guest' -and
-            $_.accountEnabled -eq $true -and
-            ($null -ne $_.createdDateTime -and [DateTime]$_.createdDateTime -le $Days) -and
-            ($null -eq $_.signInActivity -or $null -eq $_.signInActivity.lastSuccessfulSignInDateTime -or [DateTime]$_.signInActivity.lastSuccessfulSignInDateTime -le $Days)
-        }
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
+            Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -99,13 +94,6 @@ function Invoke-CIPPStandardDisableGuests {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to process bulk disable guests request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-            }
-
-            # Refresh user cache after remediation
-            try {
-                Set-CIPPDBCacheUsers -TenantFilter $Tenant
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
