@@ -24,7 +24,7 @@
     }
 
     try {
-        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = 1000; ReleaseStatus = 'Requested' } -ErrorAction Stop | Select-Object -ExcludeProperty *data.type*
+        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = 1000; ReleaseStatus = 'Requested'; StartReceivedDate = (Get-Date).AddHours(-6) } -ErrorAction Stop | Select-Object -ExcludeProperty *data.type*
 
         if ($RequestedReleases) {
             # Get the CIPP URL for the Quarantine link
