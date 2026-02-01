@@ -11,15 +11,29 @@ function Get-CIPPAlertDefenderIncidents {
         $InputValue,
         $TenantFilter
     )
+
+    $IncidentSeverities = $InputValue.IncidentSeverities.value -as [System.Collections.Generic.List[string]]
     try {
-        $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/security/incidents?`$top=50&`$filter=status eq 'active'" -tenantid $TenantFilter | ForEach-Object {
+        $Incidents = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/security/incidents?`$top=50&`$filter=status eq 'active'" -tenantid $TenantFilter
+        $AlertData = foreach ($Incident in $Incidents) {
+            # Skip if severity doesn't match filter (unless "All" is selected or no filter)
+            if ($IncidentSeverities.Count -gt 0 -and 'All' -notin $IncidentSeverities) {
+                if ($Incident.severity -notin $IncidentSeverities) {
+                    continue
+                }
+            }
+
             [PSCustomObject]@{
-                IncidentID   = $_.id
-                CreatedAt    = $_.createdDateTime
-                Severity     = $_.severity
-                IncidentName = $_.displayName
-                IncidentUrl  = $_.incidentWebUrl
-                Tenant       = $TenantFilter
+                IncidentName   = $Incident.displayName
+                Severity       = $Incident.severity
+                Classification = $Incident.classification
+                Determination  = $Incident.determination
+                Summary        = $Incident.summary
+                AssignedTo     = $Incident.assignedTo
+                CreatedAt      = $Incident.createdDateTime
+                IncidentID     = $Incident.id
+                IncidentUrl    = $Incident.incidentWebUrl
+                Tenant         = $TenantFilter
             }
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
