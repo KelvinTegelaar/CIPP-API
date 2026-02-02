@@ -170,7 +170,8 @@ function Push-CIPPStandardsList {
 
                         # Remove if both unchanged
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
-x                            [void]$ComputedStandards.Remove($Key)
+                            Write-Host "NO INTUNE CHANGE: Filtering out $key for $($TenantFilter)"
+                            [void]$ComputedStandards.Remove($Key)
                         }
                     }
                 } catch {

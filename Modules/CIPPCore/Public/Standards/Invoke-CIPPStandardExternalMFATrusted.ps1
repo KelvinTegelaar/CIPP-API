@@ -52,8 +52,6 @@ function Invoke-CIPPStandardExternalMFATrusted {
     }
 
     if ($Settings.remediate -eq $true) {
-
-        Write-Host 'Remediate External MFA Trusted'
         if ($ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState ) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "External MFA Trusted is already $StateMessage." -sev Info
         } else {

@@ -24,12 +24,14 @@ function Set-CIPPNamedLocation {
                 $ActionDescription = "Adding location $Content to named location"
             }
             'removeIp' {
-                $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object -Property cidrAddress -NE $Content)
-                $ActionDescription = "Removing IP $Content from named location"
+                $IpsToRemove = @($Content)
+                $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object { $_.cidrAddress -notin $IpsToRemove })
+                $ActionDescription = "Removing IP(s) $($IpsToRemove -join ', ') from named location"
             }
             'removeLocation' {
-                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $Content })
-                $ActionDescription = "Removing location $Content from named location"
+                $LocationsToRemove = @($Content)
+                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -notin $LocationsToRemove })
+                $ActionDescription = "Removing location(s) $($LocationsToRemove -join ', ') from named location"
             }
             'rename' {
                 $NamedLocations.displayName = $Content

@@ -35,7 +35,6 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAddShortcutsToOneDrive'
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -77,8 +76,6 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($StateIsCorrect -eq $false) {
             try {
                 $CurrentState | Set-CIPPSPOTenant -Properties @{DisableAddToOneDrive = $WantedState }

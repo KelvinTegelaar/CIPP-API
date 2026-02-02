@@ -70,11 +70,11 @@ function Push-AuditLogTenantDownload {
             }
         } catch {
             Write-Information ('Audit Log search: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
-            exit 0
+            return $false
         }
 
     } catch {
         Write-Information ('Push-AuditLogTenant: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
-        exit 0
+        return $false
     }
 }

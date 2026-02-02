@@ -34,7 +34,6 @@ function Invoke-CIPPStandardDelegateSentItems {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DelegateSentItems' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
@@ -62,26 +61,22 @@ function Invoke-CIPPStandardDelegateSentItems {
         state = 'Configured correctly'
     }
 
-    Write-Host "Mailboxes: $($Mailboxes.Count)"
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($Mailboxes) {
             try {
-                $Request = $Mailboxes | ForEach-Object {
+                $Request = foreach ($Mailbox in $Mailboxes) {
                     @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
-                            Parameters = @{Identity = $_.UserPrincipalName ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
+                            Parameters = @{Identity = $Mailbox.UserPrincipalName ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
                         }
                     }
                 }
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request)
-                $BatchResults | ForEach-Object {
-                    if ($_.error) {
-                        $ErrorMessage = Get-CippException -Exception $_.error
-                        Write-Host "Failed to apply Delegate Sent Items Style to $($_.target) Error: $($ErrorMessage.NormalizedError)"
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Delegate Sent Items Style to $($_.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-CippException -Exception $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Delegate Sent Items Style to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     }
                 }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style applied for $($Mailboxes.Count - $BatchResults.Error.Count) mailboxes" -sev Info

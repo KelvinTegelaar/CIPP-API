@@ -36,6 +36,13 @@ function Invoke-CIPPStandardBranding {
     #>
 
     param($Tenant, $Settings)
+
+    $TestResult = Test-CIPPStandardLicense -StandardName 'Branding' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Branding'
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant

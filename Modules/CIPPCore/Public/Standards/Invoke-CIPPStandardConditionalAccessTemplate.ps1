@@ -39,10 +39,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
-        $settings.TemplateList | ForEach-Object {
-            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($_.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        foreach ($Template in $settings.TemplateList) {
+            Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Template.value)" -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
         }
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
