@@ -102,7 +102,25 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     if ($Settings.report -eq $true) {
         $StateIsCorrect = !(Compare-Object -ReferenceObject $ExpectedValues -DifferenceObject $CurrentValues -Property productName, productId, policyValue)
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSelfServiceLicenses' -CurrentValue $CurrentValues -ExpectedValue $ExpectedValues -TenantFilter $Tenant
+        $ExpectedValuesHash = @{}
+        foreach ($Item in $ExpectedValues) {
+            $ExpectedValuesHash[$Item.productName] = [PSCustomObject]@{
+                Id   = $Item.productId
+                Value = $Item.policyValue
+            }
+        }
+        $ExpectedValue = [PSCustomObject]$ExpectedValuesHash
+
+        $CurrentValuesHash = @{}
+        foreach ($Item in $CurrentValues) {
+            $CurrentValuesHash[$Item.productName] = [PSCustomObject]@{
+                Id   = $Item.productId
+                Value = $Item.policyValue
+            }
+        }
+        $CurrentValue = [PSCustomObject]$CurrentValuesHash
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSelfServiceLicenses' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableSelfServiceLicenses' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }
