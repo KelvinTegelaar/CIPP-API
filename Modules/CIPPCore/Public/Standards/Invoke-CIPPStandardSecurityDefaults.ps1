@@ -44,7 +44,6 @@ function Invoke-CIPPStandardSecurityDefaults {
 
         if ($SecureDefaultsState.IsEnabled -ne $true) {
             try {
-                Write-Host "Secure Defaults is disabled. Enabling for $tenant" -ForegroundColor Yellow
                 $body = '{ "isEnabled": true }'
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -ContentType 'application/json'
 

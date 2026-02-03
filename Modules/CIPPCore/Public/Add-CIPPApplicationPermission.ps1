@@ -9,9 +9,9 @@ function Add-CIPPApplicationPermission {
     if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
         $RequiredResourceAccess = 'CIPPDefaults'
     }
-    Set-Location (Get-Item $PSScriptRoot).FullName
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
 
+        Set-Location (Get-Item $PSScriptRoot).FullName
         $Permissions = Get-CippSamPermissions -NoDiff
         $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
 

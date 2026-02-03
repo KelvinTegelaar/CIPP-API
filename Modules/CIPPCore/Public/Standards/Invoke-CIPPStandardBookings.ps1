@@ -34,7 +34,6 @@ function Invoke-CIPPStandardBookings {
     $TestResult = Test-CIPPStandardLicense -StandardName 'Bookings' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Bookings'
@@ -72,7 +71,6 @@ function Invoke-CIPPStandardBookings {
         return
     }
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $false) {
             try {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ BookingsEnabled = $WantedState } -useSystemMailbox $true

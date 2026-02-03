@@ -412,6 +412,7 @@ function Push-ExecOnboardTenantQueue {
                 $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                 Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
                 Write-LogMessage -API 'Onboarding' -message "Tenant onboarding succeeded for $($Relationship.customer.displayName)" -Sev 'Info'
+                Write-LogMessage -API 'NewTenant' -message "New tenant onboarded: $($Relationship.customer.displayName) ($($Relationship.customer.id))" -Sev 'Info'
             } else {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'API Test failed: {0}' -f $ApiError })
                 $OnboardingSteps.Step5.Status = 'failed'

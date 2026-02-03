@@ -1155,13 +1155,13 @@ function Read-MXRecord {
     elseif ($Result.Status -ne 0 -or -not ($Result.Answer)) {
         if ($Result.Status -eq 3) {
             $ValidationFails.Add($NoMxValidation) | Out-Null
-            $MXResults.MailProvider = Get-Content "$PSScriptRoot\MailProviders\Null.json" | ConvertFrom-Json
+            $MXResults.MailProvider = Get-Content "$($MyInvocation.MyCommand.Module.ModuleBase)\MailProviders\Null.json" | ConvertFrom-Json
             $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
 
         else {
             $ValidationFails.Add($NoMxValidation) | Out-Null
-            $MXResults.MailProvider = Get-Content "$PSScriptRoot\MailProviders\Null.json" | ConvertFrom-Json
+            $MXResults.MailProvider = Get-Content "$($MyInvocation.MyCommand.Module.ModuleBase)\MailProviders\Null.json" | ConvertFrom-Json
             $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
         $MXRecords = $null
@@ -1183,17 +1183,17 @@ function Read-MXRecord {
         $MXRecords = $MXRecords | Sort-Object -Property Priority
 
         # Attempt to identify mail provider based on MX record
-        if (Test-Path "$PSScriptRoot\MailProviders") {
+        if (Test-Path "$($MyInvocation.MyCommand.Module.ModuleBase)\MailProviders") {
             $ReservedVariables = @{
                 'DomainNameDashNotation' = $Domain -replace '\.', '-'
             }
             if ($MXRecords.Hostname -eq '') {
                 $ValidationFails.Add($NoMxValidation) | Out-Null
-                $MXResults.MailProvider = Get-Content "$PSScriptRoot\MailProviders\Null.json" | ConvertFrom-Json
+                $MXResults.MailProvider = Get-Content "$($MyInvocation.MyCommand.Module.ModuleBase)\MailProviders\Null.json" | ConvertFrom-Json
             }
 
             else {
-                $ProviderList = Get-ChildItem "$PSScriptRoot\MailProviders" -Exclude '_template.json' | ForEach-Object {
+                $ProviderList = Get-ChildItem "$($MyInvocation.MyCommand.Module.ModuleBase)\MailProviders" -Exclude '_template.json' | ForEach-Object {
                     try { Get-Content $_ | ConvertFrom-Json -ErrorAction Stop }
                     catch { Write-Verbose $_.Exception.Message }
                 }
@@ -1345,7 +1345,7 @@ function Read-SpfRecord {
     Author: John Duprey
     #>
     [CmdletBinding(DefaultParameterSetName = 'Lookup')]
-    Param(
+    param(
         [Parameter(Mandatory = $true, ParameterSetName = 'Lookup')]
         [Parameter(ParameterSetName = 'Manual')]
         [string]$Domain,
@@ -1774,6 +1774,30 @@ function Read-SpfRecord {
             $ValidationPasses.Add('The SPF record ends with a hard fail qualifier (-all). This is best practice and will instruct recipients to discard unauthorized senders.') | Out-Null
         }
 
+        elseif ($AllMechanism -eq '~all') {
+            # Check DMARC policy for soft fail
+            $DmarcRejectPolicy = $false
+            try {
+                $DmarcPolicy = Read-DmarcPolicy -Domain $Domain -ErrorAction Stop
+                if ($DmarcPolicy.Policy -eq 'reject' -and ($DmarcPolicy.Percent -eq 100 -or $null -eq $DmarcPolicy.Percent)) {
+                    $DmarcRejectPolicy = $true
+                }
+            } catch {
+                Write-Verbose "Unable to read DMARC policy: $($_.Exception.Message)"
+            }
+
+            if ($DmarcRejectPolicy) {
+                $ValidationPasses.Add('The SPF record ends with a soft fail qualifier (~all). With DMARC p=reject at 100%, this is acceptable as DMARC will enforce rejection.') | Out-Null
+            } else {
+                $ValidationFails.Add('The SPF record should end in -all to prevent spamming.') | Out-Null
+                $Recommendations.Add([PSCustomObject]@{
+                        Message = "Replace '~all' with '-all' to make a SPF failure result in a hard fail."
+                        Match   = '~all'
+                        Replace = '-all'
+                    }) | Out-Null
+            }
+        }
+
         elseif ($Record -ne '') {
             $ValidationFails.Add('The SPF record should end in -all to prevent spamming.') | Out-Null
             $Recommendations.Add([PSCustomObject]@{
@@ -1865,7 +1889,7 @@ function Read-SpfRecord {
     # Output SpfResults object
     $SpfResults
 }
-#EndRegion './Public/Records/Read-SPFRecord.ps1' 553
+#EndRegion './Public/Records/Read-SPFRecord.ps1' 577
 #Region './Public/Records/Read-TlsRptRecord.ps1' -1
 
 function Read-TlsRptRecord {
@@ -2269,7 +2293,7 @@ function Resolve-DnsHttpsQuery {
     if (!$Results) { throw 'Exception querying resolver {0}: {1}' -f $Resolver.Resolver, $Exception.Exception.Message }
 
     if ($RecordType -eq 'txt' -and $Results.Answer) {
-        if ($Resolver -eq 'Cloudflare' -or $Resolver -eq 'Quad9') {
+        if ($Resolver -eq 'Cloudflare') {
             $Results.Answer | ForEach-Object {
                 $_.data = $_.data -replace '" "' -replace '"', ''
             }
@@ -2284,9 +2308,9 @@ function Resolve-DnsHttpsQuery {
 
 function Set-DnsResolver {
     [CmdletBinding(SupportsShouldProcess)]
-    Param(
+    param(
         [Parameter()]
-        [ValidateSet('Google', 'Cloudflare', 'Quad9')]
+        [ValidateSet('Google', 'Cloudflare')]
         [string]$Resolver = 'Google'
     )
 
@@ -2306,17 +2330,10 @@ function Set-DnsResolver {
                     QueryTemplate = '{0}?name={1}&type={2}'
                 }
             }
-            'Quad9' {
-                [PSCustomObject]@{
-                    Resolver      = $Resolver
-                    BaseUri       = 'https://dns.quad9.net:5053/dns-query'
-                    QueryTemplate = '{0}?name={1}&type={2}'
-                }
-            }
         }
     }
 }
-#EndRegion './Public/Resolver/Set-DnsResolver.ps1' 35
+#EndRegion './Public/Resolver/Set-DnsResolver.ps1' 28
 #Region './Public/Tests/Test-DNSSEC.ps1' -1
 
 function Test-DNSSEC {

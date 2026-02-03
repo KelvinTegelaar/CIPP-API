@@ -40,7 +40,6 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalFileSharing' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 

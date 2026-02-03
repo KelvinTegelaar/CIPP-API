@@ -87,7 +87,7 @@ function Invoke-ExecAddTenant {
             # Add tenant to table
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $NewTenant -Force | Out-Null
             $Results = @{'message' = "Successfully added tenant $displayName ($defaultDomainName) to the tenant list with Direct Tenant status. Permission refresh queued, the tenant will be available shortly."; 'severity' = 'success' }
-            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'Add-Tenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
+            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'NewTenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
 
             # Trigger CPV refresh to push remaining permissions to this specific tenant
             try {
