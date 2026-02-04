@@ -45,7 +45,6 @@ function Start-AuditLogSearchCreation {
             }
 
             if (!$TenantInConfig) {
-                Write-Information "Tenant $($Tenant.defaultDomainName) has no configured audit log rules, skipping search creation."
                 continue
             }
 
@@ -67,7 +66,7 @@ function Start-AuditLogSearchCreation {
                 SkipLog          = $true
             }
             Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-            Write-Information "Started Audit Log search creation orchestratorwith $($Batch.Count) tenants"
+            Write-Information "Started Audit Log search creation orchestrator with $($Batch.Count) tenants"
         } else {
             Write-Information 'No tenants found for Audit Log search creation'
         }

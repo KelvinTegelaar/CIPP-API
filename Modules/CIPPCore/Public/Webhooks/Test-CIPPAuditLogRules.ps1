@@ -8,97 +8,107 @@ function Test-CIPPAuditLogRules {
     )
 
     try {
-        # Helper function to map GUIDs and partner UPNs to user objects
+        # Pre-compiled regex patterns for GUID matching (performance optimization)
+        $script:StandardGuidRegex = [regex]'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        $script:PartnerUpnRegex = [regex]'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)'
+        $script:PartnerExchangeRegex = [regex]'([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})'
+
+        # Helper function to map GUIDs and partner UPNs to user objects (Optimized with hashtable lookups)
         function Add-CIPPGuidMappings {
             param(
                 [Parameter(Mandatory = $true)]
                 $DataObject,
                 [Parameter(Mandatory = $true)]
-                $Users,
+                $UserLookup,
                 [Parameter(Mandatory = $true)]
-                $Groups,
+                $GroupLookup,
                 [Parameter(Mandatory = $true)]
-                $Devices,
+                $DeviceLookup,
                 [Parameter(Mandatory = $true)]
-                $ServicePrincipals,
+                $ServicePrincipalLookup,
                 [Parameter(Mandatory = $true)]
-                $PartnerUsers,
+                $PartnerUserLookup,
                 [Parameter(Mandatory = $false)]
                 [string]$PropertyPrefix = ''
             )
 
             $DataObject.PSObject.Properties | ForEach-Object {
-                # Check for standard GUID format OR partner UPN formats
-                if ($_.Value -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' -or
-                    $_.Value -match 'user_[0-9a-f]{32}@[^@]+\.onmicrosoft\.com' -or
-                    $_.Value -match '[^\\]+\.onmicrosoft\.com\\tenant:\s*[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12},\s*object:\s*[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}') {
+                $propValue = $_.Value
 
-                    # Use regex from guid-resolver hook to match various partner user formats
-                    # Format 1: user_<objectid>@<tenant>.onmicrosoft.com
-                    if ($_.Value -match 'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)') {
-                        $hexId = $matches[1]
-                        $tenantDomain = $matches[2]
-                        if ($hexId.Length -eq 32) {
-                            # Convert the 32-character hex string to GUID format
-                            $guid = "$($hexId.Substring(0,8))-$($hexId.Substring(8,4))-$($hexId.Substring(12,4))-$($hexId.Substring(16,4))-$($hexId.Substring(20,12))"
-                            Write-Information "Found partner UPN format: $($_.Value) with GUID: $guid and tenant: $tenantDomain"
+                # Quick type check - skip if not string or empty
+                if ([string]::IsNullOrEmpty($propValue) -or $propValue -isnot [string]) {
+                    return
+                }
 
-                            # Check partner users for this GUID
-                            foreach ($PartnerUser in $PartnerUsers) {
-                                if ($PartnerUser.id -eq $guid) {
-                                    $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
-                                    Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
-                                    return
-                                }
-                            }
-                        }
-                    }
+                # Check for partner UPN format 1: user_<objectid>@<tenant>.onmicrosoft.com
+                $match = $script:PartnerUpnRegex.Match($propValue)
+                if ($match.Success) {
+                    $hexId = $match.Groups[1].Value
+                    $tenantDomain = $match.Groups[2].Value
+                    if ($hexId.Length -eq 32) {
+                        # Convert hex string to GUID format
+                        $guid = "$($hexId.Substring(0,8))-$($hexId.Substring(8,4))-$($hexId.Substring(12,4))-$($hexId.Substring(16,4))-$($hexId.Substring(20,12))"
+                        Write-Information "Found partner UPN format: $propValue with GUID: $guid and tenant: $tenantDomain"
 
-                    # Format 2: TenantName.onmicrosoft.com\tenant: <tenant-guid>, object: <object-guid>
-                    if ($_.Value -match '([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})') {
-                        $customerTenantDomain = $matches[1]
-                        $partnerTenantGuid = $matches[2]
-                        $objectGuid = $matches[3]
-                        Write-Information "Found partner exchange format: customer tenant $customerTenantDomain, partner tenant $partnerTenantGuid, object $objectGuid"
-
-                        # Check partner users for this object GUID
-                        foreach ($PartnerUser in $PartnerUsers) {
-                            if ($PartnerUser.id -eq $objectGuid) {
-                                $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
-                                Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
-                                return
-                            }
-                        }
-                    }
-
-                    # Check standard directory objects (users, groups, devices, service principals)
-                    foreach ($User in $Users) {
-                        if ($User.id -eq $_.Value) {
-                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $User.userPrincipalName -Force -ErrorAction SilentlyContinue
-                            Write-Information "Mapped User: $($User.userPrincipalName) to $PropertyPrefix$($_.Name)"
+                        # O(1) hashtable lookup instead of O(n) loop
+                        if ($PartnerUserLookup.ContainsKey($guid)) {
+                            $PartnerUser = $PartnerUserLookup[$guid]
+                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
+                            Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
                             return
                         }
                     }
-                    foreach ($Group in $Groups) {
-                        if ($Group.id -eq $_.Value) {
-                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Group -Force -ErrorAction SilentlyContinue
-                            Write-Information "Mapped Group: $($Group.displayName) to $PropertyPrefix$($_.Name)"
-                            return
-                        }
+                }
+
+                # Check for partner exchange format: TenantName.onmicrosoft.com\tenant: <tenant-guid>, object: <object-guid>
+                $match = $script:PartnerExchangeRegex.Match($propValue)
+                if ($match.Success) {
+                    $customerTenantDomain = $match.Groups[1].Value
+                    $partnerTenantGuid = $match.Groups[2].Value
+                    $objectGuid = $match.Groups[3].Value
+                    Write-Information "Found partner exchange format: customer tenant $customerTenantDomain, partner tenant $partnerTenantGuid, object $objectGuid"
+
+                    # O(1) hashtable lookup
+                    if ($PartnerUserLookup.ContainsKey($objectGuid)) {
+                        $PartnerUser = $PartnerUserLookup[$objectGuid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $PartnerUser.userPrincipalName -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Partner User UPN: $($PartnerUser.userPrincipalName) to $PropertyPrefix$($_.Name)"
+                        return
                     }
-                    foreach ($Device in $Devices) {
-                        if ($Device.id -eq $_.Value) {
-                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Device -Force -ErrorAction SilentlyContinue
-                            Write-Information "Mapped Device: $($Device.displayName) to $PropertyPrefix$($_.Name)"
-                            return
-                        }
+                }
+
+                # Check for standard GUID format
+                if ($script:StandardGuidRegex.IsMatch($propValue)) {
+                    $guid = $propValue
+
+                    # O(1) hashtable lookups in priority order
+                    if ($UserLookup.ContainsKey($guid)) {
+                        $User = $UserLookup[$guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $User.userPrincipalName -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped User: $($User.userPrincipalName) to $PropertyPrefix$($_.Name)"
+                        return
                     }
-                    foreach ($ServicePrincipal in $ServicePrincipals) {
-                        if ($ServicePrincipal.id -eq $_.Value -or $ServicePrincipal.appId -eq $_.Value) {
-                            $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $ServicePrincipal -Force -ErrorAction SilentlyContinue
-                            Write-Information "Mapped Service Principal: $($ServicePrincipal.displayName) to $PropertyPrefix$($_.Name)"
-                            return
-                        }
+
+                    if ($GroupLookup.ContainsKey($guid)) {
+                        $Group = $GroupLookup[$guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Group -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Group: $($Group.displayName) to $PropertyPrefix$($_.Name)"
+                        return
+                    }
+
+                    if ($DeviceLookup.ContainsKey($guid)) {
+                        $Device = $DeviceLookup[$guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $Device -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Device: $($Device.displayName) to $PropertyPrefix$($_.Name)"
+                        return
+                    }
+
+                    # ServicePrincipal indexed by both id and appId
+                    if ($ServicePrincipalLookup.ContainsKey($guid)) {
+                        $ServicePrincipal = $ServicePrincipalLookup[$guid]
+                        $DataObject | Add-Member -NotePropertyName "$PropertyPrefix$($_.Name)" -NotePropertyValue $ServicePrincipal -Force -ErrorAction SilentlyContinue
+                        Write-Information "Mapped Service Principal: $($ServicePrincipal.displayName) to $PropertyPrefix$($_.Name)"
+                        return
                     }
                 }
             }
@@ -151,7 +161,31 @@ function Test-CIPPAuditLogRules {
         $Table = Get-CIPPTable -tablename 'cacheauditloglookups'
         $1dayago = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         $Lookups = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$TenantFilter' and Timestamp gt datetime'$1dayago'"
-        if (!$Lookups) {
+
+        # Check if cached data needs refresh (wrong format or corrupted)
+        $NeedsRefresh = $false
+        if ($Lookups) {
+            try {
+                # Test if we can parse the cached data
+                $TestUser = ($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data
+                if (![string]::IsNullOrEmpty($TestUser)) {
+                    $ParsedTest = $TestUser | ConvertFrom-Json -ErrorAction Stop
+                    # Check if data is valid (either array for legacy or PSCustomObject for hashtable)
+                    if ($null -eq $ParsedTest) {
+                        Write-Warning 'Cached data is null after parsing, triggering refresh'
+                        $NeedsRefresh = $true
+                    }
+                } else {
+                    Write-Warning 'Cached data is empty, triggering refresh'
+                    $NeedsRefresh = $true
+                }
+            } catch {
+                Write-Warning "Error parsing cached data: $($_.Exception.Message), triggering refresh"
+                $NeedsRefresh = $true
+            }
+        }
+
+        if (!$Lookups -or $NeedsRefresh) {
             # Collect bulk data for users/groups/devices/applications
             $Requests = @(
                 @{
@@ -180,43 +214,144 @@ function Test-CIPPAuditLogRules {
             $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
             $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
             $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
-            # Cache the lookups for 1 day
+
+            # Build hashtables for O(1) GUID lookups
+            Write-Information "Building hashtable lookups for tenant $TenantFilter"
+            $UserLookup = @{}
+            foreach ($User in $Users) {
+                if (![string]::IsNullOrEmpty($User.id)) {
+                    $UserLookup[$User.id] = $User
+                }
+            }
+
+            $GroupLookup = @{}
+            foreach ($Group in $Groups) {
+                if (![string]::IsNullOrEmpty($Group.id)) {
+                    $GroupLookup[$Group.id] = $Group
+                }
+            }
+
+            $DeviceLookup = @{}
+            foreach ($Device in $Devices) {
+                if (![string]::IsNullOrEmpty($Device.id)) {
+                    $DeviceLookup[$Device.id] = $Device
+                }
+            }
+
+            $ServicePrincipalLookup = @{}
+            foreach ($SP in $ServicePrincipals) {
+                if (![string]::IsNullOrEmpty($SP.id)) {
+                    $ServicePrincipalLookup[$SP.id] = $SP
+                }
+                # Also index by appId for dual lookup capability
+                if (![string]::IsNullOrEmpty($SP.appId)) {
+                    $ServicePrincipalLookup[$SP.appId] = $SP
+                }
+            }
+            Write-Information "Built hashtables: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
+
+            # Cache the hashtable lookups for 1 day (storing as JSON)
             $Entities = @(
                 @{
                     PartitionKey = $TenantFilter
                     RowKey       = 'users'
-                    Data         = [string]($Users | ConvertTo-Json -Compress)
+                    Data         = [string]($UserLookup | ConvertTo-Json -Compress)
+                    Format       = 'hashtable'
                 }
                 @{
                     PartitionKey = $TenantFilter
                     RowKey       = 'groups'
-                    Data         = [string]($Groups | ConvertTo-Json -Compress)
+                    Data         = [string]($GroupLookup | ConvertTo-Json -Compress)
+                    Format       = 'hashtable'
                 }
                 @{
                     PartitionKey = $TenantFilter
                     RowKey       = 'devices'
-                    Data         = [string]($Devices | ConvertTo-Json -Compress)
+                    Data         = [string]($DeviceLookup | ConvertTo-Json -Compress)
+                    Format       = 'hashtable'
                 }
                 @{
                     PartitionKey = $TenantFilter
                     RowKey       = 'servicePrincipals'
-                    Data         = [string]($ServicePrincipals | ConvertTo-Json -Compress)
+                    Data         = [string]($ServicePrincipalLookup | ConvertTo-Json -Compress)
+                    Format       = 'hashtable'
                 }
             )
             # Save the cached lookups
             Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
-            Write-Information "Cached directory lookups for tenant $TenantFilter"
+            Write-Information "Cached directory hashtable lookups for tenant $TenantFilter"
         } else {
-            # Use cached lookups
-            $Users = (($Lookups | Where-Object { $_.RowKey -eq 'users' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-            $Groups = (($Lookups | Where-Object { $_.RowKey -eq 'groups' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-            $Devices = (($Lookups | Where-Object { $_.RowKey -eq 'devices' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-            $ServicePrincipals = (($Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }).Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-            Write-Information "Using cached directory lookups for tenant $TenantFilter"
+            # Use cached lookups - check if they're already hashtables or need conversion
+            $UsersLookup = $Lookups | Where-Object { $_.RowKey -eq 'users' }
+            $GroupsLookup = $Lookups | Where-Object { $_.RowKey -eq 'groups' }
+            $DevicesLookup = $Lookups | Where-Object { $_.RowKey -eq 'devices' }
+            $ServicePrincipalsLookup = $Lookups | Where-Object { $_.RowKey -eq 'servicePrincipals' }
+
+            # Check if cached data is already in hashtable format
+            $IsHashtableFormat = $UsersLookup.Format -eq 'hashtable'
+
+            if ($IsHashtableFormat) {
+                # Load pre-built hashtables directly from cache
+                Write-Information "Loading pre-built hashtable lookups from cache for tenant $TenantFilter"
+                $UserLookup = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                $GroupLookup = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                $DeviceLookup = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                $ServicePrincipalLookup = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                Write-Information "Loaded hashtables: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
+            } else {
+                # Old format (array) - convert to hashtables
+                Write-Information "Converting legacy array cache to hashtables for tenant $TenantFilter"
+                $Users = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+                $Groups = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+                $Devices = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+                $ServicePrincipals = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+
+                # Build hashtables
+                $UserLookup = @{}
+                foreach ($User in $Users) {
+                    if (![string]::IsNullOrEmpty($User.id)) {
+                        $UserLookup[$User.id] = $User
+                    }
+                }
+
+                $GroupLookup = @{}
+                foreach ($Group in $Groups) {
+                    if (![string]::IsNullOrEmpty($Group.id)) {
+                        $GroupLookup[$Group.id] = $Group
+                    }
+                }
+
+                $DeviceLookup = @{}
+                foreach ($Device in $Devices) {
+                    if (![string]::IsNullOrEmpty($Device.id)) {
+                        $DeviceLookup[$Device.id] = $Device
+                    }
+                }
+
+                $ServicePrincipalLookup = @{}
+                foreach ($SP in $ServicePrincipals) {
+                    if (![string]::IsNullOrEmpty($SP.id)) {
+                        $ServicePrincipalLookup[$SP.id] = $SP
+                    }
+                    if (![string]::IsNullOrEmpty($SP.appId)) {
+                        $ServicePrincipalLookup[$SP.appId] = $SP
+                    }
+                }
+                Write-Information "Built hashtables from legacy cache: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
+            }
         }
 
         # partner users
         $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
+
+        # Build partner user hashtable
+        $PartnerUserLookup = @{}
+        foreach ($PartnerUser in $PartnerUsers) {
+            if (![string]::IsNullOrEmpty($PartnerUser.id)) {
+                $PartnerUserLookup[$PartnerUser.id] = $PartnerUser
+            }
+        }
+        Write-Information "Built partner user hashtable: $($PartnerUserLookup.Count) partner users"
 
         Write-Warning '## Audit Log Configuration ##'
         Write-Information ($Configuration | ConvertTo-Json -Depth 10)
@@ -245,13 +380,13 @@ function Test-CIPPAuditLogRules {
                 $RootProperties = $AuditRecord
                 $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
                 try {
-                    # Attempt to locate GUIDs in $Data and match them with their corresponding user, group, device, or service principal recursively by checking each key/value once located lets store these mapped values in a CIPP$KeyName property
+                    # Attempt to locate GUIDs in $Data and match them with their corresponding user, group, device, or service principal using O(1) hashtable lookups
                     Write-Information 'Checking Data for GUIDs to map to users, groups, devices, or service principals'
-                    Add-CIPPGuidMappings -DataObject $Data -Users $Users -Groups $Groups -Devices $Devices -ServicePrincipals $ServicePrincipals -PartnerUsers $PartnerUsers -PropertyPrefix 'CIPP'
+                    Add-CIPPGuidMappings -DataObject $Data -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup -PropertyPrefix 'CIPP'
 
                     # Also check root properties for GUIDs and partner UPNs
                     Write-Information 'Checking RootProperties for GUIDs to map to users, groups, devices, or service principals'
-                    Add-CIPPGuidMappings -DataObject $RootProperties -Users $Users -Groups $Groups -Devices $Devices -ServicePrincipals $ServicePrincipals -PartnerUsers $PartnerUsers
+                    Add-CIPPGuidMappings -DataObject $RootProperties -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup
 
                     if ($Data.ExtendedProperties) {
                         $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress)
@@ -432,6 +567,7 @@ function Test-CIPPAuditLogRules {
                 try {
                     $ClauseStartTime = Get-Date
                     Write-Warning "Webhook: Processing clause: $($clause.clause)"
+                    Write-Information "Webhook: Available operations in data: $(($ProcessedData.Operation | Select-Object -Unique) -join ', ')"
                     $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
                     if ($ReturnedData) {
                         Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
