@@ -16,13 +16,21 @@ function Invoke-CippTestZTNA21801 {
 
         $PhishResistantMethods = @('passKeyDeviceBound', 'passKeyDeviceBoundAuthenticator', 'windowsHelloForBusiness')
 
-        $results = $UserRegistrationDetails | Where-Object {
-            $userId = $_.id
-            $matchingUser = $Users | Where-Object { $_.id -eq $userId -and $_.accountEnabled }
-            $matchingUser
-        } | ForEach-Object {
-            $regDetail = $_
-            $matchingUser = $Users | Where-Object { $_.id -eq $regDetail.id }
+        # Create hashtable for O(1) user lookup instead of O(n) Where-Object searches
+        $UserLookup = @{}
+        foreach ($user in $Users) {
+            if ($user.accountEnabled) {
+                $UserLookup[$user.id] = $user
+            }
+        }
+
+        $results = foreach ($regDetail in $UserRegistrationDetails) {
+            # Fast O(1) lookup instead of Where-Object
+            if (-not $UserLookup.ContainsKey($regDetail.id)) {
+                continue
+            }
+
+            $matchingUser = $UserLookup[$regDetail.id]
             $hasPhishResistant = $false
 
             if ($regDetail.methodsRegistered) {
@@ -42,11 +50,11 @@ function Invoke-CippTestZTNA21801 {
             }
         }
 
-        $totalUserCount = $results.Length
+        $totalUserCount = $results.Count
         $phishResistantUsers = $results | Where-Object { $_.phishResistantAuthMethod }
         $phishableUsers = $results | Where-Object { !$_.phishResistantAuthMethod }
 
-        $phishResistantUserCount = $phishResistantUsers.Length
+        $phishResistantUserCount = $phishResistantUsers.Count
 
         $passed = $totalUserCount -eq $phishResistantUserCount
 
@@ -64,24 +72,42 @@ function Invoke-CippTestZTNA21801 {
             $mdInfo = "Found users that have not registered phishing resistant authentication methods.`n`n"
         }
 
+        # Limit output to prevent performance issues with large user sets
+        $maxUsersToDisplay = 500
+
         $mdInfo = $mdInfo + "| User | Last sign in | Phishing resistant method registered |`n"
         $mdInfo = $mdInfo + "| :--- | :--- | :---: |`n"
 
         $userLinkFormat = 'https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/UserAuthMethods/userId/{0}/hidePreviewBanner~/true'
 
-        $mdLines = @($phishableUsers | Sort-Object displayName | ForEach-Object {
+        # Show phishable users first (up to limit)
+        $phishableUsersToShow = $phishableUsers | Sort-Object displayName | Select-Object -First $maxUsersToDisplay
+        $mdLines = @($phishableUsersToShow | ForEach-Object {
                 $userLink = $userLinkFormat -f $_.id
                 $lastSignInDate = if ($_.lastSuccessfulSignInDateTime) { (Get-Date $_.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
                 "|[$($_.displayName)]($userLink)| $lastSignInDate | ❌ |`n"
             })
         $mdInfo = $mdInfo + ($mdLines -join '')
 
-        $mdLines = @($phishResistantUsers | Sort-Object displayName | ForEach-Object {
-                $userLink = $userLinkFormat -f $_.id
-                $lastSignInDate = if ($_.lastSuccessfulSignInDateTime) { (Get-Date $_.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
-                "|[$($_.displayName)]($userLink)| $lastSignInDate | ✅ |`n"
-            })
-        $mdInfo = $mdInfo + ($mdLines -join '')
+        if ($phishableUsers.Count -gt $maxUsersToDisplay) {
+            $mdInfo = $mdInfo + "|... and $($phishableUsers.Count - $maxUsersToDisplay) more users without phish-resistant methods|||`n"
+        }
+
+        # Show phish-resistant users (up to remaining limit)
+        $remainingSlots = $maxUsersToDisplay - [Math]::Min($phishableUsers.Count, $maxUsersToDisplay)
+        if ($remainingSlots -gt 0) {
+            $phishResistantUsersToShow = $phishResistantUsers | Sort-Object displayName | Select-Object -First $remainingSlots
+            $mdLines = @($phishResistantUsersToShow | ForEach-Object {
+                    $userLink = $userLinkFormat -f $_.id
+                    $lastSignInDate = if ($_.lastSuccessfulSignInDateTime) { (Get-Date $_.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
+                    "|[$($_.displayName)]($userLink)| $lastSignInDate | ✅ |`n"
+                })
+            $mdInfo = $mdInfo + ($mdLines -join '')
+
+            if ($phishResistantUsers.Count -gt $remainingSlots) {
+                $mdInfo = $mdInfo + "|... and $($phishResistantUsers.Count - $remainingSlots) more users with phish-resistant methods|||`n"
+            }
+        }
 
         $testResultMarkdown = $testResultMarkdown -replace '%TestResult%', $mdInfo
 

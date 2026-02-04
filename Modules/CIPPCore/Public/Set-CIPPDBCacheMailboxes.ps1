@@ -24,11 +24,11 @@ function Set-CIPPDBCacheMailboxes {
             Select    = $Select
         }
         # Use Generic List for better memory efficiency with large datasets
-        $MailboxList = [System.Collections.Generic.List[PSObject]]::new()
+        $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
         $RawMailboxes = New-ExoRequest @ExoRequest
 
         foreach ($Mailbox in $RawMailboxes) {
-            $MailboxList.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+            $Mailboxes.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
                     @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
