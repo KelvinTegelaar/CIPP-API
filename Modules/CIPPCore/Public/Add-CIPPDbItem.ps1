@@ -41,6 +41,7 @@ function Add-CIPPDbItem {
 
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [Alias('Data')]
+        [AllowNull()]
         [AllowEmptyCollection()]
         $InputObject,
 
