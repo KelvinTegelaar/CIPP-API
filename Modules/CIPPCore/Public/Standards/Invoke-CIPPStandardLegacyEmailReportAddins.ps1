@@ -31,6 +31,8 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
 
     param($Tenant, $Settings)
 
+    #Deprecated, immmediate return
+    return $true
     # Define the legacy add-ins to remove
     $LegacyAddins = @(
         @{
