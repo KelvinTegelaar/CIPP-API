@@ -34,10 +34,8 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
 
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsFederationConfiguration' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsFederationConfiguration'
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -144,11 +142,19 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'FederationConfiguration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect -eq $true) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState | Select-Object AllowTeamsConsumer, AllowFederatedUsers, AllowedDomains, BlockedDomains
+
+        $CurrentValue = @{
+            AllowTeamsConsumer  = $CurrentState.AllowTeamsConsumer
+            AllowFederatedUsers = $CurrentState.AllowFederatedUsers
+            AllowedDomains      = if ($CurrentAllowedDomains.GetType().Name -eq 'Deserialized.Microsoft.Rtc.Management.WritableConfig.Settings.Edge.AllowAllKnownDomains') { $CurrentAllowedDomains.ToString() } else { $CurrentAllowedDomains }
+            BlockedDomains      = $CurrentState.BlockedDomains
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsFederationConfiguration' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            AllowTeamsConsumer  = $Settings.AllowTeamsConsumer
+            AllowFederatedUsers = $AllowFederatedUsers
+            AllowedDomains      = $AllowedDomains
+            BlockedDomains      = $BlockedDomains
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsFederationConfiguration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

@@ -13,15 +13,15 @@ function Set-CIPPDBCacheMFAState {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching MFA state' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching MFA state' -sev Debug
 
         $MFAState = Get-CIPPMFAState -TenantFilter $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MFAState' -Data @($MFAState)
-        $MFAState = $null
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MFAState' -Data @($MFAState) -Count
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached MFA state successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($MFAState.Count) MFA state records successfully" -sev Debug
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache MFA state: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache MFA state: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
 }

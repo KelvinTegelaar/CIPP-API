@@ -13,7 +13,7 @@ function Set-CIPPDBCacheRoles {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching directory roles' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching directory roles' -sev Debug
 
         $Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directoryRoles' -tenantid $TenantFilter
 
@@ -29,7 +29,7 @@ function Set-CIPPDBCacheRoles {
         }
 
         if ($MemberRequests) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching role members' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching role members' -sev Debug
             $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
 
             # Add members to each role object
@@ -55,7 +55,7 @@ function Set-CIPPDBCacheRoles {
             $Roles = $null
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory roles successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory roles successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache directory roles: $($_.Exception.Message)" -sev Error

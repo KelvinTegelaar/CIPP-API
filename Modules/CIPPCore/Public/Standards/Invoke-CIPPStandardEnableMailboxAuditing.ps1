@@ -42,10 +42,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableMailboxAuditing' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableMailboxAuditing'
 
     try {
         $AuditState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AuditDisabled
@@ -97,22 +95,21 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
         # Disable audit bypass for all mailboxes that have it enabled
 
-        $BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
-        $Request = $BypassMailboxes | ForEach-Object {
+        #$BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
+        $Request = foreach ($Mailbox in $BypassMailboxes) {
             @{
                 CmdletInput = @{
                     CmdletName = 'Set-MailboxAuditBypassAssociation'
-                    Parameters = @{Identity = $_.Guid; AuditBypassEnabled = $false }
+                    Parameters = @{Identity = $Mailbox.Guid; AuditBypassEnabled = $false }
                 }
             }
         }
 
         $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-        $BatchResults | ForEach-Object {
-            if ($_.error) {
-                $ErrorMessage = Get-NormalizedError -Message $_.error
-                Write-Host "Failed to disable mailbox audit bypass for $($_.target). Error: $ErrorMessage"
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($_.target). Error: $ErrorMessage" -sev Error
+        foreach ($Result in $BatchResults) {
+            if ($Result.error) {
+                $ErrorMessage = Get-NormalizedError -Message $Result.error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($Result.target). Error: $ErrorMessage" -sev Error
             }
         }
 
@@ -142,7 +139,15 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     if ($Settings.report -eq $true) {
         $AuditState = -not $AuditState
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -FieldValue $AuditState -Tenant $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableMailboxAuditing = $AuditState
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableMailboxAuditing = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue $AuditState -StoreAs bool -Tenant $Tenant
     }
 

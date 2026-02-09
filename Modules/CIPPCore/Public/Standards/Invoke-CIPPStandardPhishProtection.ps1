@@ -33,7 +33,12 @@ function Invoke-CIPPStandardPhishProtection {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
+
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishProtection' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
@@ -75,11 +80,9 @@ function Invoke-CIPPStandardPhishProtection {
                 }
             }
             if ($currentBody -like "*$CSS*") {
-                Write-Host 'Logon Screen Phishing Protection system already active'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Logon Screen Phishing Protection system already active' -sev Info
             } else {
                 $currentBody = $currentBody + $CSS
-                Write-Host 'Creating Logon Screen Phishing Protection System'
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -ContentType 'text/css' -asApp $true -Type PUT -Body $currentBody
 
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Logon Screen Phishing Protection system' -sev Info
@@ -100,7 +103,13 @@ function Invoke-CIPPStandardPhishProtection {
     }
     if ($Settings.report -eq $true) {
         if ($currentBody -like "*$CSS*") { $authState = $true } else { $authState = $false }
+        $CurrentValue = @{
+            PhishingCSSEnabled = $authState
+        }
+        $ExpectedValue = @{
+            PhishingCSSEnabled = $true
+        }
         Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authState -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -FieldValue $authState -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

@@ -27,21 +27,17 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-
     param ($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GlobalQuarantineNotifications'
     $TestResult = Test-CIPPStandardLicense -StandardName 'GlobalQuarantineNotifications' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' } |
-        Select-Object -ExcludeProperty '*data.type'
-    }
-    catch {
+            Select-Object -ExcludeProperty '*data.type'
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the GlobalQuarantineNotifications state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -71,8 +67,6 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are already set to the desired value of $WantedState" -sev Info
         } else {
@@ -102,8 +96,15 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
 
     if ($Settings.report -eq $true) {
         $notificationInterval = @{ NotificationInterval = "$(($CurrentState.EndUserSpamNotificationFrequency).TotalHours) hours" }
-        $ReportState = $CurrentState.EndUserSpamNotificationFrequency -eq $WantedState ? $true : $notificationInterval
-        Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineNotifications' -FieldValue $ReportState -Tenant $Tenant
+
+        $CurrentValue = @{
+            EndUserSpamNotificationFrequency = $CurrentState.EndUserSpamNotificationFrequency
+        }
+        $ExpectedValue = @{
+            EndUserSpamNotificationFrequency = $WantedState
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineNotifications' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $Tenant
     }
 }

@@ -4,52 +4,16 @@
     "Product_Display_Name": "Business Apps (free)"
   },
   {
-    "GUID": "90d8b3f8-712e-4f7b-aa1e-62e7ae6cbe96",
-    "Product_Display_Name": "Business Apps (free)"
-  },
-  {
     "GUID": "f30db892-07e9-47e9-837c-80727f46fd3d",
-    "Product_Display_Name": "MICROSOFT FLOW FREE"
-  },
-  {
-    "GUID": "f30db892-07e9-47e9-837c-80727f46fd3d",
-    "Product_Display_Name": "MICROSOFT FLOW FREE"
-  },
-  {
-    "GUID": "f30db892-07e9-47e9-837c-80727f46fd3d",
-    "Product_Display_Name": "MICROSOFT FLOW FREE"
+    "Product_Display_Name": "Microsoft Power Automate Free"
   },
   {
     "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
-  },
-  {
-    "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
-  },
-  {
-    "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
-  },
-  {
-    "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
-  },
-  {
-    "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
-  },
-  {
-    "GUID": "16ddbbfc-09ea-4de2-b1d7-312db6112d70",
-    "Product_Display_Name": "MICROSOFT TEAMS (FREE)"
+    "Product_Display_Name": "Microsoft Teams (Free)"
   },
   {
     "GUID": "a403ebcc-fae0-4ca2-8c8c-7a907fd6c235",
-    "Product_Display_Name": "Power BI (free)"
-  },
-  {
-    "GUID": "a403ebcc-fae0-4ca2-8c8c-7a907fd6c235",
-    "Product_Display_Name": "Power BI (free)"
+    "Product_Display_Name": "Microsoft Fabric (Free)"
   },
   {
     "GUID": "61e6bd70-fbdb-4deb-82ea-912842f39431",
@@ -60,32 +24,8 @@
     "Product_Display_Name": "Dynamics 365 Customer Voice Trial"
   },
   {
-    "GUID": "bc946dac-7877-4271-b2f7-99d2db13cd2c",
-    "Product_Display_Name": "Dynamics 365 Customer Voice Trial"
-  },
-  {
-    "GUID": "bc946dac-7877-4271-b2f7-99d2db13cd2c",
-    "Product_Display_Name": "Dynamics 365 Customer Voice Trial"
-  },
-  {
-    "GUID": "bc946dac-7877-4271-b2f7-99d2db13cd2c",
-    "Product_Display_Name": "Dynamics 365 Customer Voice Trial"
-  },
-  {
-    "GUID": "bc946dac-7877-4271-b2f7-99d2db13cd2c",
-    "Product_Display_Name": "Dynamics 365 Customer Voice Trial"
-  },
-  {
     "GUID": "338148b6-1b11-4102-afb9-f92b6cdc0f8d",
-    "Product_Display_Name": "DYNAMICS 365 P1 TRIAL FOR INFORMATION WORKERS"
-  },
-  {
-    "GUID": "338148b6-1b11-4102-afb9-f92b6cdc0f8d",
-    "Product_Display_Name": "DYNAMICS 365 P1 TRIAL FOR INFORMATION WORKERS"
-  },
-  {
-    "GUID": "fcecd1f9-a91e-488d-a918-a96cdb6ce2b0",
-    "Product_Display_Name": "Microsoft Dynamics AX7 User Trial"
+    "Product_Display_Name": "Dynamics 365 P1 Tria for Information Workers"
   },
   {
     "GUID": "fcecd1f9-a91e-488d-a918-a96cdb6ce2b0",
@@ -96,91 +36,67 @@
     "Product_Display_Name": "Microsoft Power Apps Plan 2 Trial"
   },
   {
-    "GUID": "dcb1a3ae-b33f-4487-846a-a640262fadf4",
-    "Product_Display_Name": "Microsoft Power Apps Plan 2 Trial"
-  },
-  {
-    "GUID": "dcb1a3ae-b33f-4487-846a-a640262fadf4",
-    "Product_Display_Name": "Microsoft Power Apps Plan 2 Trial"
-  },
-  {
-    "GUID": "dcb1a3ae-b33f-4487-846a-a640262fadf4",
-    "Product_Display_Name": "Microsoft Power Apps Plan 2 Trial"
-  },
-  {
-    "GUID": "dcb1a3ae-b33f-4487-846a-a640262fadf4",
-    "Product_Display_Name": "Microsoft Power Apps Plan 2 Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
-    "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
-    "Product_Display_Name": "Microsoft Teams Trial"
-  },
-  {
     "GUID": "74fbf1bb-47c6-4796-9623-77dc7371723b",
     "Product_Display_Name": "Microsoft Teams Trial"
   },
   {
     "GUID": "606b54a9-78d8-4298-ad8b-df6ef4481c80",
-    "Product_Display_Name": "Power Virtual Agents Viral Trial"
-  },
-  {
-    "GUID": "606b54a9-78d8-4298-ad8b-df6ef4481c80",
-    "Product_Display_Name": "Power Virtual Agents Viral Trial"
-  },
-  {
-    "GUID": "606b54a9-78d8-4298-ad8b-df6ef4481c80",
-    "Product_Display_Name": "Power Virtual Agents Viral Trial"
+    "Product_Display_Name": "Microsoft Copilot Studio Viral Trial"
   },
   {
     "GUID": "1f2f344a-700d-42c9-9427-5cea1d5d7ba6",
-    "Product_Display_Name": "MICROSOFT STREAM"
-  },
-  {
-    "GUID": "1f2f344a-700d-42c9-9427-5cea1d5d7ba6",
-    "Product_Display_Name": "MICROSOFT STREAM"
+    "Product_Display_Name": "Microsoft Stream"
   },
   {
     "GUID": "6470687e-a428-4b7a-bef2-8a291ad947c9",
-    "Product_Display_Name": "WINDOWS STORE FOR BUSINESS"
-  },
-  {
-    "GUID": "6470687e-a428-4b7a-bef2-8a291ad947c9",
-    "Product_Display_Name": "WINDOWS STORE FOR BUSINESS"
+    "Product_Display_Name": "Windows Store for Business"
   },
   {
     "GUID": "710779e8-3d4a-4c88-adb9-386c958d1fdf",
-    "Product_Display_Name": "MICROSOFT TEAMS EXPLORATORY"
+    "Product_Display_Name": "Microsoft Teams Exploratory"
+  },
+  {
+    "GUID": "8c4ce438-32a7-4ac5-91a6-e22ae08d9c8b",
+    "Product_Display_Name": "Rights Management Adhoc"
+  },
+  {
+    "GUID": "5b631642-bd26-49fe-bd20-1daaa972ef80",
+    "Product_Display_Name": "Microsoft Power Apps for Developer"
+  },
+  {
+    "GUID": "6a4a1628-9b9a-424d-bed5-4118f0ede3fd",
+    "Product_Display_Name": "Dynamics 365 Business Central for IWs"
+  },
+  {
+    "GUID": "6ec92958-3cc1-49db-95bd-bc6b3798df71",
+    "Product_Display_Name": "Dynamics 365 Sales Premium Viral Trial"
+  },
+  {
+    "GUID": "3f9f06f5-3c31-472c-985f-62d9c10ec167",
+    "Product_Display_Name": "Power Pages vTrial for Makers"
+  },
+  {
+    "GUID": "9c7bff7a-3715-4da7-88d3-07f57f8d0fb6",
+    "Product_Display_Name": "Dynamics 365 For Sales Professional Trial"
+  },
+  {
+    "GUID": "8f0c5670-4e56-4892-b06d-91c085d7004f",
+    "Product_Display_Name": "App Connect IW"
+  },
+  {
+    "GUID": "87bbbc60-4754-4998-8c88-227dca264858",
+    "Product_Display_Name": "Power Apps and Logic Flows"
+  },
+  {
+    "GUID": "e5788282-6381-469f-84f0-3d7d4021d34d",
+    "Product_Display_Name": "Office 365 Extra File Storage for GCC"
+  },
+  {
+    "GUID": "99049c9c-6011-4908-bf17-15f496e6519d",
+    "Product_Display_Name": "Office 365 Extra File Storage"
+  },
+  {
+    "GUID": "47794cd0-f0e5-45c5-9033-2eb6b5fc84e0",
+    "Product_Display_Name": "Communications Credits"
   }
 ]

@@ -11,8 +11,35 @@ Function Invoke-ListCalendarPermissions {
     $APIName = $Request.Params.CIPPEndpoint
     $UserID = $Request.Query.UserID
     $TenantFilter = $Request.Query.tenantFilter
+    $UseReportDB = $Request.Query.UseReportDB
+    $ByUser = $Request.Query.ByUser
 
     try {
+        # If UseReportDB is specified and no specific UserID, retrieve from report database
+        if ($UseReportDB -eq 'true' -and -not $UserID) {
+
+            # Call the report function with proper parameters
+            $ReportParams = @{
+                TenantFilter = $TenantFilter
+            }
+            if ($ByUser -eq 'true') {
+                $ReportParams.ByUser = $true
+            }
+            try {
+                $GraphRequest = Get-CIPPCalendarPermissionReport @ReportParams
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
+        # Original live query logic for specific user
         $GetCalParam = @{Identity = $UserID; FolderScope = 'Calendar' }
         $CalendarFolder = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -anchor $UserID -cmdParams $GetCalParam | Select-Object -First 1 -ExcludeProperty *data.type*
         $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }

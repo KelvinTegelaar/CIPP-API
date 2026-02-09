@@ -32,7 +32,6 @@ function Invoke-CIPPStandardEXODirectSend {
 
     param ($Tenant, $Settings)
 
-
     # Determine desired state. These double negative MS loves are a bit confusing
     $DesiredStateName = $Settings.state.value ?? $Settings.state
     # Input validation
@@ -55,8 +54,6 @@ function Invoke-CIPPStandardEXODirectSend {
 
     # Remediate if needed
     if ($Settings.remediate -eq $true) {
-
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Direct Send is already set to $DesiredStateName." -sev Info
         } else {
@@ -87,10 +84,10 @@ function Invoke-CIPPStandardEXODirectSend {
     if ($Settings.report -eq $true) {
         $ExpectedState = @{
             RejectDirectSend = $DesiredState
-        } | ConvertTo-Json -Depth 10 -Compress
+        }
         $CurrentState = @{
             RejectDirectSend = $CurrentConfig
-        } | ConvertTo-Json -Depth 10 -Compress
+        }
         Set-CIPPStandardsCompareField -FieldName 'standards.EXODirectSend' -CurrentValue $CurrentState -ExpectedValue $ExpectedState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'EXODirectSend' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }

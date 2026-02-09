@@ -36,7 +36,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
     # Get current secure score controls
     try {
-        $CurrentControls = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/secureScoreControlProfiles' -tenantid $Tenant
+        $CurrentControls = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/secureScoreControlProfiles?$top=999' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not retrieve Secure Score controls for $Tenant. Error: $ErrorMessage" -sev Error
@@ -95,39 +95,66 @@ function Invoke-CIPPStandardSecureScoreRemediation {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Processing Secure Score control updates'
+        $ControlsNeedingUpdate = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Control in $ControlsToUpdate) {
             # Skip if this is a Defender control (starts with scid_)
             if ($Control.ControlName -match '^scid_') {
+                Write-Host 'scid'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping Defender control $($Control.ControlName) - cannot be updated via this API" -sev Info
                 continue
             }
 
-            # Build the request body
-            $Body = @{
-                state             = $Control.State
-                comment           = $Control.Reason
-                vendorInformation = @{
-                    vendor   = 'Microsoft'
-                    provider = 'SecureScore'
+            $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
+
+            # Check if already in desired state
+            if ($CurrentControl.state -eq $Control.State) {
+                Write-Host 'Already in state'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) is already in state $($Control.State)" -sev Info
+            } else {
+                $ControlsNeedingUpdate.Add($Control)
+            }
+        }
+
+        # Build bulk requests for all controls that need updating
+        if ($ControlsNeedingUpdate.Count -gt 0) {
+            $int = 1
+            $BulkRequests = foreach ($Control in $ControlsNeedingUpdate) {
+                @{
+                    id      = $int++
+                    method  = 'PATCH'
+                    url     = "security/secureScoreControlProfiles/$($Control.ControlName)"
+                    body    = @{
+                        state             = $Control.State
+                        comment           = $Control.Reason
+                        vendorInformation = @{
+                            vendor   = 'Microsoft'
+                            provider = 'SecureScore'
+                        }
+                    }
+                    headers = @{
+                        'Content-Type' = 'application/json'
+                    }
                 }
             }
 
             try {
-                $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
+                $BulkResults = New-GraphBulkRequest -tenantid $Tenant -Requests @($BulkRequests)
 
-                # Check if already in desired state
-                if ($CurrentControl.state -eq $Control.State) {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) is already in state $($Control.State)" -sev Info
-                } else {
-                    # Update the control
-                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/security/secureScoreControlProfiles/$($Control.ControlName)" -tenantid $Tenant -type PATCH -Body (ConvertTo-Json -InputObject $Body -Compress)
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set control $($Control.ControlName) to $($Control.State)" -sev Info
+                for ($i = 0; $i -lt $BulkResults.Count; $i++) {
+                    $result = $BulkResults[$i]
+                    $Control = $ControlsNeedingUpdate[$i]
+
+                    if ($result.status -eq 200 -or $result.status -eq 204) {
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set control $($Control.ControlName) to $($Control.State)" -sev Info
+                    } else {
+                        $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set control $($Control.ControlName) to $($Control.State). Error: $errorMsg" -sev Error
+                    }
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set control $($Control.ControlName) to $($Control.State). Error: $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to update secure score controls in bulk. Error: $ErrorMessage" -sev Error
             }
         }
     }
@@ -181,11 +208,16 @@ function Invoke-CIPPStandardSecureScoreRemediation {
                     })
             }
         }
-        if ($ReportData.count -eq 0) {
-            $ReportData = $true
+
+
+        $CurrentValue = @{
+            ControlsToUpdate = $ReportData ?? @()
+        }
+        $ExpectedValue = @{
+            ControlsToUpdate = @()
         }
 
-        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -FieldValue $ReportData -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.SecureScoreRemediation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'SecureScoreRemediation' -FieldValue $ReportData -StoreAs json -Tenant $tenant
     }
 }

@@ -13,7 +13,7 @@ function Set-CIPPDBCacheRiskyServicePrincipals {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching risky service principals from Identity Protection' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching risky service principals from Identity Protection' -sev Debug
 
         # Requires Workload Identity Premium licensing
         $RiskyServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyServicePrincipals' -tenantid $TenantFilter
@@ -21,9 +21,9 @@ function Set-CIPPDBCacheRiskyServicePrincipals {
         if ($RiskyServicePrincipals) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskyServicePrincipals.Count) risky service principals successfully" -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskyServicePrincipals.Count) risky service principals successfully" -sev Debug
         } else {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risky service principals found or Workload Identity Protection not available' -sev Info
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risky service principals found or Workload Identity Protection not available' -sev Debug
         }
 
     } catch {

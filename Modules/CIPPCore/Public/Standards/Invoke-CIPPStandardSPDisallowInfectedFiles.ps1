@@ -38,7 +38,6 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     $TestResult = Test-CIPPStandardLicense -StandardName 'SPDisallowInfectedFiles' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -85,11 +84,12 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPDisallowInfectedFiles' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            DisallowInfectedFileDownload = $CurrentState.DisallowInfectedFileDownload
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisallowInfectedFiles' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            DisallowInfectedFileDownload = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisallowInfectedFiles' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

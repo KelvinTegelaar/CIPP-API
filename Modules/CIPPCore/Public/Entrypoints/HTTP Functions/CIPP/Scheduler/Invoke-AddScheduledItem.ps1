@@ -13,6 +13,8 @@ function Invoke-AddScheduledItem {
         $hidden = $true
     }
 
+    $DisallowDuplicateName = $Request.Query.DisallowDuplicateName ?? $Request.Body.DisallowDuplicateName
+
     if ($Request.Body.RunNow -eq $true) {
         try {
             $Table = Get-CIPPTable -TableName 'ScheduledTasks'
@@ -33,7 +35,7 @@ function Invoke-AddScheduledItem {
             Task                  = $Request.Body
             Headers               = $Request.Headers
             Hidden                = $hidden
-            DisallowDuplicateName = $Request.Query.DisallowDuplicateName
+            DisallowDuplicateName = $DisallowDuplicateName
             DesiredStartTime      = $Request.Body.DesiredStartTime
         }
         $Result = Add-CIPPScheduledTask @ScheduledTask

@@ -23,7 +23,7 @@ function Push-BPACollectData {
     $Rerun = Test-CIPPRerun -Type 'BPA' -Tenant $Item.Tenant -API $Item.Template
     if ($Rerun) {
         Write-Host 'Detected rerun for BPA. Exiting cleanly'
-        exit 0
+        return
     }
     Write-Host "Working on BPA for $($TenantName.defaultDomainName) with GUID $($TenantName.customerId) - Report ID $($Item.Template)"
     $Template = $Templates | Where-Object -Property Name -EQ -Value $Item.Template

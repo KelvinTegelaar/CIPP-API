@@ -1,4 +1,4 @@
-Function Invoke-ExecTokenExchange {
+function Invoke-ExecTokenExchange {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -32,24 +32,29 @@ Function Invoke-ExecTokenExchange {
         # Make sure we get the latest authentication
         $auth = Get-CIPPAuthentication
 
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+        # Check if environment variable is already set and not the placeholder value
+        if ($auth -and $env:ApplicationSecret -and $env:ApplicationSecret -ne 'AppSecret') {
+            $ClientSecret = $env:ApplicationSecret
+            Write-LogMessage -API $APIName -message 'Using client secret from environment variable' -Sev 'Debug'
+        } elseif ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             $ClientSecret = $Secret.applicationsecret
-            Write-LogMessage -API $APIName -message 'Retrieved client secret from development secrets' -Sev 'Info'
+            Write-LogMessage -API $APIName -message 'Retrieved client secret from development secrets' -Sev 'Debug'
         } else {
             try {
                 $ClientSecret = (Get-CippKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText)
-                Write-LogMessage -API $APIName -message 'Retrieved client secret from key vault' -Sev 'Info'
+                Write-LogMessage -API $APIName -message 'Retrieved client secret from key vault' -Sev 'Debug'
             } catch {
                 Write-LogMessage -API $APIName -message "Failed to retrieve client secret: $($_.Exception.Message)" -Sev 'Error'
                 throw "Failed to retrieve client secret: $($_.Exception.Message)"
             }
         }
 
-        if (!$ClientSecret) {
-            Write-LogMessage -API $APIName -message 'Client secret is empty or null' -Sev 'Error'
-            throw 'Client secret is empty or null'
+        # Check if client secret is still the default placeholder value from ARM template
+        if (!$ClientSecret -or $ClientSecret -eq 'AppSecret') {
+            Write-LogMessage -API $APIName -message 'Client secret is not configured' -Sev 'Error'
+            throw 'Application secret has not been configured. Please complete the setup process first.'
         }
 
         # Convert token request to form data and add client secret

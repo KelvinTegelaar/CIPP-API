@@ -106,6 +106,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     if ($Settings.remediate) {
         try {
             $CompareResult.customGroup ? ($CompareResult.AssignTo = $CompareResult.customGroup) : $null
+
             $PolicyParams = @{
                 TemplateType = $CompareResult.templateType
                 Description  = $CompareResult.description

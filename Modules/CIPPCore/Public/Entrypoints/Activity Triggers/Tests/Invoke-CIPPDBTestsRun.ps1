@@ -1,4 +1,4 @@
-function Invoke-CIPPTestsRun {
+function Invoke-CIPPDBTestsRun {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,17 +13,18 @@ function Invoke-CIPPTestsRun {
 
     Write-Information "Starting tests run for tenant: $TenantFilter"
 
+    Write-Host 'Checking rerun protection'
+    $RerunParams = @{
+        TenantFilter = $TenantFilter
+        Type         = 'CippTests'
+        API          = 'CippTests'
+    }
+    $Rerun = Test-CIPPRerun @RerunParams
+    if ($Rerun -eq $true) {
+        Write-Host "rerun is true for $($TenantFilter)"
+        return $true
+    }
     try {
-        $AllTests = Get-Command -Name 'Invoke-CippTest*' -Module CIPPCore | Select-Object -ExpandProperty Name | ForEach-Object {
-            $_ -replace '^Invoke-CippTest', ''
-        }
-
-        if ($AllTests.Count -eq 0) {
-            Write-LogMessage -API 'Tests' -message 'No test functions found.' -sev Error
-            return
-        }
-
-        Write-Information "Found $($AllTests.Count) test functions to run"
         $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
             $DbCounts = Get-CIPPDbItem -CountsOnly -TenantFilter 'allTenants'
             $TenantsWithData = $DbCounts | Where-Object { $_.Count -gt 0 } | Select-Object -ExpandProperty PartitionKey -Unique
@@ -31,7 +32,7 @@ function Invoke-CIPPTestsRun {
             $TenantsWithData
         } else {
             $DbCounts = Get-CIPPDbItem -TenantFilter $TenantFilter -CountsOnly
-            if (($DbCounts | Measure-Object -Property Count -Sum).Sum -gt 0) {
+            if (($DbCounts | Measure-Object -Property DataCount -Sum).Sum -gt 0) {
                 @($TenantFilter)
             } else {
                 Write-LogMessage -API 'Tests' -tenant $TenantFilter -message 'Tenant has no data in database. Skipping tests.' -sev Info
@@ -44,31 +45,31 @@ function Invoke-CIPPTestsRun {
             return
         }
 
-        # Build batch: all tests for all tenants
+        # Build batch of per-tenant list activities
+        # Each activity will start its own orchestrator for that tenant's tests
         $Batch = foreach ($Tenant in $AllTenantsList) {
-            foreach ($Test in $AllTests) {
-                @{
-                    FunctionName = 'CIPPTest'
-                    TenantFilter = $Tenant
-                    TestId       = $Test
-                }
+            @{
+                FunctionName = 'CIPPTestsList'
+                TenantFilter = $Tenant
             }
         }
 
-        Write-Information "Built batch of $($Batch.Count) test activities ($($AllTests.Count) tests × $($AllTenantsList.Count) tenants)"
+        Write-Information "Built batch of $($Batch.Count) tenant test list activities"
 
+        # Start orchestrator to dispatch per-tenant test orchestrators
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'TestsRun'
+            OrchestratorName = 'TestsList'
             Batch            = @($Batch)
             SkipLog          = $true
         }
 
+        Write-Information "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-        Write-Information "Started tests orchestration with ID = '$InstanceId'"
+        Write-Information "Started tests list orchestration with ID = '$InstanceId'"
 
         return @{
             InstanceId = $InstanceId
-            Message    = "Tests orchestration started: $($AllTests.Count) tests for $($AllTenantsList.Count) tenants"
+            Message    = "Tests orchestration started: $($AllTenantsList.Count) tenant orchestrators will be created"
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

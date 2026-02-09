@@ -178,7 +178,7 @@ function Invoke-ExecCustomRole {
             }
         }
         default {
-            $Body = Get-CIPPAzDataTableEntity @Table
+            $Body = Get-CIPPAzDataTableEntity @Table | Sort-Object -Property RowKey
             $EntraRoleGroups = Get-CIPPAzDataTableEntity @AccessRoleGroupTable
             $AccessIPRanges = Get-CIPPAzDataTableEntity @AccessIPRangeTable
             if (!$Body) {

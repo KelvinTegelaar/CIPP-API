@@ -40,13 +40,10 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsGlobalMeetingPolicy'
-
     param($Tenant, $Settings)
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsGlobalMeetingPolicy' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -108,12 +105,25 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
 
     if ($Settings.report -eq $true) {
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            AllowAnonymousUsersToJoinMeeting           = $CurrentState.AllowAnonymousUsersToJoinMeeting
+            AllowAnonymousUsersToStartMeeting          = $CurrentState.AllowAnonymousUsersToStartMeeting
+            AutoAdmittedUsers                          = $CurrentState.AutoAdmittedUsers
+            AllowPSTNUsersToBypassLobby                = $CurrentState.AllowPSTNUsersToBypassLobby
+            MeetingChatEnabledType                     = $CurrentState.MeetingChatEnabledType
+            DesignatedPresenterRoleMode                = $CurrentState.DesignatedPresenterRoleMode
+            AllowExternalParticipantGiveRequestControl = $CurrentState.AllowExternalParticipantGiveRequestControl
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
+            AllowAnonymousUsersToStartMeeting          = $false
+            AutoAdmittedUsers                          = $AutoAdmittedUsers
+            AllowPSTNUsersToBypassLobby                = $false
+            MeetingChatEnabledType                     = $MeetingChatEnabledType
+            DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
+            AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
     }

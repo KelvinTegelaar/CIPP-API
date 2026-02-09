@@ -35,7 +35,6 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalChatWithAnyone' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     }
 
@@ -83,11 +82,12 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsExternalChatWithAnyone' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            UseB2BInvitesToAddExternalUsers = $CurrentState.UseB2BInvitesToAddExternalUsers
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsExternalChatWithAnyone' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            UseB2BInvitesToAddExternalUsers = $DesiredState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsExternalChatWithAnyone' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

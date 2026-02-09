@@ -34,7 +34,6 @@
     $TestResult = Test-CIPPStandardLicense -StandardName 'MDMEnrollmentDuringRegistration' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     }
 
@@ -83,8 +82,13 @@
     }
 
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : @{isMdmEnrollmentDuringRegistrationDisabled = $CurrentState; desiredState = $DesiredState }
-        Set-CIPPStandardsCompareField -FieldName 'standards.MDMEnrollmentDuringRegistration' -FieldValue $FieldValue -TenantFilter $Tenant
+        $CurrentValue = @{
+            isMdmEnrollmentDuringRegistrationDisabled = $CurrentState
+        }
+        $ExpectedValue = @{
+            isMdmEnrollmentDuringRegistrationDisabled = $DesiredState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MDMEnrollmentDuringRegistration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'MDMEnrollmentDuringRegistration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

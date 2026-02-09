@@ -56,10 +56,16 @@ function Invoke-CIPPStandardAutoAddProxy {
     }
 
     $StateIsCorrect = $MissingProxies -eq 0
+    $ExpectedValue = [PSCustomObject]@{
+        MissingProxies = 0
+    }
+    $CurrentValue = [PSCustomObject]@{
+        MissingProxies = $MissingProxies
+    }
+
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $MissingProxies
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoAddProxy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
@@ -98,11 +104,10 @@ function Invoke-CIPPStandardAutoAddProxy {
                     }
                 }
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($bulkRequest)
-                $BatchResults | ForEach-Object {
-                    if ($_.error) {
-                        $ErrorMessage = Get-CippException -Exception $_.error
-                        Write-Host "Failed to apply new email policy to $($_.target) Error: $($ErrorMessage.NormalizedError)"
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($_.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-CippException -Exception $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                     }
                 }
             }

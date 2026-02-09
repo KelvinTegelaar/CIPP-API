@@ -13,13 +13,13 @@ function Set-CIPPDBCacheOrganization {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching organization data' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching organization data' -sev Debug
 
         $Organization = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Organization' -Data $Organization
         $Organization = $null
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached organization data successfully' -sev Info
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached organization data successfully' -sev Debug
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `

@@ -12,7 +12,7 @@ function Invoke-CustomDataSync {
     }
 
     Write-Information "Found $($Mappings.Count) Custom Data mappings"
-    $Mappings = $Mappings | Where-Object { $_.sourceType.value -eq 'extensionSync' -and $_.tenantFilter.value -contains $TenantFilter -or $_.tenantFilter.value -contains 'AllTenants' }
+    $Mappings = $Mappings | Where-Object { ($_.sourceType.value -eq 'reportingDb' -or $_.sourceType.value -eq 'extensionSync') -and ($_.tenantFilter.value -contains $TenantFilter -or $_.tenantFilter.value -contains 'AllTenants') }
 
     if ($Mappings.Count -eq 0) {
         Write-Warning "No Custom Data mappings found for tenant $TenantFilter"
@@ -20,7 +20,7 @@ function Invoke-CustomDataSync {
     }
 
     Write-Information "Getting cached data for tenant $TenantFilter"
-    $Cache = Get-ExtensionCacheData -TenantFilter $TenantFilter
+    $Cache = Get-CippExtensionReportingData -TenantFilter $TenantFilter -IncludeMailboxes
     $BulkRequests = [System.Collections.Generic.List[object]]::new()
     $DirectoryObjectQueries = [System.Collections.Generic.List[object]]::new()
     $SyncConfigs = foreach ($Mapping in $Mappings) {

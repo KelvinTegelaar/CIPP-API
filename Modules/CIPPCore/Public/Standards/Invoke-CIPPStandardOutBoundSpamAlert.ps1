@@ -34,14 +34,12 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
     $TestResult = Test-CIPPStandardLicense -StandardName 'OutBoundSpamAlert' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{ Identity = 'Default' } -useSystemMailbox $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the OutBoundSpamAlert state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -76,11 +74,14 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
-        if ($CurrentInfo.NotifyOutboundSpam -ne $true -or $CurrentInfo.NotifyOutboundSpamRecipients -ne $settings.OutboundSpamContact) {
-            $ValueField = $CurrentInfo | Select-Object -Property NotifyOutboundSpamRecipients, NotifyOutboundSpam
-        } else {
-            $ValueField = $true
+        $CurrentValue = @{
+            NotifyOutboundSpam           = $CurrentInfo.NotifyOutboundSpam
+            NotifyOutboundSpamRecipients = $CurrentInfo.NotifyOutboundSpamRecipients
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.OutBoundSpamAlert' -FieldValue $ValueField -Tenant $tenant
+        $ExpectedValue = @{
+            NotifyOutboundSpam           = $true
+            NotifyOutboundSpamRecipients = $settings.OutboundSpamContact
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.OutBoundSpamAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

@@ -34,10 +34,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableLitigationHold' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableLitigationHold'
 
     try {
         $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' |
@@ -53,11 +51,11 @@ function Invoke-CIPPStandardEnableLitigationHold {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Litigation Hold already enabled for all accounts' -sev Info
         } else {
             try {
-                $Request = $MailboxesNoLitHold | ForEach-Object {
+                $Request = foreach ($Mailbox in $MailboxesNoLitHold) {
                     $params = @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
-                            Parameters = @{ Identity = $_.UserPrincipalName; LitigationHoldEnabled = $true }
+                            Parameters = @{ Identity = $Mailbox.UserPrincipalName; LitigationHoldEnabled = $true }
                         }
                     }
                     if ($null -ne $Settings.days) {
@@ -68,11 +66,10 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
 
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request)
-                $BatchResults | ForEach-Object {
-                    if ($_.error) {
-                        $ErrorMessage = Get-NormalizedError -Message $_.error
-                        Write-Host "Failed to Enable Litigation Hold for $($_.Target). Error: $ErrorMessage"
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Litigation Hold for $($_.Target). Error: $ErrorMessage" -sev Error
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-NormalizedError -Message $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Litigation Hold for $($Result.Target). Error: $ErrorMessage" -sev Error
                     }
                 }
             } catch {
@@ -94,8 +91,16 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoLitHold | Select-Object -Property UserPrincipalName
-        $state = $filtered ? $MailboxesNoLitHold : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableLitigationHold' -FieldValue $state -Tenant $Tenant
+        $state = $filtered ? $MailboxesNoLitHold : @()
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableLitigationHold = @($state)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableLitigationHold = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableLitigationHold' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'EnableLitHold' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

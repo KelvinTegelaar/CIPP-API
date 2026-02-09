@@ -35,17 +35,15 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'sharingDomainRestriction' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'sharingDomainRestriction' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SharingDomainRestriction state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -66,7 +64,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             ($mode -eq 'blockList' -and ([string[]]($CurrentBlockedDomains | Sort-Object) -join ',') -eq ([string[]]($SelectedDomains | Sort-Object) -join ','))
         )
     }
-    Write-Host "StateIsCorrect: $StateIsCorrect"
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -90,8 +87,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
                 body     = ($Body | ConvertTo-Json)
             }
 
-            Write-Host ($cmdParams | ConvertTo-Json -Depth 5)
-
             try {
                 $null = New-GraphPostRequest @cmdParams
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Successfully updated Sharing Domain Restriction settings' -sev Info
@@ -114,11 +109,16 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'sharingDomainRestriction' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState | Select-Object sharingAllowedDomainList, sharingDomainRestrictionMode
+        $CurrentValue = @{
+            sharingDomainRestrictionMode = $CurrentState.sharingDomainRestrictionMode
+            sharingAllowedDomainList     = $CurrentState.sharingAllowedDomainList
+            sharingBlockedDomainList     = $CurrentState.sharingBlockedDomainList
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.sharingDomainRestriction' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            sharingDomainRestrictionMode = $mode
+            sharingAllowedDomainList     = if ($mode -eq 'allowList') { $SelectedDomains } else { @() }
+            sharingBlockedDomainList     = if ($mode -eq 'blockList') { $SelectedDomains } else { @() }
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.sharingDomainRestriction' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

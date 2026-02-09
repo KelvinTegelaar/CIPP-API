@@ -34,7 +34,6 @@ function Invoke-CIPPStandardAutoArchive {
     $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     }
 
@@ -57,9 +56,14 @@ function Invoke-CIPPStandardAutoArchive {
 
     $CorrectState = $CurrentState -eq $DesiredThreshold
 
-    if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
+    $ExpectedValue = [PSCustomObject]@{
+        AutoArchivingThresholdPercentage = $DesiredThreshold
+    }
+    $CurrentValue = [PSCustomObject]@{
+        AutoArchivingThresholdPercentage = $CurrentState
+    }
 
+    if ($Settings.remediate -eq $true) {
         if ($CorrectState) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Auto-archiving threshold is already set to $CurrentState%." -Sev Info
         } else {
@@ -91,6 +95,6 @@ function Invoke-CIPPStandardAutoArchive {
         } else {
             $FieldValue = @{ CurrentThreshold = $CurrentState; DesiredThreshold = $DesiredThreshold }
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoArchive' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoArchive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }
