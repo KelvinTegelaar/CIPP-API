@@ -80,11 +80,12 @@ function Get-CIPPAlertInactiveGuestUsers {
 
 
                     [PSCustomObject]@{
-                        UserPrincipalName = $user.UserPrincipalName
-                        Id                = $user.id
-                        lastSignIn        = $lastSignIn
-                        Message           = $Message
-                        Tenant            = $TenantFilter
+                        UserPrincipalName   = $user.UserPrincipalName
+                        Id                  = $user.id
+                        lastSignIn          = $lastSignIn
+                        DaysSinceLastSignIn = if ($daysSinceSignIn) { $daysSinceSignIn } else { 'N/A' }
+                        Message             = $Message
+                        Tenant              = $TenantFilter
                     }
                 }
             }

@@ -47,30 +47,36 @@ function Get-CIPPAlertStaleEntraDevices {
 
                 $lastActivity = $device.approximateLastSignInDateTime
 
-                # Check if inactive
                 $isInactive = (-not $lastActivity) -or ([DateTime]$lastActivity -le $Lookup)
                 # Only process stale Entra devices
                 if ($isInactive) {
 
-                    $daysSinceLastActivity = [Math]::Round(((Get-Date) - [DateTime]$lastActivity).TotalDays)
-                    $Message = 'Device {0} has been inactive for {1} days. Last activity: {2}' -f $device.displayName, $daysSinceLastActivity, $lastActivity
+                    if (-not $lastActivity) {
+
+                        $Message = 'Device {0} has never been active' -f $device.displayName
+                    }
+                    else {
+                        $daysSinceLastActivity = [Math]::Round(((Get-Date) - [DateTime]$lastActivity).TotalDays)
+                        $Message = 'Device {0} has been inactive for {1} days. Last activity: {2}' -f $device.displayName, $daysSinceLastActivity, $lastActivity
+                    }
 
                     if ($device.TrustType -eq "Workplace") { $TrustType = "Entra registered" }
                     elseif ($device.TrustType -eq "AzureAd") { $TrustType = "Entra joined" }
                     elseif ($device.TrustType -eq "ServerAd") { $TrustType = "Entra hybrid joined" }
 
-
                     [PSCustomObject]@{
-                        DeviceName         = $device.displayName
-                        Id                 = $device.id
-                        deviceOwnership    = $device.deviceOwnership
-                        operatingSystem    = $device.operatingSystem
-                        enrollmentType     = $device.enrollmentType
-                        Enabled            = $device.accountEnabled
-                        Managed            = $device.isManaged
+                        DeviceName         = if ($device.displayName) { $device.displayName } else { 'N/A' }
+                        Id                 = if ($device.id) { $device.id } else { 'N/A' }
+                        deviceOwnership    = if ($device.deviceOwnership) { $device.deviceOwnership } else { 'N/A' }
+                        operatingSystem    = if ($device.operatingSystem) { $device.operatingSystem } else { 'N/A' }
+                        enrollmentType     = if ($device.enrollmentType) { $device.enrollmentType } else { 'N/A' }
+                        Enabled            = if ($device.accountEnabled) { $device.accountEnabled } else { 'N/A' }
+                        Managed            = if ($device.isManaged) { $device.isManaged } else { 'N/A' }
+                        Complaint          = if ($device.isCompliant) { $device.isCompliant } else { 'N/A' }
                         JoinType           = $TrustType
-                        lastActivity       = $lastActivity
-                        RegisteredDateTime = $device.registeredDateTime
+                        lastActivity       = if ($lastActivity) { $lastActivity } else { 'N/A' }
+                        DaysSinceLastActivity = if ($daysSinceLastActivity) { $daysSinceLastActivity } else { 'N/A' }
+                        RegisteredDateTime = if ($device.createdDateTime) { $device.createdDateTime } else { 'N/A' }
                         Message            = $Message
                         Tenant             = $TenantFilter
                     }
