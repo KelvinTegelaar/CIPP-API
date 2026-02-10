@@ -5,6 +5,7 @@ function Search-GitHub {
         [string]$User,
         [string]$Org,
         [string]$Path,
+        [bool]$includeforks = $false,
         [string[]]$SearchTerm,
         [string]$Language,
         [ValidateSet('code', 'commits', 'issues', 'users', 'repositories', 'topics', 'labels')]
@@ -46,6 +47,7 @@ function Search-GitHub {
     if ($Language) {
         $QueryParts.Add("language:$Language")
     }
+    $QueryParts.Add("fork:$($includeforks.ToString().ToLower())")
 
     $Query = $QueryParts -join ' '
     Write-Information "Query: $Query"
