@@ -56,6 +56,13 @@ function Get-CIPPLicenseOverview {
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
+    # If no excluded licenses exist, initialize them
+    if ($ExcludedSkuList.Count -lt 1) {
+        Write-Information 'Excluded licenses table is empty. Initializing from config file.'
+        $null = Initialize-CIPPExcludedLicenses
+        $ExcludedSkuList = Get-CIPPAzDataTableEntity @Table
+    }
+
     $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value)
     $UsersBySku = @{}
     foreach ($User in $AllLicensedUsers) {
