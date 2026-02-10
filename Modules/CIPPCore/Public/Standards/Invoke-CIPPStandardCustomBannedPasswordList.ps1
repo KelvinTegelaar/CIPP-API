@@ -31,7 +31,13 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     #>
 
     param($Tenant, $Settings)
-    Write-Host "All params received: $Tenant, $tenant, $($Settings | ConvertTo-Json -Depth 10 -Compress)"
+
+    $TestResult = Test-CIPPStandardLicense -StandardName 'CustomBannedPasswordList' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     $PasswordRuleTemplateId = '5cf42378-d67d-4f36-ba46-e8b86229381d'
     # Parse and validate banned words from input
     $BannedWordsInput = $Settings.BannedWords
@@ -42,12 +48,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
 
     # Split input by commas, newlines, or semicolons and clean up
     $BannedWordsList = $BannedWordsInput -split '[,;\r\n]+' | ForEach-Object { ($_.Trim()) } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
-
-    # Validate word count
-    if ($BannedWordsList.Count -gt 1000) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Too many banned words provided ($($BannedWordsList.Count)). Maximum allowed is 1000." -sev Error
-        return
-    }
 
     # Validate word length (4-16 characters), remove duplicates and invalid words
     $ValidBannedWordsList = [System.Collections.Generic.List[string]]::new()
@@ -67,6 +67,12 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Invalid words found in input (must be 4-16 characters). Please remove the following words: $($InvalidWords -join ', ')" -sev Warning
     }
 
+    # Validate word count after filtering
+    if ($BannedWordsList.Count -gt 1000) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "CustomBannedPasswordList: Too many valid banned words ($($BannedWordsList.Count)). Maximum allowed is 1000." -sev Error
+        return
+    }
+
     # Get existing directory settings for password rules
     try {
         $ExistingSettings = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $Tenant | Where-Object { $_.templateId -eq $PasswordRuleTemplateId }
@@ -77,10 +83,7 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate Custom Banned Password List'
-
         if ($null -eq $ExistingSettings) {
-            Write-Host 'No existing Custom Banned Password List found, creating new one'
             # Create new directory setting with default values if it doesn't exist
             try {
                 $Body = @{
@@ -121,7 +124,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Custom Banned Password List: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
-            Write-Host 'Existing Custom Banned Password List found, updating it'
             # Update existing directory setting
             try {
                 # Get the current passwords and check if all the new words are already in the list
@@ -131,13 +133,11 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
                 # Check if the new words are already in the list
                 $NewBannedWords = $BannedWordsList | Where-Object { $CurrentBannedWords -notcontains $_ }
                 if ($NewBannedWords.Count -eq 0 -and ($ExistingSettings.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value -eq 'True') {
-                    Write-Host 'No new words to add'
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Custom Banned Password List is already configured with $($CurrentBannedWords.Count) words." -sev Info
                 } else {
-                    Write-Host "$($NewBannedWords.Count) new words to add"
                     $AllBannedWords = [System.Collections.Generic.List[string]]::new()
-                    $NewBannedWords | ForEach-Object { $AllBannedWords.Add($_) }
-                    $CurrentBannedWords | ForEach-Object { $AllBannedWords.Add($_) }
+                    foreach ($Word in $NewBannedWords) { $AllBannedWords.Add($Word) }
+                    foreach ($Word in $CurrentBannedWords) { $AllBannedWords.Add($Word) }
                     $AllBannedWords = $AllBannedWords | Select-Object -Unique -First 1000 | Where-Object { $_ -ne $null }
 
                     $Body = @{

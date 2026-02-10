@@ -24,11 +24,11 @@ function Set-CIPPDBCacheMailboxes {
             Select    = $Select
         }
         # Use Generic List for better memory efficiency with large datasets
-        $MailboxList = [System.Collections.Generic.List[PSObject]]::new()
+        $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
         $RawMailboxes = New-ExoRequest @ExoRequest
 
         foreach ($Mailbox in $RawMailboxes) {
-            $MailboxList.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+            $Mailboxes.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
                     @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
@@ -44,13 +44,8 @@ function Set-CIPPDBCacheMailboxes {
                     MessageCopyForSentAsEnabled))
         }
 
-        $Mailboxes = $MailboxList.ToArray()
-        $RawMailboxes = $null
-        $MailboxList.Clear()
-        $MailboxList = $null
+        $Mailboxes | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -Data $Mailboxes -Count
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Mailboxes.Count) mailboxes successfully" -sev Debug
 
         # Start orchestrator to cache mailbox permissions in batches

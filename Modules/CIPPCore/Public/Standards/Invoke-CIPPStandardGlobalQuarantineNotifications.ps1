@@ -31,7 +31,6 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     $TestResult = Test-CIPPStandardLicense -StandardName 'GlobalQuarantineNotifications' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -68,8 +67,6 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are already set to the desired value of $WantedState" -sev Info
         } else {

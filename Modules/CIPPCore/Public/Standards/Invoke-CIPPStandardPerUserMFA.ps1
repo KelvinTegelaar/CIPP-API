@@ -41,7 +41,12 @@ function Invoke-CIPPStandardPerUserMFA {
     param($Tenant, $Settings)
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,accountEnabled,perUserMfaState&`$filter=userType eq 'Member' and accountEnabled eq true and displayName ne 'On-Premises Directory Synchronization Service Account'&`$count=true" -tenantid $Tenant -ComplexFilter
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $GraphRequest = $AllUsers | Where-Object {
+            $_.userType -eq 'Member' -and
+            $_.accountEnabled -eq $true -and
+            $_.displayName -ne 'On-Premises Directory Synchronization Service Account'
+        }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PerUserMFA state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -50,13 +55,24 @@ function Invoke-CIPPStandardPerUserMFA {
     $UsersWithoutMFA = $GraphRequest | Where-Object -Property perUserMfaState -NE 'enforced' | Select-Object -Property userPrincipalName, displayName, accountEnabled, perUserMfaState
 
     if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
         if (($UsersWithoutMFA | Measure-Object).Count -gt 0) {
             try {
                 $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -userId @($UsersWithoutMFA.userPrincipalName) -State 'enforced'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $MFAMessage -sev Info
+                $UpdateDB = $true
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enforce MFA for all users: $ErrorMessage" -sev Error
+            }
+
+            # Refresh user cache after remediation only if changes were made
+            if ($UpdateDB) {
+                try {
+                    Set-CIPPDBCacheUsers -TenantFilter $Tenant
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
+                }
             }
         }
     }

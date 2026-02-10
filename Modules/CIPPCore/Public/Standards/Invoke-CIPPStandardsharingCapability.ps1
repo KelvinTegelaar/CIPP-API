@@ -39,7 +39,6 @@ function Invoke-CIPPStandardsharingCapability {
     $TestResult = Test-CIPPStandardLicense -StandardName 'sharingCapability' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -67,10 +66,8 @@ function Invoke-CIPPStandardsharingCapability {
     if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.sharingCapability -eq $level) {
-            Write-Host "Sharing level is already set to $level"
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is already set to $level" -sev Info
         } else {
-            Write-Host "Setting sharing level to $level from $($CurrentInfo.sharingCapability)"
             try {
                 $body = @{
                     sharingCapability = $level

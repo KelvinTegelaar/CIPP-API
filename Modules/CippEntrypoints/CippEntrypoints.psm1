@@ -291,7 +291,6 @@ function Receive-CippActivityTrigger {
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Output = $null
-        Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
         $metric = @{
             Kind         = 'CIPPCommandStart'
             InvocationId = "$($ExecutionContext.InvocationId)"

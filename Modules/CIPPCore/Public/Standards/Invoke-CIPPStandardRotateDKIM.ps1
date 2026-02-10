@@ -36,7 +36,6 @@ function Invoke-CIPPStandardRotateDKIM {
     $TestResult = Test-CIPPStandardLicense -StandardName 'RotateDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -51,10 +50,10 @@ function Invoke-CIPPStandardRotateDKIM {
     if ($Settings.remediate -eq $true) {
 
         if ($DKIM) {
-            $DKIM | ForEach-Object {
+            foreach ($DkimConfig in $DKIM) {
                 try {
-                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdParams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdParams @{ KeySize = 2048; Identity = $DkimConfig.Identity } -useSystemMailbox $true)
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($DkimConfig.Identity)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $ErrorMessage" -sev Error

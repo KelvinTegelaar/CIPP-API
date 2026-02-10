@@ -35,7 +35,6 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceRetirementDays' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
