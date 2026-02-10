@@ -5,11 +5,15 @@ function Set-CIPPDBCacheMailboxes {
 
     .PARAMETER TenantFilter
         The tenant to cache mailboxes for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {
@@ -68,6 +72,7 @@ function Set-CIPPDBCacheMailboxes {
                 # Add mailbox permissions batch
                 $Batches.Add([PSCustomObject]@{
                         FunctionName = 'GetMailboxPermissionsBatch'
+                        QueueName    = "Mailbox Permissions Batch $BatchNumber/$TotalBatches - $TenantFilter"
                         TenantFilter = $TenantFilter
                         Mailboxes    = $BatchMailboxUPNs
                         BatchNumber  = $BatchNumber
@@ -77,6 +82,7 @@ function Set-CIPPDBCacheMailboxes {
                 # Add calendar permissions batch for the same mailboxes
                 $Batches.Add([PSCustomObject]@{
                         FunctionName = 'GetCalendarPermissionsBatch'
+                        QueueName    = "Calendar Permissions Batch $BatchNumber/$TotalBatches - $TenantFilter"
                         TenantFilter = $TenantFilter
                         Mailboxes    = $BatchMailboxUPNs
                         BatchNumber  = $BatchNumber
@@ -88,6 +94,12 @@ function Set-CIPPDBCacheMailboxes {
             $MailboxPermBatches = $Batches | Where-Object { $_.FunctionName -eq 'GetMailboxPermissionsBatch' }
             $CalendarPermBatches = $Batches | Where-Object { $_.FunctionName -eq 'GetCalendarPermissionsBatch' }
 
+            # Update queue with additional tasks if QueueId is provided
+            if ($QueueId) {
+                Update-CippQueueEntry -RowKey $QueueId -TotalTasks $Batches.Count -IncrementTotalTasks
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Updated queue $QueueId with $($Batches.Count) additional tasks" -sev Debug
+            }
+
             # Start single orchestrator for both mailbox and calendar permissions
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batches)
@@ -97,6 +109,12 @@ function Set-CIPPDBCacheMailboxes {
                     Parameters   = @{
                         TenantFilter = $TenantFilter
                     }
+                }
+            }
+            if ($QueueId) {
+                # Add QueueId to each batch item
+                foreach ($Batch in $Batches) {
+                    $Batch | Add-Member -NotePropertyName 'QueueId' -NotePropertyValue $QueueId -Force
                 }
             }
             Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)

@@ -14,6 +14,7 @@ function Push-ExecCIPPDBCache {
 
     $Name = $Item.Name
     $TenantFilter = $Item.TenantFilter
+    $QueueId = $Item.QueueId
 
     try {
         Write-Information "Collecting $Name for tenant $TenantFilter"
@@ -27,8 +28,18 @@ function Push-ExecCIPPDBCache {
             throw "Function $FullFunctionName does not exist"
         }
 
+        # Build parameters for the cache function
+        $CacheFunctionParams = @{
+            TenantFilter = $TenantFilter
+        }
+
+        # Add QueueId if provided
+        if ($QueueId) {
+            $CacheFunctionParams.QueueId = $QueueId
+        }
+
         # Execute the cache function
-        & $FullFunctionName -TenantFilter $TenantFilter
+        & $FullFunctionName @CacheFunctionParams
 
         Write-Information "Completed $Name for tenant $TenantFilter"
         return "Successfully executed $Name for tenant $TenantFilter"

@@ -2,7 +2,8 @@ function Set-CIPPDBCacheRoleAssignmentScheduleInstances {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {

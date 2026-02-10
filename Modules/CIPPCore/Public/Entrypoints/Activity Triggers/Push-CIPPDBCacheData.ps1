@@ -99,6 +99,7 @@ function Push-CIPPDBCacheData {
                 'ExoPresetSecurityPolicy'
                 'ExoTenantAllowBlockList'
                 'Mailboxes'
+                'MailboxRules'
                 'CASMailboxes'
                 'MailboxUsage'
                 'OneDriveUsage'
