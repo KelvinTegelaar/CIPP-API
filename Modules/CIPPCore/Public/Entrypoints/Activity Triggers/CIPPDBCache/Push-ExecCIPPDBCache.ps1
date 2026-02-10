@@ -15,6 +15,7 @@ function Push-ExecCIPPDBCache {
     $Name = $Item.Name
     $TenantFilter = $Item.TenantFilter
     $QueueId = $Item.QueueId
+    $Types = $Item.Types
 
     try {
         Write-Information "Collecting $Name for tenant $TenantFilter"
@@ -37,6 +38,13 @@ function Push-ExecCIPPDBCache {
         if ($QueueId) {
             $CacheFunctionParams.QueueId = $QueueId
         }
+
+        # Add Types if provided (for Mailboxes function)
+        if ($Types) {
+            $CacheFunctionParams.Types = $Types
+        }
+
+        Write-Information "Executing $FullFunctionName with parameters: $(($CacheFunctionParams.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', '))"
 
         # Execute the cache function
         & $FullFunctionName @CacheFunctionParams
