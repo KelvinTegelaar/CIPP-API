@@ -1,11 +1,11 @@
 function Search-GitHub {
     [CmdletBinding()]
-    Param (
+    param (
         [string[]]$Repository,
         [string]$User,
         [string]$Org,
         [string]$Path,
-        [bool]$includeforks = $false,
+        [switch]$IncludeForks,
         [string[]]$SearchTerm,
         [string]$Language,
         [ValidateSet('code', 'commits', 'issues', 'users', 'repositories', 'topics', 'labels')]
@@ -47,7 +47,9 @@ function Search-GitHub {
     if ($Language) {
         $QueryParts.Add("language:$Language")
     }
-    $QueryParts.Add("fork:$($includeforks.ToString().ToLower())")
+    if ($IncludeForks.IsPresent) {
+        $QueryParts.Add('fork:true')
+    }
 
     $Query = $QueryParts -join ' '
     Write-Information "Query: $Query"
