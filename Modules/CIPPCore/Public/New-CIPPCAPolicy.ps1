@@ -189,9 +189,9 @@ function New-CIPPCAPolicy {
                     Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
                 }
                 [pscustomobject]@{
-                    id          = $ExistingLocation.id
-                    name        = $ExistingLocation.displayName
-                    templateId  = $location.id
+                    id         = $ExistingLocation.id
+                    name       = $ExistingLocation.displayName
+                    templateId = $location.id
                 }
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
@@ -224,7 +224,9 @@ function New-CIPPCAPolicy {
         if (!$lookup) { continue }
         Write-Information "Replacing named location - $location"
         $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
-        $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+        if ($lookup.id) {
+            $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+        }
     }
 
     foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
@@ -233,7 +235,9 @@ function New-CIPPCAPolicy {
         if (!$lookup) { continue }
         Write-Information "Replacing named location - $location"
         $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
-        $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+        if ($lookup.id) {
+            $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+        }
     }
     switch ($ReplacePattern) {
         'none' {

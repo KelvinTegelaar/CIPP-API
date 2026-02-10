@@ -31,7 +31,10 @@ function Compare-CIPPIntuneObject {
             'wslDistributions',
             'lastSuccessfulSyncDateTime',
             'tenantFilter',
-            'agents'
+            'agents',
+            'isSynced'
+            'locationInfo',
+            'templateId'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties

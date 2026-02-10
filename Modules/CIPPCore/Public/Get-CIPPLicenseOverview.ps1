@@ -37,9 +37,10 @@ function Get-CIPPLicenseOverview {
     )
 
     try {
-        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/admin/api/tenant/accountSkus'
+        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/fd/m365licensing/v3/licensedProducts?allotmentSourceOwnerType=User&allotmentSourceType=LowFrictionTrial&allotmentSourceState=Active,Deleted,Suspended,Lockout,Warning&displayNameLanguage=en-GB'
     } catch {
-        Write-Warning 'Failed to get Admin Portal Licenses'
+        Write-Warning "Failed to get Admin Portal Licenses: $($_.Exception.Message)"
+        $AdminPortalLicenses = @()
     }
 
     $Results = New-GraphBulkRequest -Requests $Requests -TenantID $TenantFilter -asapp $true
@@ -103,7 +104,7 @@ function Get-CIPPLicenseOverview {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
             if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-            $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.SkuId -eq $sku.skuId } | Select-Object -ExpandProperty Name
+            $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
 
