@@ -37,33 +37,23 @@ function Get-CIPPFeatureFlag {
             $TableFlag = $TableFlags | Where-Object { $_.RowKey -eq $Id }
 
             if ($TableFlag) {
-                # Return the table version with metadata from JSON
-                # Parse JSON arrays from table storage
-                $Timers = if ($TableFlag.Timers) { $TableFlag.Timers | ConvertFrom-Json } else { $FeatureFlag.Timers }
-                $Endpoints = if ($TableFlag.Endpoints) { $TableFlag.Endpoints | ConvertFrom-Json } else { $FeatureFlag.Endpoints }
-                $Pages = if ($TableFlag.Pages) { $TableFlag.Pages | ConvertFrom-Json } else { $FeatureFlag.Pages }
-
+                # Return feature flag with Enabled from table, everything else from JSON
                 return [PSCustomObject]@{
-                    Id              = $TableFlag.RowKey
-                    Name            = $TableFlag.Name
-                    Description     = $TableFlag.Description
+                    Id              = $FeatureFlag.Id
+                    Name            = $FeatureFlag.Name
+                    Description     = $FeatureFlag.Description
                     AllowUserToggle = $FeatureFlag.AllowUserToggle
-                    Timers          = $Timers
-                    Endpoints       = $Endpoints
-                    Pages           = $Pages
+                    Timers          = $FeatureFlag.Timers
+                    Endpoints       = $FeatureFlag.Endpoints
+                    Pages           = $FeatureFlag.Pages
                     Enabled         = $TableFlag.Enabled
                 }
             } else {
-                # Insert feature flag into table with defaults from JSON
+                # Insert feature flag into table with defaults from JSON (only RowKey and Enabled)
                 $Entity = @{
                     PartitionKey = 'FeatureFlag'
                     RowKey       = $FeatureFlag.Id
                     Enabled      = $FeatureFlag.Enabled
-                    Timers       = [string]($FeatureFlag.Timers | ConvertTo-Json -Compress)
-                    Endpoints    = [string]($FeatureFlag.Endpoints | ConvertTo-Json -Compress)
-                    Pages        = [string]($FeatureFlag.Pages | ConvertTo-Json -Compress)
-                    Name         = [string]$FeatureFlag.Name
-                    Description  = [string]$FeatureFlag.Description
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
@@ -85,32 +75,23 @@ function Get-CIPPFeatureFlag {
                 $TableFlag = $TableFlags | Where-Object { $_.RowKey -eq $FeatureFlag.Id }
 
                 if ($TableFlag) {
-                    # Parse JSON arrays from table storage
-                    $Timers = if ($TableFlag.Timers) { $TableFlag.Timers | ConvertFrom-Json } else { $FeatureFlag.Timers }
-                    $Endpoints = if ($TableFlag.Endpoints) { $TableFlag.Endpoints | ConvertFrom-Json } else { $FeatureFlag.Endpoints }
-                    $Pages = if ($TableFlag.Pages) { $TableFlag.Pages | ConvertFrom-Json } else { $FeatureFlag.Pages }
-
+                    # Return feature flag with Enabled from table, everything else from JSON
                     [PSCustomObject]@{
-                        Id              = $TableFlag.RowKey
-                        Name            = $TableFlag.Name
-                        Description     = $TableFlag.Description
+                        Id              = $FeatureFlag.Id
+                        Name            = $FeatureFlag.Name
+                        Description     = $FeatureFlag.Description
                         AllowUserToggle = $FeatureFlag.AllowUserToggle
-                        Timers          = $Timers
-                        Endpoints       = $Endpoints
-                        Pages           = $Pages
+                        Timers          = $FeatureFlag.Timers
+                        Endpoints       = $FeatureFlag.Endpoints
+                        Pages           = $FeatureFlag.Pages
                         Enabled         = $TableFlag.Enabled
                     }
                 } else {
-                    # Insert feature flag into table with defaults from JSON
+                    # Insert feature flag into table with defaults from JSON (only RowKey and Enabled)
                     $Entity = @{
                         PartitionKey = 'FeatureFlag'
                         RowKey       = $FeatureFlag.Id
                         Enabled      = $FeatureFlag.Enabled
-                        Timers       = [string]($FeatureFlag.Timers | ConvertTo-Json -Compress)
-                        Endpoints    = [string]($FeatureFlag.Endpoints | ConvertTo-Json -Compress)
-                        Pages        = [string]($FeatureFlag.Pages | ConvertTo-Json -Compress)
-                        Name         = [string]$FeatureFlag.Name
-                        Description  = [string]$FeatureFlag.Description
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
