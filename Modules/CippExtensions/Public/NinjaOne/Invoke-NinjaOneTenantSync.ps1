@@ -7,9 +7,21 @@ function Invoke-NinjaOneTenantSync {
         $StartQueueTime = Get-Date
         Write-Information "$(Get-Date) - Starting NinjaOne Sync"
 
-        # Stagger start
-        # Check Global Rate Limiting
-        $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOneMapping' -RateLimit 5 -WaitTime 10
+        $MappingTable = Get-CIPPTable -TableName CippMapping
+        $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'NinjaOneMapping'")
+        $CurrentMap | ForEach-Object {
+            if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne '') {
+                $_.lastEndTime = (Get-Date($_.lastEndTime))
+            } else {
+                $_ | Add-Member -NotePropertyName lastEndTime -NotePropertyValue $Null -Force
+            }
+
+            if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
+                $_.lastStartTime = (Get-Date($_.lastStartTime))
+            } else {
+                $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
+            }
+        }
 
         $StartTime = Get-Date
 
@@ -275,7 +287,7 @@ function Invoke-NinjaOneTenantSync {
         [System.Collections.Generic.List[PSCustomObject]]$NinjaLicenseCreation = @()
 
         # Replace direct Graph/Exchange calls with cached data
-        $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Customer.defaultDomainName
+        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Customer.defaultDomainName -IncludeMailboxes
 
         # Map cached data to variables
         $Users = $ExtensionCache.Users
@@ -289,9 +301,9 @@ function Invoke-NinjaOneTenantSync {
         $MailboxStatsFull = $ExtensionCache.MailboxUsage
         $Permissions = $ExtensionCache.MailboxPermissions
         $SecureScore = $ExtensionCache.SecureScore
-        $Subscriptions = $ExtensionCache.Subscriptions
+        $Subscriptions = if ($ExtensionCache.Licenses) { $ExtensionCache.Licenses.TermInfo | Where-Object { $null -ne $_ } } else { @() }
         $SecureScoreProfiles = $ExtensionCache.SecureScoreControlProfiles
-        $TenantDetails = $ExtensionCache.TenantDetails
+        $TenantDetails = $ExtensionCache.Organization
         $RawDomains = $ExtensionCache.Domains
         $AllGroups = $ExtensionCache.Groups
         $Licenses = $ExtensionCache.Licenses
@@ -325,14 +337,14 @@ function Invoke-NinjaOneTenantSync {
         $licensedUsers = $Users | Where-Object { $null -ne $_.AssignedLicenses.SkuId } | Sort-Object UserPrincipalName
 
         $Roles = foreach ($Role in $AllRoles) {
-            # Get members from cache
-            $Members = ($ExtensionCache."AllRoles_$($Role.id)")
+            # Get members from inline property (no longer separate cache entries)
+            $Members = $Role.members
             [PSCustomObject]@{
-                ID            = $Result.id
+                ID            = $Role.id
                 DisplayName   = $Role.displayName
                 Description   = $Role.description
                 Members       = $Members
-                ParsedMembers = $Members.displayName -join ', '
+                ParsedMembers = if ($Members) { $Members.displayName -join ', ' } else { '' }
             }
         }
 
@@ -352,7 +364,8 @@ function Invoke-NinjaOneTenantSync {
         Write-Verbose "$(Get-Date) - Parsing Device Compliance Policies"
 
         $DeviceComplianceDetails = foreach ($Policy in $DeviceCompliancePolicies) {
-            $DeviceStatuses = $ExtensionCache."DeviceCompliancePolicy_$($Policy.id)"
+            $StatusItems = Get-CIPPDbItem -TenantFilter $Customer.defaultDomainName -Type "IntuneDeviceCompliancePolicies_$($Policy.id)" | Where-Object { $_.RowKey -notlike '*-Count' }
+            $DeviceStatuses = if ($StatusItems) { $StatusItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
             [pscustomobject]@{
                 ID             = $Policy.id
                 DisplayName    = $Policy.displayName
@@ -363,7 +376,8 @@ function Invoke-NinjaOneTenantSync {
         Write-Verbose "$(Get-Date) - Parsing Groups"
 
         $Groups = foreach ($Group in $AllGroups) {
-            $Members = $ExtensionCache."Groups_$($Result.id)"
+            # Get members from inline property (no longer separate cache entries)
+            $Members = $Group.members
             [pscustomobject]@{
                 ID          = $Group.id
                 DisplayName = $Group.displayName
@@ -1642,7 +1656,7 @@ function Invoke-NinjaOneTenantSync {
             $ParsedAdmins = [PSCustomObject]@{}
 
             $AdminUsers | Select-Object displayname, userPrincipalName -Unique | ForEach-Object {
-                $ParsedAdmins | Add-Member -NotePropertyName $_.displayname -NotePropertyValue $_.userPrincipalName
+                $ParsedAdmins | Add-Member -NotePropertyName $_.displayname -NotePropertyValue $_.userPrincipalName -Force
             }
 
             $TenantDetailsItems = [PSCustomObject]@{
@@ -1840,7 +1854,7 @@ function Invoke-NinjaOneTenantSync {
                 $StandardsDefinitions = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/refs/heads/main/src/data/standards.json'
                 $AppliedStandards = Get-CIPPStandards -TenantFilter $Customer.defaultDomainName
                 $Templates = Get-CIPPTable 'templates'
-                $StandardTemplates = Get-CIPPAzDataTableEntity @Templates | Where-Object { $_.PartitionKey -eq 'StandardsTemplateV2' }
+                $StandardTemplates = Get-CIPPAzDataTableEntity @Templates -Filter "PartitionKey eq 'StandardsTemplateV2'"
 
                 $ParsedStandards = foreach ($Standard in $AppliedStandards) {
                     Write-Information "Processing Standard: $($Standard | ConvertTo-Json -Depth 10)"

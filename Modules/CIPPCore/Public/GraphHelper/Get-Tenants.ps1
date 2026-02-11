@@ -16,10 +16,7 @@ function Get-Tenants {
         [switch]$CleanOld,
         [string]$TenantFilter
     )
-    #$caller = $MyInvocation.InvocationName
-    #$scriptName = $MyInvocation.ScriptName
-    #Write-Host "Called by: $caller"
-    #Write-Host "In script: $scriptName"
+
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
@@ -61,7 +58,9 @@ function Get-Tenants {
 
     if ($CleanOld.IsPresent) {
         try {
-            $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
+            $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+            # Filter out MLT relationships locally
+            $GDAPRelationships = $GDAPRelationships | Where-Object { $_.displayName -notlike 'MLT_*' }
             if (!$GDAPRelationships) {
                 Write-LogMessage -API 'Get-Tenants' -message 'Tried cleaning old tenants but failed to get GDAP relationships - No relationships returned' -Sev 'Critical'
                 throw 'Failed to get GDAP relationships for cleaning old tenants.'
@@ -94,7 +93,9 @@ function Get-Tenants {
             throw 'RefreshToken not set. Cannot get tenant list.'
         }
         #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        # Filter out MLT relationships locally
+        $GDAPRelationships = $GDAPRelationships | Where-Object { $_.displayName -notlike 'MLT_*' }
         Write-Host "GDAP relationships found: $($GDAPRelationships.Count)"
         Write-Information "GDAP relationships found: $($GDAPRelationships.Count)"
         $totalTenants = $GDAPRelationships.customer.tenantId | Select-Object -Unique
@@ -273,5 +274,11 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
+
+    # Limit tenant list to allowed tenants if set in script scope from New-CippCoreRequest
+    if ($script:CippAllowedTenantsStorage -and $script:CippAllowedTenantsStorage.Value) {
+        $IncludedTenantsCache = $IncludedTenantsCache | Where-Object { $script:CippAllowedTenantsStorage.Value -contains $_.customerId }
+    }
+
     return $IncludedTenantsCache | Where-Object { ($null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) } | Where-Object $IncludedTenantFilter | Sort-Object -Property displayName
 }

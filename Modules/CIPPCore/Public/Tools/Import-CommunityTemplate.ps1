@@ -8,6 +8,8 @@ function Import-CommunityTemplate {
         $Template,
         $SHA,
         $MigrationTable,
+        $LocationData,
+        $Source,
         [switch]$Force
     )
 
@@ -41,12 +43,6 @@ function Import-CommunityTemplate {
                     $excludedTenants = $ExistingJSON.excludedTenants
                     $NewJSON.tenantFilter = $tenantFilter
                     $NewJSON.excludedTenants = $excludedTenants
-
-                    # Extract package tag from existing template
-                    $PackageTag = $Existing.Package
-                    if ($PackageTag) {
-                        $Template | Add-Member -MemberType NoteProperty -Name Package -Value $PackageTag -Force
-                    }
                 }
             }
 
@@ -69,28 +65,30 @@ function Import-CommunityTemplate {
             $NewJSON = [string]($NewJSON | ConvertTo-Json -Depth 100 -Compress)
             $Template.JSON = $NewJSON
             $Template | Add-Member -MemberType NoteProperty -Name SHA -Value $SHA -Force
+            $Template | Add-Member -MemberType NoteProperty -Name Source -Value $Source -Force
             Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
         } else {
+            $id = [guid]::NewGuid().ToString()
             if ($Template.mailNickname) { $Type = 'Group' }
             if ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { $Type = 'ConditionalAccessPolicy' }
             Write-Host "The type is $Type"
             switch -Wildcard ($Type) {
-
                 '*Group*' {
                     $RawJsonObj = [PSCustomObject]@{
                         Displayname     = $Template.displayName
                         Description     = $Template.Description
                         MembershipRules = $Template.membershipRule
                         username        = $Template.mailNickname
-                        GUID            = $Template.id
+                        GUID            = $id
                         groupType       = 'generic'
                     } | ConvertTo-Json -Depth 100
                     $entity = @{
                         JSON         = "$RawJsonObj"
                         PartitionKey = 'GroupTemplate'
                         SHA          = $SHA
-                        GUID         = $Template.id
-                        RowKey       = $Template.id
+                        GUID         = $id
+                        RowKey       = $id
+                        Source       = $Source
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     break
@@ -101,23 +99,42 @@ function Import-CommunityTemplate {
                         $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                         $_ | Select-Object -Property $NonEmptyProperties
                     }
-                    $id = $Template.id
-                    $Template = $Template | Select-Object * -ExcludeProperty lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', '*odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type'
+                    $Template = $Template | Select-Object * -ExcludeProperty lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', '*odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type', 'templateId'
                     Remove-ODataProperties -Object $Template
+
+                    $LocationInfo = [system.collections.generic.list[object]]::new()
+                    if ($LocationData) {
+                        $LocationData | ForEach-Object {
+                            if ($Template.conditions.locations.includeLocations -contains $_.id -or $Template.conditions.locations.excludeLocations -contains $_.id) {
+                                Write-Information "Adding location info for location ID $($_.id)"
+                                $LocationInfo.Add($_)
+                            }
+                        }
+                        if ($LocationInfo.Count -gt 0) {
+                            $Template | Add-Member -MemberType NoteProperty -Name LocationInfo -Value $LocationInfo -Force
+                        }
+                    }
+
                     $RawJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
+
+                    Write-Information "Raw JSON before ID replacement: $RawJson"
                     #Replace the ids with the displayname by using the migration table, this is a simple find and replace each instance in the JSON.
                     $MigrationTable.objects | ForEach-Object {
                         if ($RawJson -match $_.ID) {
                             $RawJson = $RawJson.Replace($_.ID, $($_.DisplayName))
                         }
                     }
+
                     $entity = @{
                         JSON         = "$RawJson"
                         PartitionKey = 'CATemplate'
                         SHA          = $SHA
-                        GUID         = $ID
-                        RowKey       = $ID
+                        GUID         = $id
+                        RowKey       = $id
+                        Source       = $Source
                     }
+                    Write-Information "Final entity: $($entity | ConvertTo-Json -Depth 10)"
+
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     break
                 }
@@ -131,7 +148,6 @@ function Import-CommunityTemplate {
                         '*managedAppPolicies*' { 'AppProtection' }
                         '*deviceAppManagement*' { 'AppProtection' }
                     }
-                    $id = $Template.id
                     $RawJson = $Template | Select-Object * -ExcludeProperty id, lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', 'lastModifiedDateTime@odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type'
                     Remove-ODataProperties -Object $RawJson
                     $RawJson = $RawJson | ConvertTo-Json -Depth 100 -Compress
@@ -142,16 +158,22 @@ function Import-CommunityTemplate {
                         Description = $Template.Description
                         RAWJson     = $RawJson
                         Type        = $URLName
-                        GUID        = $ID
+                        GUID        = $id
                     } | ConvertTo-Json -Depth 100 -Compress
 
                     $entity = @{
                         JSON         = "$RawJsonObj"
                         PartitionKey = 'IntuneTemplate'
                         SHA          = $SHA
-                        GUID         = $ID
-                        RowKey       = $ID
+                        GUID         = $id
+                        RowKey       = $id
+                        Source       = $Source
                     }
+
+                    if ($Existing -and $Existing.Package) {
+                        $entity.Package = $Existing.Package
+                    }
+
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
 
                 }

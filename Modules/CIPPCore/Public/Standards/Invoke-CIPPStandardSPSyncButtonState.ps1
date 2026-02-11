@@ -31,17 +31,15 @@ function Invoke-CIPPStandardSPSyncButtonState {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SPSyncButtonState' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPSyncButtonState' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPSyncButtonState state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -60,8 +58,6 @@ function Invoke-CIPPStandardSPSyncButtonState {
     $HumanReadableState = if ($WantedState -eq $true) { 'disabled' } else { 'enabled' }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($StateIsCorrect -eq $false) {
             try {
                 $CurrentState | Set-CIPPSPOTenant -Properties @{HideSyncButtonOnDocLib = $WantedState }
@@ -92,7 +88,13 @@ function Invoke-CIPPStandardSPSyncButtonState {
         } else {
             $FieldValue = $CurrentState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPSyncButtonState' -FieldValue $FieldValue -Tenant $Tenant
+        $CurrentValue = @{
+            HideSyncButtonOnDocLib = $CurrentState.HideSyncButtonOnDocLib
+        }
+        $ExpectedValue = @{
+            HideSyncButtonOnDocLib = $WantedState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPSyncButtonState' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 
 }

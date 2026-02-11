@@ -43,7 +43,6 @@ function Invoke-CIPPStandardAutopilotStatusPage {
     # Get current Autopilot enrollment status page configuration
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     try {
@@ -63,9 +62,22 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $Settings.AllowReset) -and
         ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $Settings.AllowFail)
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $ErrorMessage" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $StateIsCorrect = $false
+    }
+
+    $CurrentValue = $CurrentConfig | Select-Object -Property id, displayName, priority, showInstallationProgress, blockDeviceSetupRetryByUser, allowDeviceResetOnInstallFailure, allowLogCollectionOnInstallFailure, customErrorMessage, installProgressTimeoutInMinutes, allowDeviceUseOnInstallFailure, trackInstallProgressForAutopilotOnly, installQualityUpdates
+    $ExpectedValue = [PSCustomObject]@{
+        installProgressTimeoutInMinutes      = $Settings.TimeOutInMinutes
+        customErrorMessage                   = $Settings.ErrorMessage
+        showInstallationProgress             = $Settings.ShowProgress
+        allowLogCollectionOnInstallFailure   = $Settings.EnableLog
+        trackInstallProgressForAutopilotOnly = $Settings.OBEEOnly
+        blockDeviceSetupRetryByUser          = !$Settings.BlockDevice
+        installQualityUpdates                = $InstallWindowsUpdates
+        allowDeviceResetOnInstallFailure     = $Settings.AllowReset
+        allowDeviceUseOnInstallFailure       = $Settings.AllowFail
     }
 
     # Remediate if the state is not correct
@@ -86,15 +98,12 @@ function Invoke-CIPPStandardAutopilotStatusPage {
 
             Set-CIPPDefaultAPEnrollment @Parameters
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            throw $ErrorMessage
         }
     }
 
     # Report
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect -eq $true ? $true : $CurrentConfig
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotStatusPage' -FieldValue $FieldValue -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotStatusPage' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutopilotStatusPage' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 

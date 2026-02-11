@@ -36,19 +36,18 @@ function Invoke-CIPPStandardSafeSendersDisable {
     $TestResult = Test-CIPPStandardLicense -StandardName 'SafeSendersDisable' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     if ($Settings.remediate -eq $true) {
         try {
             $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -select 'UserPrincipalName'
-            $Request = $Mailboxes | ForEach-Object {
+            $Request = foreach ($Mailbox in $Mailboxes) {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-MailboxJunkEmailConfiguration'
                         Parameters = @{
-                            Identity                    = $_.UserPrincipalName
+                            Identity                    = $Mailbox.UserPrincipalName
                             TrustedRecipientsAndDomains = $null
                         }
                     }
@@ -56,11 +55,10 @@ function Invoke-CIPPStandardSafeSendersDisable {
             }
 
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-            $BatchResults | ForEach-Object {
-                if ($_.error) {
-                    $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-Host "Failed to Disable SafeSenders for $($_.target). Error: $ErrorMessage"
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($_.target). Error: $ErrorMessage" -sev Error
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($Result.target). Error: $ErrorMessage" -sev Error
                 }
             }
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Safe Senders disabled' -sev Info
@@ -72,7 +70,13 @@ function Invoke-CIPPStandardSafeSendersDisable {
 
     if ($Settings.report -eq $true) {
         #This script always returns true, as it only disables the Safe Senders list
-        Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -FieldValue $true -Tenant $Tenant
+        $CurrentValue = @{
+            SafeSendersDisabled = $true
+        }
+        $ExpectedValue = @{
+            SafeSendersDisabled = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SafeSendersDisable' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 
 }

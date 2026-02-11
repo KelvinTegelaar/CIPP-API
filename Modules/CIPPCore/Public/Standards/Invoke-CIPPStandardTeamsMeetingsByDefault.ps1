@@ -34,18 +34,15 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingsByDefault' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingsByDefault'
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 
     try {
         $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').OnlineMeetingsByDefaultEnabled
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMeetingsByDefault state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -61,7 +58,6 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $false) {
             try {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ OnlineMeetingsByDefaultEnabled = $WantedState } -useSystemMailbox $true
@@ -89,11 +85,13 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
         # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
         Add-CIPPBPAField -FieldName 'TeamsMeetingsByDefault' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+
+        $CurrentValue = @{
+            OnlineMeetingsByDefaultEnabled = $CurrentState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingsByDefault' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            OnlineMeetingsByDefaultEnabled = $WantedState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingsByDefault' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

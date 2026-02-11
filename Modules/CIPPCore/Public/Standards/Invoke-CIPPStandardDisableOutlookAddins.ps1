@@ -38,16 +38,13 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableOutlookAddins' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableOutlookAddins'
 
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' |
-        Where-Object { $_.IsDefault -eq $true }
-    }
-    catch {
+            Where-Object { $_.IsDefault -eq $true }
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableOutlookAddins state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -65,8 +62,9 @@ function Invoke-CIPPStandardDisableOutlookAddins {
 
             foreach ($Role in $RolesToRemove) {
                 try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ RoleAssignee = $CurrentInfo.Identity; Role = $Role } | ForEach-Object {
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Remove-ManagementRoleAssignment' -cmdParams @{ Identity = $_.Guid; Confirm = $false } -UseSystemMailbox $true
+                    $RoleAssignments = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ RoleAssignee = $CurrentInfo.Identity; Role = $Role }
+                    foreach ($Assignment in $RoleAssignments) {
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Remove-ManagementRoleAssignment' -cmdParams @{ Identity = $Assignment.Guid; Confirm = $false } -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Outlook add-in role: $Role" -sev Debug
                     }
                 } catch {
@@ -97,8 +95,15 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     }
     if ($Settings.report -eq $true) {
         $State = if ($RolesToRemove) { $false } else { $true }
-        $StateForCompare = if ($RolesToRemove) { @{ AllowedApps = $RolesToRemove } } else { $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -FieldValue $StateForCompare -TenantFilter $Tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisabledOutlookAddins = $State
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisabledOutlookAddins = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

@@ -36,12 +36,11 @@ function Invoke-CIPPStandardDefaultSharingLink {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DefaultSharingLink' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DefaultSharingLink' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     # Determine the desired sharing link type (default to Internal if not specified)
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     $DesiredSharingLinkType = $Settings.SharingLinkType.value ?? 'Internal'
@@ -56,17 +55,34 @@ function Invoke-CIPPStandardDefaultSharingLink {
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
-    }
-    catch {
+            Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType, DefaultLinkPermission
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DefaultSharingLink state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
+    $CurrentValue = [PSCustomObject]@{
+        DefaultSharingLinkType = switch ($CurrentState.DefaultSharingLinkType) {
+            1 { 'Direct' }
+            2 { 'Internal' }
+            3 { 'Anyone' }
+            default { 'Unknown' }
+        }
+        DefaultLinkPermission  = switch ($CurrentState.DefaultLinkPermission) {
+            0 { 'Edit' }
+            1 { 'View' }
+            2 { 'Edit' }
+            default { 'Unknown' }
+        }
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        DefaultSharingLinkType = $DesiredSharingLinkType
+        DefaultLinkPermission  = 'View'
+    }
+
     # Check if the current state matches the desired configuration
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq $DesiredSharingLinkTypeValue) -and ($CurrentState.DefaultLinkPermission -eq 1)
-    Write-Host "currentstate: $($CurrentState.DefaultSharingLinkType), $($CurrentState.DefaultLinkPermission). Desired: $DesiredSharingLinkTypeValue, 1"
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Default sharing link settings are already configured correctly (Type: $DesiredSharingLinkType, Permission: View)" -Sev Info
@@ -117,6 +133,6 @@ function Invoke-CIPPStandardDefaultSharingLink {
         } else {
             $FieldValue = $CurrentState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DefaultSharingLink' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DefaultSharingLink' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

@@ -34,20 +34,17 @@ function Invoke-CIPPStandardDisableTenantCreation {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTenantCreation'
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableTenantCreation state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.defaultUserRolePermissions.allowedToCreateTenants -eq $false)
 
-    If ($Settings.remediate -eq $true) {
-        Write-Host "Time to remediate DisableTenantCreation standard for tenant $Tenant"
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Users are already disabled from creating tenants.' -sev Info
         } else {
@@ -77,7 +74,14 @@ function Invoke-CIPPStandardDisableTenantCreation {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableTenantCreation' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            DisableTenantCreation = $StateIsCorrect
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableTenantCreation = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableTenantCreation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

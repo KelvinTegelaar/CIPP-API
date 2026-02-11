@@ -16,11 +16,7 @@ function Invoke-ListTenants {
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
     Write-Host "Tenant Access: $TenantAccess"
 
-    if ($TenantAccess -notcontains 'AllTenants') {
-        $AllTenantSelector = $false
-    } else {
-        $AllTenantSelector = $Request.Query.AllTenantSelector
-    }
+    $AllTenantSelector = $Request.Query.AllTenantSelector
 
     $IncludeOffboardingDefaults = $Request.Query.IncludeOffboardingDefaults
 

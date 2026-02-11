@@ -30,21 +30,18 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingVerification'
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingVerification' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMeetingVerification' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } |
-        Select-Object CaptchaVerificationForMeetingJoin
-    }
-    catch {
+            Select-Object CaptchaVerificationForMeetingJoin
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMeetingVerification state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -58,7 +55,7 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Meeting Verification Policy already set.' -sev Info
         } else {
             $cmdParams = @{
-                Identity                         = 'Global'
+                Identity                          = 'Global'
                 CaptchaVerificationForMeetingJoin = $CaptchaVerificationForMeetingJoin
             }
 
@@ -82,12 +79,13 @@ function Invoke-CIPPStandardTeamsMeetingVerification {
     }
 
     if ($Settings.report -eq $true) {
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentState = @{
+            CaptchaVerificationForMeetingJoin = $CurrentState.CaptchaVerificationForMeetingJoin
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingVerification' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedState = @{
+            CaptchaVerificationForMeetingJoin = $CaptchaVerificationForMeetingJoin
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingVerification' -CurrentValue $CurrentState -ExpectedValue $ExpectedState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsMeetingVerification' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

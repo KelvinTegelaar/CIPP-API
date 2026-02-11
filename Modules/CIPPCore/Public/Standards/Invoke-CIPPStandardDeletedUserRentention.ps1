@@ -31,27 +31,31 @@ function Invoke-CIPPStandardDeletedUserRentention {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DeletedUserRetention'
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DeletedUserRetention state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $Days = $Settings.Days.value ?? $Settings.Days
 
+    $ExpectedValue = [PSCustomObject]@{
+        DeletedUserRententionDays = [int]$Days
+    }
+    $CurrentValue = [PSCustomObject]@{
+        DeletedUserRententionDays = $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays
+    }
+
     if ($Settings.report -eq $true) {
-        $CurrentState = $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $Days ? $true : ($CurrentInfo | Select-Object deletedUserPersonalSiteRetentionPeriodInDays)
-        Set-CIPPStandardsCompareField -FieldName 'standards.DeletedUserRentention' -FieldValue $CurrentState -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DeletedUserRentention' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -StoreAs string -Tenant $Tenant
     }
 
@@ -60,7 +64,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
     # Input validation
     if (($Days -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DeletedUserRentention: Invalid Days parameter set' -sev Error
-        Return
+        return
     }
 
     # Backwards compatibility for v5.9.4 and back
@@ -72,9 +76,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
 
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $WantedState) { $true } else { $false }
 
-    If ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
+    if ($Settings.remediate -eq $true) {
         if ($StateSetCorrectly -eq $false) {
             try {
                 $body = [PSCustomObject]@{

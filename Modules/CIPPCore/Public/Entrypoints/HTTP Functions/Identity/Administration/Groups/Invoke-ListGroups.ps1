@@ -15,7 +15,7 @@ function Invoke-ListGroups {
 
     $ExpandMembers = $Request.Query.expandMembers ?? $false
 
-    $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName'
+    $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
     if ($ExpandMembers -ne $false) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString
     }
@@ -24,7 +24,7 @@ function Invoke-ListGroups {
     $BulkRequestArrayList = [System.Collections.Generic.List[object]]::new()
 
     if ($Request.Query.GroupID) {
-        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName,onPremisesSyncEnabled'
+        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,assignedLicenses,userPrincipalName,onPremisesSyncEnabled,licenseProcessingState'
         $BulkRequestArrayList.add(@{
                 id     = 1
                 method = 'GET'
@@ -87,15 +87,23 @@ function Invoke-ListGroups {
             $GraphRequest = [PSCustomObject]@{
                 groupInfo              = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
                 @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true } else { $false } } },
-                @{Name = 'calculatedGroupType'; Expression = {
-                        if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-                        if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                @{Name = 'groupType'; Expression = {
                         if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-                        if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+                        elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                        elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                        elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
                     }
-                }, @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
-                members                = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value
-                owners                 = ($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value
+                },
+                @{Name = 'calculatedGroupType'; Expression = {
+                        if ($_.groupTypes -contains 'Unified') { 'm365' }
+                        elseif ($_.mailEnabled -and $_.securityEnabled) { 'security' }
+                        elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'generic' }
+                        elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
+                    }
+                },
+                @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
+                members                = @(($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value | Sort-Object displayName)
+                owners                 = @(($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value | Sort-Object displayName)
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
@@ -104,12 +112,18 @@ function Invoke-ListGroups {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
             @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
-            @{Name = 'calculatedGroupType'; Expression = {
-
-                    if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
-                    if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
+            @{Name = 'groupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
-                    if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+                    elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                    elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                    elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
+                }
+            },
+            @{Name = 'calculatedGroupType'; Expression = {
+                    if ($_.groupTypes -contains 'Unified') { 'm365' }
+                    elseif ($_.mailEnabled -and $_.securityEnabled) { 'security' }
+                    elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'generic' }
+                    elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
                 }
             },
             @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }

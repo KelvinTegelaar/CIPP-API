@@ -35,14 +35,16 @@ function Invoke-CIPPStandardallowOTPTokens {
 
     try {
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the allowOTPTokens state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    $CurrentValue = $CurrentInfo | Select-Object -Property isSoftwareOathEnabled
+    $ExpectedValue = [PSCustomObject]@{isSoftwareOathEnabled = $true }
+
+    if ($Settings.remediate -eq $true) {
         if ($CurrentInfo.isSoftwareOathEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is already enabled.' -sev Info
         } else {
@@ -63,7 +65,7 @@ function Invoke-CIPPStandardallowOTPTokens {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.allowOTPTokens' -FieldValue $CurrentInfo.isSoftwareOathEnabled -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.allowOTPTokens' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 

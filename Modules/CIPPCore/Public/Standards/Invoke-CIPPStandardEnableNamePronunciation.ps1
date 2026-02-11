@@ -36,13 +36,10 @@ function Invoke-CIPPStandardEnableNamePronunciation {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Name Pronunciation. Error: $($ErrorMessage.NormalizedError)" -sev Error
-        Return
+        return
     }
-    Write-Host $CurrentState
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Name Pronunciation is already enabled.' -sev Info
         } else {
@@ -69,7 +66,14 @@ function Invoke-CIPPStandardEnableNamePronunciation {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableNamePronunciation' -FieldValue $CurrentState.isEnabledInOrganization -Tenant $tenant
+        $CurrentValue = [PSCustomObject]@{
+            EnableNamePronunciation = $CurrentState.isEnabledInOrganization
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableNamePronunciation = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableNamePronunciation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'NamePronunciationEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }

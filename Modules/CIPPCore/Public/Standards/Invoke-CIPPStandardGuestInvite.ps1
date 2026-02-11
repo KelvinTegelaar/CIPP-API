@@ -37,8 +37,7 @@ function Invoke-CIPPStandardGuestInvite {
 
     try {
         $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the GuestInvite state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -48,7 +47,7 @@ function Invoke-CIPPStandardGuestInvite {
     $AllowInvitesFromValue = $Settings.allowInvitesFrom.value ?? $Settings.allowInvitesFrom
     if (([string]::IsNullOrWhiteSpace($AllowInvitesFromValue) -or $AllowInvitesFromValue -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'GuestInvite: Invalid allowInvitesFrom parameter set' -sev Error
-        Return
+        return
     }
 
     $StateIsCorrect = ($CurrentState.allowInvitesFrom -eq $AllowInvitesFromValue)
@@ -87,8 +86,14 @@ function Invoke-CIPPStandardGuestInvite {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : ($CurrentState | Select-Object allowInvitesFrom)
-        Set-CIPPStandardsCompareField -FieldName 'standards.GuestInvite' -FieldValue $state -TenantFilter $Tenant
+        $CurrentValue = @{
+            allowInvitesFrom = $CurrentState.allowInvitesFrom
+        }
+        $ExpectedValue = @{
+            allowInvitesFrom = $AllowInvitesFromValue
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.GuestInvite' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'GuestInvite' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -31,19 +31,17 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableAddShortcutsToOneDrive' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableAddShortcutsToOneDrive' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAddShortcutsToOneDrive'
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
-    }
-    catch {
+            Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAddShortcutsToOneDrive state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -53,7 +51,14 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     $StateValue = $Settings.state.value ?? $Settings.state
     if (([string]::IsNullOrWhiteSpace($StateValue) -or $StateValue -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'DisableAddShortcutsToOneDrive: Invalid state parameter set' -sev Error
-        Return
+        return
+    }
+
+    $CurrentValue = [PSCustomObject]@{
+        DisableAddShortcutsToOneDrive = $CurrentState.DisableAddToOneDrive
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        DisableAddShortcutsToOneDrive = [System.Convert]::ToBoolean($StateValue)
     }
 
     $WantedState = [System.Convert]::ToBoolean($StateValue)
@@ -66,13 +71,11 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         } else {
             $FieldValue = $CurrentState | Select-Object -Property DisableAddToOneDrive
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAddShortcutsToOneDrive' -FieldValue $FieldValue -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAddShortcutsToOneDrive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'OneDriveAddShortcutButtonDisabled' -FieldValue $CurrentState.DisableAddToOneDrive -StoreAs bool -Tenant $Tenant
     }
 
-    If ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
-
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $false) {
             try {
                 $CurrentState | Set-CIPPSPOTenant -Properties @{DisableAddToOneDrive = $WantedState }

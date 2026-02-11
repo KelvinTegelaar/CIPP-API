@@ -34,7 +34,6 @@ function Invoke-CIPPStandardCloudMessageRecall {
     $TestResult = Test-CIPPStandardLicense -StandardName 'CloudMessageRecall' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'CloudMessageRecall'
@@ -44,21 +43,13 @@ function Invoke-CIPPStandardCloudMessageRecall {
 
     try {
         $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
-    }
-    catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the CloudMessageRecall state for $Tenant. Error: $ErrorMessage" -Sev Error
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the CloudMessageRecall state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
-
-    if ($Settings.report -eq $true) {
-        # Default is not set, not set means it's enabled
-        if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -FieldValue $StateIsCorrect -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
-    }
 
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
@@ -66,8 +57,22 @@ function Invoke-CIPPStandardCloudMessageRecall {
         return
     }
 
+    $CurrentValue = [PSCustomObject]@{
+        MessageRecallEnabled = $CurrentState
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        MessageRecallEnabled = $WantedState
+    }
+
+    if ($Settings.report -eq $true) {
+        # Default is not set, not set means it's enabled
+        if ($null -eq $CurrentState ) { $CurrentState = $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
+    }
+
+
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $false) {
             try {
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ MessageRecallEnabled = $WantedState } -useSystemMailbox $true

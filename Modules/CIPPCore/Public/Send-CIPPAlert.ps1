@@ -18,6 +18,11 @@ function Send-CIPPAlert {
     $Table = Get-CIPPTable -TableName SchedulerConfig
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
     $Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+
+    if ($HTMLContent) {
+        $HTMLContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $HTMLContent
+    }
+
     if ($Type -eq 'email') {
         Write-Information 'Trying to send email'
         try {
@@ -39,6 +44,7 @@ function Send-CIPPAlert {
                         }
                     }
                 }
+
                 $PowerShellBody = [PSCustomObject]@{
                     message         = @{
                         subject      = $Title
@@ -52,6 +58,7 @@ function Send-CIPPAlert {
                 }
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
+
                 if ($PSCmdlet.ShouldProcess($($Recipients.EmailAddress.Address -join ', '), 'Sending email')) {
                     $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
                 }
@@ -94,8 +101,20 @@ function Send-CIPPAlert {
     if ($Type -eq 'webhook') {
         Write-Information 'Trying to send webhook'
 
+        $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
+        $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json)
+
+        if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
+            $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
+            $Headers = @{'CF-Access-Client-Id' = $Configuration.CFZTNA.ClientId; 'CF-Access-Client-Secret' = "$CFAPIKey" }
+            Write-Information 'CF-Access-Client-Id and CF-Access-Client-Secret headers added to webhook API request'
+        } else {
+            $Headers = $null
+        }
+
+        $JSONBody = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $JSONContent -EscapeForJson
         try {
-            if ($Config.webhook -ne '' -or $AltWebhook -ne '') {
+            if (![string]::IsNullOrWhiteSpace($Config.webhook) -or ![string]::IsNullOrWhiteSpace($AltWebhook)) {
                 if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
                     $webhook = if ($AltWebhook) { $AltWebhook } else { $Config.webhook }
                     switch -wildcard ($webhook) {
@@ -117,17 +136,29 @@ function Send-CIPPAlert {
                             Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                         }
                         default {
-                            Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $JSONContent
+                            $RestMethod = @{
+                                Uri         = $webhook
+                                Method      = 'POST'
+                                ContentType = 'application/json'
+                                Body        = $JSONContent
+                            }
+                            if ($Headers) {
+                                $RestMethod['Headers'] = $Headers
+                            }
+                            Invoke-RestMethod @RestMethod
                         }
                     }
                 }
+                Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
+            } else {
+                Write-LogMessage -API 'Webhook Alerts' -message 'No webhook URL configured' -sev warning
             }
-            Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
 
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
+            return "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
         }
     }
 
