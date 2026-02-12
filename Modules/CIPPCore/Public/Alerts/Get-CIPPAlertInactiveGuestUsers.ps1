@@ -18,19 +18,15 @@ function Get-CIPPAlertInactiveGuestUsers {
             $inactiveDays = 90
             $excludeDisabled = $false
 
-            if ($InputValue -is [hashtable] -or $InputValue -is [pscustomobject]) {
-                $excludeDisabled = [bool]$InputValue.ExcludeDisabled
-                if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
-                    $parsedDays = 0
-                    if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {
-                        $inactiveDays = $parsedDays
-                    }
+            $excludeDisabled = [bool]$InputValue.ExcludeDisabled
+            if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
+                $parsedDays = 0
+                if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {
+                    $inactiveDays = $parsedDays
                 }
             }
-            elseif ($InputValue -eq $true) {
-                # Backwards compatibility: legacy single-input boolean means exclude disabled users
-                $excludeDisabled = $true
-            }
+
+
 
             $Lookup = (Get-Date).AddDays(-$inactiveDays).ToUniversalTime()
             Write-Host "Checking for guest users inactive since $Lookup (excluding disabled: $excludeDisabled)"
@@ -39,13 +35,11 @@ function Get-CIPPAlertInactiveGuestUsers {
 
             $Uri = if ($BaseFilter) {
                 "https://graph.microsoft.com/beta/users?`$filter=$BaseFilter&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses"
-            }
-            else {
+            } else {
                 "https://graph.microsoft.com/beta/users?`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses"
             }
 
-            $GraphRequest = New-GraphGetRequest -uri $Uri -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter |
-            Where-Object { $_.userType -eq 'Guest' }
+            $GraphRequest = New-GraphGetRequest -uri $Uri-tenantid $TenantFilter | Where-Object { $_.userType -eq 'Guest' }
 
             $AlertData = foreach ($user in $GraphRequest) {
                 $lastInteractive = $user.signInActivity.lastSignInDateTime
@@ -55,11 +49,9 @@ function Get-CIPPAlertInactiveGuestUsers {
                 $lastSignIn = $null
                 if ($lastInteractive -and $lastNonInteractive) {
                     $lastSignIn = if ([DateTime]$lastInteractive -gt [DateTime]$lastNonInteractive) { $lastInteractive } else { $lastNonInteractive }
-                }
-                elseif ($lastInteractive) {
+                } elseif ($lastInteractive) {
                     $lastSignIn = $lastInteractive
-                }
-                elseif ($lastNonInteractive) {
+                } elseif ($lastNonInteractive) {
                     $lastSignIn = $lastNonInteractive
                 }
 
@@ -72,8 +64,7 @@ function Get-CIPPAlertInactiveGuestUsers {
 
                     if (-not $lastSignIn) {
                         $Message = 'Guest user {0} has never signed in.' -f $user.UserPrincipalName
-                    }
-                    else {
+                    } else {
                         $daysSinceSignIn = [Math]::Round(((Get-Date) - [DateTime]$lastSignIn).TotalDays)
                         $Message = 'Guest user {0} has been inactive for {1} days. Last sign-in: {2}' -f $user.UserPrincipalName, $daysSinceSignIn, $lastSignIn
                     }
@@ -91,10 +82,8 @@ function Get-CIPPAlertInactiveGuestUsers {
             }
 
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
-        catch {}
-    }
-    catch {
+        } catch {}
+    } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check inactive guest users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }

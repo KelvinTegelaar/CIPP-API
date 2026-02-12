@@ -18,17 +18,12 @@ function Get-CIPPAlertInactiveUsers {
             $inactiveDays = 90
             $excludeDisabled = $false
 
-            if ($InputValue -is [hashtable] -or $InputValue -is [pscustomobject]) {
-                $excludeDisabled = [bool]$InputValue.ExcludeDisabled
-                if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
-                    $parsedDays = 0
-                    if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {
-                        $inactiveDays = $parsedDays
-                    }
+            $excludeDisabled = [bool]$InputValue.ExcludeDisabled
+            if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
+                $parsedDays = 0
+                if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {
+                    $inactiveDays = $parsedDays
                 }
-            } elseif ($InputValue -eq $true) {
-                # Backwards compatibility: legacy single-input boolean means exclude disabled users
-                $excludeDisabled = $true
             }
 
             $Lookup = (Get-Date).AddDays(-$inactiveDays).ToUniversalTime()
@@ -42,8 +37,7 @@ function Get-CIPPAlertInactiveUsers {
                 "https://graph.microsoft.com/beta/users?`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses"
             }
 
-            $GraphRequest = New-GraphGetRequest -uri $Uri -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter |
-                Where-Object { $_.userType -eq 'Member' }
+            $GraphRequest = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter | Where-Object { $_.userType -eq 'Member' }
 
             $AlertData = foreach ($user in $GraphRequest) {
                 $lastInteractive = $user.signInActivity.lastSignInDateTime
@@ -73,12 +67,12 @@ function Get-CIPPAlertInactiveUsers {
                     }
 
                     [PSCustomObject]@{
-                        UserPrincipalName = $user.UserPrincipalName
-                        Id                = $user.id
-                        lastSignIn        = $lastSignIn
+                        UserPrincipalName   = $user.UserPrincipalName
+                        Id                  = $user.id
+                        lastSignIn          = $lastSignIn
                         DaysSinceLastSignIn = if ($daysSinceSignIn) { $daysSinceSignIn } else { 'N/A' }
-                        Message           = $Message
-                        Tenant            = $TenantFilter
+                        Message             = $Message
+                        Tenant              = $TenantFilter
                     }
                 }
             }
