@@ -10,6 +10,7 @@ function Set-CIPPAuthenticationPolicy {
         $TAPDefaultLifeTime = 60, #minutes
         $TAPDefaultLength = 8, #TAP password generated length in chars
         $TAPisUsableOnce = $true,
+        [Parameter()][string[]]$GroupIds,
         [Parameter()][ValidateRange(1, 395)]$QRCodeLifetimeInDays = 365,
         [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
         $APIName = 'Set Authentication Policy',
@@ -118,6 +119,40 @@ function Set-CIPPAuthenticationPolicy {
             throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
+
+    if ($PSBoundParameters.ContainsKey('GroupIds') -and @($GroupIds).Count -gt 0) {
+        $ResolvedGroupIds = @(
+            @($GroupIds) |
+                ForEach-Object { "$_".Trim() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                Select-Object -Unique
+        )
+
+        if ($ResolvedGroupIds.Count -gt 0) {
+            $TargetTemplate = $null
+            if ($CurrentInfo.includeTargets -and @($CurrentInfo.includeTargets).Count -gt 0) {
+                $TargetTemplate = $CurrentInfo.includeTargets | Select-Object -First 1
+            }
+
+            $CurrentInfo.includeTargets = @(
+                foreach ($GroupId in $ResolvedGroupIds) {
+                    $TargetProperties = [ordered]@{}
+                    if ($TargetTemplate) {
+                        foreach ($Property in $TargetTemplate.PSObject.Properties) {
+                            if ($Property.Name -ne 'id' -and $Property.Name -ne 'targetType') {
+                                $TargetProperties[$Property.Name] = $Property.Value
+                            }
+                        }
+                    }
+                    $TargetProperties.targetType = 'group'
+                    $TargetProperties.id = $GroupId
+                    [pscustomobject]$TargetProperties
+                }
+            )
+            $OptionalLogMessage = "$OptionalLogMessage and targeted groups set to $($ResolvedGroupIds -join ', ')"
+        }
+    }
+
     # Set state of the authentication method
     try {
         if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
