@@ -77,20 +77,32 @@ function New-CIPPGroup {
             $null
         }
 
+        # Determine if we should generate a random mailNickname:
+        # For Security/Generic groups WITHOUT a username filled in
+        $ShouldGenerateRandomMailNickname = ($NormalizedGroupType -in @('Generic', 'Security')) -and [string]::IsNullOrWhiteSpace($GroupObject.username)
+
         # Extract local part of username if exists and remove special characters for mailNickname
-        if ($GroupObject.username -like '*@*') {
-            $MailNickname = ($GroupObject.username -split '@')[0]
+        if ($ShouldGenerateRandomMailNickname) {
+            # Generate a random alphanumeric mailNickname for security groups without a username
+            # Format: 8 hex characters + hyphen + 1 hex character (e.g., "450662e4-3")
+            $RandomPart1 = -join ((0..7) | ForEach-Object { (0..15 | ForEach-Object { '0123456789abcdef'[$_] } | Get-Random) })
+            $RandomPart2 = (0..15 | ForEach-Object { '0123456789abcdef'[$_] } | Get-Random)
+            $MailNickname = "$RandomPart1-$RandomPart2"
         } else {
-            $MailNickname = $GroupObject.username
-        }
+            if ($GroupObject.username) {
+                $MailNickname = ($GroupObject.username -split '@')[0]
+            } else {
+                $MailNickname = $GroupObject.username
+            }
 
-        # Remove forbidden characters per Microsoft 365 mailNickname requirements:
-        # ASCII 0-127 only, excluding: @ () / [] ' ; : <> , SPACE and any non-ASCII
-        $MailNickname = $MailNickname -replace "[@()\[\]/'`;:<>,\s]|[^\x00-\x7F]", ''
+            # Remove forbidden characters per Microsoft 365 mailNickname requirements:
+            # ASCII 0-127 only, excluding: @ () / [] ' ; : <> , SPACE and any non-ASCII
+            $MailNickname = $MailNickname -replace "[@()\[\]/'`;:<>,\s]|[^\x00-\x7F]", ''
 
-        # Ensure max length of 64 characters
-        if ($MailNickname.Length -gt 64) {
-            $MailNickname = $MailNickname.Substring(0, 64)
+            # Ensure max length of 64 characters
+            if ($MailNickname.Length -gt 64) {
+                $MailNickname = $MailNickname.Substring(0, 64)
+            }
         }
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info
