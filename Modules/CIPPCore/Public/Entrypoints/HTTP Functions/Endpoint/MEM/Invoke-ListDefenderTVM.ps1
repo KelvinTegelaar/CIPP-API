@@ -25,8 +25,8 @@ function Invoke-ListDefenderTVM {
             # Add all properties from the group with appropriate processing
             foreach ($property in $allProperties) {
                 if ($property -eq 'deviceName') {
-                    # Special handling for deviceName - join with comma
-                    $obj['affectedDevices'] = ($cve.group.$property -join ', ')
+                    # Special handling for deviceName - create array of objects
+                    $obj['affectedDevices'] = @($cve.group.$property | ForEach-Object { @{ $property = $_ } })
                 } else {
                     # For all other properties, get unique values
                     $obj[$property] = ($cve.group.$property | Sort-Object -Unique) | Select-Object -First 1
