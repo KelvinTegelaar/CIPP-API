@@ -38,13 +38,13 @@ function New-CIPPGraphRetry {
     param(
         [Parameter(Mandatory = $true)]
         [string]$uri,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$tenantid,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$type,
-        
+
         [string]$body,
         [string]$scope,
         [switch]$AsApp,
@@ -56,9 +56,9 @@ function New-CIPPGraphRetry {
         [bool]$returnHeaders,
         [int]$maxRetries = 3
     )
-    
+
     Write-Information "Retrying Graph API request for URI: $uri | Tenant: $tenantid"
-    
+
     try {
         # Build the parameter splat for New-GraphPOSTRequest
         $GraphParams = @{
@@ -69,7 +69,7 @@ function New-CIPPGraphRetry {
             maxRetries    = $maxRetries
             ScheduleRetry = $false  # Do NOT schedule again if this retry fails
         }
-        
+
         # Add optional parameters if they were provided
         if ($scope) { $GraphParams.scope = $scope }
         if ($AsApp) { $GraphParams.AsApp = $AsApp }
@@ -79,12 +79,12 @@ function New-CIPPGraphRetry {
         if ($contentType) { $GraphParams.contentType = $contentType }
         if ($IgnoreErrors) { $GraphParams.IgnoreErrors = $IgnoreErrors }
         if ($returnHeaders) { $GraphParams.returnHeaders = $returnHeaders }
-        
+
         # Execute the Graph request
         $Result = New-GraphPOSTRequest @GraphParams
-        
+
         Write-LogMessage -API 'GraphRetry' -message "Successfully retried Graph request for URI: $uri | Tenant: $tenantid" -Sev 'Info' -tenant $tenantid
-        
+
         return $Result
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
