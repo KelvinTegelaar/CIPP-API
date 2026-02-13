@@ -17,7 +17,7 @@ function New-GraphPOSTRequest {
         $contentType,
         $IgnoreErrors = $false,
         $returnHeaders = $false,
-        $maxRetries = 1
+        $maxRetries = 3
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
