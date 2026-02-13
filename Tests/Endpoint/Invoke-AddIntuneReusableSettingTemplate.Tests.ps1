@@ -4,6 +4,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-AddIntuneReusableSettingTemplate.ps1'
+    $MetadataPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPReusableSettingMetadata.ps1'
 
     class HttpResponseContext {
         [int]$StatusCode
@@ -19,9 +20,7 @@ BeforeAll {
         [pscustomobject]@{ NormalizedError = $Exception }
     }
 
-    # Pass-through for metadata cleanup used in the function
-    function Remove-CIPPReusableSettingMetadata { param($InputObject) $InputObject }
-
+    . $MetadataPath
     . $FunctionPath
 }
 
@@ -71,5 +70,34 @@ Describe 'Invoke-AddIntuneReusableSettingTemplate' {
 
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
         $response.Body.Results | Should -Match 'RawJSON is not valid JSON'
+    }
+
+    It 'normalizes children null values in reusable setting templates' {
+        $request = [pscustomobject]@{
+            Params = @{ CIPPEndpoint = 'AddIntuneReusableSettingTemplate' }
+            Headers = @{ Authorization = 'Bearer token' }
+            Body    = [pscustomobject]@{
+                displayName = 'Template With Children'
+                rawJSON     = '{"displayName":"Template With Children","settingInstance":{"groupSettingCollectionValue":[{"children":[{"choiceSettingValue":{"children":null}}]}]}}'
+                GUID        = 'template-children'
+            }
+        }
+
+        $parsed = $request.Body.rawJSON | ConvertFrom-Json -Depth 100
+        $clean = Remove-CIPPReusableSettingMetadata -InputObject $parsed
+        $clean.settingInstance.PSObject.Properties.Name | Should -Contain 'groupSettingCollectionValue'
+        $clean.settingInstance.groupSettingCollectionValue | Should -Not -BeNullOrEmpty
+        $clean.settingInstance.groupSettingCollectionValue.GetType().FullName | Should -Be 'System.Object[]'
+        ($clean.settingInstance.groupSettingCollectionValue -is [System.Collections.IEnumerable]) | Should -BeTrue
+        ($clean.settingInstance.groupSettingCollectionValue | Measure-Object).Count | Should -Be 1
+        ($clean.settingInstance.groupSettingCollectionValue[0].children -is [System.Collections.IEnumerable]) | Should -BeTrue
+        ($clean.settingInstance.groupSettingCollectionValue[0].children | Measure-Object).Count | Should -Be 1
+        ($clean.settingInstance.groupSettingCollectionValue[0].children[0].choiceSettingValue.children -is [System.Collections.IEnumerable]) | Should -BeTrue
+
+        $response = Invoke-AddIntuneReusableSettingTemplate -Request $request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $lastEntity.RawJSON | Should -Not -Match '"children":null'
+        $lastEntity.RawJSON | Should -Match '"children":\[\]'
     }
 }

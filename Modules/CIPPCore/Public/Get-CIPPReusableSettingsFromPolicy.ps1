@@ -98,12 +98,26 @@ function Get-CIPPReusableSettingsFromPolicy {
     foreach ($settingId in $referencedReusableIds) {
         try {
             $setting = New-GraphGETRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings/$settingId" -tenantid $Tenant
-            if (-not $setting) {
+            if ($null -eq $setting) {
                 Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId not returned from Graph" -Sev 'Warn'
                 continue
             }
 
-            $settingDisplayName = $setting.displayName
+            # Normalize Graph SDK objects into PSCustomObject to ensure cleanup works consistently
+            $settingNormalized = [ordered]@{}
+            foreach ($prop in $setting.PSObject.Properties) {
+                $settingNormalized[$prop.Name] = $prop.Value
+            }
+
+            if ($settingNormalized.Count -eq 0) {
+                foreach ($prop in $setting.GetType().GetProperties()) {
+                    $settingNormalized[$prop.Name] = $prop.GetValue($setting)
+                }
+            }
+
+            $settingNormalized = $settingNormalized | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json -Depth 100
+
+            $settingDisplayName = $setting.displayName ?? $settingNormalized.displayName
             if (-not $settingDisplayName) {
                 Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId missing displayName" -Sev 'Warn'
                 continue
@@ -112,9 +126,10 @@ function Get-CIPPReusableSettingsFromPolicy {
             $matchedTemplate = $existingReusableByName[$settingDisplayName]
             $templateGuid = $matchedTemplate.RowKey
 
+            $cleanSetting = Remove-CIPPReusableSettingMetadata -InputObject $settingNormalized
+            $sanitizedJson = $cleanSetting | ConvertTo-Json -Depth 100 -Compress
+
             if (-not $templateGuid) {
-                $cleanSetting = Remove-CIPPReusableSettingMetadata -InputObject $setting
-                $sanitizedJson = $cleanSetting | ConvertTo-Json -Depth 100 -Compress
                 $templateGuid = (New-Guid).Guid
                 $reusableEntity = [pscustomobject]@{
                     DisplayName = $settingDisplayName
@@ -139,7 +154,46 @@ function Get-CIPPReusableSettingsFromPolicy {
 
                 Write-LogMessage -headers $Headers -API $APIName -message "Created reusable setting template $templateGuid for '$settingDisplayName'" -Sev 'Info'
             } else {
-                Write-LogMessage -headers $Headers -API $APIName -message "Reusing existing reusable setting template $templateGuid for '$settingDisplayName'" -Sev 'Info'
+                $existingRawJson = $matchedTemplate.RawJSON
+                if (-not $existingRawJson) {
+                    $existingParsed = $matchedTemplate.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    $existingRawJson = $existingParsed.RawJSON
+                }
+
+                $requiresNormalization = $false
+                if ($existingRawJson -and $existingRawJson -match '"children"\s*:\s*null') {
+                    $requiresNormalization = $true
+                }
+
+                if ($requiresNormalization) {
+                    $reusableEntity = [pscustomobject]@{
+                        DisplayName = $settingDisplayName
+                        Description = $setting.description
+                        RawJSON     = $sanitizedJson
+                        GUID        = $templateGuid
+                    } | ConvertTo-Json -Depth 100 -Compress
+
+                    Add-CIPPAzDataTableEntity @templatesTableForAdd -Entity @{
+                        JSON         = "$reusableEntity"
+                        RowKey       = "$templateGuid"
+                        PartitionKey = 'IntuneReusableSettingTemplate'
+                        GUID         = "$templateGuid"
+                        DisplayName  = $settingDisplayName
+                        Description  = $setting.description
+                        RawJSON      = "$sanitizedJson"
+                    }
+
+                    $existingReusableByName[$settingDisplayName] = [pscustomobject]@{
+                        RowKey      = $templateGuid
+                        DisplayName = $settingDisplayName
+                        JSON        = $reusableEntity
+                        RawJSON     = $sanitizedJson
+                    }
+
+                    Write-LogMessage -headers $Headers -API $APIName -message "Normalized reusable setting template $templateGuid for '$settingDisplayName'" -Sev 'Info'
+                } else {
+                    Write-LogMessage -headers $Headers -API $APIName -message "Reusing existing reusable setting template $templateGuid for '$settingDisplayName'" -Sev 'Info'
+                }
             }
 
             $result.ReusableSettings.Add([pscustomobject]@{
