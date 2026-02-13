@@ -295,7 +295,7 @@ function Compare-CIPPIntuneObject {
                             foreach ($groupValue in $child.groupSettingCollectionValue) {
                                 if ($groupValue.children) {
                                     $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollection $IntuneCollection
-                                    $results.AddRange($nestedResults)
+                                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                                 }
                             }
                         }
@@ -381,7 +381,7 @@ function Compare-CIPPIntuneObject {
                 # Also process any children within choice setting values
                 if ($child.choiceSettingValue?.children) {
                     $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollection $IntuneCollection
-                    $results.AddRange($nestedResults)
+                    foreach ($nr in $nestedResults) { $results.Add($nr) }
                 }
             }
 
@@ -399,7 +399,7 @@ function Compare-CIPPIntuneObject {
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
                                 $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollection $intuneCollection
-                                $groupResults.AddRange($childResults)
+                                foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
                         # Return the results from the recursive processing
@@ -471,7 +471,7 @@ function Compare-CIPPIntuneObject {
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
                                 $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollection $intuneCollection
-                                $groupResults.AddRange($childResults)
+                                foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
                         # Return the results from the recursive processing

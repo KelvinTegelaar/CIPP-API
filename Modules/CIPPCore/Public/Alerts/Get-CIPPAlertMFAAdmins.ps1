@@ -20,6 +20,15 @@ function Get-CIPPAlertMFAAdmins {
         if (!$DuoActive) {
             $Users = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$top=999&filter=IsAdmin eq true and isMfaRegistered eq false and userType eq 'member'&`$select=id,userDisplayName,userPrincipalName,lastUpdatedDateTime,isMfaRegistered,IsAdmin" -tenantid $($TenantFilter) -AsApp $true |
                 Where-Object { $_.userDisplayName -ne 'On-Premises Directory Synchronization Service Account' }
+
+            # Filter out JIT admins if any users were found
+            if ($Users) {
+                $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
+                $JITAdmins = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,$($Schema.id)&`$filter=$($Schema.id)/jitAdminEnabled eq true" -tenantid $TenantFilter -ComplexFilter
+                $JITAdminIds = $JITAdmins.id
+                $Users = $Users | Where-Object { $_.id -notin $JITAdminIds }
+            }
+
             if ($Users.UserPrincipalName) {
                 $AlertData = foreach ($user in $Users) {
                     [PSCustomObject]@{

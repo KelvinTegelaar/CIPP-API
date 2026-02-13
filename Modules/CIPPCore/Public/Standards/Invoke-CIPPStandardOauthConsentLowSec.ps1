@@ -119,7 +119,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
         }
 
         $ExpectedValue = @{
-            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('managePermissionGrantsForSelf.microsoft-user-default-low')
+            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.microsoft-user-default-low')
         }
         Add-CIPPBPAField -FieldName 'OauthConsentLowSec' -FieldValue $State.permissionGrantPolicyIdsAssignedToDefaultUserRole -StoreAs bool -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsentLowSec' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant

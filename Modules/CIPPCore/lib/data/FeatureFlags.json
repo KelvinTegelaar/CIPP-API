@@ -2,8 +2,7 @@
   {
     "Id": "BestPracticeAnalyser",
     "Name": "Best Practice Analyser",
-    "Type": "Orchestrator",
-    "Description": "Best Practice Analyser orchestrator (deprecated)",
+    "Description": "The Best Practice Analyser has been deprecated and will be removed in a future release.",
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": [

@@ -20,7 +20,8 @@ function Set-CIPPDBCacheUsers {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching users' -sev Debug
 
         # Stream users directly from Graph API to batch processor
-        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter |
+        # Using $top=500 due to signInActivity limitation
+        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=500&$select=signInActivity' -tenantid $TenantFilter |
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Users' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached users successfully' -sev Debug

@@ -40,19 +40,13 @@ function Set-CIPPFeatureFlag {
         }
 
         if ($PSCmdlet.ShouldProcess($Id, "Set feature flag enabled to $Enabled")) {
-            # Update or create the table entry
+            # Update or create the table entry (only store RowKey and Enabled)
             $Table = Get-CIPPTable -TableName 'FeatureFlags'
 
-            # Convert arrays to JSON strings for table storage
             $Entity = @{
                 PartitionKey = 'FeatureFlag'
                 RowKey       = $Id
                 Enabled      = $Enabled
-                Timers       = [string]($FeatureFlag.Timers | ConvertTo-Json -Compress)
-                Endpoints    = [string]($FeatureFlag.Endpoints | ConvertTo-Json -Compress)
-                Pages        = [string]($FeatureFlag.Pages | ConvertTo-Json -Compress)
-                Name         = [string]$FeatureFlag.Name
-                Description  = [string]$FeatureFlag.Description
                 LastModified = (Get-Date).ToUniversalTime().ToString('o')
             }
 
