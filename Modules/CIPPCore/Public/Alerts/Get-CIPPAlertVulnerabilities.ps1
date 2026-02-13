@@ -81,7 +81,6 @@ function Get-CIPPAlertVulnerabilities {
                     DaysOld              = $DaysOld
                     HoursOld             = $HoursOld
                     AffectedDeviceCount  = $Group.Count
-                    AffectedDevices      = $AffectedDevices
                     SoftwareName         = $FirstVuln.softwareName
                     SoftwareVendor       = $FirstVuln.softwareVendor
                     SoftwareVersion      = $FirstVuln.softwareVersion
@@ -90,6 +89,7 @@ function Get-CIPPAlertVulnerabilities {
                     RecommendedUpdate    = $FirstVuln.recommendedSecurityUpdate
                     RecommendedUpdateId  = $FirstVuln.recommendedSecurityUpdateId
                     RecommendedUpdateUrl = $FirstVuln.recommendedSecurityUpdateUrl
+                    AffectedDevices      = $AffectedDevices
                     Tenant               = $TenantFilter
                 }
                 $AlertData.Add($VulnerabilityAlert)
