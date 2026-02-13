@@ -30,11 +30,23 @@ function Search-CIPPDbData {
     .PARAMETER Limit
         Maximum total number of results to return across all types. Default is unlimited (0)
 
+    .PARAMETER UserProperties
+        Array of property names to return for Users type. If not specified, all properties are returned.
+        Only applies when Types includes 'Users'. Valid properties include: id, accountEnabled, businessPhones,
+        city, createdDateTime, companyName, country, department, displayName, faxNumber, givenName,
+        isResourceAccount, jobTitle, mail, mailNickname, mobilePhone, onPremisesDistinguishedName,
+        officeLocation, onPremisesLastSyncDateTime, otherMails, postalCode, preferredDataLocation,
+        preferredLanguage, proxyAddresses, showInAddressList, state, streetAddress, surname,
+        usageLocation, userPrincipalName, userType, assignedLicenses, onPremisesSyncEnabled, signInActivity
+
     .EXAMPLE
         Search-CIPPDbData -TenantFilter 'contoso.onmicrosoft.com' -SearchTerms 'john.doe' -Types 'Users', 'Groups'
 
     .EXAMPLE
         Search-CIPPDbData -SearchTerms 'admin' -Types 'Users'
+
+    .EXAMPLE
+        Search-CIPPDbData -SearchTerms 'admin' -Types 'Users' -UserProperties 'id', 'displayName', 'userPrincipalName', 'mail'
 
     .EXAMPLE
         Search-CIPPDbData -SearchTerms 'SecurityDefaults', 'ConditionalAccess' -Types 'ConditionalAccessPolicies', 'Organization'
@@ -69,7 +81,10 @@ function Search-CIPPDbData {
         [int]$MaxResultsPerType = 0,
 
         [Parameter(Mandatory = $false)]
-        [int]$Limit = 0
+        [int]$Limit = 0,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$UserProperties
     )
 
     try {
@@ -143,26 +158,82 @@ function Search-CIPPDbData {
                             if ($IsMatch) {
                                 try {
                                     $Data = $Item.Data | ConvertFrom-Json
-                                    $ResultItem = [PSCustomObject]@{
-                                        Tenant    = $Item.PartitionKey
-                                        Type      = $Type
-                                        RowKey    = $Item.RowKey
-                                        Data      = $Data
-                                        Timestamp = $Item.Timestamp
-                                    }
-                                    $Results.Add($ResultItem)
-                                    $TypeResultCount++
 
-                                    # Check total limit first
-                                    if ($Limit -gt 0 -and $Results.Count -ge $Limit) {
-                                        Write-Verbose "Reached total limit of $Limit results"
-                                        break typeLoop
+                                    # For Users type with UserProperties, verify match is in target properties
+                                    $IsVerifiedMatch = $true
+                                    if ($Type -eq 'Users' -and $UserProperties -and $UserProperties.Count -gt 0) {
+                                        $IsVerifiedMatch = $false
+
+                                        if ($MatchAll) {
+                                            # All search terms must match in target properties
+                                            $IsVerifiedMatch = $true
+                                            foreach ($SearchTerm in $SearchTerms) {
+                                                $SearchPattern = [regex]::Escape($SearchTerm)
+                                                $TermMatches = $false
+                                                foreach ($Property in $UserProperties) {
+                                                    if ($Data.PSObject.Properties.Name -contains $Property -and
+                                                        $null -ne $Data.$Property -and
+                                                        $Data.$Property.ToString() -match $SearchPattern) {
+                                                        $TermMatches = $true
+                                                        break
+                                                    }
+                                                }
+                                                if (-not $TermMatches) {
+                                                    $IsVerifiedMatch = $false
+                                                    break
+                                                }
+                                            }
+                                        } else {
+                                            # Any search term can match in target properties
+                                            foreach ($SearchTerm in $SearchTerms) {
+                                                $SearchPattern = [regex]::Escape($SearchTerm)
+                                                foreach ($Property in $UserProperties) {
+                                                    if ($Data.PSObject.Properties.Name -contains $Property -and
+                                                        $null -ne $Data.$Property -and
+                                                        $Data.$Property.ToString() -match $SearchPattern) {
+                                                        $IsVerifiedMatch = $true
+                                                        break
+                                                    }
+                                                }
+                                                if ($IsVerifiedMatch) { break }
+                                            }
+                                        }
                                     }
 
-                                    # Check max results per type
-                                    if ($MaxResultsPerType -gt 0 -and $TypeResultCount -ge $MaxResultsPerType) {
-                                        Write-Verbose "Reached max results per type ($MaxResultsPerType) for type '$Type'"
-                                        continue typeLoop
+                                    # Only add to results if verified (or not Users/UserProperties)
+                                    if ($IsVerifiedMatch) {
+                                        # Filter user properties if specified and type is Users
+                                        if ($Type -eq 'Users' -and $UserProperties -and $UserProperties.Count -gt 0) {
+                                            $FilteredData = [PSCustomObject]@{}
+                                            foreach ($Property in $UserProperties) {
+                                                if ($Data.PSObject.Properties.Name -contains $Property) {
+                                                    $FilteredData | Add-Member -MemberType NoteProperty -Name $Property -Value $Data.$Property -Force
+                                                }
+                                            }
+                                            $Data = $FilteredData
+                                        }
+
+                                        $ResultItem = [PSCustomObject]@{
+                                            Tenant    = $Item.PartitionKey
+                                            Type      = $Type
+                                            RowKey    = $Item.RowKey
+                                            Data      = $Data
+                                            Timestamp = $Item.Timestamp
+                                        }
+                                        $Results.Add($ResultItem)
+                                        $TypeResultCount++
+
+                                        # Check total limit first (only for verified matches)
+                                        if ($Limit -gt 0 -and $Results.Count -ge $Limit) {
+                                            Write-Verbose "Reached total limit of $Limit results"
+                                            break typeLoop
+                                        }
+
+                                        # Check max results per type (only for verified matches)
+                                        if ($MaxResultsPerType -gt 0 -and $TypeResultCount -ge $MaxResultsPerType) {
+                                            Write-Verbose "Reached max results per type ($MaxResultsPerType) for type '$Type'"
+                                            continue typeLoop
+                                        }
                                     }
                                 } catch {
                                     Write-Verbose "Failed to parse JSON for $($Item.RowKey): $($_.Exception.Message)"
