@@ -13,20 +13,20 @@ function Get-CIPPAlertNewMFADevice {
 
     try {
         $OneHourAgo = (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
-        
+
         $AuditLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?`$filter=activityDateTime ge $OneHourAgo and (activityDisplayName eq 'User registered security info' or activityDisplayName eq 'User deleted security info')" -tenantid $TenantFilter
         $AlertData = foreach ($Log in $AuditLogs) {
             if ($Log.activityDisplayName -eq 'User registered security info') {
                 $User = $Log.targetResources[0].userPrincipalName
                 if (-not $User) { $User = $Log.initiatedBy.user.userPrincipalName }
-                
+
                 [PSCustomObject]@{
-                    Message         = "New MFA method registered: $User"
-                    User            = $User
-                    DisplayName     = $Log.targetResources[0].displayName
-                    Activity        = $Log.activityDisplayName
-                    ActivityTime    = $Log.activityDateTime
-                    Tenant          = $TenantFilter
+                    Message      = "New MFA method registered: $User"
+                    User         = $User
+                    DisplayName  = $Log.targetResources[0].displayName
+                    Activity     = $Log.activityDisplayName
+                    ActivityTime = $Log.activityDateTime
+                    Tenant       = $TenantFilter
                 }
             }
         }
