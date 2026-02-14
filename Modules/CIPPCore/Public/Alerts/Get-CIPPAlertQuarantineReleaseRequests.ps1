@@ -29,7 +29,7 @@
     }
 
     try {
-        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = 1000; ReleaseStatus = 'Requested'; StartReceivedDate = (Get-Date).AddHours(-6) } -ErrorAction Stop | Select-Object -ExcludeProperty *data.type*
+        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = 1000; ReleaseStatus = 'Requested'; StartReceivedDate = (Get-Date).AddHours(-6) } -ErrorAction Stop | Select-Object -ExcludeProperty *data.type* | Sort-Object -Property ReceivedTime
 
         if ($RequestedReleases) {
             # Get the CIPP URL for the Quarantine link
@@ -56,6 +56,6 @@
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-AlertMessage -tenant $TenantFilter -message "QuarantineReleaseRequests: $(Get-NormalizedError -message $_.Exception.Message)"
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
     }
 }
