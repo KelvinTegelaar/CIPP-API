@@ -195,18 +195,19 @@ function New-CIPPCAPolicy {
                 }
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
-                $location | Select-Object * -ExcludeProperty id
-                Remove-ODataProperties -Object $location
-                $Body = ConvertTo-Json -InputObject $Location
+                $LocationBody = $location | Select-Object * -ExcludeProperty id
+                Remove-ODataProperties -Object $LocationBody
+                $Body = ConvertTo-Json -InputObject $LocationBody
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $tenantfilter -asApp $true
                 $retryCount = 0
+                $MaxRetryCount = 10
                 do {
                     Write-Host "Checking for location $($GraphRequest.id) attempt $retryCount. $TenantFilter"
                     $LocationRequest = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $tenantfilter -asApp $true | Where-Object -Property id -EQ $GraphRequest.id
                     Write-Host "LocationRequest: $($LocationRequest.id)"
                     Start-Sleep -Seconds 2
                     $retryCount++
-                } while ((!$LocationRequest -or !$LocationRequest.id) -and ($retryCount -lt 5))
+                } while ((!$LocationRequest -or !$LocationRequest.id) -and ($retryCount -lt $MaxRetryCount))
                 Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 [pscustomobject]@{
                     id   = $GraphRequest.id
