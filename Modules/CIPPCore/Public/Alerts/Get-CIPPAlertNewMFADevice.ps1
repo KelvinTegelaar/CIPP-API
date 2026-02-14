@@ -36,6 +36,6 @@ function Get-CIPPAlertNewMFADevice {
         }
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Could not check for new MFA devices for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not check for new MFA devices for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }

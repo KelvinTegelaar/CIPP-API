@@ -26,6 +26,6 @@ function Get-CIPPAlertDepTokenExpiry {
 
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check Apple Device Enrollment Program token expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Failed to check Apple Device Enrollment Program token expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }

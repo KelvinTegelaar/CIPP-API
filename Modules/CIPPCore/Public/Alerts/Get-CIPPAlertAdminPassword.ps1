@@ -21,6 +21,6 @@ function Get-CIPPAlertAdminPassword {
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Could not get admin password changes for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not get admin password changes for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }
