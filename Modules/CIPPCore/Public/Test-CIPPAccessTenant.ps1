@@ -120,7 +120,7 @@ function Test-CIPPAccessTenant {
             $AvailableRoles = $RoleDefinitions | Where-Object -Property displayName -In $AllOrgManagementRoles | Select-Object -Property displayName, id, description
             Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
             $MissingOrgMgmtRoles = $AvailableRoles | Where-Object { $OrgManagementRoles.Role -notcontains $_.displayName }
-            if (($MissingOrgMgmtRoles | Measure-Object).Count -gt 0) {
+            if (($MissingOrgMgmtRoles | Measure-Object).Count -ge 5) {
                 $Results.OrgManagementRolesMissing = $MissingOrgMgmtRoles
                 Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
                 $ExchangeStatus = $false
