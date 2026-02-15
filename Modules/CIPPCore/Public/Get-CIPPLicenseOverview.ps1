@@ -63,7 +63,7 @@ function Get-CIPPLicenseOverview {
         $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
     }
 
-    $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value)
+    $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value) | Sort-Object -Property displayName
     $UsersBySku = @{}
     foreach ($User in $AllLicensedUsers) {
         if (-not $User.assignedLicenses) { continue } # Skip users with no assigned licenses. Should not happens as the filter is applied, but just in case
@@ -84,7 +84,7 @@ function Get-CIPPLicenseOverview {
 
     }
 
-    $AllLicensedGroups = @(($Results | Where-Object { $_.id -eq 'licensedGroups' }).body.value)
+    $AllLicensedGroups = @(($Results | Where-Object { $_.id -eq 'licensedGroups' }).body.value) | Sort-Object -Property displayName
     $GroupsBySku = @{}
     foreach ($Group in $AllLicensedGroups) {
         if (-not $Group.assignedLicenses) { continue }
@@ -156,5 +156,5 @@ function Get-CIPPLicenseOverview {
             }
         }
     }
-    return $GraphRequest
+    return ($GraphRequest | Sort-Object -Property License)
 }
