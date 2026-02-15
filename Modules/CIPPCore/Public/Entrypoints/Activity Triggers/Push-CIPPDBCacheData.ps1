@@ -158,6 +158,7 @@ function Push-CIPPDBCacheData {
                 'IntunePolicies'
                 'ManagedDeviceEncryptionStates'
                 'IntuneAppProtectionPolicies'
+                'DetectedApps'
             )
             foreach ($CacheFunction in $IntuneCacheFunctions) {
                 $Batch.Add(@{
