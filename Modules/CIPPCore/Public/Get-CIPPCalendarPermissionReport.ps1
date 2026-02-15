@@ -185,6 +185,7 @@ function Get-CIPPCalendarPermissionReport {
                             Calendar     = $_.MailboxDisplayName
                             CalendarUPN  = $_.MailboxUPN
                             AccessRights = $_.AccessRights
+                            FolderName   = $_.FolderName
                         }
                     })
 
@@ -209,6 +210,7 @@ function Get-CIPPCalendarPermissionReport {
                         [PSCustomObject]@{
                             User         = $_.User
                             AccessRights = $_.AccessRights
+                            FolderName   = $_.FolderName
                         }
                     })
 
@@ -216,6 +218,7 @@ function Get-CIPPCalendarPermissionReport {
                     CalendarUPN              = $CalendarUPN
                     CalendarDisplayName      = $CalendarInfo.MailboxDisplayName
                     CalendarType             = $CalendarInfo.MailboxType
+                    FolderName               = $CalendarInfo.FolderName
                     PermissionCount          = $_.Count
                     Permissions              = $PermissionDetails
                     Tenant                   = $TenantFilter
