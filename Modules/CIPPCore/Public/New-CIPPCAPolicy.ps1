@@ -14,36 +14,13 @@ function New-CIPPCAPolicy {
         $PreloadedCAPolicies = $null
     )
 
-    function Remove-EmptyArrays ($Object) {
-        if ($Object -is [Array]) {
-            foreach ($Item in $Object) { Remove-EmptyArrays $Item }
-        } elseif ($Object -is [HashTable]) {
-            foreach ($Key in @($Object.get_Keys())) {
-                if ($Object[$Key] -is [Array] -and $Object[$Key].get_Count() -eq 0) {
-                    $Object.Remove($Key)
-                } else { Remove-EmptyArrays $Object[$Key] }
-            }
-        } elseif ($Object -is [PSCustomObject]) {
-            foreach ($Name in @($Object.PSObject.Properties.Name)) {
-                if ($Object.$Name -is [Array] -and $Object.$Name.get_Count() -eq 0) {
-                    $Object.PSObject.Properties.Remove($Name)
-                } elseif ($null -eq $Object.$Name) {
-                    $Object.PSObject.Properties.Remove($Name)
-                } else { Remove-EmptyArrays $Object.$Name }
-            }
-        }
-    }
-    # Function to check if a string is a GUID
-    function Test-IsGuid($string) {
-        return [guid]::TryParse($string, [ref][guid]::Empty)
-    }
     # Helper function to replace group display names with GUIDs
     function Convert-GroupNameToId {
         param($TenantFilter, $groupNames, $CreateGroups, $GroupTemplates)
 
         $GroupIds = [System.Collections.Generic.List[string]]::new()
         $groupNames | ForEach-Object {
-            if (Test-IsGuid $_) {
+            if (Test-IsGuid -String $_) {
                 Write-LogMessage -Headers $Headers -API $APIName -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $GroupIds.Add($_) # it's a GUID, so we keep it
             } else {
@@ -89,7 +66,7 @@ function New-CIPPCAPolicy {
 
         $UserIds = [System.Collections.Generic.List[string]]::new()
         $userNames | ForEach-Object {
-            if (Test-IsGuid $_) {
+            if (Test-IsGuid -String $_) {
                 Write-LogMessage -Headers $Headers -API $APIName -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $UserIds.Add($_) # it's a GUID, so we keep it
             } else {
@@ -111,7 +88,7 @@ function New-CIPPCAPolicy {
     $displayName = ($RawJSON | ConvertFrom-Json).displayName
 
     $JSONobj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
-    Remove-EmptyArrays $JSONobj
+    Remove-EmptyArrays -Object $JSONobj
     #Remove context as it does not belong in the payload.
     try {
         $JSONobj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
