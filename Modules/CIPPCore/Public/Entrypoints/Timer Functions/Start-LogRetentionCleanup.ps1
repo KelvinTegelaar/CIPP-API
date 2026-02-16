@@ -45,42 +45,12 @@ function Start-LogRetentionCleanup {
 
             # Fetch all old log entries
             $OldLogs = Get-AzDataTableEntity @CippLogsTable -Filter $CutoffFilter -Property @('PartitionKey', 'RowKey', 'ETag')
+
             if ($OldLogs) {
-                # Delete logs in batches to avoid overwhelming the table service
-                $BatchSize = 100
-                $LogBatches = @()
-                $CurrentBatch = @()
-
-                foreach ($Log in $OldLogs) {
-                    $CurrentBatch += $Log
-                    if ($CurrentBatch.Count -ge $BatchSize) {
-                        $LogBatches += , @($CurrentBatch)
-                        $CurrentBatch = @()
-                    }
-                }
-
-                # Add remaining logs as final batch
-                if ($CurrentBatch.Count -gt 0) {
-                    $LogBatches += , @($CurrentBatch)
-                }
-
-                # Delete logs in batches
-                foreach ($Batch in $LogBatches) {
-                    try {
-                        Remove-AzDataTableEntity @CippLogsTable -Entity $Batch -Force
-                        $DeletedCount += $Batch.Count
-                        Write-Host "Deleted batch of $($Batch.Count) log entries"
-                    } catch {
-                        Write-LogMessage -API 'LogRetentionCleanup' -message "Failed to delete log batch: $($_.Exception.Message)" -Sev 'Warning'
-                    }
-                }
-
-                if ($DeletedCount -gt 0) {
-                    Write-LogMessage -API 'LogRetentionCleanup' -message "Deleted $DeletedCount old log entries (retention: $RetentionDays days)" -Sev 'Info'
-                    Write-Host "Deleted $DeletedCount old log entries"
-                } else {
-                    Write-Host 'No old logs found'
-                }
+                Remove-AzDataTableEntity @CippLogsTable -Entity $OldLogs -Force
+                $DeletedCount = ($OldLogs | Measure-Object).Count
+                Write-LogMessage -API 'LogRetentionCleanup' -message "Deleted $DeletedCount old log entries (retention: $RetentionDays days)" -Sev 'Info'
+                Write-Host "Deleted $DeletedCount old log entries"
             } else {
                 Write-Host 'No old logs found'
             }
