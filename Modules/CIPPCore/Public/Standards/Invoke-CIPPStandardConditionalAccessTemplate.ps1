@@ -34,9 +34,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
-    $Table = Get-CippTable -tablename 'templates'
     $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
-    $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
         foreach ($Template in $settings.TemplateList) {
@@ -44,6 +42,8 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         }
         return $true
     } #we're done.
+
+    $Table = Get-CippTable -tablename 'templates'
 
     try {
         $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant -asApp $true
@@ -60,6 +60,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 $JSONObj = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
                 $Policy = $JSONObj | ConvertFrom-Json
                 if ($Policy.conditions.userRiskLevels.count -gt 0 -or $Policy.conditions.signInRiskLevels.count -gt 0) {
+                    $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
                     if (!$TestP2) {
                         Write-Information "Skipping policy $($Policy.displayName) as it requires AAD Premium P2 license."
                         Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Policy.displayName) requires AAD Premium P2 license." -Tenant $Tenant
@@ -96,6 +97,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
             $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Setting.label
             if (!$CheckExististing) {
                 if ($Setting.conditions.userRiskLevels.Count -gt 0 -or $Setting.conditions.signInRiskLevels.Count -gt 0) {
+                    $TestP2 = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_p2' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
                     if (!$TestP2) {
                         Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Setting.label) requires AAD Premium P2 license." -Tenant $Tenant
                     } else {
