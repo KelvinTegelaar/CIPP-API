@@ -10,7 +10,8 @@ function New-CIPPCAPolicy {
         $DisableSD = $false,
         $CreateGroups = $false,
         $APIName = 'Create CA Policy',
-        $Headers
+        $Headers,
+        $PreloadedCAPolicies = $null
     )
 
     function Remove-EmptyArrays ($Object) {
@@ -122,12 +123,70 @@ function New-CIPPCAPolicy {
             $JSONobj.state = $State
         }
     } catch {
-        # no issues here.
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-Information "Error cleaning JSON properties: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+    }
+
+    # Execute all required GET requests ONCE at the beginning to avoid rate limiting
+    Write-Information 'Fetching required resources from Graph API...'
+
+    # Get existing CA policies once (or use preloaded ones)
+    if ($PreloadedCAPolicies) {
+        Write-Information 'Using preloaded CA policies'
+        $AllExistingPolicies = $PreloadedCAPolicies
+    } else {
+        try {
+            Write-Information 'Fetching existing CA policies...'
+            $AllExistingPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -asApp $true
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error fetching existing policies: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            throw "Failed to fetch existing CA policies: $($ErrorMessage.NormalizedError)"
+        }
+    }
+
+    # Get named locations once if needed
+    $AllNamedLocations = $null
+    if ($JSONobj.LocationInfo) {
+        try {
+            Write-Information 'Fetching all named locations...'
+            $AllNamedLocations = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter -asApp $true
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error fetching named locations: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            throw "Failed to fetch named locations: $($ErrorMessage.NormalizedError)"
+        }
+    }
+
+    # Get authentication strength policies once if needed
+    $AllAuthStrengthPolicies = $null
+    if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom' -or $JSONobj.GrantControls.authenticationStrength.policyType -eq 'BuiltIn') {
+        try {
+            Write-Information 'Fetching authentication strength policies...'
+            $AllAuthStrengthPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter -asApp $true
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error fetching authentication strength policies: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            throw "Failed to fetch authentication strength policies: $($ErrorMessage.NormalizedError)"
+        }
+    }
+
+    # Get service principals once if needed
+    $AllServicePrincipals = $null
+    if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
+        try {
+            Write-Information 'Fetching all service principals...'
+            $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId&$top=999' -tenantid $TenantFilter -asApp $true
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error fetching service principals: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            throw "Failed to fetch service principals: $($ErrorMessage.NormalizedError)"
+        }
     }
 
     #If Grant Controls contains authenticationStrength, create these and then replace the id
     if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom' -or $JSONobj.GrantControls.authenticationStrength.policyType -eq 'BuiltIn') {
-        $ExistingStrength = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter -asApp $true | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
+        $ExistingStrength = $AllAuthStrengthPolicies | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
         if ($ExistingStrength) {
             $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
 
@@ -140,9 +199,7 @@ function New-CIPPCAPolicy {
     }
 
     #if we have excluded or included applications, we need to remove any appIds that do not have a service principal in the tenant
-    if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
-        $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId' -tenantid $TenantFilter -asApp $true
-
+    if ($AllServicePrincipals) {
         $ReservedApplicationNames = @('none', 'All', 'Office365', 'MicrosoftAdminPortals')
 
         if ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All') {
@@ -170,9 +227,9 @@ function New-CIPPCAPolicy {
         if (!$locations) { continue }
         foreach ($location in $locations) {
             if (!$location.displayName) { continue }
-            $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true
-            if ($Location.displayName -in $CheckExisting.displayName) {
-                $ExistingLocation = $CheckExisting | Where-Object -Property displayName -EQ $Location.displayName
+            # Use cached named locations instead of fetching each time
+            if ($Location.displayName -in $AllNamedLocations.displayName) {
+                $ExistingLocation = $AllNamedLocations | Where-Object -Property displayName -EQ $Location.displayName
                 if ($Overwrite) {
                     $LocationUpdate = $location | Select-Object * -ExcludeProperty id
                     Remove-ODataProperties -Object $LocationUpdate
@@ -181,8 +238,10 @@ function New-CIPPCAPolicy {
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($ExistingLocation.id)" -body $body -Type PATCH -tenantid $TenantFilter -asApp $true -ScheduleRetry $true
                         Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Updated existing Named Location: $($location.displayName)" -Sev 'Info'
                     } catch {
-                        Write-Warning "Failed to update location $($location.displayName): $_"
-                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Failed to update existing Named Location: $($location.displayName). Error: $_" -Sev 'Error'
+                        $ErrorMessage = Get-CippException -Exception $_
+                        Write-Information "Error updating named location: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                        Write-Warning "Failed to update location $($location.displayName): $($ErrorMessage.NormalizedError)"
+                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Failed to update existing Named Location: $($location.displayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                     }
                 } else {
                     Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
@@ -197,17 +256,35 @@ function New-CIPPCAPolicy {
                 $LocationBody = $location | Select-Object * -ExcludeProperty id
                 Remove-ODataProperties -Object $LocationBody
                 $Body = ConvertTo-Json -InputObject $LocationBody
-                $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $TenantFilter -asApp $true
-                $retryCount = 0
-                $MaxRetryCount = 10
-                do {
-                    Write-Host "Checking for location $($GraphRequest.id) attempt $retryCount. $TenantFilter"
-                    $LocationRequest = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter -asApp $true | Where-Object -Property id -EQ $GraphRequest.id
-                    Write-Host "LocationRequest: $($LocationRequest.id)"
-                    Start-Sleep -Seconds 2
-                    $retryCount++
-                } while ((!$LocationRequest -or !$LocationRequest.id) -and ($retryCount -lt $MaxRetryCount))
-                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
+                try {
+                    $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $TenantFilter -asApp $true
+                    Write-Information "Created named location with ID: $($GraphRequest.id)"
+                    # Wait for location to be available - reduced retry count and increased delay
+                    $retryCount = 0
+                    $MaxRetryCount = 5
+                    $LocationRequest = $null
+                    do {
+                        Write-Information "Verifying location $($GraphRequest.id) exists, attempt $($retryCount + 1)/$MaxRetryCount"
+                        Start-Sleep -Seconds 3
+                        try {
+                            # Get specific location by ID instead of all locations
+                            $LocationRequest = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($GraphRequest.id)" -tenantid $TenantFilter -asApp $true -ErrorAction Stop
+                            Write-Information "Location verified: $($LocationRequest.id)"
+                        } catch {
+                            Write-Information 'Location not yet available, will retry...'
+                        }
+                        $retryCount++
+                    } while ((!$LocationRequest -or !$LocationRequest.id) -and ($retryCount -lt $MaxRetryCount))
+
+                    if (!$LocationRequest -or !$LocationRequest.id) {
+                        Write-Warning "Location created but could not verify availability after $MaxRetryCount attempts. Proceeding anyway."
+                    }
+                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-Information "Error creating named location: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                    throw "Failed to create named location $($location.displayName): $($ErrorMessage.NormalizedError)"
+                }
                 [pscustomobject]@{
                     id   = $GraphRequest.id
                     name = $GraphRequest.displayName
@@ -218,25 +295,27 @@ function New-CIPPCAPolicy {
     Write-Information 'Location Lookup Table:'
     Write-Information ($LocationLookupTable | ConvertTo-Json -Depth 10)
 
-    foreach ($location in $JSONobj.conditions.locations.includeLocations) {
-        if ($null -eq $location) { continue }
-        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
-        if (!$lookup) { continue }
-        Write-Information "Replacing named location - $location"
-        $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
-        if ($lookup.id) {
-            $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+    if ($LocationLookupTable -and $JSONobj.conditions.locations) {
+        foreach ($location in $JSONobj.conditions.locations.includeLocations) {
+            if ($null -eq $location) { continue }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            if (!$lookup) { continue }
+            Write-Information "Replacing named location - $location"
+            $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
+            if ($lookup.id) {
+                $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+            }
         }
-    }
 
-    foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
-        if ($null -eq $location) { continue }
-        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
-        if (!$lookup) { continue }
-        Write-Information "Replacing named location - $location"
-        $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
-        if ($lookup.id) {
-            $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+        foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
+            if ($null -eq $location) { continue }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            if (!$lookup) { continue }
+            Write-Information "Replacing named location - $location"
+            $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
+            if ($lookup.id) {
+                $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+            }
         }
     }
     switch ($ReplacePattern) {
@@ -292,6 +371,7 @@ function New-CIPPCAPolicy {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
+                Write-Information "Error replacing displayNames: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
                 Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Failed to replace displayNames for conditional access rule $($JSONobj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
                 throw "Failed to replace displayNames for conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError)"
             }
@@ -327,6 +407,7 @@ function New-CIPPCAPolicy {
             Start-Sleep 3
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error disabling security defaults: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
             Write-Information "Failed to disable security defaults for tenant $($TenantFilter): $($ErrorMessage.NormalizedError)"
         }
     }
@@ -334,8 +415,23 @@ function New-CIPPCAPolicy {
     Write-Information $RawJSON
     try {
         Write-Information 'Checking for existing policies'
-        $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -asApp $true | Where-Object -Property displayName -EQ $displayName
+        # Use cached policies from the beginning
+        $CheckExisting = $AllExistingPolicies | Where-Object -Property displayName -EQ $displayName
+
+        # Handle multiple policies with the same name (should not happen but does)
+        if ($CheckExisting -is [Array] -and $CheckExisting.Count -gt 1) {
+            Write-Warning "Found $($CheckExisting.Count) policies with display name '$displayName'. IDs: $($CheckExisting.id -join ', '). Using the first one."
+            $CheckExisting = $CheckExisting[0]
+        }
+
         if ($CheckExisting) {
+            Write-Information "Found existing policy: displayName=$($CheckExisting.displayName), id=$($CheckExisting.id)"
+
+            # Validate the ID before proceeding
+            if ([string]::IsNullOrWhiteSpace($CheckExisting.id)) {
+                Write-Information "ERROR: Policy found but ID is null/empty. Full object: $($CheckExisting | ConvertTo-Json -Depth 5 -Compress)"
+                throw "Found existing policy '$displayName' but ID is null or empty. This may indicate an API issue."
+            }
             if ($Overwrite -ne $true) {
                 throw "Conditional Access Policy with Display Name $($displayName) Already exists"
                 return $false
@@ -366,7 +462,9 @@ function New-CIPPCAPolicy {
                         $RawJSON = ConvertTo-Json -InputObject $JSONobj -Depth 10 -Compress
                     }
                 } catch {
-                    Write-Information "Failed to preserve vacation exclusion group: $($_.Exception.Message)"
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-Information "Error preserving vacation exclusion group: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                    Write-Information "Failed to preserve vacation exclusion group: $($ErrorMessage.NormalizedError)"
                 }
                 Write-Information "overwriting $($CheckExisting.id)"
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -asApp $true -ScheduleRetry $true
@@ -385,11 +483,14 @@ function New-CIPPCAPolicy {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create or update conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Result -sev 'Error' -LogData $ErrorMessage
 
+        # Full error details for debugging
+        Write-Information "Full error details: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+        Write-Information "Position: $($_.InvocationInfo.PositionMessage)"
+        Write-Information "Policy JSON: $($JSONobj | ConvertTo-Json -Depth 10 -Compress)"
+
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message $Result -sev 'Error' -LogData $ErrorMessage
         Write-Warning $Result
-        Write-Information $_.InvocationInfo.PositionMessage
-        Write-Information ($JSONobj | ConvertTo-Json -Depth 10)
         throw $Result
     }
 }

@@ -163,7 +163,7 @@ function New-GraphGetRequest {
                         }
                     }
                     # Check for "Resource temporarily unavailable"
-                    elseif ($Message -like '*Resource temporarily unavailable*') {
+                    elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*') {
                         if ($RetryCount -lt $MaxRetries) {
                             $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
