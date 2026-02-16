@@ -134,12 +134,10 @@ function New-CIPPCAPolicy {
     if ($PreloadedCAPolicies) {
         Write-Information 'Using preloaded CA policies'
         $AllExistingPolicies = $PreloadedCAPolicies
-        Write-Information "Found $($AllExistingPolicies.Count) preloaded CA policies"
     } else {
         try {
             Write-Information 'Fetching existing CA policies...'
             $AllExistingPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -asApp $true
-            Write-Information "Found $($AllExistingPolicies.Count) existing CA policies"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Error fetching existing policies: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
@@ -153,7 +151,6 @@ function New-CIPPCAPolicy {
         try {
             Write-Information 'Fetching all named locations...'
             $AllNamedLocations = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter -asApp $true
-            Write-Information "Found $($AllNamedLocations.Count) existing named locations"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Error fetching named locations: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
@@ -167,7 +164,6 @@ function New-CIPPCAPolicy {
         try {
             Write-Information 'Fetching authentication strength policies...'
             $AllAuthStrengthPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter -asApp $true
-            Write-Information "Found $($AllAuthStrengthPolicies.Count) authentication strength policies"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Error fetching authentication strength policies: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
@@ -181,15 +177,12 @@ function New-CIPPCAPolicy {
         try {
             Write-Information 'Fetching all service principals...'
             $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId&$top=999' -tenantid $TenantFilter -asApp $true
-            Write-Information "Found $($AllServicePrincipals.Count) service principals"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Error fetching service principals: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
             throw "Failed to fetch service principals: $($ErrorMessage.NormalizedError)"
         }
     }
-
-    Write-Information 'All required resources fetched successfully'
 
     #If Grant Controls contains authenticationStrength, create these and then replace the id
     if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom' -or $JSONobj.GrantControls.authenticationStrength.policyType -eq 'BuiltIn') {
@@ -422,9 +415,23 @@ function New-CIPPCAPolicy {
     Write-Information $RawJSON
     try {
         Write-Information 'Checking for existing policies'
-        # Use cached policies instead of fetching again
+        # Use cached policies from the beginning
         $CheckExisting = $AllExistingPolicies | Where-Object -Property displayName -EQ $displayName
+
+        # Handle multiple policies with the same name (should not happen but does)
+        if ($CheckExisting -is [Array] -and $CheckExisting.Count -gt 1) {
+            Write-Warning "Found $($CheckExisting.Count) policies with display name '$displayName'. IDs: $($CheckExisting.id -join ', '). Using the first one."
+            $CheckExisting = $CheckExisting[0]
+        }
+
         if ($CheckExisting) {
+            Write-Information "Found existing policy: displayName=$($CheckExisting.displayName), id=$($CheckExisting.id)"
+
+            # Validate the ID before proceeding
+            if ([string]::IsNullOrWhiteSpace($CheckExisting.id)) {
+                Write-Information "ERROR: Policy found but ID is null/empty. Full object: $($CheckExisting | ConvertTo-Json -Depth 5 -Compress)"
+                throw "Found existing policy '$displayName' but ID is null or empty. This may indicate an API issue."
+            }
             if ($Overwrite -ne $true) {
                 throw "Conditional Access Policy with Display Name $($displayName) Already exists"
                 return $false
