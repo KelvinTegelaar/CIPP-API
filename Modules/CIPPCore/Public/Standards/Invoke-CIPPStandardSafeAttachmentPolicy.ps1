@@ -57,6 +57,14 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
             return
         }
+        # Cache all Safe Attachment Rules to avoid duplicate API calls
+        try {
+            $AllSafeAttachmentRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule'
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SafeAttachmentRule state for $Tenant. Error: $ErrorMessage" -Sev Error
+            return
+        }
 
         # Use custom name if provided, otherwise use default for backward compatibility
         $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Safe Attachment Policy' }
@@ -72,7 +80,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         # Derive rule name from policy name, but check for old names for backward compatibility
         $DesiredRuleName = "$PolicyName Rule"
         $RuleList = @($DesiredRuleName, 'CIPP Default Safe Attachment Rule', 'CIPP Default Safe Attachment Policy')
-        $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' | Where-Object -Property Name -In $RuleList | Select-Object -First 1
+        $ExistingRule = $AllSafeAttachmentRule | Where-Object -Property Name -In $RuleList | Select-Object -First 1
         if ($null -eq $ExistingRule.Name) {
             # No existing rule - use the derived name
             $RuleName = $DesiredRuleName
@@ -94,7 +102,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
-        $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
+        $RuleState = $AllSafeAttachmentRule |
         Where-Object -Property Name -EQ $RuleName |
         Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
 
