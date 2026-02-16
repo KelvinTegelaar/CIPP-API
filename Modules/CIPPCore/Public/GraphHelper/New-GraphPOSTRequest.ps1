@@ -39,25 +39,51 @@ function New-GraphPOSTRequest {
 
         $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
 
-        $x = 0
+        $RetryCount = 0
+        $RequestSuccessful = $false
         do {
             try {
-                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | attempt: $($x + 1) of $maxRetries"
-                $success = $false
+                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $maxRetries"
                 $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
-                $success = $true
+                $RequestSuccessful = $true
             } catch {
-
+                $ShouldRetry = $false
+                $WaitTime = 0
                 $Message = if ($_.ErrorDetails.Message) {
                     Get-NormalizedError -Message $_.ErrorDetails.Message
                 } else {
                     $_.Exception.message
                 }
-                $x++
-                Start-Sleep -Seconds (2 * $x)
+
+                # Check for 429 Too Many Requests
+                if ($_.Exception.Response.StatusCode -eq 429) {
+                    $RetryAfterHeader = $_.Exception.Response.Headers['Retry-After']
+                    if ($RetryAfterHeader) {
+                        $WaitTime = [int]$RetryAfterHeader
+                        Write-Warning "Rate limited (429). Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $maxRetries"
+                        $ShouldRetry = $true
+                    }
+                }
+                # Check for "Resource temporarily unavailable"
+                elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*') {
+                    $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1
+                    Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $maxRetries"
+                    $ShouldRetry = $true
+                }
+
+                if ($ShouldRetry) {
+                    $RetryCount++
+                    if ($RetryCount -lt $maxRetries) {
+                        Start-Sleep -Seconds $WaitTime
+                    }
+                } else {
+                    # Not a retryable error, exit immediately
+                    break
+                }
             }
-        } while (($x -lt $maxRetries) -and ($success -eq $false))
-        if (($maxRetries -and $success -eq $false) -and $ScheduleRetry -eq $true) {
+        } while (-not $RequestSuccessful -and $RetryCount -lt $maxRetries)
+
+        if (($RequestSuccessful -eq $false) -and $ScheduleRetry -eq $true -and $ShouldRetry -eq $true) {
             #Create a scheduled task to retry the task later, when there is less pressure on the system, but only if ScheduledRetry is true.
             try {
                 $TaskId = (New-Guid).Guid.ToString()
@@ -102,7 +128,7 @@ function New-GraphPOSTRequest {
             }
         }
 
-        if ($success -eq $false) {
+        if ($RequestSuccessful -eq $false) {
             throw $Message
         }
 
