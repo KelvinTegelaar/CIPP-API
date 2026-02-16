@@ -11,7 +11,8 @@ function New-CIPPCAPolicy {
         $CreateGroups = $false,
         $APIName = 'Create CA Policy',
         $Headers,
-        $PreloadedCAPolicies = $null
+        $PreloadedCAPolicies = $null,
+        $PreloadedLocations = $null
     )
 
     function Remove-EmptyArrays ($Object) {
@@ -148,13 +149,18 @@ function New-CIPPCAPolicy {
     # Get named locations once if needed
     $AllNamedLocations = $null
     if ($JSONobj.LocationInfo) {
-        try {
-            Write-Information 'Fetching all named locations...'
-            $AllNamedLocations = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter -asApp $true
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-Information "Error fetching named locations: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
-            throw "Failed to fetch named locations: $($ErrorMessage.NormalizedError)"
+        if ($PreloadedLocations) {
+            Write-Information 'Using preloaded named locations'
+            $AllNamedLocations = $PreloadedLocations
+        } else {
+            try {
+                Write-Information 'Fetching all named locations...'
+                $AllNamedLocations = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter -asApp $true
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-Information "Error fetching named locations: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                throw "Failed to fetch named locations: $($ErrorMessage.NormalizedError)"
+            }
         }
     }
 
