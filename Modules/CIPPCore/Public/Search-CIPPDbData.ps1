@@ -30,14 +30,12 @@ function Search-CIPPDbData {
     .PARAMETER Limit
         Maximum total number of results to return across all types. Default is unlimited (0)
 
+    .PARAMETER Properties
+        Array of property names to return for the searched types. If not specified, all properties are returned.
+        Applies to all types in the Types parameter. Only properties that exist in the data will be included.
+
     .PARAMETER UserProperties
-        Array of property names to return for Users type. If not specified, all properties are returned.
-        Only applies when Types includes 'Users'. Valid properties include: id, accountEnabled, businessPhones,
-        city, createdDateTime, companyName, country, department, displayName, faxNumber, givenName,
-        isResourceAccount, jobTitle, mail, mailNickname, mobilePhone, onPremisesDistinguishedName,
-        officeLocation, onPremisesLastSyncDateTime, otherMails, postalCode, preferredDataLocation,
-        preferredLanguage, proxyAddresses, showInAddressList, state, streetAddress, surname,
-        usageLocation, userPrincipalName, userType, assignedLicenses, onPremisesSyncEnabled, signInActivity
+        [DEPRECATED] Use Properties parameter instead. Array of property names to return for Users type.
 
     .EXAMPLE
         Search-CIPPDbData -TenantFilter 'contoso.onmicrosoft.com' -SearchTerms 'john.doe' -Types 'Users', 'Groups'
@@ -82,6 +80,9 @@ function Search-CIPPDbData {
 
         [Parameter(Mandatory = $false)]
         [int]$Limit = 0,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$Properties,
 
         [Parameter(Mandatory = $false)]
         [string[]]$UserProperties
@@ -159,9 +160,18 @@ function Search-CIPPDbData {
                                 try {
                                     $Data = $Item.Data | ConvertFrom-Json
 
-                                    # For Users type with UserProperties, verify match is in target properties
+                                    # Determine which properties to use (Properties parameter takes precedence, fallback to UserProperties for backward compatibility)
+                                    $PropertiesToUse = if ($Properties -and $Properties.Count -gt 0) {
+                                        $Properties
+                                    } elseif ($Type -eq 'Users' -and $UserProperties -and $UserProperties.Count -gt 0) {
+                                        $UserProperties
+                                    } else {
+                                        $null
+                                    }
+
+                                    # If properties are specified, verify match is in target properties
                                     $IsVerifiedMatch = $true
-                                    if ($Type -eq 'Users' -and $UserProperties -and $UserProperties.Count -gt 0) {
+                                    if ($PropertiesToUse -and $PropertiesToUse.Count -gt 0) {
                                         $IsVerifiedMatch = $false
 
                                         if ($MatchAll) {
@@ -170,7 +180,7 @@ function Search-CIPPDbData {
                                             foreach ($SearchTerm in $SearchTerms) {
                                                 $SearchPattern = [regex]::Escape($SearchTerm)
                                                 $TermMatches = $false
-                                                foreach ($Property in $UserProperties) {
+                                                foreach ($Property in $PropertiesToUse) {
                                                     if ($Data.PSObject.Properties.Name -contains $Property -and
                                                         $null -ne $Data.$Property -and
                                                         $Data.$Property.ToString() -match $SearchPattern) {
@@ -187,7 +197,7 @@ function Search-CIPPDbData {
                                             # Any search term can match in target properties
                                             foreach ($SearchTerm in $SearchTerms) {
                                                 $SearchPattern = [regex]::Escape($SearchTerm)
-                                                foreach ($Property in $UserProperties) {
+                                                foreach ($Property in $PropertiesToUse) {
                                                     if ($Data.PSObject.Properties.Name -contains $Property -and
                                                         $null -ne $Data.$Property -and
                                                         $Data.$Property.ToString() -match $SearchPattern) {
@@ -200,12 +210,12 @@ function Search-CIPPDbData {
                                         }
                                     }
 
-                                    # Only add to results if verified (or not Users/UserProperties)
+                                    # Only add to results if verified (or no property filtering)
                                     if ($IsVerifiedMatch) {
-                                        # Filter user properties if specified and type is Users
-                                        if ($Type -eq 'Users' -and $UserProperties -and $UserProperties.Count -gt 0) {
+                                        # Filter properties if specified
+                                        if ($PropertiesToUse -and $PropertiesToUse.Count -gt 0) {
                                             $FilteredData = [PSCustomObject]@{}
-                                            foreach ($Property in $UserProperties) {
+                                            foreach ($Property in $PropertiesToUse) {
                                                 if ($Data.PSObject.Properties.Name -contains $Property) {
                                                     $FilteredData | Add-Member -MemberType NoteProperty -Name $Property -Value $Data.$Property -Force
                                                 }
