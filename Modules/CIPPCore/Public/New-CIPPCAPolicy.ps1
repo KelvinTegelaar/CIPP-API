@@ -302,25 +302,27 @@ function New-CIPPCAPolicy {
     Write-Information 'Location Lookup Table:'
     Write-Information ($LocationLookupTable | ConvertTo-Json -Depth 10)
 
-    foreach ($location in $JSONobj.conditions.locations.includeLocations) {
-        if ($null -eq $location) { continue }
-        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
-        if (!$lookup) { continue }
-        Write-Information "Replacing named location - $location"
-        $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
-        if ($lookup.id) {
-            $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+    if ($LocationLookupTable -and $JSONobj.conditions.locations) {
+        foreach ($location in $JSONobj.conditions.locations.includeLocations) {
+            if ($null -eq $location) { continue }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            if (!$lookup) { continue }
+            Write-Information "Replacing named location - $location"
+            $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
+            if ($lookup.id) {
+                $JSONobj.conditions.locations.includeLocations[$index] = $lookup.id
+            }
         }
-    }
 
-    foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
-        if ($null -eq $location) { continue }
-        $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
-        if (!$lookup) { continue }
-        Write-Information "Replacing named location - $location"
-        $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
-        if ($lookup.id) {
-            $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+        foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
+            if ($null -eq $location) { continue }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            if (!$lookup) { continue }
+            Write-Information "Replacing named location - $location"
+            $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
+            if ($lookup.id) {
+                $JSONobj.conditions.locations.excludeLocations[$index] = $lookup.id
+            }
         }
     }
     switch ($ReplacePattern) {
