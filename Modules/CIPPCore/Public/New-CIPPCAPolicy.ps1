@@ -92,7 +92,9 @@ function New-CIPPCAPolicy {
     Remove-EmptyArrays -Object $JSONobj
     #Remove context as it does not belong in the payload.
     try {
-        $JSONobj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+        if ($JSONobj.grantControls) {
+            $JSONobj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+        }
         $JSONobj.templateId ? $JSONobj.PSObject.Properties.Remove('templateId') : $null
         if ($JSONobj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.Members) {
             $JSONobj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
@@ -426,7 +428,7 @@ function New-CIPPCAPolicy {
                 # Preserve any exclusion groups named "Vacation Exclusion - <PolicyDisplayName>" from existing policy
                 try {
                     $ExistingVacationGroup = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=startsWith(displayName,'Vacation Exclusion')&`$select=id,displayName&`$top=999&`$count=true" -ComplexFilter -tenantid $TenantFilter -asApp $true |
-                    Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
+                        Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
                     if ($ExistingVacationGroup) {
                         if (-not ($JSONobj.conditions.users.PSObject.Properties.Name -contains 'excludeGroups')) {
                             $JSONobj.conditions.users | Add-Member -NotePropertyName 'excludeGroups' -NotePropertyValue @() -Force
