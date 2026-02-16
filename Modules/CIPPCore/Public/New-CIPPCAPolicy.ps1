@@ -141,7 +141,7 @@ function New-CIPPCAPolicy {
 
     #if we have excluded or included applications, we need to remove any appIds that do not have a service principal in the tenant
     if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
-        $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId' -tenantid $TenantFilter -asApp $true
+        $AllServicePrincipals = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$select=appId&$top=999' -tenantid $TenantFilter -asApp $true
 
         $ReservedApplicationNames = @('none', 'All', 'Office365', 'MicrosoftAdminPortals')
 
