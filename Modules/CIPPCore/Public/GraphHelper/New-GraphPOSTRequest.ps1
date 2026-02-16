@@ -96,7 +96,7 @@ function New-GraphPOSTRequest {
                 # Add the scheduled task (hidden = system task)
                 $null = Add-CIPPScheduledTask -Task $TaskObject -Hidden $true
 
-                return @{Result = "Scheduled job with id $TaskId as Graph API was too busy to respond" }
+                return @{Result = "Scheduled job with id $TaskId as Graph API was too busy to respond. Check the job status in the scheduler." }
             } catch {
                 Write-Warning "Failed to schedule retry task: $($_.Exception.Message)"
             }

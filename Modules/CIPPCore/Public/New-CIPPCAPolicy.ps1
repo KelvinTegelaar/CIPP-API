@@ -133,7 +133,7 @@ function New-CIPPCAPolicy {
 
         } else {
             $Body = ConvertTo-Json -InputObject $JSONobj.GrantControls.authenticationStrength
-            $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $TenantFilter -asApp $true
+            $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $TenantFilter -asApp $true -ScheduleRetry $true
             $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
             Write-LogMessage -Headers $Headers -API $APIName -message "Created new Authentication Strength Policy: $($JSONobj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
         }
@@ -178,7 +178,7 @@ function New-CIPPCAPolicy {
                     Remove-ODataProperties -Object $LocationUpdate
                     $Body = ConvertTo-Json -InputObject $LocationUpdate -Depth 10
                     try {
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($ExistingLocation.id)" -body $body -Type PATCH -tenantid $TenantFilter -asApp $true
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($ExistingLocation.id)" -body $body -Type PATCH -tenantid $TenantFilter -asApp $true -ScheduleRetry $true
                         Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Updated existing Named Location: $($location.displayName)" -Sev 'Info'
                     } catch {
                         Write-Warning "Failed to update location $($location.displayName): $_"
@@ -347,7 +347,7 @@ function New-CIPPCAPolicy {
                 # Preserve any exclusion groups named "Vacation Exclusion - <PolicyDisplayName>" from existing policy
                 try {
                     $ExistingVacationGroup = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=startsWith(displayName,'Vacation Exclusion')&`$select=id,displayName&`$top=999&`$count=true" -ComplexFilter -tenantid $TenantFilter -asApp $true |
-                        Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
+                    Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
                     if ($ExistingVacationGroup) {
                         if (-not ($JSONobj.conditions.users.PSObject.Properties.Name -contains 'excludeGroups')) {
                             $JSONobj.conditions.users | Add-Member -NotePropertyName 'excludeGroups' -NotePropertyValue @() -Force
@@ -369,7 +369,7 @@ function New-CIPPCAPolicy {
                     Write-Information "Failed to preserve vacation exclusion group: $($_.Exception.Message)"
                 }
                 Write-Information "overwriting $($CheckExisting.id)"
-                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -asApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExisting.id)" -tenantid $TenantFilter -type PATCH -body $RawJSON -asApp $true -ScheduleRetry $true
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Updated Conditional Access Policy $($JSONobj.displayName) to the template standard." -Sev 'Info'
                 return "Updated policy $($JSONobj.displayName) for $TenantFilter"
             }
@@ -378,7 +378,7 @@ function New-CIPPCAPolicy {
             if ($JSOObj.GrantControls.authenticationStrength.policyType -or $JSONobj.$JSONobj.LocationInfo) {
                 Start-Sleep 3
             }
-            $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -type POST -body $RawJSON -asApp $true
+            $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -type POST -body $RawJSON -asApp $true -ScheduleRetry $true
             Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Added Conditional Access Policy $($JSONobj.displayName)" -Sev 'Info'
             return "Created policy $($JSONobj.displayName) for $TenantFilter"
         }
