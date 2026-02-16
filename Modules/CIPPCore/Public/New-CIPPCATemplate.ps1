@@ -6,7 +6,8 @@ function New-CIPPCATemplate {
         $APIName = 'Add CIPP CA Template',
         $Headers,
         $preloadedUsers,
-        $preloadedGroups
+        $preloadedGroups,
+        $preloadedLocations
     )
 
     $JSON = ([pscustomobject]$JSON) | ForEach-Object {
@@ -34,8 +35,12 @@ function New-CIPPCATemplate {
     }
 
     $namedLocations = $null
-    if ($JSON.conditions.locations.includeLocations -or $JSON.conditions.locations.excludeLocations) {
-        $namedLocations = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $TenantFilter
+    if ($preloadedLocations) {
+        $namedLocations = $preloadedLocations
+    } else {
+        if ($JSON.conditions.locations.includeLocations -or $JSON.conditions.locations.excludeLocations) {
+            $namedLocations = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
+        }
     }
 
     $AllLocations = [system.collections.generic.list[object]]::new()
@@ -46,7 +51,7 @@ function New-CIPPCATemplate {
         $null = if ($locationinfo) { $includelocations.add($locationinfo.displayName) } else { $includelocations.add($location) }
         $locationinfo
     }
-    if ($includelocations) { 
+    if ($includelocations) {
         $JSON.conditions.locations | Add-Member -NotePropertyName 'includeLocations' -NotePropertyValue $includelocations -Force
     }
 
@@ -57,7 +62,7 @@ function New-CIPPCATemplate {
         $locationinfo
     }
 
-    if ($excludelocations) { 
+    if ($excludelocations) {
         $JSON.conditions.locations | Add-Member -NotePropertyName 'excludeLocations' -NotePropertyValue $excludelocations -Force
     }
     # Check if conditions.users exists and is a PSCustomObject (not an array) before accessing properties

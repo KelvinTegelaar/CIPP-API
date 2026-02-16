@@ -90,6 +90,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         $Filter = "PartitionKey eq 'CATemplate'"
         $Policies = (Get-CippAzDataTableEntity @Table -Filter $Filter | Where-Object RowKey -In $Settings.TemplateList.value).JSON | ConvertFrom-Json -Depth 10
         $AllCAPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $Tenant -asApp $true
+
         #check if all groups.displayName are in the existingGroups, if not $fieldvalue should contain all missing groups, else it should be true.
         $MissingPolicies = foreach ($Setting in $Settings.TemplateList) {
             $policy = $Policies | Where-Object { $_.displayName -eq $Setting.label }
@@ -105,7 +106,8 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                     Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Setting.value)" -FieldValue "Policy $($Setting.label) is missing from this tenant." -Tenant $Tenant
                 }
             } else {
-                $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing
+                $preloadedLocations = New-CIPPDbRequest -TenantFilter $tenant -Type 'NamedLocations'
+                $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing -preloadedLocations $preloadedLocations
                 $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject $templateResult
                 try {
                     $Compare = Compare-CIPPIntuneObject -ReferenceObject $policy -DifferenceObject $CompareObj -CompareType 'ca'
