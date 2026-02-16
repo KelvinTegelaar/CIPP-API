@@ -46,7 +46,9 @@ function New-CIPPCATemplate {
         $null = if ($locationinfo) { $includelocations.add($locationinfo.displayName) } else { $includelocations.add($location) }
         $locationinfo
     }
-    if ($includelocations) { $JSON.conditions.locations.includeLocations = $includelocations }
+    if ($includelocations) { 
+        $JSON.conditions.locations | Add-Member -NotePropertyName 'includeLocations' -NotePropertyValue $includelocations -Force
+    }
 
     $excludelocations = [system.collections.generic.list[object]]::new()
     $ExcludeJSON = foreach ($Location in $JSON.conditions.locations.excludeLocations) {
@@ -55,7 +57,9 @@ function New-CIPPCATemplate {
         $locationinfo
     }
 
-    if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
+    if ($excludelocations) { 
+        $JSON.conditions.locations | Add-Member -NotePropertyName 'excludeLocations' -NotePropertyValue $excludelocations -Force
+    }
     # Check if conditions.users exists and is a PSCustomObject (not an array) before accessing properties
     $hasConditionsUsers = $null -ne $JSON.conditions.users
     # Explicitly exclude array types - arrays have properties but we can't set custom properties on them
