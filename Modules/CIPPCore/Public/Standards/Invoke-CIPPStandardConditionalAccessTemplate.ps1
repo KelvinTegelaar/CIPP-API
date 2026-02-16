@@ -67,15 +67,16 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                     }
                 }
                 $NewCAPolicy = @{
-                    replacePattern = 'displayName'
-                    TenantFilter   = $Tenant
-                    state          = $Setting.state
-                    RawJSON        = $JSONObj
-                    Overwrite      = $true
-                    APIName        = 'Standards'
-                    Headers        = $Request.Headers
-                    DisableSD      = $Setting.DisableSD
-                    CreateGroups   = $Setting.CreateGroups ?? $false
+                    replacePattern      = 'displayName'
+                    TenantFilter        = $Tenant
+                    state               = $Setting.state
+                    RawJSON             = $JSONObj
+                    Overwrite           = $true
+                    APIName             = 'Standards'
+                    Headers             = $Request.Headers
+                    DisableSD           = $Setting.DisableSD
+                    CreateGroups        = $Setting.CreateGroups ?? $false
+                    PreloadedCAPolicies = $AllCAPolicies
                 }
 
                 $null = New-CIPPCAPolicy @NewCAPolicy
