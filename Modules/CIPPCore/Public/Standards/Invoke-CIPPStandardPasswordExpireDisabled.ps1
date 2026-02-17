@@ -43,7 +43,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         return
     }
 
-    $DomainIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$GraphRequest.id)
+    $DomainIds = @($GraphRequest.id)
     $SubDomains = foreach ($id in $DomainIds) {
         foreach ($parent in $DomainIds) {
             if ($id -ne $parent -and $id.EndsWith(".$parent")) { 
