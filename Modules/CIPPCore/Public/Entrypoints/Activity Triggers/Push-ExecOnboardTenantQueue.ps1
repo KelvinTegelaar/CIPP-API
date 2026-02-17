@@ -126,6 +126,7 @@ function Push-ExecOnboardTenantQueue {
         if ($OnboardingSteps.Step2.Status -eq 'succeeded') {
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking group mapping' })
             $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+            $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
             if ($AccessAssignments.id -and $Item.AutoMapRoles -ne $true) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Groups mapped' })
                 $OnboardingSteps.Step3.Status = 'succeeded'
@@ -228,6 +229,7 @@ function Push-ExecOnboardTenantQueue {
 
             do {
                 $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+                $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
                 Start-Sleep -Seconds 15
             } while ($AccessAssignments.status -contains 'pending' -and (Get-Date) -lt $Start.AddMinutes(8))
 
