@@ -43,16 +43,19 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         return
     }
 
-    $DomainIds = @($GraphRequest.id)
+    $DomainIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$GraphRequest.id)
+    $SubDomains = foreach ($id in $DomainIds) {
+        foreach ($parent in $DomainIds) {
+            if ($id -ne $parent -and $id.EndsWith(".$parent")) { 
+                $id; break 
+            }
+        }
+    }
     $DomainsWithoutPassExpire = $GraphRequest |
         Where-Object { 
-            $id = $_.id
             $_.isVerified -eq $true `
-                -and $_.passwordValidityPeriodInDays -ne 2147483647 `
-                -and -not ($DomainIds | Where-Object { 
-                    $id -ne $_ `
-                        -and $id.EndsWith(".$_") 
-                }) 
+            -and $_.passwordValidityPeriodInDays -ne 2147483647 `
+            -and $_.id -notin $SubDomains 
         }
 
     if ($Settings.remediate -eq $true) {
