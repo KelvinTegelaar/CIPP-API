@@ -29,7 +29,7 @@ function Remove-CIPPLicense {
                 PSA     = $false
             }
         }
-        Add-CIPPScheduledTask -Task $ScheduledTask -hidden $false
+        Add-CIPPScheduledTask -Task $ScheduledTask -hidden $false -DisallowDuplicateName $true
         return "Scheduled license removal for $username"
     } else {
         try {
