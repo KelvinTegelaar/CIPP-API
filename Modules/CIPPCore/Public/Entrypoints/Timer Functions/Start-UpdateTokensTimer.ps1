@@ -43,8 +43,13 @@ function Start-UpdateTokensTimer {
             # sort by latest expiration date and get the first one
             $LastPasswordCredential = $AppRegistration.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
 
-            $AppPolicyStatus = Update-AppManagementPolicy
-            Write-Information $AppPolicyStatus.PolicyAction
+            try {
+                $AppPolicyStatus = Update-AppManagementPolicy
+                Write-Information $AppPolicyStatus.PolicyAction
+            } catch {
+                Write-Warning "Error updating app management policy $($_.Exception.Message)."
+                Write-Information ($_.InvocationInfo.PositionMessage)
+            }
 
             if ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
                 Write-Information "Application secret for $AppId is expiring soon. Generating a new application secret."
