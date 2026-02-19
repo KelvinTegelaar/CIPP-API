@@ -42,6 +42,10 @@ function Start-UpdateTokensTimer {
             $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')?`$select=id,passwordCredentials,servicePrincipalLockConfiguration" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
             # sort by latest expiration date and get the first one
             $LastPasswordCredential = $AppRegistration.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
+
+            $AppPolicyStatus = Update-AppManagementPolicy
+            Write-Information $AppPolicyStatus.PolicyAction
+
             if ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
                 Write-Information "Application secret for $AppId is expiring soon. Generating a new application secret."
                 $AppSecret = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/addPassword" -Body '{"passwordCredential":{"displayName":"UpdateTokens"}}' -NoAuthCheck $true -AsApp $true -ErrorAction Stop
