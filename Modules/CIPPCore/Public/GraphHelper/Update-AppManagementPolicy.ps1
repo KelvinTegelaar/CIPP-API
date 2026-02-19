@@ -6,14 +6,17 @@ function Update-AppManagementPolicy {
     .DESCRIPTION
         Retrieves tenant default app management policy and app management policies to check if
         passwordCredential or keyCredential creation is restricted. If the default policy blocks
-        credential addition and CIPP-SAM app doesn't have an exemption, creates or updates a policy
-        to allow CIPP-SAM to manage credentials.
+        credential addition and the targeted app doesn't have an exemption, creates or updates a policy
+        to allow the app to manage credentials.
 
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
-    param()
+    param(
+        $TenantFilter = $env:TenantID,
+        $ApplicationId = $env:ApplicationID
+    )
 
     try {
         # Create bulk request to fetch both policies at once
@@ -31,12 +34,12 @@ function Update-AppManagementPolicy {
             @{
                 id     = 'appRegistration'
                 method = 'GET'
-                url    = "applications(appId='$env:ApplicationID')?`$select=id,appId,displayName"
+                url    = "applications(appId='$ApplicationId')?`$select=id,appId,displayName"
             }
         )
 
         # Execute bulk request
-        $Results = New-GraphBulkRequest -Requests $Requests -NoAuthCheck $true -asapp $true
+        $Results = New-GraphBulkRequest -Requests $Requests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter
 
         # Parse results
         $DefaultPolicy = ($Results | Where-Object { $_.id -eq 'defaultPolicy' }).body
@@ -46,7 +49,7 @@ function Update-AppManagementPolicy {
         # Check if CIPP-SAM app is targeted by any policies
         $CIPPAppTargeted = $false
         $CIPPAppPolicyId = $null
-        if ($AppPolicies -and $env:ApplicationID) {
+        if ($AppPolicies -and $ApplicationId) {
             # Build bulk requests to get appliesTo for each policy
             $AppliesToRequests = @($AppPolicies | ForEach-Object {
                     @{
@@ -57,10 +60,10 @@ function Update-AppManagementPolicy {
                 })
 
             if ($AppliesToRequests.Count -gt 0) {
-                $AppliesToResults = New-GraphBulkRequest -Requests $AppliesToRequests -NoAuthCheck $true -asapp $true
+                $AppliesToResults = New-GraphBulkRequest -Requests $AppliesToRequests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter
 
-                # Find which policy (if any) targets CIPP Ap
-                $CIPPPolicyResult = $AppliesToResults | Where-Object { $_.body.value.appId -contains $env:ApplicationID } | Select-Object -First 1
+                # Find which policy (if any) targets the app
+                $CIPPPolicyResult = $AppliesToResults | Where-Object { $_.body.value.appId -contains $ApplicationId } | Select-Object -First 1
                 if ($CIPPPolicyResult) {
                     $CIPPAppTargeted = $true
                     $CIPPAppPolicyId = $CIPPPolicyResult.id
@@ -126,7 +129,7 @@ function Update-AppManagementPolicy {
         $PolicyAction = $null
         if ($DefaultPolicyBlocksCredentials -and $CIPPApp) {
             # Check if a CIPP-SAM Exemption Policy already exists
-            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq 'CIPP-SAM Exemption Policy' } | Select-Object -First 1
+            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq 'CIPP Exemption Policy' } | Select-Object -First 1
 
             # Check if CIPP app has a policy that allows credentials
             $CIPPHasExemption = $false
@@ -142,12 +145,12 @@ function Update-AppManagementPolicy {
             }
 
             if (-not $CIPPHasExemption) {
-                # Need to create or update a policy for CIPP-SAM
+                # Need to create or update a policy for CIPP
                 try {
                     # Define policy structure with disabled restrictions
                     $PolicyBody = @{
-                        displayName  = 'CIPP-SAM Exemption Policy'
-                        description  = 'Allows CIPP-SAM app to manage credentials'
+                        displayName  = 'CIPP Exemption Policy'
+                        description  = 'Allows CIPP app to manage credentials'
                         isEnabled    = $true
                         restrictions = @{
                             passwordCredentials = @(
@@ -168,7 +171,7 @@ function Update-AppManagementPolicy {
 
                     if ($CIPPAppPolicyId) {
                         # Update existing policy that's already assigned to the app
-                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$CIPPAppPolicyId" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$CIPPAppPolicyId" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter
                         $PolicyAction = "Updated existing policy $CIPPAppPolicyId to allow credentials"
                     } elseif ($ExistingExemptionPolicy) {
                         # Exemption policy exists but not assigned to app - update and assign it
@@ -179,7 +182,7 @@ function Update-AppManagementPolicy {
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter
                             $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
                             $CIPPAppPolicyId = $ExistingExemptionPolicy.id
                             $CIPPAppTargeted = $true
