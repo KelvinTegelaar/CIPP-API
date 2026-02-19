@@ -147,6 +147,7 @@ function New-CIPPBackup {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -headers $Headers -API $APINAME -message "Blob upload failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            return [pscustomobject]@{'Results' = "Blob Upload failed: $($ErrorMessage.NormalizedError)" }
         }
 
         # Write table entity pointing to blob resource
