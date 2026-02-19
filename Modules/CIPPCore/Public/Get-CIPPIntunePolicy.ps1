@@ -35,8 +35,8 @@ function Get-CIPPIntunePolicy {
                 $iOSPolicies = ($BulkResults | Where-Object { $_.id -eq 'iOSPolicies' }).body.value
 
                 if ($DisplayName) {
-                    $androidPolicy = $androidPolicies | Where-Object -Property displayName -EQ $DisplayName
-                    $iOSPolicy = $iOSPolicies | Where-Object -Property displayName -EQ $DisplayName
+                    $androidPolicy = $androidPolicies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
+                    $iOSPolicy = $iOSPolicies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
 
                     # Return the matching policy (Android or iOS) - using full data from bulk request
                     if ($androidPolicy) {
@@ -92,7 +92,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantFilter
                         $policyJson = ConvertTo-Json -InputObject $policyDetails -Depth 100 -Compress
@@ -122,7 +122,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $definitionValues = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')/definitionValues" -tenantid $tenantFilter
                         $policy | Add-Member -MemberType NoteProperty -Name 'definitionValues' -Value $definitionValues -Force
@@ -237,7 +237,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
@@ -270,7 +270,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property Name -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property Name -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')?`$expand=settings" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object name, description, settings, platforms, technologies, templateReference
@@ -303,7 +303,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
@@ -336,7 +336,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
@@ -369,7 +369,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
@@ -402,7 +402,7 @@ function Get-CIPPIntunePolicy {
 
                 if ($DisplayName) {
                     $policies = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
-                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName
+                    $policy = $policies | Where-Object -Property displayName -EQ $DisplayName | Sort-Object -Property lastModifiedDateTime -Descending | Select-Object -First 1
                     if ($policy) {
                         $policyDetails = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL('$($policy.id)')" -tenantid $tenantFilter
                         $policyDetails = $policyDetails | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
