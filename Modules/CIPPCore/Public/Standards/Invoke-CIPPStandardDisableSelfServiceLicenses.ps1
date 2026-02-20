@@ -31,7 +31,6 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSelfServiceLicenses'
 
     try {
         $selfServiceItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
@@ -53,32 +52,31 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             $exclusions = $settings.Exclusions -split (',')
         }
 
-        $selfServiceItems | ForEach-Object {
+        foreach ($Item in $selfServiceItems) {
             $body = $null
 
-            if ($_.policyValue -eq 'Enabled' -AND ($_.productId -in $exclusions)) {
+            if ($Item.policyValue -eq 'Enabled' -AND ($Item.productId -in $exclusions)) {
                 # Self service is enabled on product and productId is in exclusions, skip
             }
-            if ($_.policyValue -eq 'Disabled' -AND ($_.productId -in $exclusions)) {
+            if ($Item.policyValue -eq 'Disabled' -AND ($Item.productId -in $exclusions)) {
                 # Self service is disabled on product and productId is in exclusions, enable
                 $body = '{ "policyValue": "Enabled" }'
             }
-            if ($_.policyValue -eq 'Enabled' -AND ($_.productId -notin $exclusions)) {
+            if ($Item.policyValue -eq 'Enabled' -AND ($Item.productId -notin $exclusions)) {
                 # Self service is enabled on product and productId is NOT in exclusions, disable
                 $body = '{ "policyValue": "Disabled" }'
             }
-            if ($_.policyValue -eq 'Disabled' -AND ($_.productId -notin $exclusions)) {
+            if ($Item.policyValue -eq 'Disabled' -AND ($Item.productId -notin $exclusions)) {
                 # Self service is disabled on product and productId is NOT in exclusions, skip
             }
 
             try {
                 if ($body) {
-                    $product = $_
-                    New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($product.productId)" -tenantid $Tenant -body $body -type PUT
+                    New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set product status for $($product.productId) with body $($body) for reason: $($_.Exception.Message)" -sev Error
-                #Write-Error "Failed to disable product $($product.productName):$($_.Exception.Message)"
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set product status for $($Item.productId) with body $($body) for reason: $($_.Exception.Message)" -sev Error
+                #Write-Error "Failed to disable product $($Item.productName):$($_.Exception.Message)"
             }
         }
 

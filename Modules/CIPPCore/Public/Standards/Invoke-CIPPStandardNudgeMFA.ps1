@@ -32,8 +32,7 @@ function Invoke-CIPPStandardNudgeMFA {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'NudgeMFA'
-    Write-Host "NudgeMFA: $($Settings | ConvertTo-Json -Compress)"
+
     # Get state value using null-coalescing operator
     $State = $Settings.state.value ?? $Settings.state
 
@@ -86,8 +85,15 @@ function Invoke-CIPPStandardNudgeMFA {
     }
 
     if ($Settings.report -eq $true) {
-        $State = $StateIsCorrect ? $true : ($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign | Select-Object snoozeDurationInDays, state)
-        Set-CIPPStandardsCompareField -FieldName 'standards.NudgeMFA' -FieldValue $State -Tenant $Tenant
+        $CurrentValue = @{
+            snoozeDurationInDays = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays
+            state                = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
+        }
+        $ExpectedValue = @{
+            snoozeDurationInDays = $Settings.snoozeDurationInDays
+            state                = $State
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.NudgeMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

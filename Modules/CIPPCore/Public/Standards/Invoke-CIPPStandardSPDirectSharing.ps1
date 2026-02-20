@@ -7,8 +7,8 @@ function Invoke-CIPPStandardSPDirectSharing {
     .SYNOPSIS
         (Label) Default sharing to Direct users
     .DESCRIPTION
-        (Helptext) This standard has been deprecated in favor of the Default Sharing Link standard. 
-        (DocsDescription) This standard has been deprecated in favor of the Default Sharing Link standard. 
+        (Helptext) This standard has been deprecated in favor of the Default Sharing Link standard.
+        (DocsDescription) This standard has been deprecated in favor of the Default Sharing Link standard.
     .NOTES
         CAT
             SharePoint Standards
@@ -32,10 +32,9 @@ function Invoke-CIPPStandardSPDirectSharing {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDirectSharing' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SPDirectSharing' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -43,9 +42,8 @@ function Invoke-CIPPStandardSPDirectSharing {
     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'The default sharing to Direct users standard has been deprecated in favor of the "Set Default Sharing Link Settings" standard. Please update your standards to use new standard. However this will continue to function.' -Sev Alert
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType
-    }
-    catch {
+            Select-Object -Property _ObjectIdentity_, TenantFilter, DefaultSharingLinkType
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SPDirectSharing state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -84,11 +82,12 @@ function Invoke-CIPPStandardSPDirectSharing {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'DirectSharing' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            DefaultSharingLinkType = $CurrentState.DefaultSharingLinkType
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SPDirectSharing' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            DefaultSharingLinkType = 1
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPDirectSharing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

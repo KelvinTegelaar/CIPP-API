@@ -12,13 +12,17 @@ function Get-CIPPAlertNewAppApproval {
         $TenantFilter,
         $Headers
     )
+
     try {
-        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
+        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
+
         if ($Approvals.count -gt 0) {
             $TenantGUID = (Get-Tenants -TenantFilter $TenantFilter -SkipDomains).customerId
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
+
             foreach ($App in $Approvals) {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
+
                 $userConsentRequests | ForEach-Object {
                     $consentUrl = if ($App.consentType -eq 'Static') {
                         # if something is going wrong here you've probably stumbled on a fourth variation - rvdwegen
@@ -35,7 +39,7 @@ function Get-CIPPAlertNewAppApproval {
                         RequestUser = $_.createdBy.user.userPrincipalName
                         Reason      = $_.reason
                         RequestDate = $_.createdDateTime
-                        Status      = $_.status # Will allways be InProgress as we filter to only get these but this will reduce confusion when an alert is generated
+                        Status      = $_.status # Will always be InProgress as we filter to only get these but this will reduce confusion when an alert is generated
                         AppId       = $App.appId
                         Scopes      = ($App.pendingScopes.displayName -join ', ')
                         ConsentURL  = $consentUrl
@@ -45,6 +49,7 @@ function Get-CIPPAlertNewAppApproval {
                     $AlertData.Add($Message)
                 }
             }
+
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {

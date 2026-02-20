@@ -54,8 +54,6 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     }
 
     If ($Settings.remediate -eq $true) {
-        Write-Host "Remediating PWcompanionAppAllowedState for tenant $Tenant to $WantedState"
-
         if ($AuthStateCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "companionAppAllowedState is already set to the desired state of $WantedState." -sev Info
         } else {
@@ -102,6 +100,12 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         } else {
             $FieldValue = $AuthenticatorFeaturesState.featureSettings.companionAppAllowedState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.PWcompanionAppAllowedState' -FieldValue $FieldValue -Tenant $Tenant
+        $CurrentValue = @{
+            companionAppAllowedState = $AuthenticatorFeaturesState.featureSettings.companionAppAllowedState.state
+        }
+        $ExpectedValue = @{
+            companionAppAllowedState = $WantedState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PWcompanionAppAllowedState' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

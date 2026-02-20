@@ -31,8 +31,14 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
     #>
     param($Tenant, $Settings)
 
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AssignmentFilterTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AssignmentFilterTemplate'
-    $existingFilters = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $tenant
+    $existingFilters = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters?$select=id,displayName,description,platform,rule,assignmentFilterManagementType' -tenantid $tenant
 
     $Settings.assignmentFilterTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.assignmentFilterTemplate) : $null
 
@@ -40,8 +46,16 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
     $Filter = "PartitionKey eq 'AssignmentFilterTemplate' and (RowKey eq '$($Settings.TemplateList.value -join "' or RowKey eq '")')"
     $AssignmentFilterTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
+    $ExpectedValue = [PSCustomObject]@{ state = 'Configured correctly' }
+    $MissingFilters = $AssignmentFilterTemplates | Where-Object {
+        $CheckExisting = $existingFilters | Where-Object { $_.displayName -eq $_.displayName }
+        if (!$CheckExisting) {
+            $_.displayName
+        }
+    }
+    $CurrentValue = if ($MissingFilters.Count -eq 0) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingFilters' = @($MissingFilters) } }
+
     if ($Settings.remediate -eq $true) {
-        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $AssignmentFilterTemplates) {
             Write-Information "Processing template: $($Template.displayName)"
             try {
@@ -115,12 +129,6 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
             }
         }
 
-        if ($MissingFilters.Count -eq 0) {
-            $fieldValue = $true
-        } else {
-            $fieldValue = $MissingFilters -join ', '
-        }
-
-        Set-CIPPStandardsCompareField -FieldName 'standards.AssignmentFilterTemplate' -FieldValue $fieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AssignmentFilterTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

@@ -32,11 +32,9 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     #>
 
     param ($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'RestrictThirdPartyStorageServices'
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -52,8 +50,6 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate third-party storage services restriction'
-
         # Check if service principal is already disabled
         if ($CurrentState.accountEnabled -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Third-party storage services are already restricted (service principal is disabled).' -sev Info
@@ -89,13 +85,15 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     }
 
     if ($Settings.report -eq $true) {
-        if ($null -eq $CurrentState.accountEnabled -or $CurrentState.accountEnabled -eq $true) {
-            Set-CIPPStandardsCompareField -FieldName 'standards.RestrictThirdPartyStorageServices' -FieldValue $false -Tenant $Tenant
-            Add-CIPPBPAField -FieldName 'ThirdPartyStorageServicesRestricted' -FieldValue $false -StoreAs bool -Tenant $Tenant
-        } else {
-            $CorrectState = $CurrentState.accountEnabled -eq $false ? $true : $false
-            Set-CIPPStandardsCompareField -FieldName 'standards.RestrictThirdPartyStorageServices' -FieldValue $CorrectState -Tenant $Tenant
-            Add-CIPPBPAField -FieldName 'ThirdPartyStorageServicesRestricted' -FieldValue $CorrectState -StoreAs bool -Tenant $Tenant
+
+        $CurrentValue = @{
+            thirdPartyStorageRestricted = $CurrentState.accountEnabled -eq $false
         }
+        $ExpectedValue = @{
+            thirdPartyStorageRestricted = $false
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.RestrictThirdPartyStorageServices' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'ThirdPartyStorageServicesRestricted' -FieldValue ($CurrentState.accountEnabled -eq $false) -StoreAs bool -Tenant $Tenant
     }
 }

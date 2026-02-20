@@ -62,9 +62,6 @@ function Invoke-ExecAlertsList {
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
                     QueueId      = $RunningQueue.RowKey
                 }
-                [PSCustomObject]@{
-                    Waiting = $true
-                }
             } elseif (!$Rows -and !$RunningQueue) {
                 # If no rows are found and no queue is running, we will start a new one
                 $TenantList = Get-Tenants -IncludeErrors
@@ -85,11 +82,7 @@ function Invoke-ExecAlertsList {
                     }
                     SkipLog          = $true
                 } | ConvertTo-Json -Depth 10
-                $InstanceId = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject $InputObject
-                [PSCustomObject]@{
-                    Waiting    = $true
-                    InstanceId = $InstanceId
-                }
+                Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject $InputObject
             } else {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null

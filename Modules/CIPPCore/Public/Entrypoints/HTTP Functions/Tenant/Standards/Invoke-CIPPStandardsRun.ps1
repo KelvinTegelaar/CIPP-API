@@ -2,9 +2,9 @@
 function Invoke-CIPPStandardsRun {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint
     .ROLE
-        CIPP.Standards.ReadWrite
+        Tenant.Standards.ReadWrite
     #>
     [CmdletBinding()]
     param(
@@ -48,48 +48,48 @@ function Invoke-CIPPStandardsRun {
     } else {
         Write-Information 'Classic Standards Run'
 
-        $GetStandardParams = @{
-            TenantFilter = $TenantFilter
-            runManually  = $runManually
-        }
-
-        if ($TemplateID) {
-            $GetStandardParams['TemplateId'] = $TemplateID
-        }
-
-        $AllTasks = Get-CIPPStandards @GetStandardParams
-
         if ($Force.IsPresent) {
             Write-Information 'Clearing Rerun Cache'
             Test-CIPPRerun -ClearAll -TenantFilter $TenantFilter -Type 'Standard'
         }
 
-        if ($AllTasks.Count -eq 0) {
-            Write-Information "No standards found for tenant $($TenantFilter)."
-            return
+        $StandardsParams = @{
+            TenantFilter = $TenantFilter
+            runManually  = $runManually
+        }
+        if ($TemplateID) {
+            $StandardsParams['TemplateId'] = $TemplateID
         }
 
-        #For each item in our object, run the queue.
-        $Queue = New-CippQueueEntry -Name "Applying Standards ($TenantFilter)" -TotalTasks ($AllTasks | Measure-Object).Count
+        $AllTenantsList = Get-CIPPStandards @StandardsParams | Select-Object -ExpandProperty Tenant | Sort-Object -Unique
 
+        # Build batch of per-tenant list activities
+        $Batch = foreach ($Tenant in $AllTenantsList) {
+            $BatchItem = @{
+                FunctionName = 'CIPPStandardsList'
+                TenantFilter = $Tenant
+                runManually  = $runManually
+            }
+            if ($TemplateID) {
+                $BatchItem['TemplateId'] = $TemplateID
+            }
+            $BatchItem
+        }
+
+        Write-Information "Built batch of $($Batch.Count) tenant standards list activities: $($Batch | ConvertTo-Json -Depth 5 -Compress)"
+
+        # Start orchestrator with distributed batch and post-exec aggregation
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'StandardsOrchestrator'
-            QueueFunction    = @{
-                FunctionName   = 'GetStandards'
-                QueueId        = $Queue.RowKey
-                StandardParams = @{
-                    TenantFilter = $TenantFilter
-                    runManually  = $runManually
-                }
+            OrchestratorName = 'StandardsList'
+            Batch            = @($Batch)
+            PostExecution    = @{
+                FunctionName = 'CIPPStandardsApplyBatch'
             }
             SkipLog          = $true
         }
-        if ($TemplateID) {
-            $InputObject.QueueFunction.StandardParams['TemplateId'] = $TemplateID
-        }
+
         Write-Information "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-        Write-Information "Started orchestration with ID = '$InstanceId'"
-        #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
+        Write-Information "Started standards list orchestration with ID = '$InstanceId'"
     }
 }

@@ -7,12 +7,21 @@ function Push-ExecScheduledCommand {
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
+    # Initialize AsyncLocal storage for thread-safe per-invocation context
+    if (-not $script:CippScheduledTaskIdStorage) {
+        $script:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    }
+    $script:CippScheduledTaskIdStorage.Value = $Item.TaskInfo.RowKey
+
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
     # Handle tenant resolution - support both direct tenant and group-expanded tenants
     $Tenant = $Item.Parameters.TenantFilter ?? $Item.TaskInfo.Tenant
+
+    # Detect if this is a multi-tenant task that should store results per-tenant
+    $IsMultiTenantTask = ($task.Tenant -eq 'AllTenants' -or $task.TenantGroup)
 
     # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
     # We don't need to expand groups here as that's handled in the orchestrator
@@ -21,11 +30,55 @@ function Push-ExecScheduledCommand {
     $CurrentTask = Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($task.PartitionKey)' and RowKey eq '$($task.RowKey)'"
     if (!$CurrentTask) {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) does not exist in the ScheduledTasks table. Exiting."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
-    if ($CurrentTask.TaskState -eq 'Completed') {
+    if ($CurrentTask.TaskState -eq 'Completed' -and !$IsMultiTenantTask) {
         Write-Information "The task $($task.Name) for tenant $($task.Tenant) is already completed. Skipping execution."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
+    }
+    # Task should be 'Pending' (queued by orchestrator) or 'Running' (retry/recovery)
+    # We accept both to handle edge cases
+
+    # Check for rerun protection - prevent duplicate executions within the recurrence interval
+    if ($task.Recurrence -and $task.Recurrence -ne '0') {
+        # Calculate interval in seconds from recurrence string
+        $IntervalSeconds = switch -Regex ($task.Recurrence) {
+            '^(\d+)$' { [int64]$matches[1] * 86400 }  # Plain number = days
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { 0 }
+        }
+
+        if ($IntervalSeconds -gt 0) {
+            # Round down to nearest 15-minute interval (900 seconds) since that's when orchestrator runs
+            # This prevents rerun blocking issues due to slight timing variations
+            $FifteenMinutes = 900
+            $AdjustedInterval = [Math]::Floor($IntervalSeconds / $FifteenMinutes) * $FifteenMinutes
+
+            # Ensure we have at least one 15-minute interval
+            if ($AdjustedInterval -lt $FifteenMinutes) {
+                $AdjustedInterval = $FifteenMinutes
+            }
+            # Use task RowKey as API identifier for rerun cache
+            $RerunParams = @{
+                TenantFilter = $Tenant
+                Type         = 'ScheduledTask'
+                API          = $task.RowKey
+                Interval     = $AdjustedInterval
+                BaseTime     = [int64]$task.ScheduledTime
+                Headers      = $Headers
+            }
+
+            $IsRerun = Test-CIPPRerun @RerunParams
+            if ($IsRerun) {
+                Write-Information "Scheduled task $($task.Name) for tenant $Tenant was recently executed. Skipping to prevent duplicate execution."
+                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+                return
+            }
+        }
     }
 
     if ($task.Trigger) {
@@ -69,6 +122,7 @@ function Push-ExecScheduledCommand {
                     TaskState     = 'Planned'
                     ScheduledTime = [string]$nextRunUnixTime
                 }
+                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
                 return
             }
         }
@@ -94,6 +148,7 @@ function Push-ExecScheduledCommand {
         }
 
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): The command $($Item.Command) does not exist." -sev Error
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
         return
     }
 
@@ -210,7 +265,7 @@ function Push-ExecScheduledCommand {
             }
         }
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
-        if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants' -or $task.TenantGroup) {
+        if ($StoredResults.Length -gt 64000 -or $IsMultiTenantTask) {
             $TaskResultsTable = Get-CippTable -tablename 'ScheduledTaskResults'
             $TaskResults = @{
                 PartitionKey = $task.RowKey
@@ -262,10 +317,15 @@ function Push-ExecScheduledCommand {
 
         # Add alert comment if available
         if ($task.AlertComment) {
-            $HTML += "<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$($task.AlertComment)</p></div>"
+            if ($task.AlertComment -match '%resultcount%') {
+                $resultCount = if ($Results -is [array]) { $Results.Count } else { 1 }
+                $task.AlertComment = $task.AlertComment -replace '%resultcount%', "$resultCount"
+            }
+            $task.AlertComment = Get-CIPPTextReplacement -Text $task.AlertComment -TenantFilter $Tenant
+            $HTML += "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$($task.AlertComment)</p></div>"
         }
 
-        $title = "$TaskType - $Tenant - $($task.Name)"
+        $title = "$TaskType - $Tenant - $($task.Name)$(if ($task.Reference) { " - Reference: $($task.Reference)" })"
         Write-Information 'Scheduler: Sending the results to the target.'
         Write-Information "The content of results is: $Results"
         switch -wildcard ($task.PostExecution) {
@@ -330,4 +390,6 @@ function Push-ExecScheduledCommand {
     if ($TaskType -ne 'Alert') {
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Successfully executed task: $($task.Name)" -sev Info
     }
+    Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+    return 'Task Completed Successfully.'
 }

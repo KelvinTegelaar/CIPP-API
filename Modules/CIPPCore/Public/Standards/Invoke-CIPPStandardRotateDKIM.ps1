@@ -36,14 +36,12 @@ function Invoke-CIPPStandardRotateDKIM {
     $TestResult = Test-CIPPStandardLicense -StandardName 'RotateDKIM' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -eq 1024 -and $_.Enabled -eq $true }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DKIM state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -52,10 +50,10 @@ function Invoke-CIPPStandardRotateDKIM {
     if ($Settings.remediate -eq $true) {
 
         if ($DKIM) {
-            $DKIM | ForEach-Object {
+            foreach ($DkimConfig in $DKIM) {
                 try {
-                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdParams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdParams @{ KeySize = 2048; Identity = $DkimConfig.Identity } -useSystemMailbox $true)
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($DkimConfig.Identity)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $ErrorMessage" -sev Error
@@ -78,10 +76,13 @@ function Invoke-CIPPStandardRotateDKIM {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
-        if ($DKIM) {
-            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $DKIM -Tenant $tenant
-        } else {
-            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $true -Tenant $tenant
+
+        $CurrentValue = @{
+            domainsWith1024BitDKIM = @(@($DKIM.Identity) | Where-Object { $_ })
         }
+        $ExpectedValue = @{
+            domainsWith1024BitDKIM = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

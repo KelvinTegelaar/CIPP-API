@@ -45,7 +45,6 @@ function Invoke-CIPPStandardAutopilotProfile {
     # Get the current configuration
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     try {
@@ -76,6 +75,32 @@ function Invoke-CIPPStandardAutopilotProfile {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot profile: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $StateIsCorrect = $false
+    }
+
+    $CurrentValue = $CurrentConfig | Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, @{Name = 'outOfBoxExperienceSetting'; Expression = {
+            [PSCustomObject]@{
+                deviceUsageType              = $_.outOfBoxExperienceSetting.deviceUsageType
+                privacySettingsHidden        = $_.outOfBoxExperienceSetting.privacySettingsHidden
+                eulaHidden                   = $_.outOfBoxExperienceSetting.eulaHidden
+                userType                     = $_.outOfBoxExperienceSetting.userType
+                keyboardSelectionPageSkipped = $_.outOfBoxExperienceSetting.keyboardSelectionPageSkipped
+            }
+        }
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        displayName                   = $Settings.DisplayName
+        description                   = $Settings.Description
+        deviceNameTemplate            = $Settings.DeviceNameTemplate
+        locale                        = $Settings.Languages.value
+        preprovisioningAllowed        = $Settings.AllowWhiteGlove
+        hardwareHashExtractionEnabled = $Settings.CollectHash
+        outOfBoxExperienceSetting     = [PSCustomObject]@{
+            deviceUsageType              = $DeploymentMode
+            privacySettingsHidden        = $Settings.HidePrivacy
+            eulaHidden                   = $Settings.HideTerms
+            userType                     = $userType
+            keyboardSelectionPageSkipped = $Settings.AutoKeyboard
+        }
     }
 
     # Remediate if the state is not correct
@@ -117,8 +142,7 @@ function Invoke-CIPPStandardAutopilotProfile {
 
     # Report
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect -eq $true ? $true : $CurrentConfig
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -FieldValue $FieldValue -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 

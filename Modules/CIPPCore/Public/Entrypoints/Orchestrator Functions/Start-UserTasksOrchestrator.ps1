@@ -10,36 +10,12 @@ function Start-UserTasksOrchestrator {
     param()
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Running' and Timestamp lt datetime'$1HourAgo'))"
+    $30MinutesAgo = (Get-Date).AddMinutes(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    # Pending = orchestrator queued, Running = actively executing
+    # Pick up: Planned, Failed-Planned, stuck Pending (>30min), or stuck Running (>4hr for large AllTenants tasks)
+    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$30MinutesAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo'))"
     $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-
-    $RateLimitTable = Get-CIPPTable -tablename 'SchedulerRateLimits'
-    $RateLimits = Get-CIPPAzDataTableEntity @RateLimitTable -Filter "PartitionKey eq 'SchedulerRateLimits'"
-
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $DefaultRateLimits = Get-Content -Path "$CIPPRoot/Config/SchedulerRateLimits.json" | ConvertFrom-Json
-    $NewRateLimits = foreach ($Limit in $DefaultRateLimits) {
-        if ($Limit.Command -notin $RateLimits.RowKey) {
-            @{
-                PartitionKey = 'SchedulerRateLimits'
-                RowKey       = $Limit.Command
-                MaxRequests  = $Limit.MaxRequests
-            }
-        }
-    }
-
-    if ($NewRateLimits) {
-        $null = Add-CIPPAzDataTableEntity @RateLimitTable -Entity $NewRateLimits -Force
-        $RateLimits = Get-CIPPAzDataTableEntity @RateLimitTable -Filter "PartitionKey eq 'SchedulerRateLimits'"
-    }
-
-    # Create a hashtable for quick rate limit lookups
-    $RateLimitLookup = @{}
-    foreach ($limit in $RateLimits) {
-        $RateLimitLookup[$limit.RowKey] = $limit.MaxRequests
-    }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
     $TenantList = Get-Tenants -IncludeErrors
@@ -49,16 +25,22 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
+                # Update task state to 'Pending' immediately to prevent concurrent orchestrator runs from picking it up
+                # 'Pending' = orchestrator has picked it up and is queuing commands
+                # 'Running' = actual execution is happening (set by Push-ExecScheduledCommand)
                 $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Planned'
+                    TaskState    = 'Pending'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
-                $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
-
                 if (!$task.Parameters) { $task.Parameters = @{} }
+
+                # Cache Get-Command result to avoid repeated expensive reflection calls
+                $CommandInfo = Get-Command $task.Command
+                $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
+
                 $ScheduledCommand = [pscustomobject]@{
                     Command      = $task.Command
                     Parameters   = $task.Parameters
@@ -71,13 +53,15 @@ function Start-UserTasksOrchestrator {
                     Write-Host "Excluded Tenants from this task: $ExcludedTenants"
                     $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
-                        if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                        if ($HasTenantFilter) {
                             $NewParams.TenantFilter = $Tenant.defaultDomainName
                         }
+                        # Clone TaskInfo to prevent shared object references
+                        $TaskInfoClone = $task.PSObject.Copy()
                         [pscustomobject]@{
                             Command      = $task.Command
                             Parameters   = $NewParams
-                            TaskInfo     = $task
+                            TaskInfo     = $TaskInfoClone
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
@@ -103,13 +87,15 @@ function Start-UserTasksOrchestrator {
 
                         $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {
                             $NewParams = $task.Parameters.Clone()
-                            if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                            if ($HasTenantFilter) {
                                 $NewParams.TenantFilter = $ExpandedTenant.value
                             }
+                            # Clone TaskInfo to prevent shared object references
+                            $TaskInfoClone = $task.PSObject.Copy()
                             [pscustomobject]@{
                                 Command      = $task.Command
                                 Parameters   = $NewParams
-                                TaskInfo     = $task
+                                TaskInfo     = $TaskInfoClone
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
@@ -119,14 +105,14 @@ function Start-UserTasksOrchestrator {
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
 
                         # Fall back to treating as single tenant
-                        if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                        if ($HasTenantFilter) {
                             $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
                         }
                         $Batch.Add($ScheduledCommand)
                     }
                 } else {
                     # Handle single tenant
-                    if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                    if ($HasTenantFilter) {
                         $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
                     }
                     $Batch.Add($ScheduledCommand)
@@ -149,51 +135,35 @@ function Start-UserTasksOrchestrator {
     Write-Information 'Batching tasks for execution...'
     Write-Information "Total tasks to process: $($Batch.Count)"
 
-    if (($Batch | Measure-Object).Count -gt 0) {
-        # Group commands by type and apply rate limits
-        $CommandGroups = $Batch | Group-Object -Property Command
+    if ($Batch.Count -gt 0) {
+        # Group tasks by tenant instead of command type
+        $TenantGroups = $Batch | Group-Object -Property { $_.Parameters.TenantFilter }
         $ProcessedBatches = [System.Collections.Generic.List[object]]::new()
 
-        foreach ($CommandGroup in $CommandGroups) {
-            $CommandName = $CommandGroup.Name
-            $Commands = [System.Collections.Generic.List[object]]::new($CommandGroup.Group)
+        foreach ($TenantGroup in $TenantGroups) {
+            $TenantName = $TenantGroup.Name
+            $TenantCommands = [System.Collections.Generic.List[object]]::new($TenantGroup.Group)
 
-            # Get rate limit for this command (default to 100 if not found)
-            $MaxItemsPerBatch = if ($RateLimitLookup.ContainsKey($CommandName)) {
-                $RateLimitLookup[$CommandName]
-            } else {
-                100
-            }
-
-            # Split into batches based on rate limit
-            while ($Commands.Count -gt 0) {
-                $BatchSize = [Math]::Min($Commands.Count, $MaxItemsPerBatch)
-                $CommandBatch = [System.Collections.Generic.List[object]]::new()
-
-                for ($i = 0; $i -lt $BatchSize; $i++) {
-                    $CommandBatch.Add($Commands[0])
-                    $Commands.RemoveAt(0)
-                }
-
-                $ProcessedBatches.Add($CommandBatch)
-            }
+            Write-Information "Creating batch for tenant: $TenantName with $($TenantCommands.Count) tasks"
+            $ProcessedBatches.Add($TenantCommands)
         }
 
-        # Process each batch separately
+        # Process each tenant batch separately
         foreach ($ProcessedBatch in $ProcessedBatches) {
-            Write-Information "Processing batch with $($ProcessedBatch.Count) tasks..."
+            $TenantName = $ProcessedBatch[0].Parameters.TenantFilter
+            Write-Information "Processing batch for tenant: $TenantName with $($ProcessedBatch.Count) tasks..."
             Write-Information 'Tasks by command:'
             $ProcessedBatch | Group-Object -Property Command | ForEach-Object {
                 Write-Information " - $($_.Name): $($_.Count)"
             }
 
-            # Create queue entry for each batch
-            $Queue = New-CippQueueEntry -Name "Scheduled Tasks - Batch #$($ProcessedBatches.IndexOf($ProcessedBatch) + 1) of $($ProcessedBatches.Count)"
+            # Create queue entry for each tenant batch
+            $Queue = New-CippQueueEntry -Name "Scheduled Tasks - $TenantName"
             $QueueId = $Queue.RowKey
-            $BatchWithQueue = $ProcessedBatch | Select-Object *, @{Name = 'QueueId'; Expression = { $QueueId } }, @{Name = 'QueueName'; Expression = { '{0} - {1}' -f $_.TaskInfo.Name, ($_.TaskInfo.Tenant -ne 'AllTenants' ? $_.TaskInfo.Tenant : $_.Parameters.TenantFilter) } }
+            $BatchWithQueue = $ProcessedBatch | Select-Object *, @{Name = 'QueueId'; Expression = { $QueueId } }, @{Name = 'QueueName'; Expression = { '{0} - {1}' -f $_.TaskInfo.Name, $TenantName } }
 
             $InputObject = [PSCustomObject]@{
-                OrchestratorName = 'UserTaskOrchestrator'
+                OrchestratorName = "UserTaskOrchestrator_$TenantName"
                 Batch            = @($BatchWithQueue)
                 SkipLog          = $true
             }

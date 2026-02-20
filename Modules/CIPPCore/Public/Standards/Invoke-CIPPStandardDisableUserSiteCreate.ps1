@@ -30,24 +30,21 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableUserSiteCreate' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableUserSiteCreate'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableUserSiteCreate' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableUserSiteCreate state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isSiteCreationEnabled -or $CurrentInfo.isSiteCreationUIEnabled) {
             try {
@@ -76,7 +73,15 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
 
     if ($Settings.report -eq $true) {
         $state = $CurrentInfo.isSiteCreationEnabled -and $CurrentInfo.isSiteCreationUIEnabled ? ($CurrentInfo | Select-Object isSiteCreationEnabled, isSiteCreationUIEnabled) : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableUserSiteCreate' -FieldValue $State -Tenant $tenant
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableUserSiteCreate = $state
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableUserSiteCreate = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableUserSiteCreate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreateUI' -FieldValue $CurrentInfo.isSiteCreationUIEnabled -StoreAs bool -Tenant $tenant
     }

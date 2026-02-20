@@ -36,6 +36,13 @@ function Invoke-CIPPStandardBranding {
     #>
 
     param($Tenant, $Settings)
+
+    $TestResult = Test-CIPPStandardLicense -StandardName 'Branding' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Branding'
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
@@ -88,6 +95,25 @@ function Invoke-CIPPStandardBranding {
     ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
     ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
 
+    $CurrentValue = [PSCustomObject]@{
+        signInPageText                  = $CurrentState.signInPageText
+        usernameHintText                = $CurrentState.usernameHintText
+        loginPageTextVisibilitySettings = $CurrentState.loginPageTextVisibilitySettings | Select-Object -Property hideAccountResetCredentials
+        loginPageLayoutConfiguration    = $CurrentState.loginPageLayoutConfiguration | Select-Object -Property layoutTemplateType, isHeaderShown, isFooterShown
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        signInPageText                  = $Settings.signInPageText
+        usernameHintText                = $Settings.usernameHintText
+        loginPageTextVisibilitySettings = [pscustomobject]@{
+            hideAccountResetCredentials = $Settings.hideAccountResetCredentials
+        }
+        loginPageLayoutConfiguration    = [pscustomobject]@{
+            layoutTemplateType = $layoutTemplateType
+            isHeaderShown      = $Settings.isHeaderShown
+            isFooterShown      = $Settings.isFooterShown
+        }
+    }
+
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is already applied correctly.' -Sev Info
@@ -133,8 +159,7 @@ function Invoke-CIPPStandardBranding {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect -eq $true ? $true : ($CurrentState | Select-Object -Property signInPageText, usernameHintText, loginPageTextVisibilitySettings, loginPageLayoutConfiguration)
-        Set-CIPPStandardsCompareField -FieldName 'standards.Branding' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.Branding' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'Branding' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

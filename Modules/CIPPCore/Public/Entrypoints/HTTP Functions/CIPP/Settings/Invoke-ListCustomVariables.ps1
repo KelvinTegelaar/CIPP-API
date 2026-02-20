@@ -174,6 +174,14 @@ function Invoke-ListCustomVariables {
             $ReservedVariables = $ReservedVariables | Where-Object { $_.Category -ne 'system' }
         }
 
+        # Filter out global reserved variables if requested (for tenant group rules)
+        # These variables are the same for all tenants so they're not useful for grouping
+        if ($Request.Query.excludeGlobalReserved -eq 'true') {
+            $ReservedVariables = $ReservedVariables | Where-Object {
+                $_.Category -notin @('partner', 'cipp', 'system')
+            }
+        }
+
         # Add reserved variables first
         foreach ($Variable in $ReservedVariables) {
             $VariableMap[$Variable.Name] = $Variable

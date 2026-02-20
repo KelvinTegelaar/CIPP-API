@@ -36,7 +36,6 @@ function Invoke-CIPPStandardAuthMethodsSettings {
 
     param($Tenant, $Settings)
 
-    Write-Host 'Time to run'
     # Get current authentication methods policy
     try {
         $CurrentPolicy = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant -AsApp $true
@@ -55,13 +54,18 @@ function Invoke-CIPPStandardAuthMethodsSettings {
     $ValidStates = @('default', 'enabled', 'disabled')
     if (($Settings.remediate -eq $true -or $Settings.alert -eq $true) -and
         ($ReportSuspiciousActivityState -notin $ValidStates -or $SystemCredentialState -notin $ValidStates)) {
-        Write-Host "ReportSuspiciousActivity: $($ReportSuspiciousActivityState)"
-        Write-Host "SystemCredential: $($SystemCredentialState)"
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'AuthMethodsPolicy: Invalid state parameter set' -sev Error
         return
     }
 
-
+    $CurrentValue = [PSCustomObject]@{
+        reportSuspiciousActivitySettings = $CurrentPolicy.reportSuspiciousActivitySettings.state
+        systemCredentialPreferences      = $CurrentPolicy.systemCredentialPreferences.state
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        reportSuspiciousActivitySettings = $ReportSuspiciousActivityState
+        systemCredentialPreferences      = $SystemCredentialState
+    }
 
     # Check if states are set correctly
     $ReportSuspiciousActivityCorrect = if ($CurrentPolicy.reportSuspiciousActivitySettings.state -eq $ReportSuspiciousActivityState) { $true } else { $false }
@@ -69,7 +73,6 @@ function Invoke-CIPPStandardAuthMethodsSettings {
     $StateSetCorrectly = $ReportSuspiciousActivityCorrect -and $SystemCredentialCorrect
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
         if ($StateSetCorrectly -eq $false) {
             try {
                 $body = [PSCustomObject]@{
@@ -79,7 +82,6 @@ function Invoke-CIPPStandardAuthMethodsSettings {
                 $body.reportSuspiciousActivitySettings.state = $ReportSuspiciousActivityState
                 $body.systemCredentialPreferences.state = $SystemCredentialState
 
-                Write-Host "Body: $($body | ConvertTo-Json -Depth 10 -Compress)"
                 # Update settings
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -AsApp $true -Type PATCH -Body ($body | ConvertTo-Json -Depth 10 -Compress) -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully configured authentication methods policy settings: Report Suspicious Activity ($ReportSuspiciousActivityState), System Credential Preferences ($SystemCredentialState)" -sev Info
@@ -93,8 +95,7 @@ function Invoke-CIPPStandardAuthMethodsSettings {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateSetCorrectly ? $true :  @{CurrentReportState = $CurrentReportState; CurrentSystemState = $CurrentSystemState; WantedReportState = $ReportSuspiciousActivityState; WantedSystemState = $SystemCredentialState }
-        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsSettings' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsSettings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'ReportSuspiciousActivity' -FieldValue $CurrentPolicy.reportSuspiciousActivitySettings.state -StoreAs string -Tenant $tenant
         Add-CIPPBPAField -FieldName 'SystemCredential' -FieldValue $CurrentPolicy.systemCredentialPreferences.state -StoreAs string -Tenant $tenant
     }

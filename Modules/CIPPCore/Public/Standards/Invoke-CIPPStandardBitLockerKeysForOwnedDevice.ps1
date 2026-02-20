@@ -1,31 +1,29 @@
-﻿function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
+function Invoke-CIPPStandardBitLockerKeysForOwnedDevice {
     <#
     .FUNCTIONALITY
         Internal
     .COMPONENT
         (APIName) BitLockerKeysForOwnedDevice
     .SYNOPSIS
-        (Label) Restrict users from recovering BitLocker keys for owned devices
+        (Label) Control BitLocker key recovery for owned devices
     .DESCRIPTION
-    (Helptext) Controls whether standard users can recover BitLocker keys for devices they own via Microsoft 365 portals.
-    (DocsDescription) Updates the default user role setting that governs access to BitLocker recovery keys for owned devices. This allows administrators to either permit self-service recovery or require helpdesk involvement through Microsoft Entra authorization policies.
+        (Helptext) Controls whether standard users can recover BitLocker keys for devices they own.
+        (DocsDescription) Updates the Microsoft Entra authorization policy that controls whether standard users can read BitLocker recovery keys for devices they own. Choose to restrict access for tighter security or allow self-service recovery when operational needs require it.
     .NOTES
         CAT
             Entra (AAD) Standards
         TAG
-            "NIST CSF 2.0 (PR.AA-05)"
         EXECUTIVETEXT
-            Ensures administrators retain control over BitLocker recovery secrets when required, while still allowing flexibility to enable self-service recovery when business needs demand it.
+            Gives administrators centralized control over BitLocker recovery secrets—restrict access to ensure IT-assisted recovery flows, or allow self-service when rapid device unlocks are a priority.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select state","name":"standards.BitLockerKeysForOwnedDevice.state","options":[{"label":"Restrict","value":"restrict"},{"label":"Allow","value":"allow"}]}
         IMPACT
-            Medium Impact
+            Low Impact
         ADDEDDATE
             2025-10-12
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthorizationPolicy
         RECOMMENDEDBY
-            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -57,8 +55,15 @@
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the BitLockerKeysForOwnedDevice state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
-    $CurrentValue = [bool]$CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice
-    $StateIsCorrect = ($CurrentValue -eq $DesiredValue)
+    $CurrentStateValue = [bool]$CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice
+    $StateIsCorrect = ($CurrentStateValue -eq $DesiredValue)
+
+    $CurrentValue = [PSCustomObject]@{
+        allowedToReadBitLockerKeysForOwnedDevice = $CurrentStateValue
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        allowedToReadBitLockerKeysForOwnedDevice = $DesiredValue
+    }
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -74,7 +79,7 @@
 
                 # Update current state variables to reflect the change immediately if running remediate and report/alert together
                 $CurrentState.defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice = $DesiredValue
-                $CurrentValue = $DesiredValue
+                $CurrentStateValue = $DesiredValue
                 $StateIsCorrect = $true
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -87,7 +92,7 @@
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Users are $DesiredLabel to recover BitLocker keys for their owned devices as configured." -sev Info
         } else {
-            $CurrentLabel = if ($CurrentValue) { 'allowed' } else { 'restricted' }
+            $CurrentLabel = if ($CurrentStateValue) { 'allowed' } else { 'restricted' }
             $AlertMessage = "Users are $CurrentLabel to recover BitLocker keys for their owned devices but should be $DesiredLabel."
             Write-StandardsAlert -message $AlertMessage -object $CurrentState -tenant $tenant -standardName 'BitLockerKeysForOwnedDevice' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Info
@@ -95,7 +100,7 @@
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.BitLockerKeysForOwnedDevice' -FieldValue $StateIsCorrect -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.BitLockerKeysForOwnedDevice' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'BitLockerKeysForOwnedDevice' -FieldValue $CurrentValue -StoreAs bool -Tenant $tenant
     }
 }

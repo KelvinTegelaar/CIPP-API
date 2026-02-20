@@ -35,7 +35,6 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     $TestResult = Test-CIPPStandardLicense -StandardName 'MailboxRecipientLimits' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -48,8 +47,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     # Get mailbox plans first
     try {
         $MailboxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' -cmdParams @{ ResultSize = 'Unlimited' }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MailboxRecipientLimits state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -83,11 +81,9 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
     if ($null -ne $Mailboxes -and @($Mailboxes).Count -gt 0) {
         # Process mailboxes and categorize them based on their plan limits
-        $MailboxResults = @($Mailboxes) | ForEach-Object {
-
-            $Mailbox = $_
+        $MailboxResults = foreach ($Mailbox in @($Mailboxes)) {
             if ($Mailbox.UserPrincipalName -like 'DiscoverySearchMailbox*' -or $Mailbox.UserPrincipalName -like 'SystemMailbox*') {
-                return
+                continue
             }
             # Safe hashtable lookup - check if MailboxPlanId exists and is not null
             $Plan = $null
@@ -129,12 +125,13 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
         # Separate mailboxes into their respective categories only if we have results
         $MailboxesToUpdate = $MailboxResults | Where-Object { $_.Type -eq 'ToUpdate' } | Select-Object -ExpandProperty Mailbox
-        $MailboxesWithPlanIssues = $MailboxResults | Where-Object { $_.Type -eq 'PlanIssue' } | ForEach-Object {
+        $PlanIssueResults = $MailboxResults | Where-Object { $_.Type -eq 'PlanIssue' }
+        $MailboxesWithPlanIssues = foreach ($Issue in $PlanIssueResults) {
             [PSCustomObject]@{
-                Identity     = $_.Mailbox.Identity
-                CurrentLimit = $_.CurrentLimit
-                PlanLimit    = $_.PlanLimit
-                PlanName     = $_.PlanName
+                Identity     = $Issue.Mailbox.Identity
+                CurrentLimit = $Issue.CurrentLimit
+                PlanLimit    = $Issue.PlanLimit
+                PlanName     = $Issue.PlanName
             }
         }
     }
@@ -151,12 +148,12 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         if ($MailboxesToUpdate.Count -gt 0) {
             try {
                 # Create detailed log data for audit trail
-                $MailboxChanges = $MailboxesToUpdate | ForEach-Object {
-                    $CurrentLimit = if ($_.RecipientLimits -eq 'Unlimited') { 'Unlimited' } else { $_.RecipientLimits }
+                $MailboxChanges = foreach ($Mailbox in $MailboxesToUpdate) {
+                    $CurrentLimit = if ($Mailbox.RecipientLimits -eq 'Unlimited') { 'Unlimited' } else { $Mailbox.RecipientLimits }
                     @{
-                        Identity           = $_.Identity
-                        DisplayName        = $_.DisplayName
-                        PrimarySmtpAddress = $_.PrimarySmtpAddress
+                        Identity           = $Mailbox.Identity
+                        DisplayName        = $Mailbox.DisplayName
+                        PrimarySmtpAddress = $Mailbox.PrimarySmtpAddress
                         CurrentLimit       = $CurrentLimit
                         NewLimit           = $Settings.RecipientLimit
                     }
@@ -165,12 +162,12 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updating recipient limits to $($Settings.RecipientLimit) for $($MailboxesToUpdate.Count) mailboxes" -sev Info -LogData $MailboxChanges
 
                 # Create batch requests for mailbox updates
-                $UpdateRequests = $MailboxesToUpdate | ForEach-Object {
+                $UpdateRequests = foreach ($Mailbox in $MailboxesToUpdate) {
                     @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
                             Parameters = @{
-                                Identity        = $_.Identity
+                                Identity        = $Mailbox.Identity
                                 RecipientLimits = $Settings.RecipientLimit
                             }
                         }
@@ -206,12 +203,12 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
             # Add mailboxes that need updating
             if ($MailboxesToUpdate.Count -gt 0) {
-                $AlertData.MailboxesToUpdate = $MailboxesToUpdate | ForEach-Object {
-                    $CurrentLimit = if ($_.RecipientLimits -eq 'Unlimited') { 'Unlimited' } else { $_.RecipientLimits }
+                $AlertData.MailboxesToUpdate = foreach ($Mailbox in $MailboxesToUpdate) {
+                    $CurrentLimit = if ($Mailbox.RecipientLimits -eq 'Unlimited') { 'Unlimited' } else { $Mailbox.RecipientLimits }
                     @{
-                        Identity           = $_.Identity
-                        DisplayName        = $_.DisplayName
-                        PrimarySmtpAddress = $_.PrimarySmtpAddress
+                        Identity           = $Mailbox.Identity
+                        DisplayName        = $Mailbox.DisplayName
+                        PrimarySmtpAddress = $Mailbox.PrimarySmtpAddress
                         CurrentLimit       = $CurrentLimit
                         RequiredLimit      = $Settings.RecipientLimit
                     }
@@ -224,12 +221,12 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
             # Add mailboxes with plan issues
             if ($MailboxesWithPlanIssues.Count -gt 0) {
-                $AlertData.MailboxesWithPlanIssues = $MailboxesWithPlanIssues | ForEach-Object {
+                $AlertData.MailboxesWithPlanIssues = foreach ($Issue in $MailboxesWithPlanIssues) {
                     @{
-                        Identity       = $_.Identity
-                        CurrentLimit   = $_.CurrentLimit
-                        PlanLimit      = $_.PlanLimit
-                        PlanName       = $_.PlanName
+                        Identity       = $Issue.Identity
+                        CurrentLimit   = $Issue.CurrentLimit
+                        PlanLimit      = $Issue.PlanLimit
+                        PlanName       = $Issue.PlanName
                         RequestedLimit = $Settings.RecipientLimit
                     }
                 }
@@ -259,11 +256,14 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         }
         Add-CIPPBPAField -FieldName 'MailboxRecipientLimits' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
 
-        if ($MailboxesToUpdate.Count -eq 0 -and $MailboxesWithPlanIssues.Count -eq 0) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $ReportData
+        $CurrentValue = @{
+            MailboxesToUpdate       = @($MailboxesToUpdate)
+            MailboxesWithPlanIssues = @($MailboxesWithPlanIssues)
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            MailboxesToUpdate       = @()
+            MailboxesWithPlanIssues = @()
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

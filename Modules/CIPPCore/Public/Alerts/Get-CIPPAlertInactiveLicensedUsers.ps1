@@ -4,7 +4,7 @@ function Get-CIPPAlertInactiveLicensedUsers {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -15,10 +15,26 @@ function Get-CIPPAlertInactiveLicensedUsers {
 
     try {
         try {
-            $Lookup = (Get-Date).AddDays(-90).ToUniversalTime()
+            $inactiveDays = 90
+            $excludeDisabled = $false
 
+            if ($InputValue -is [hashtable] -or $InputValue -is [pscustomobject]) {
+                $excludeDisabled = [bool]$InputValue.ExcludeDisabled
+                if ($null -ne $InputValue.DaysSinceLastLogin -and $InputValue.DaysSinceLastLogin -ne '') {
+                    $parsedDays = 0
+                    if ([int]::TryParse($InputValue.DaysSinceLastLogin.ToString(), [ref]$parsedDays) -and $parsedDays -gt 0) {
+                        $inactiveDays = $parsedDays
+                    }
+                }
+            } elseif ($InputValue -eq $true) {
+                # Backwards compatibility: legacy single-input boolean means exclude disabled users
+                $excludeDisabled = $true
+            }
+
+            $Lookup = (Get-Date).AddDays(-$inactiveDays).ToUniversalTime()
+            Write-Host "Checking for users inactive since $Lookup (excluding disabled: $excludeDisabled)"
             # Build base filter - cannot filter assignedLicenses server-side
-            $BaseFilter = if ($InputValue -eq $true) { "accountEnabled eq true" } else { "" }
+            $BaseFilter = if ($excludeDisabled) { 'accountEnabled eq true' } else { '' }
 
             $Uri = if ($BaseFilter) {
                 "https://graph.microsoft.com/beta/users?`$filter=$BaseFilter&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses"
@@ -56,7 +72,13 @@ function Get-CIPPAlertInactiveLicensedUsers {
                         $Message = 'User {0} has been inactive for {1} days but still has a license assigned. Last sign-in: {2}' -f $user.UserPrincipalName, $daysSinceSignIn, $lastSignIn
                     }
 
-                    $user | Select-Object -Property UserPrincipalName, signInActivity, @{Name = 'Message'; Expression = { $Message } }
+                    [PSCustomObject]@{
+                        UserPrincipalName = $user.UserPrincipalName
+                        Id                = $user.id
+                        lastSignIn        = $lastSignIn
+                        Message           = $Message
+                        Tenant            = $TenantFilter
+                    }
                 }
             }
 

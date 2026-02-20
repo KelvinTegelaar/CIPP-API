@@ -36,16 +36,13 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableExternalCalendarSharing' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableExternalCalendarSharing'
 
     try {
         $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SharingPolicy' |
-        Where-Object { $_.Default -eq $true }
-    }
-    catch {
+            Where-Object { $_.Default -eq $true }
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableExternalCalendarSharing state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -53,14 +50,24 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
 
     if ($Settings.remediate -eq $true) {
         if ($CurrentInfo.Enabled) {
-            $CurrentInfo | ForEach-Object {
-                try {
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SharingPolicy' -cmdParams @{ Identity = $_.Id ; Enabled = $false } -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully disabled external calendar sharing for the policy $($_.Name)" -sev Info
-                } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable external calendar sharing for the policy $($_.Name). Error: $ErrorMessage" -sev Error
+            $BulkRequest = foreach ($Policy in $CurrentInfo) {
+                @{
+                    CmdletInput = @{
+                        CmdletName = 'Set-SharingPolicy'
+                        Parameters = @{ Identity = $Policy.Id ; Enabled = $false }
+                    }
                 }
+            }
+            $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($BulkRequest) -useSystemMailbox $true
+            foreach ($Result in $BatchResults) {
+                if ($Result.error) {
+                    $ErrorMessage = Get-NormalizedError -Message $Result.error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable external calendar sharing. Error: $ErrorMessage" -sev Error
+                }
+            }
+            $SuccessCount = ($BatchResults | Where-Object { -not $_.error }).Count
+            if ($SuccessCount -gt 0) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully disabled external calendar sharing for $SuccessCount policies" -sev Info
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'External calendar sharing is already disabled' -sev Info
@@ -79,8 +86,16 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     }
 
     if ($Settings.report -eq $true) {
-        $CurrentInfo.Enabled = -not $CurrentInfo.Enabled
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableExternalCalendarSharing' -FieldValue $CurrentInfo.Enabled -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+        $CurrentStatus = -not $CurrentInfo.Enabled
+
+        $CurrentValue = [PSCustomObject]@{
+            ExternalCalendarSharingDisabled = $CurrentStatus
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            ExternalCalendarSharingDisabled = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableExternalCalendarSharing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentStatus -StoreAs bool -Tenant $tenant
     }
 }

@@ -19,11 +19,12 @@ function Invoke-ListScheduledItems {
         $ShowHidden = $Request.Query.ShowHidden ?? $Request.Body.ShowHidden
         $Name = $Request.Query.Name ?? $Request.Body.Name
         $Type = $Request.Query.Type ?? $Request.Body.Type
+        $SearchTitle = $Request.query.SearchTitle ?? $Request.body.SearchTitle
 
         if ($ShowHidden -eq $true) {
-            $ScheduledItemFilter.Add('Hidden eq true')
+            $ScheduledItemFilter.Add("(Hidden eq true or Hidden eq 'True')")
         } else {
-            $ScheduledItemFilter.Add('Hidden eq false')
+            $ScheduledItemFilter.Add("(Hidden eq false or Hidden eq 'False')")
         }
 
         if ($Name) {
@@ -42,8 +43,13 @@ function Invoke-ListScheduledItems {
         $HiddenTasks = $true
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    Write-Information "Retrieved $($Tasks.Count) scheduled tasks from storage."
     if ($Type) {
         $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
+    }
+
+    if ($SearchTitle) {
+        $Tasks = $Tasks | Where-Object { $_.Name -like $SearchTitle }
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
@@ -53,8 +59,12 @@ function Invoke-ListScheduledItems {
         $AllowedTenantDomains = $TenantList | Where-Object -Property customerId -In $AllowedTenants | Select-Object -ExpandProperty defaultDomainName
         $Tasks = $Tasks | Where-Object -Property Tenant -In $AllowedTenantDomains
     }
-    $ScheduledTasks = foreach ($Task in $tasks) {
+
+    Write-Information "Found $($Tasks.Count) scheduled tasks after filtering and access check."
+
+    $ScheduledTasks = foreach ($Task in $Tasks) {
         if (!$Task.Tenant -or !$Task.Command) {
+            Write-Information "Skipping invalid scheduled task entry: $($Task.RowKey)"
             continue
         }
 

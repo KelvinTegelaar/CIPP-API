@@ -22,7 +22,7 @@
     }
 
     try {
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "$State-InboxRule" -Anchor $Username -cmdParams @{Identity = $RuleId }
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "$State-InboxRule" -Anchor $Username -cmdParams @{Identity = $RuleId; Mailbox = $UserId }
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully set mailbox rule $($RuleName) for $($Username) to $($State)d" -Sev 'Info' -tenant $TenantFilter
         return "Successfully set mailbox rule $($RuleName) for $($Username) to $($State)d"
     } catch {
