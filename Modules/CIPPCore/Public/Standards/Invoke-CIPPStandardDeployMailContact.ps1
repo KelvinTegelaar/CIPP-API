@@ -105,15 +105,15 @@ function Invoke-CIPPStandardDeployMailContact {
         $ContactData = @{
             DisplayName          = $Settings.DisplayName
             ExternalEmailAddress = $Settings.ExternalEmailAddress
-            FirstName            = $Settings.FirstName
-            LastName             = $Settings.LastName
+            FirstName            = $Settings.FirstName ?? ''
+            LastName             = $Settings.LastName ?? ''
         }
         $CurrentValue = $ExistingContact | Select-Object DisplayName, ExternalEmailAddress, FirstName, LastName
         $currentValue = @{
             DisplayName          = $ExistingContact.displayName
             ExternalEmailAddress = ($ExistingContact.ExternalEmailAddress -replace 'SMTP:', '')
-            FirstName            = $ExistingContact.firstName
-            LastName             = $ExistingContact.lastName
+            FirstName            = $ExistingContact.firstName ?? ''
+            LastName             = $ExistingContact.lastName ?? ''
         }
         Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ReportData -Tenant $Tenant
