@@ -1,11 +1,11 @@
 function Add-CIPPW32ScriptApplication {
     <#
     .SYNOPSIS
-        Adds a Win32 app with PowerShell script installer to Intune.
+        Adds a Win32 app with PowerShell script installer to Intune using the standard Chocolatey package.
 
     .DESCRIPTION
-        Creates a Win32 app using the PowerShell script installer feature.
-        Uploads an intunewin file and PowerShell scripts via the scripts endpoint.
+        Creates a Win32 app that uses the standard Chocolatey intunewin package but with custom PowerShell scripts.
+        Always uploads the same Choco package, but uses user-provided scripts for install/uninstall commands.
 
     .PARAMETER TenantFilter
         Tenant ID or domain name for the Graph API call.
@@ -17,31 +17,21 @@ function Add-CIPPW32ScriptApplication {
         - publisher: Publisher name
         - installScript (required): PowerShell install script content (plaintext)
         - uninstallScript: PowerShell uninstall script content (plaintext)
-        - detectionScript: PowerShell detection script content (plaintext)
+        - detectionPath (required): Full path to the file or folder to detect (e.g., 'C:\\Program Files\\MyApp')
+        - detectionFile: File name to detect (optional, for folder path detection)
+        - detectionType: 'exists', 'modifiedDate', 'createdDate', 'version', 'sizeInMB' (default: 'exists')
+        - check32BitOn64System: Boolean, check 32-bit registry/paths on 64-bit systems (default: false)
         - runAsAccount: 'system' or 'user' (default: 'system')
         - deviceRestartBehavior: 'allow', 'suppress', or 'force' (default: 'suppress')
-        - runAs32Bit: Boolean, run scripts as 32-bit on 64-bit clients (default: false)
-        - enforceSignatureCheck: Boolean, enforce script signature validation (default: false)
-
-    .PARAMETER FilePath
-        Path to the intunewin file.
-
-    .PARAMETER FileName
-        Name of the file from XML metadata.
-
-    .PARAMETER UnencryptedSize
-        Unencrypted size of the file from XML metadata.
-
-    .PARAMETER EncryptionInfo
-        Hashtable containing encryption information from XML.
 
     .EXAMPLE
         $Properties = @{
             displayName = 'My Script App'
             installScript = 'Write-Host "Installing..."'
+            detectionPath = 'C:\\Program Files\\MyApp'
+            detectionFile = 'app.exe'
         }
-        $EncryptionInfo = @{ EncryptionKey = '...'; MacKey = '...'; ... }
-        Add-CIPPW32ScriptApplication -TenantFilter 'contoso.com' -Properties $Properties -FilePath 'app.intunewin' -FileName 'app.intunewin' -UnencryptedSize 1024000 -EncryptionInfo $EncryptionInfo
+        Add-CIPPW32ScriptApplication -TenantFilter 'contoso.com' -Properties $Properties
     #>
     [CmdletBinding()]
     param(
@@ -49,59 +39,112 @@ function Add-CIPPW32ScriptApplication {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
-        [PSCustomObject]$Properties,
-
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$FileName,
-
-        [Parameter(Mandatory = $true)]
-        [int64]$UnencryptedSize,
-
-        [Parameter(Mandatory = $true)]
-        [hashtable]$EncryptionInfo
+        [PSCustomObject]$Properties
     )
 
-    # Build Win32 app body
-    $intuneBody = @{
-        '@odata.type'                    = '#microsoft.graph.win32LobApp'
-        displayName                      = $Properties.displayName
-        description                      = $Properties.description
-        publisher                        = $Properties.publisher
-        fileName                         = $FileName
-        setupFilePath                    = 'N/A'
-        minimumSupportedWindowsRelease   = '1607'
-        returnCodes                      = @(
+    # Get the standard Chocolatey package location (relative to function app root)
+    $IntuneWinFile = 'AddChocoApp\IntunePackage.intunewin'
+    $ChocoXmlFile = 'AddChocoApp\Choco.App.xml'
+
+    if (-not (Test-Path $IntuneWinFile)) {
+        throw "Chocolatey IntunePackage.intunewin not found at: $IntuneWinFile (Current directory: $PWD)"
+    }
+
+    if (-not (Test-Path $ChocoXmlFile)) {
+        throw "Choco.App.xml not found at: $ChocoXmlFile (Current directory: $PWD)"
+    }
+
+    # Parse the Choco XML to get encryption info
+    [xml]$ChocoXml = Get-Content $ChocoXmlFile
+    $EncryptionInfo = @{
+        EncryptionKey        = $ChocoXml.ApplicationInfo.EncryptionInfo.EncryptionKey
+        MacKey               = $ChocoXml.ApplicationInfo.EncryptionInfo.MacKey
+        InitializationVector = $ChocoXml.ApplicationInfo.EncryptionInfo.InitializationVector
+        Mac                  = $ChocoXml.ApplicationInfo.EncryptionInfo.Mac
+        ProfileIdentifier    = $ChocoXml.ApplicationInfo.EncryptionInfo.ProfileIdentifier
+        FileDigest           = $ChocoXml.ApplicationInfo.EncryptionInfo.FileDigest
+        FileDigestAlgorithm  = $ChocoXml.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
+    }
+
+    $FileName = $ChocoXml.ApplicationInfo.FileName
+    $UnencryptedSize = [int64]$ChocoXml.ApplicationInfo.UnencryptedContentSize
+
+    # Build detection rules
+    if ($Properties.detectionPath) {
+        # Determine if this is a file or folder detection
+        $DetectionRule = @{
+            '@odata.type'        = '#microsoft.graph.win32LobAppFileSystemDetection'
+            check32BitOn64System = if ($null -ne $Properties.check32BitOn64System) { [bool]$Properties.check32BitOn64System } else { $false }
+            detectionType        = if ($Properties.detectionType) { $Properties.detectionType } else { 'exists' }
+        }
+
+        if ($Properties.detectionFile) {
+            # File detection (path + file)
+            $DetectionRule['path'] = $Properties.detectionPath
+            $DetectionRule['fileOrFolderName'] = $Properties.detectionFile
+        } else {
+            # Folder/File detection (full path)
+            # Split the path into directory and file/folder name
+            $PathItem = Split-Path $Properties.detectionPath -Leaf
+            $ParentPath = Split-Path $Properties.detectionPath -Parent
+
+            if ([string]::IsNullOrEmpty($ParentPath)) {
+                throw "Invalid detection path: $($Properties.detectionPath). Must be a full path."
+            }
+
+            $DetectionRule['path'] = $ParentPath
+            $DetectionRule['fileOrFolderName'] = $PathItem
+        }
+
+        $DetectionRules = @($DetectionRule)
+    } else {
+        # Default detection: Check for a marker file in ProgramData
+        $DetectionRules = @(
+            @{
+                '@odata.type'        = '#microsoft.graph.win32LobAppFileSystemDetection'
+                path                 = '%ProgramData%\CIPPApps'
+                fileOrFolderName     = "$($Properties.displayName -replace '[^a-zA-Z0-9]', '_').txt"
+                check32BitOn64System = $false
+                detectionType        = 'exists'
+            }
+        )
+    }
+
+    # Build the Win32 app body
+    $AppBody = @{
+        '@odata.type'                  = '#microsoft.graph.win32LobApp'
+        displayName                    = $Properties.displayName
+        description                    = $Properties.description
+        publisher                      = if ($Properties.publisher) { $Properties.publisher } else { 'CIPP' }
+        fileName                       = $FileName
+        setupFilePath                  = 'N/A'
+        installCommandLine             = 'powershell.exe -ExecutionPolicy Bypass -File install.ps1'
+        uninstallCommandLine           = 'powershell.exe -ExecutionPolicy Bypass -File uninstall.ps1'
+        minimumSupportedWindowsRelease = '1607'
+        detectionRules                 = $DetectionRules
+        returnCodes                    = @(
             @{ returnCode = 0; type = 'success' }
             @{ returnCode = 1707; type = 'success' }
             @{ returnCode = 3010; type = 'softReboot' }
             @{ returnCode = 1641; type = 'hardReboot' }
             @{ returnCode = 1618; type = 'retry' }
         )
+        installExperience              = @{
+            '@odata.type'         = 'microsoft.graph.win32LobAppInstallExperience'
+            runAsAccount          = if ($Properties.runAsAccount) { $Properties.runAsAccount } else { 'system' }
+            deviceRestartBehavior = if ($Properties.deviceRestartBehavior) { $Properties.deviceRestartBehavior } else { 'suppress' }
+        }
     }
 
-    # Add install experience
-    $intuneBody.installExperience = @{
-        '@odata.type'         = 'microsoft.graph.win32LobAppInstallExperience'
-        runAsAccount          = if ($Properties.runAsAccount) { $Properties.runAsAccount } else { 'system' }
-        deviceRestartBehavior = if ($Properties.deviceRestartBehavior) { $Properties.deviceRestartBehavior } else { 'suppress' }
-        maxRunTimeInMinutes   = 60
-    }
-
-    # Create the app
+    # Create the app first
     $Baseuri = 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps'
-    $NewApp = New-GraphPostRequest -Uri $Baseuri -Body ($intuneBody | ConvertTo-Json -Depth 10) -Type POST -tenantid $TenantFilter
+    $NewApp = New-GraphPostRequest -Uri $Baseuri -Body ($AppBody | ConvertTo-Json -Depth 10) -Type POST -tenantid $TenantFilter
     Start-Sleep -Milliseconds 200
 
-    # Upload intunewin file using shared helper
-    Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $FilePath -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter
+    # Upload the Chocolatey intunewin content
+    Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $IntuneWinFile -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter
 
-    # Upload PowerShell scripts via the scripts endpoint
-    $RunAs32Bit = if ($null -ne $Properties.runAs32Bit) { [bool]$Properties.runAs32Bit } else { $false }
-    $EnforceSignatureCheck = if ($null -ne $Properties.enforceSignatureCheck) { [bool]$Properties.enforceSignatureCheck } else { $false }
-
+    # Upload PowerShell scripts via the scripts endpoint (newer method)
     $InstallScriptId = $null
     $UninstallScriptId = $null
 
@@ -110,8 +153,8 @@ function Add-CIPPW32ScriptApplication {
         $InstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppInstallPowerShellScript'
             displayName           = 'install.ps1'
-            enforceSignatureCheck = $EnforceSignatureCheck
-            runAs32Bit            = $RunAs32Bit
+            enforceSignatureCheck = $false
+            runAs32Bit            = $false
             content               = $InstallScriptContent
         } | ConvertTo-Json
 
@@ -133,8 +176,8 @@ function Add-CIPPW32ScriptApplication {
         $UninstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppUninstallPowerShellScript'
             displayName           = 'uninstall.ps1'
-            enforceSignatureCheck = $EnforceSignatureCheck
-            runAs32Bit            = $RunAs32Bit
+            enforceSignatureCheck = $false
+            runAs32Bit            = $false
             content               = $UninstallScriptContent
         } | ConvertTo-Json
 
@@ -153,8 +196,8 @@ function Add-CIPPW32ScriptApplication {
 
     # Build final commit body with active script references
     $CommitBody = @{
-        '@odata.type'             = '#microsoft.graph.win32LobApp'
-        committedContentVersion   = '1'
+        '@odata.type'           = '#microsoft.graph.win32LobApp'
+        committedContentVersion = '1'
     }
 
     if ($InstallScriptId) {
@@ -165,22 +208,8 @@ function Add-CIPPW32ScriptApplication {
         $CommitBody['activeUninstallScript'] = @{ targetId = $UninstallScriptId }
     }
 
-    # Add detection rules if provided
-    if ($Properties.detectionScript) {
-        $DetectionScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.detectionScript))
-        $CommitBody['detectionRules'] = @(
-            @{
-                '@odata.type'         = '#microsoft.graph.win32LobAppPowerShellScriptDetection'
-                scriptContent         = $DetectionScriptContent
-                enforceSignatureCheck = $EnforceSignatureCheck
-                runAs32Bit            = $RunAs32Bit
-            }
-        )
-    }
-
     # Commit the app with script references
     $null = New-GraphPostRequest -Uri "$Baseuri/$($NewApp.id)" -tenantid $TenantFilter -Body ($CommitBody | ConvertTo-Json -Depth 10) -Type PATCH
 
     return $NewApp
-
 }
