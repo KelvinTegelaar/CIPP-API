@@ -81,12 +81,12 @@ function Push-UploadApplication {
 
                         # Build parameters dynamically
                         $Params = @{
-                            AppBody = $intuneBody
-                            TenantFilter = $tenant
-                            FilePath = $Infile
-                            FileName = $Intunexml.ApplicationInfo.FileName
+                            AppBody         = $intuneBody
+                            TenantFilter    = $tenant
+                            FilePath        = $Infile
+                            FileName        = $Intunexml.ApplicationInfo.FileName
                             UnencryptedSize = [int64]$Intunexml.ApplicationInfo.UnencryptedContentSize
-                            EncryptionInfo = $EncryptionInfo
+                            EncryptionInfo  = $EncryptionInfo
                         }
                         if ($AppConfig.Applicationname) { $Params.DisplayName = $AppConfig.Applicationname }
 
@@ -106,12 +106,12 @@ function Push-UploadApplication {
 
                         # Build parameters dynamically
                         $Params = @{
-                            AppBody = $intuneBody
-                            TenantFilter = $tenant
-                            FilePath = $Infile
-                            FileName = $Intunexml.ApplicationInfo.FileName
+                            AppBody         = $intuneBody
+                            TenantFilter    = $tenant
+                            FilePath        = $Infile
+                            FileName        = $Intunexml.ApplicationInfo.FileName
                             UnencryptedSize = [int64]$Intunexml.ApplicationInfo.UnencryptedContentSize
-                            EncryptionInfo = $EncryptionInfo
+                            EncryptionInfo  = $EncryptionInfo
                         }
                         if ($AppConfig.Applicationname) { $Params.DisplayName = $AppConfig.Applicationname }
 
@@ -139,13 +139,14 @@ function Push-UploadApplication {
                         if ($AppConfig.description) { $Properties['description'] = $AppConfig.description }
                         if ($AppConfig.publisher) { $Properties['publisher'] = $AppConfig.publisher }
                         if ($AppConfig.uninstallScript) { $Properties['uninstallScript'] = $AppConfig.uninstallScript }
-                        if ($AppConfig.detectionScript) { $Properties['detectionScript'] = $AppConfig.detectionScript }
+                        if ($AppConfig.detectionPath) { $Properties['detectionPath'] = $AppConfig.detectionPath }
+                        if ($AppConfig.detectionFile) { $Properties['detectionFile'] = $AppConfig.detectionFile }
                         if ($AppConfig.runAsAccount) { $Properties['runAsAccount'] = $AppConfig.runAsAccount }
                         if ($AppConfig.deviceRestartBehavior) { $Properties['deviceRestartBehavior'] = $AppConfig.deviceRestartBehavior }
                         if ($null -ne $AppConfig.runAs32Bit) { $Properties['runAs32Bit'] = $AppConfig.runAs32Bit }
                         if ($null -ne $AppConfig.enforceSignatureCheck) { $Properties['enforceSignatureCheck'] = $AppConfig.enforceSignatureCheck }
 
-                        $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $tenant -Properties ([PSCustomObject]$Properties) -FilePath $Infile -FileName $Intunexml.ApplicationInfo.FileName -UnencryptedSize ([int64]$Intunexml.ApplicationInfo.UnencryptedContentSize) -EncryptionInfo $EncryptionInfo
+                        $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $tenant -Properties ([PSCustomObject]$Properties)
                     }
                     'WinGetNew' {
                         # I think we don't need a separate WinGetNew type, just use WinGet?

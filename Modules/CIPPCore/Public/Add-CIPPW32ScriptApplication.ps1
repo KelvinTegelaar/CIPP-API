@@ -54,7 +54,7 @@ function Add-CIPPW32ScriptApplication {
         throw "Choco.App.xml not found at: $ChocoXmlFile (Current directory: $PWD)"
     }
 
-    # Parse the Choco XML to get encryption info
+    # Parse the Choco XML to get encryption info. We need a wrapper around the application and this is a tiny intune file, perfect for our purpose.
     [xml]$ChocoXml = Get-Content $ChocoXmlFile
     $EncryptionInfo = @{
         EncryptionKey        = $ChocoXml.ApplicationInfo.EncryptionInfo.EncryptionKey
