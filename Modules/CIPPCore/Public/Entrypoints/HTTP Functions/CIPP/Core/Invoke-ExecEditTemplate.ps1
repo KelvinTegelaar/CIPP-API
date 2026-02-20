@@ -31,7 +31,7 @@ function Invoke-ExecEditTemplate {
             if ($Request.Body.parsedRAWJson) {
                 $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.Body.parsedRAWJson
             } else {
-                $RawJSON = $OriginalJSON
+                $RawJSON = $TemplateData.RAWJson
             }
 
             $IntuneTemplate = @{

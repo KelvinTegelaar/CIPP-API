@@ -26,11 +26,16 @@ function Get-CIPPDomainAnalyser {
     }
     $Domains = Get-CIPPAzDataTableEntity @DomainTable | Where-Object { $_.TenantGUID -in $Tenants.customerId -or $TenantFilter -eq $_.TenantGUID }
     try {
-        # Extract json from table results
-        $Results = foreach ($DomainAnalyserResult in ($Domains).DomainAnalyser) {
+        # Extract json from table results and merge with DkimSelectors from the domain entity
+        $Results = foreach ($Domain in $Domains) {
             try {
-                if (![string]::IsNullOrEmpty($DomainAnalyserResult)) {
-                    $Object = $DomainAnalyserResult | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if (![string]::IsNullOrEmpty($Domain.DomainAnalyser)) {
+                    $Object = $Domain.DomainAnalyser | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    # Add DkimSelectors from the domain entity if available
+                    if (![string]::IsNullOrEmpty($Domain.DkimSelectors)) {
+                        $Selectors = $Domain.DkimSelectors | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        $Object | Add-Member -NotePropertyName 'DkimSelectors' -NotePropertyValue ($Selectors) -Force
+                    }
                     $Object
                 }
             } catch {}

@@ -461,15 +461,21 @@ function Invoke-NinjaOneTenantSync {
             [System.Collections.Generic.List[PSCustomObject]]$DeviceMap = @()
         }
 
-        # Parse Devices
-        foreach ($Device in $Devices | Where-Object { $_.id -notin $ParsedDevices.id }) {
+        $DevicesToProcess = $Devices | Where-Object { $_.id -notin $ParsedDevices.id }
 
-            # First lets match on serial
-            $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.system.biosSerialNumber -eq $Device.SerialNumber -or $_.system.serialNumber -eq $Device.SerialNumber }
+        # Parse Devices
+        foreach ($Device in $DevicesToProcess) {
+
+            # First lets match on serial (normalize by removing spaces for comparison)
+            $NormalizedDeviceSerial = $Device.SerialNumber -replace '\s', ''
+            $MatchedNinjaDevice = $NinjaDevices | Where-Object {
+                ($_.system.biosSerialNumber -replace '\s', '') -eq $NormalizedDeviceSerial -or
+                ($_.system.serialNumber -replace '\s', '') -eq $NormalizedDeviceSerial
+            }
 
             # See if we found just one device, if not match on name
             if (($MatchedNinjaDevice | Measure-Object).count -ne 1) {
-                $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.systemName -eq $Device.Name -or $_.dnsName -eq $Device.Name }
+                $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.systemName -eq $Device.deviceName -or $_.dnsName -eq $Device.deviceName }
             }
 
             # Check on a match again and set name
@@ -710,7 +716,12 @@ function Invoke-NinjaOneTenantSync {
 
             # Update Device
             if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance) {
-                $Result = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($MatchedNinjaDevice.id)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaDeviceUpdate | ConvertTo-Json -Depth 100)
+                try {
+                    $UpdateBody = $NinjaDeviceUpdate | ConvertTo-Json -Depth 100
+                    $Result = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($MatchedNinjaDevice.id)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body $UpdateBody
+                } catch {
+                    Write-Verbose "Error details: $($_ | ConvertTo-Json -Depth 5)"
+                }
             }
         }
 
@@ -1543,8 +1554,6 @@ function Invoke-NinjaOneTenantSync {
 
         ### M365 Links Section
         if ($MappedFields.TenantLinks) {
-            Write-Information 'Tenant Links'
-
             $ManagementLinksData = @(
                 @{
                     Name = 'M365 Admin Portal'
@@ -1650,8 +1659,6 @@ function Invoke-NinjaOneTenantSync {
 
 
         if ($MappedFields.TenantSummary) {
-            Write-Information 'Tenant Summary'
-
             ### Tenant Overview Card
             $ParsedAdmins = [PSCustomObject]@{}
 
@@ -1672,7 +1679,6 @@ function Invoke-NinjaOneTenantSync {
             $TenantSummaryCard = Get-NinjaOneInfoCard -Title 'Tenant Details' -Data $TenantDetailsItems -Icon 'fas fa-building'
 
             ### Users details card
-            Write-Information 'User Details'
             $TotalUsersCount = ($Users | Measure-Object).count
             $GuestUsersCount = ($Users | Where-Object { $_.UserType -eq 'Guest' } | Measure-Object).count
             $LicensedUsersCount = ($licensedUsers | Measure-Object).count
@@ -1730,7 +1736,6 @@ function Invoke-NinjaOneTenantSync {
 
 
             ### Device Details Card
-            Write-Information 'Device Details'
             $TotalDeviceswCount = ($Devices | Measure-Object).count
             $ComplianceDevicesCount = ($Devices | Where-Object { $_.complianceState -eq 'compliant' } | Measure-Object).count
             $WindowsCount = ($Devices | Where-Object { $_.operatingSystem -eq 'Windows' } | Measure-Object).count
@@ -1810,7 +1815,6 @@ function Invoke-NinjaOneTenantSync {
             $DeviceSummaryCardHTML = Get-NinjaOneCard -Title 'Device Details' -Body $DeviceCardBodyHTML -Icon 'fas fa-network-wired' -TitleLink $TitleLink
 
             #### Secure Score Card
-            Write-Information 'Secure Score Details'
             $Top5Actions = ($SecureScoreParsed | Where-Object { $_.scoreInPercentage -ne 100 } | Sort-Object 'Score Impact', adjustedRank -Descending) | Select-Object -First 5
 
             # Score Chart
@@ -1845,7 +1849,6 @@ function Invoke-NinjaOneTenantSync {
 
 
             ### CIPP Applied Standards Cards
-            Write-Information 'Applied Standards'
             $ModuleBase = Get-Module CIPPExtensions | Select-Object -ExpandProperty ModuleBase
             $CIPPRoot = (Get-Item $ModuleBase).Parent.Parent.FullName
             Set-Location $CIPPRoot
@@ -2195,7 +2198,7 @@ function Invoke-NinjaOneTenantSync {
 
         $Token = Get-NinjaOneToken -configuration $Configuration
 
-        Write-Information "Ninja Body: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
+        #Write-Information "Ninja Body: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
         $Result = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.IntegrationId)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
 
 

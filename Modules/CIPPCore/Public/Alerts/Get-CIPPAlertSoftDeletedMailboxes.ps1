@@ -24,6 +24,6 @@ function Get-CIPPAlertSoftDeletedMailboxes {
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check for soft deleted mailboxes in $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Failed to check for soft deleted mailboxes in $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }

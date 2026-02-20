@@ -20,7 +20,15 @@ function Invoke-AddScheduledItem {
             $Table = Get-CIPPTable -TableName 'ScheduledTasks'
             $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
             $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+
             if ($ExistingTask) {
+                $RerunParams = @{
+                    TenantFilter = $ExistingTask.Tenant
+                    Type         = 'ScheduledTask'
+                    API          = $Request.Body.RowKey
+                    Clear        = $true
+                }
+                $null = Test-CIPPRerun @RerunParams
                 $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Request.Headers
             } else {
                 $Result = "Task with id $($Request.Body.RowKey) does not exist"

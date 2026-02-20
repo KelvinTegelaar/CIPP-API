@@ -19,7 +19,7 @@ function Get-CIPPAlertOneDriveQuota {
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-AlertMessage -tenant $($TenantFilter) -message "OneDrive quota Alert: Unable to get OneDrive usage: Error occurred: $ErrorMessage"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "OneDrive quota Alert: Unable to get OneDrive usage: Error occurred: $ErrorMessage" -sev Error
         return
     }
 
