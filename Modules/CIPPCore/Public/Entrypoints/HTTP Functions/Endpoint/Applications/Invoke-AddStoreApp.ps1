@@ -1,7 +1,7 @@
 function Invoke-AddStoreApp {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.ReadWrite
     #>
@@ -26,8 +26,8 @@ function Invoke-AddStoreApp {
             'runAsAccount' = 'system'
         }
     }
-
-    $Tenants = $Request.body.selectedTenants.defaultDomainName
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{

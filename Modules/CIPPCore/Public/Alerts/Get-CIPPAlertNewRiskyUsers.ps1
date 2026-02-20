@@ -14,7 +14,7 @@ function Get-CIPPAlertNewRiskyUsers {
         # Check if tenant has P2 capabilities
         $Capabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
         if (-not ($Capabilities.AAD_PREMIUM_P2 -eq $true)) {
-            Write-AlertMessage -tenant $($TenantFilter) -message 'Tenant does not have Azure AD Premium P2 licensing required for risky users detection'
+            Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message 'Tenant does not have Azure AD Premium P2 licensing required for risky users detection' -sev Warning
             return
         }
 
@@ -69,6 +69,6 @@ function Get-CIPPAlertNewRiskyUsers {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Could not get risky users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not get risky users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }

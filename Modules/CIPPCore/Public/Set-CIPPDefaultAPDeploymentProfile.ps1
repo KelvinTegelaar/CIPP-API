@@ -70,17 +70,22 @@ function Set-CIPPDefaultAPDeploymentProfile {
         }
 
         if ($AssignTo -eq $true) {
-            $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-            if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $DisplayName")) {
-                #Get assignments
-                $Assignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
-                if (!$Assignments) {
-                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $AssignBody
+            try {
+                $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
+                if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $DisplayName")) {
+                    #Get assignments
+                    $Assignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
+                    if (!$Assignments) {
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $AssignBody
+                    }
+                    Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to $($AssignTo)" -Sev 'Info'
                 }
-                Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to $AssignTo" -Sev 'Info'
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to $($AssignTo): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
-        "Successfully $($Type)ed profile for $TenantFilter"
+        "Successfully $($Type)ed profile for $($TenantFilter)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed $($Type)ing Autopilot Profile $($DisplayName). Error: $($ErrorMessage.NormalizedError)"

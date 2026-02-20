@@ -31,7 +31,7 @@ function Get-CIPPMailboxPermissionReport {
     )
 
     try {
-        Write-LogMessage -API 'MailboxPermissionReport' -tenant $TenantFilter -message 'Generating mailbox permission report' -sev Info
+        Write-LogMessage -API 'MailboxPermissionReport' -tenant $TenantFilter -message 'Generating mailbox permission report' -sev Debug
 
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {

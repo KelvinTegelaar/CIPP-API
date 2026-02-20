@@ -5,11 +5,15 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
 
     .PARAMETER TenantFilter
         The tenant to cache authentication flows policy for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {

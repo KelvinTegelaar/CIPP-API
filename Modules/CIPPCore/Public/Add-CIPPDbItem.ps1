@@ -22,6 +22,10 @@ function Add-CIPPDbItem {
     .PARAMETER AddCount
         If specified, automatically records the total count after processing all items
 
+    .PARAMETER Append
+        If specified, adds items without clearing existing entries for this type/tenant and automatically
+        increments the count. Useful for accumulating report data over time. By default, existing entries are replaced.
+
     .EXAMPLE
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'Groups' -Data $GroupsData
 
@@ -30,6 +34,9 @@ function Add-CIPPDbItem {
 
     .EXAMPLE
         Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'Groups' -Data $GroupsData -Count
+
+    .EXAMPLE
+        Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'AlertHistory' -Data $AlertData -Append -AddCount
     #>
     [CmdletBinding()]
     param(
@@ -49,7 +56,10 @@ function Add-CIPPDbItem {
         [switch]$Count,
 
         [Parameter(Mandatory = $false)]
-        [switch]$AddCount
+        [switch]$AddCount,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Append
     )
 
     begin {
@@ -104,7 +114,7 @@ function Add-CIPPDbItem {
             }
         }
 
-        if (-not $Count.IsPresent) {
+        if (-not $Count.IsPresent -and -not $Append.IsPresent) {
             # Delete existing entries for this type
             $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
             $ExistingEntities = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag
@@ -168,18 +178,29 @@ function Add-CIPPDbItem {
                 Invoke-FlushBatch -State $State
             }
 
-            if ($Count.IsPresent) {
+            if ($Count.IsPresent -or $Append.IsPresent) {
                 # Store count record
+                if ($Append.IsPresent) {
+                    # When appending, always increment the existing count
+                    $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f $TenantFilter, $Type
+                    $ExistingCount = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+                    $PreviousCount = if ($ExistingCount -and $ExistingCount.DataCount) { [int]$ExistingCount.DataCount } else { 0 }
+                    $NewCount = $PreviousCount + $State.TotalProcessed
+                } else {
+                    # Normal mode - replace count
+                    $NewCount = $State.TotalProcessed
+                }
+
                 $Entity = @{
                     PartitionKey = $TenantFilter
                     RowKey       = Format-RowKey "$Type-Count"
-                    DataCount    = [int]$State.TotalProcessed
+                    DataCount    = [int]$NewCount
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
             }
 
             Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter `
-                -message "Added $($State.TotalProcessed) items of type $Type$(if ($Count.IsPresent) { ' (count mode)' })" -sev Debug
+                -message "Added $($State.TotalProcessed) items of type $Type$(if ($Count.IsPresent) { ' (count mode)' })$(if ($Append.IsPresent) { ' (append mode)' })" -sev Debug
 
         } catch {
             Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter `
@@ -191,7 +212,16 @@ function Add-CIPPDbItem {
             # Record count if AddCount was specified
             if ($AddCount.IsPresent -and $State.TotalProcessed -gt 0) {
                 try {
-                    Add-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -InputObject $State.TotalProcessed -Count
+                    $countParams = @{
+                        TenantFilter = $TenantFilter
+                        Type         = $Type
+                        InputObject  = $State.TotalProcessed
+                        Count        = $true
+                    }
+                    if ($Append.IsPresent) {
+                        $countParams.Append = $true
+                    }
+                    Add-CIPPDbItem @countParams
                 } catch {
                     Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter `
                         -message "Failed to record count for $Type : $($_.Exception.Message)" -sev Warning
