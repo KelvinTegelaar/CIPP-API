@@ -36,7 +36,7 @@ function Get-CIPPAlertReportOnlyCA {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Report-Only CA Alert: Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Report-Only CA Alert: Error occurred: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 
 }

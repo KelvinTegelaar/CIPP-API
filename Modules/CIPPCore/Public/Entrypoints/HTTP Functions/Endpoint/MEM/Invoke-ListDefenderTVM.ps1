@@ -1,4 +1,4 @@
-Function Invoke-ListDefenderTVM {
+function Invoke-ListDefenderTVM {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,7 +10,7 @@ Function Invoke-ListDefenderTVM {
     $TenantFilter = $Request.Query.tenantFilter
     # Interact with query parameters or the body of the request.
     try {
-        $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
+        $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine' -scope 'https://api.securitycenter.microsoft.com/.default' | Group-Object cveId
         $GroupObj = foreach ($cve in $GraphRequest) {
             # Start with base properties
             $obj = [ordered]@{
@@ -25,8 +25,8 @@ Function Invoke-ListDefenderTVM {
             # Add all properties from the group with appropriate processing
             foreach ($property in $allProperties) {
                 if ($property -eq 'deviceName') {
-                    # Special handling for deviceName - join with comma
-                    $obj['affectedDevices'] = ($cve.group.$property -join ', ')
+                    # Special handling for deviceName - create array of objects
+                    $obj['affectedDevices'] = @($cve.group.$property | ForEach-Object { @{ $property = $_ } })
                 } else {
                     # For all other properties, get unique values
                     $obj[$property] = ($cve.group.$property | Sort-Object -Unique) | Select-Object -First 1
