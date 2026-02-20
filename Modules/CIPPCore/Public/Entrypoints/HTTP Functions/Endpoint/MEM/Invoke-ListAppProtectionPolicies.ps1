@@ -34,7 +34,7 @@
             }
         )
 
-        $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+        $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter
 
         # Extract groups for resolving assignment names
         $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
@@ -66,7 +66,7 @@
                 }
             }
 
-            $ManagedAppPoliciesBulkResults = New-GraphBulkRequest -Requests $ManagedAppPoliciesBulkRequests -tenantid $TenantFilter
+            $ManagedAppPoliciesBulkResults = New-GraphBulkRequest -Requests @($ManagedAppPoliciesBulkRequests) -tenantid $TenantFilter
             # Do this horriblenes as a workaround, as the results dont return with a odata.type property
             $ManagedAppPolicies = $ManagedAppPoliciesBulkResults | ForEach-Object {
                 $URLName = $_.id

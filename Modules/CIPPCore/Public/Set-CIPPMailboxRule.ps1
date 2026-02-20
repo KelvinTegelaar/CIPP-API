@@ -24,6 +24,17 @@
     try {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "$State-InboxRule" -Anchor $Username -cmdParams @{Identity = $RuleId; Mailbox = $UserId }
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully set mailbox rule $($RuleName) for $($Username) to $($State)d" -Sev 'Info' -tenant $TenantFilter
+
+        # Update the cached rule if it exists (without calling Exchange again)
+        try {
+            $EnabledValue = $State -eq 'Enable'
+            Update-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' -ItemId $RuleId -PropertyUpdates @{
+                Enabled = $EnabledValue
+            }
+        } catch {
+            Write-LogMessage -headers $Headers -API $APIName -message "Rule updated but failed to update cache: $($_.Exception.Message)" -Sev 'Warning' -tenant $TenantFilter
+        }
+
         return "Successfully set mailbox rule $($RuleName) for $($Username) to $($State)d"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

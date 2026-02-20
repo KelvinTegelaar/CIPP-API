@@ -9,6 +9,9 @@ function Set-CIPPDbCacheTestData {
     .PARAMETER TenantFilter
         The tenant to use for test data
 
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
+
     .PARAMETER Count
         Number of test objects to generate (default: 50000)
     #>
@@ -16,6 +19,7 @@ function Set-CIPPDbCacheTestData {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
+        [string]$QueueId,
 
         [Parameter(Mandatory = $false)]
         [int]$Count = 50000
