@@ -43,6 +43,21 @@ function New-CippCoreRequest {
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
 
+    # Check if endpoint is disabled via feature flags
+    $FeatureFlags = Get-CIPPFeatureFlag
+    $DisabledEndpoint = $FeatureFlags | Where-Object {
+        $_.Enabled -eq $false -and $_.Endpoints -contains $Request.Params.CIPPEndpoint
+    } | Select-Object -First 1
+
+    if ($DisabledEndpoint) {
+        Write-Information "Endpoint $($Request.Params.CIPPEndpoint) is disabled via feature flag: $($DisabledEndpoint.Name)"
+        $HttpTotalStopwatch.Stop()
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::ServiceUnavailable
+                Body       = "This feature has been disabled: $($DisabledEndpoint.Description)"
+            })
+    }
+
     if ($Request.Headers.'X-CIPP-Version') {
         $Table = Get-CippTable -tablename 'Version'
         $FrontendVer = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'frontend'"
