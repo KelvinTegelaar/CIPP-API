@@ -5,7 +5,7 @@ function Push-DomainAnalyserTenant {
         #>
     param($Item)
 
-    $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Item.customerId } | Select-Object -First 1
+    $Tenant = Get-Tenants -TenantFilter $Item.customerId
     $DomainTable = Get-CippTable -tablename 'Domains'
 
     if ($Tenant.Excluded -eq $true) {
@@ -20,6 +20,14 @@ function Push-DomainAnalyserTenant {
         return
     } else {
         try {
+            # Get domains from cached database instead of making Graph API calls
+            $Domains = New-CIPPDbRequest -TenantFilter $Tenant.defaultDomainName -Type 'Domains'
+
+            if (-not $Domains) {
+                Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message 'No cached domain data found. Domain analysis will be skipped until data collection completes.' -sev Info
+                return
+            }
+
             # Remove domains that are not wanted, and used for cloud signature services. Same exclusions also found in Invoke-CIPPStandardAddDKIM
             $ExclusionDomains = @(
                 '*.microsoftonline.com'
@@ -35,7 +43,7 @@ function Push-DomainAnalyserTenant {
                 '*.ucconnect.co.uk'
                 '*.teams-sbc.dk'
             )
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
+            $Domains = $Domains | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
                 $Domain = $_
                 foreach ($ExclusionDomain in $ExclusionDomains) {
                     if ($Domain.id -like $ExclusionDomain) {

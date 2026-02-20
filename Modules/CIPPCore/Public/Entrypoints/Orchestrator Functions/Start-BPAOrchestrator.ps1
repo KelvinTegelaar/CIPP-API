@@ -14,6 +14,12 @@ function Start-BPAOrchestrator {
     )
 
     try {
+        # Check feature flag
+        $FeatureFlag = Get-CIPPFeatureFlag -Id 'BestPracticeAnalyser'
+        if ($FeatureFlag -and $FeatureFlag.Enabled -eq $false) {
+            Write-LogMessage -API 'BestPracticeAnalyser' -message 'Best Practice Analyser is disabled via feature flag' -sev Info
+            return $false
+        }
         if ($TenantFilter -ne 'AllTenants') {
             Write-Verbose "TenantFilter: $TenantFilter"
             if ($TenantFilter -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {

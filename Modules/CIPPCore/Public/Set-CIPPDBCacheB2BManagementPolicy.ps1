@@ -5,11 +5,15 @@ function Set-CIPPDBCacheB2BManagementPolicy {
 
     .PARAMETER TenantFilter
         The tenant to cache B2B management policy for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {

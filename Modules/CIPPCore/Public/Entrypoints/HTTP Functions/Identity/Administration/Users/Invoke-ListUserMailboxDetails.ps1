@@ -155,7 +155,6 @@ function Invoke-ListUserMailboxDetails {
             # First try users array
             $matchedUser = $usernames | Where-Object {
                 $_.id -eq $rawAddress -or
-                $_.displayName -eq $rawAddress -or
                 $_.mailNickname -eq $rawAddress
             }
 
@@ -166,7 +165,8 @@ function Invoke-ListUserMailboxDetails {
                 try {
                     # Escape single quotes in the filter value
                     $escapedAddress = $rawAddress -replace "'", "''"
-                    $filterQuery = "displayName eq '$escapedAddress' or mailNickname eq '$escapedAddress'"
+                    $escapedNickname = $rawAddress -replace "'", "''" -replace ' ', ''
+                    $filterQuery = "displayName eq '$escapedAddress' or mailNickname eq '$escapedNickname'"
                     $contactUri = "https://graph.microsoft.com/beta/contacts?`$filter=$filterQuery&`$select=displayName,mail,mailNickname"
 
                     $matchedContacts = New-GraphGetRequest -tenantid $TenantFilter -uri $contactUri

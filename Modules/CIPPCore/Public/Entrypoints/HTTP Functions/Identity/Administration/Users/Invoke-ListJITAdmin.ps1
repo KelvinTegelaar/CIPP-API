@@ -17,23 +17,23 @@
 
     if ($TenantFilter -ne 'AllTenants') {
         # Single tenant logic
-        $Query = @{
-            TenantFilter = $TenantFilter
-            Endpoint     = 'users'
-            Parameters   = @{
-                '$count'  = 'true'
-                '$select' = "id,accountEnabled,displayName,userPrincipalName,$($Schema.id)"
-                '$filter' = "$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false"
-            }
-        }
-        $Users = Get-GraphRequestList @Query | Where-Object { $_.id }
-        $BulkRequests = $Users | ForEach-Object { @(
-                @{
-                    id     = $_.id
+        $BulkRequests = [System.Collections.Generic.List[object]]::new()
+        $BulkRequests.Add(@{
+                id     = 'users'
+                method = 'GET'
+                url    = "users?`$count=true&`$select=id,accountEnabled,displayName,userPrincipalName,$($Schema.id)&`$filter=$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false&`$top=999"
+            })
+
+        $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $BulkRequests
+        $Users = ($BulkResults | Where-Object { $_.id -eq 'users' }).body.value | Where-Object { $_.id }
+
+        $BulkRequests.Clear()
+        foreach ($User in $Users) {
+            $BulkRequests.Add(@{
+                    id     = $User.id
                     method = 'GET'
-                    url    = "users/$($_.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
-                }
-            )
+                    url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+                })
         }
         $RoleResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)
         # Write-Information ($RoleResults | ConvertTo-Json -Depth 10 )
@@ -54,7 +54,7 @@
         }
 
         # Write-Information ($Results | ConvertTo-Json -Depth 10)
-        $Metadata = [PSCustomObject]@{Parameters = $Query.Parameters }
+        $Metadata = [PSCustomObject]@{Method = 'BulkRequest' }
     } else {
         # AllTenants logic
         $Results = [System.Collections.Generic.List[object]]::new()

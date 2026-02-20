@@ -39,12 +39,21 @@ function Start-UpdateTokensTimer {
         # Check application secret expiration for $env:ApplicationId and generate a new application secret if expiration is within 30 days.
         try {
             $AppId = $env:ApplicationID
-            $PasswordCredentials = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')?`$select=id,passwordCredentials" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+            $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')?`$select=id,passwordCredentials,servicePrincipalLockConfiguration" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
             # sort by latest expiration date and get the first one
-            $LastPasswordCredential = $PasswordCredentials.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
+            $LastPasswordCredential = $AppRegistration.passwordCredentials | Sort-Object -Property endDateTime -Descending | Select-Object -First 1
+
+            try {
+                $AppPolicyStatus = Update-AppManagementPolicy
+                Write-Information $AppPolicyStatus.PolicyAction
+            } catch {
+                Write-Warning "Error updating app management policy $($_.Exception.Message)."
+                Write-Information ($_.InvocationInfo.PositionMessage)
+            }
+
             if ($LastPasswordCredential.endDateTime -lt (Get-Date).AddDays(30).ToUniversalTime()) {
                 Write-Information "Application secret for $AppId is expiring soon. Generating a new application secret."
-                $AppSecret = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($PasswordCredentials.id)/addPassword" -Body '{"passwordCredential":{"displayName":"UpdateTokens"}}' -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+                $AppSecret = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/addPassword" -Body '{"passwordCredential":{"displayName":"UpdateTokens"}}' -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                 Write-Information "New application secret generated for $AppId. Expiration date: $($AppSecret.endDateTime)."
             } else {
                 Write-Information "Application secret for $AppId is valid until $($LastPasswordCredential.endDateTime). No need to generate a new application secret."
@@ -77,6 +86,20 @@ function Start-UpdateTokensTimer {
             } else {
                 Write-Information "No expired application secrets found for $AppId."
             }
+
+            if (!$AppRegistration.servicePrincipalLockConfiguration.isEnabled) {
+                Write-Warning "Service principal lock configuration is not enabled for $AppId"
+                $Body = @{
+                    servicePrincipalLockConfiguration = @{
+                        isEnabled     = $true
+                        allProperties = $true
+                    }
+                } | ConvertTo-Json
+                New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)" -Body $Body -NoAuthCheck $true -AsApp $true -ErrorAction Stop
+                Write-Information "Service principal lock configuration has been enabled for application $AppId."
+                Write-LogMessage -API 'Update Tokens' -message "Service principal lock configuration has been enabled for application $AppId." -sev 'Info'
+            }
+
         } catch {
             Write-Warning "Error updating application secret $($_.Exception.Message)."
             Write-Information ($_.InvocationInfo.PositionMessage)

@@ -11,7 +11,8 @@ function Set-CIPPIntunePolicy {
         $APIName = 'Set-CIPPIntunePolicy',
         $TenantFilter,
         $AssignmentFilterName,
-        $AssignmentFilterType = 'include'
+        $AssignmentFilterType = 'include',
+        [array]$ReusableSettings
     )
 
     $RawJSON = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJSON
@@ -133,6 +134,14 @@ function Set-CIPPIntunePolicy {
                 $PlatformType = 'deviceManagement'
                 $TemplateTypeURL = 'configurationPolicies'
                 $DisplayName = ($RawJSON | ConvertFrom-Json).Name
+                if ($ReusableSettings) {
+                    Write-Verbose "Catalog: ReusableSettings count $($ReusableSettings.Count)"
+                    Write-Verbose ("Catalog: ReusableSettings detail " + ($ReusableSettings | ConvertTo-Json -Depth 5 -Compress))
+                    $syncResult = Sync-CIPPReusablePolicySettings -TemplateInfo ([pscustomobject]@{ RawJSON = $RawJSON; ReusableSettings = $ReusableSettings }) -Tenant $TenantFilter
+                    if ($syncResult.RawJSON) { $RawJSON = $syncResult.RawJSON }
+                } else {
+                    Write-Verbose "Catalog: No ReusableSettings provided"
+                }
 
                 $Template = $RawJSON | ConvertFrom-Json
                 if ($Template.templateReference.templateId) {

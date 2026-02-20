@@ -34,13 +34,13 @@ function Invoke-CIPPStandardPhishProtection {
 
     param($Tenant, $Settings)
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishProtection' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PhishProtection' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2', 'OFFICE_BUSINESS')
 
     if ($TestResult -eq $false) {
         return $true
     } #we're done.
 
-    $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
+    $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
 
     $Table = Get-CIPPTable -TableName Config
     $CippConfig = (Get-CIPPAzDataTableEntity @Table)

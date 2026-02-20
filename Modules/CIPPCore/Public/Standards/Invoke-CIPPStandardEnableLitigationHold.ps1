@@ -59,11 +59,13 @@ function Invoke-CIPPStandardEnableLitigationHold {
                         }
                     }
                     if ($null -ne $Settings.days) {
-                        $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                        $Days = [int]::TryParse($Settings.days, [ref]$null) ? $Settings.days : $null
+                        if ($Days -gt 0 -or $Settings.days -eq 'Unlimited') {
+                            $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                        }
                     }
                     $params
                 }
-
 
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request)
                 foreach ($Result in $BatchResults) {

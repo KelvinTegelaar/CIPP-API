@@ -7,8 +7,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     .SYNOPSIS
         (Label) Define Global Meeting Policy for Teams
     .DESCRIPTION
-        (Helptext) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
-        (DocsDescription) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+        (Helptext) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
+        (DocsDescription) Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
     .NOTES
         CAT
             Teams Standards
@@ -27,12 +27,13 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People who were invited","value":"InvitedUsers"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowParticipantGiveRequestControl","label":"Participants can give or request control"}
         IMPACT
             Low Impact
         ADDEDDATE
             2024-11-12
         POWERSHELLEQUIVALENT
-            Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false
+            Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false -AllowParticipantGiveRequestControl \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
@@ -49,7 +50,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } |
-            Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+            Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsGlobalMeetingPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -66,7 +67,8 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
     ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
     ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
-    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl)
+    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl) -and
+    ($CurrentState.AllowParticipantGiveRequestControl -eq $Settings.AllowParticipantGiveRequestControl)
 
 
     if ($Settings.remediate -eq $true) {
@@ -82,6 +84,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
                 MeetingChatEnabledType                     = $MeetingChatEnabledType
                 DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
                 AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
+                AllowParticipantGiveRequestControl         = $Settings.AllowParticipantGiveRequestControl
             }
 
             try {
@@ -113,6 +116,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             MeetingChatEnabledType                     = $CurrentState.MeetingChatEnabledType
             DesignatedPresenterRoleMode                = $CurrentState.DesignatedPresenterRoleMode
             AllowExternalParticipantGiveRequestControl = $CurrentState.AllowExternalParticipantGiveRequestControl
+            AllowParticipantGiveRequestControl         = $CurrentState.AllowParticipantGiveRequestControl
         }
         $ExpectedValue = @{
             AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
@@ -122,6 +126,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             MeetingChatEnabledType                     = $MeetingChatEnabledType
             DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
             AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
+            AllowParticipantGiveRequestControl         = $Settings.AllowParticipantGiveRequestControl
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
