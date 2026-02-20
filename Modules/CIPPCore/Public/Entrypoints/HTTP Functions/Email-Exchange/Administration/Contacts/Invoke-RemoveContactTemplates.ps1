@@ -3,7 +3,7 @@ function Invoke-RemoveContactTemplates {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Exchange.ReadWrite
+        Exchange.Contact.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

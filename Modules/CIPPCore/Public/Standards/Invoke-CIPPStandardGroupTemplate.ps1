@@ -33,8 +33,6 @@ function Invoke-CIPPStandardGroupTemplate {
 
     $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,description,membershipRule' -tenantid $tenant
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
-
     $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
 
     $Table = Get-CippTable -tablename 'templates'
@@ -64,9 +62,12 @@ function Invoke-CIPPStandardGroupTemplate {
                     $ActionType = 'create'
 
                     # Check if Exchange license is required for distribution groups
-                    if ($groupobj.groupType -in @('distribution', 'dynamicdistribution') -and !$TestResult) {
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot create group $($groupobj.displayname) as the tenant is not licensed for Exchange." -Sev 'Error'
-                        continue
+                    if ($groupobj.groupType -in @('distribution', 'dynamicdistribution')) {
+                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
+                        if (!$TestResult) {
+                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot create group $($groupobj.displayname) as the tenant is not licensed for Exchange." -Sev 'Error'
+                            continue
+                        }
                     }
 
                     # Use the centralized New-CIPPGroup function
@@ -127,6 +128,7 @@ function Invoke-CIPPStandardGroupTemplate {
 
                     } else {
                         # Handle Exchange Online groups (Distribution, DynamicDistribution)
+                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
                         if (!$TestResult) {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot update group $($groupobj.displayName) as the tenant is not licensed for Exchange." -Sev 'Error'
                             continue

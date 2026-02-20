@@ -5,11 +5,15 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
 
     .PARAMETER TenantFilter
         The tenant to cache CA policies for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {

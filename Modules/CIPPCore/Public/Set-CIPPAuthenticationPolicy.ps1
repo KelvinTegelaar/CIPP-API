@@ -10,6 +10,7 @@ function Set-CIPPAuthenticationPolicy {
         $TAPDefaultLifeTime = 60, #minutes
         $TAPDefaultLength = 8, #TAP password generated length in chars
         $TAPisUsableOnce = $true,
+        [Parameter()][string[]]$GroupIds,
         [Parameter()][ValidateRange(1, 395)]$QRCodeLifetimeInDays = 365,
         [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
         $APIName = 'Set Authentication Policy',
@@ -118,6 +119,20 @@ function Set-CIPPAuthenticationPolicy {
             throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
+
+    if ($PSBoundParameters.ContainsKey('GroupIds') -and $GroupIds) {
+        $CurrentInfo.includeTargets = @(
+            foreach ($id in $GroupIds ) {
+                [pscustomobject]@{
+                    targetType = 'group'
+                    id         = $id
+                }
+            }
+        )
+        $OptionalLogMessage += " and targeted groups set to $($CurrentInfo.includeTargets.id -join ', ')"
+    }
+
+
     # Set state of the authentication method
     try {
         if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {

@@ -104,28 +104,44 @@ function Get-CIPPDrift {
                         $standardDescription = $null
                         #if the $ComparisonItem.StandardName contains *IntuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
                         if ($ComparisonItem.StandardName -like '*IntuneTemplate*') {
-                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Last 1
-                            Write-Verbose "Extracted Intune GUID: $CompareGuid from $($ComparisonItem.StandardName)"
-                            $Template = $AllIntuneTemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
-                            if ($Template) {
-                                $displayName = $Template.displayName
-                                $standardDescription = $Template.description
-                                Write-Verbose "Found Intune template: $displayName"
+                            # Extract GUID from format like: standards.IntuneTemplate.{GUID}.IntuneTemplate.json
+                            # Split by '.' and find the element that looks like a GUID (contains hyphens and is 36 chars)
+                            $Parts = $ComparisonItem.StandardName.Split('.')
+                            $CompareGuid = $Parts | Where-Object { $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object -First 1
+
+                            if ($CompareGuid) {
+                                Write-Verbose "Extracted Intune GUID: $CompareGuid from $($ComparisonItem.StandardName)"
+                                $Template = $AllIntuneTemplates | Where-Object { $_.GUID -match "$CompareGuid" }
+                                if ($Template) {
+                                    $displayName = $Template.displayName
+                                    $standardDescription = $Template.description
+                                    Write-Verbose "Found Intune template: $displayName"
+                                } else {
+                                    Write-Warning "Intune template not found for GUID: $CompareGuid"
+                                }
                             } else {
-                                Write-Warning "Intune template not found for GUID: $CompareGuid"
+                                Write-Verbose "No valid GUID found in: $($ComparisonItem.StandardName)"
                             }
                         }
                         # Handle Conditional Access templates
                         if ($ComparisonItem.StandardName -like '*ConditionalAccessTemplate*') {
-                            $CompareGuid = $ComparisonItem.StandardName.Split('.') | Select-Object -Last 1
-                            Write-Verbose "Extracted CA GUID: $CompareGuid from $($ComparisonItem.StandardName)"
-                            $Template = $AllCATemplates | Where-Object { $_.GUID -eq "$CompareGuid" }
-                            if ($Template) {
-                                $displayName = $Template.displayName
-                                $standardDescription = $Template.description
-                                Write-Verbose "Found CA template: $displayName"
+                            # Extract GUID from format like: standards.ConditionalAccessTemplate.{GUID}.CATemplate.json
+                            # Split by '.' and find the element that looks like a GUID (contains hyphens and is 36 chars)
+                            $Parts = $ComparisonItem.StandardName.Split('.')
+                            $CompareGuid = $Parts | Where-Object { $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object -First 1
+
+                            if ($CompareGuid) {
+                                Write-Verbose "Extracted CA GUID: $CompareGuid from $($ComparisonItem.StandardName)"
+                                $Template = $AllCATemplates | Where-Object { $_.GUID -match "$CompareGuid" }
+                                if ($Template) {
+                                    $displayName = $Template.displayName
+                                    $standardDescription = $Template.description
+                                    Write-Verbose "Found CA template: $displayName"
+                                } else {
+                                    Write-Warning "CA template not found for GUID: $CompareGuid"
+                                }
                             } else {
-                                Write-Warning "CA template not found for GUID: $CompareGuid"
+                                Write-Verbose "No valid GUID found in: $($ComparisonItem.StandardName)"
                             }
                         }
                         $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }

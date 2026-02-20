@@ -180,6 +180,38 @@ function Push-CIPPStandardsList {
             }
         }
 
+        $CAStandardFound = ($ComputedStandards.Keys.Where({ $_ -like '*ConditionalAccessTemplate*' }, 'First').Count -gt 0)
+        if ($CAStandardFound) {
+            $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+            if (-not $TestResult) {
+                $CAKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*ConditionalAccessTemplate*' })
+                $BulkFields = [System.Collections.Generic.List[object]]::new()
+                foreach ($Key in $CAKeys) {
+                    $TemplateKey = ($Key -split '\|', 2)[1]
+                    if ($TemplateKey) {
+                        $BulkFields.Add([PSCustomObject]@{
+                                FieldName  = "standards.ConditionalAccessTemplate.$TemplateKey"
+                                FieldValue = 'This tenant does not have the required license for this standard.'
+                            })
+                    }
+                    [void]$ComputedStandards.Remove($Key)
+                }
+                if ($BulkFields.Count -gt 0) {
+                    Set-CIPPStandardsCompareField -TenantFilter $TenantFilter -BulkFields $BulkFields
+                }
+
+                Write-Information "Removed ConditionalAccessTemplate standards for $TenantFilter - missing required license"
+            } else {
+                # License valid - update CIPPDB cache with latest CA information before we run so that standards have the most up to date info
+                try {
+                    Write-Information "Updating CIPPDB cache for Conditional Access policies for $TenantFilter"
+                    Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter
+                } catch {
+                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)"
+                }
+            }
+        }
+
         Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
         # Return filtered standards
         $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
