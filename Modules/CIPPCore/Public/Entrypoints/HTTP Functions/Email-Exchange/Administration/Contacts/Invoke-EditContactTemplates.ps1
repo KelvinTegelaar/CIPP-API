@@ -3,7 +3,7 @@ Function Invoke-EditContactTemplates {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Exchange.ReadWrite
+        Exchange.Contact.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
