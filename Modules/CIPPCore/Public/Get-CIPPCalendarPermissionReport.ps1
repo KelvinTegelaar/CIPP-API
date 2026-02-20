@@ -31,8 +31,6 @@ function Get-CIPPCalendarPermissionReport {
     )
 
     try {
-        Write-LogMessage -API 'CalendarPermissionReport' -tenant $TenantFilter -message 'Generating calendar permission report' -sev Info
-
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {
             # Get all tenants that have calendar data
