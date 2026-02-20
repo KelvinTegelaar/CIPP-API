@@ -151,11 +151,6 @@ function Start-UserTasksOrchestrator {
         # Process each tenant batch separately
         foreach ($ProcessedBatch in $ProcessedBatches) {
             $TenantName = $ProcessedBatch[0].Parameters.TenantFilter
-            Write-Information "Processing batch for tenant: $TenantName with $($ProcessedBatch.Count) tasks..."
-            Write-Information 'Tasks by command:'
-            $ProcessedBatch | Group-Object -Property Command | ForEach-Object {
-                Write-Information " - $($_.Name): $($_.Count)"
-            }
 
             # Create queue entry for each tenant batch
             $Queue = New-CippQueueEntry -Name "Scheduled Tasks - $TenantName"

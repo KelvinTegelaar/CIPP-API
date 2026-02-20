@@ -1,0 +1,24 @@
+[
+  {
+    "Id": "BestPracticeAnalyser",
+    "Name": "Best Practice Analyser",
+    "Description": "The Best Practice Analyser has been deprecated and will be removed in a future release.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [
+      "80070b4f-95ed-4e5f-be4c-9e339306d4aa"
+    ],
+    "Endpoints": [
+      "BestPracticeAnalyser_List",
+      "ExecBPA",
+      "ListBPA",
+      "ListBPATemplates",
+      "RemoveBPATemplate"
+    ],
+    "Pages": [
+      "/tenant/standards/bpa-report",
+      "/tenant/standards/bpa-report/builder",
+      "/tenant/standards/bpa-report/view"
+    ]
+  }
+]

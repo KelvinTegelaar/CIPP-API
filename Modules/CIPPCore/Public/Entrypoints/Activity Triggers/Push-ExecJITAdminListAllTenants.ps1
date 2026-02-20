@@ -13,27 +13,26 @@ function Push-ExecJITAdminListAllTenants {
         # Get schema extensions
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
 
-        # Query users with JIT Admin enabled
-        $Query = @{
-            TenantFilter = $DomainName # Use $DomainName for the current tenant
-            Endpoint     = 'users'
-            Parameters   = @{
-                '$count'  = 'true'
-                '$select' = "id,accountEnabled,displayName,userPrincipalName,$($Schema.id)"
-                '$filter' = "$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false" # Fetches both states to cache current status
-            }
-        }
-        $Users = Get-GraphRequestList @Query | Where-Object { $_.id }
+        # Query users with JIT Admin enabled using bulk request
+        $BulkRequests = [System.Collections.Generic.List[object]]::new()
+        $BulkRequests.Add(@{
+                id     = 'users'
+                method = 'GET'
+                url    = "users?`$count=true&`$select=id,accountEnabled,displayName,userPrincipalName,$($Schema.id)&`$filter=$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false&`$top=999"
+            })
+
+        $BulkResults = New-GraphBulkRequest -tenantid $DomainName -Requests $BulkRequests
+        $Users = ($BulkResults | Where-Object { $_.id -eq 'users' }).body.value | Where-Object { $_.id }
 
         if ($Users) {
             # Get role memberships
-            $BulkRequests = $Users | ForEach-Object { @(
-                    @{
-                        id     = $_.id
+            $BulkRequests.Clear()
+            foreach ($User in $Users) {
+                $BulkRequests.Add(@{
+                        id     = $User.id
                         method = 'GET'
-                        url    = "users/$($_.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
-                    }
-                )
+                        url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+                    })
             }
             # Ensure $BulkRequests is not empty or null before making the bulk request
             if ($BulkRequests -and $BulkRequests.Count -gt 0) {

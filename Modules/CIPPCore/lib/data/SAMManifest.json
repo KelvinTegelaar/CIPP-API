@@ -10,6 +10,10 @@
       "http://localhost:8400"
     ]
   },
+  "servicePrincipalLockConfiguration": {
+    "isEnabled": true,
+    "allProperties": true
+  },
   "requiredResourceAccess": [
     {
       "resourceAppId": "c5393580-f805-4401-95e8-94b7a6ef2fc2",

@@ -51,6 +51,12 @@ function Invoke-ExecSendPush {
         $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -AsApp $true).id
     }
 
+    try {
+        $PolicyUpdate = Update-AppManagementPolicy -TenantFilter $TenantFilter -ApplicationId $MFAAppID
+        Write-Information $PolicyUpdate.PolicyAction
+    } catch {
+        Write-Information "Failed to update app management policy: $($_.Exception.Message)"
+    }
 
     $PassReqBody = @{
         'passwordCredential' = @{

@@ -75,8 +75,10 @@ function Invoke-AddUser {
                 'User'     = $CreationResults.User
             }
         } catch {
+            $ErrorMessage = $_.TargetObject.Results -join ' '
+            $ErrorMessage = [string]::IsNullOrWhiteSpace($ErrorMessage) ? $_.Exception.Message : $ErrorMessage
             $body = [pscustomobject] @{
-                'Results' = @("$($_.Exception.Message)")
+                'Results' = @($ErrorMessage)
             }
             $StatusCode = [HttpStatusCode]::InternalServerError
         }

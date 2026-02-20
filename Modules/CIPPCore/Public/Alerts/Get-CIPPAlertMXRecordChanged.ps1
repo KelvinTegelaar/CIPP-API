@@ -17,16 +17,35 @@ function Get-CIPPAlertMXRecordChanged {
         $PreviousResults = Get-CIPPAzDataTableEntity @CacheTable -Filter "PartitionKey eq '$TenantFilter'"
 
         $ChangedDomains = foreach ($Domain in $DomainData) {
-            $PreviousDomain = $PreviousResults | Where-Object { $_.Domain -eq $Domain.Domain }
-            $PreviousRecords = $PreviousDomain.ActualMXRecords -split ',' | Sort-Object
-            $CurrentRecords = $Domain.ActualMXRecords.Hostname | Sort-Object
-            if ($PreviousDomain -and $PreviousRecords -ne $CurrentRecords) {
-                "$($Domain.Domain): MX records changed from [$($PreviousRecords -join ', ')] to [$($CurrentRecords -join ', ')]"
+            try {
+                $PreviousDomain = $PreviousResults | Where-Object { $_.Domain -eq $Domain.Domain }
+                $PreviousRecords = if ($PreviousDomain.ActualMXRecords) { @($PreviousDomain.ActualMXRecords -split ',' | Sort-Object) } else { @() }
+                $CurrentRecords = if ($Domain.ActualMXRecords.Hostname) { @($Domain.ActualMXRecords.Hostname | Sort-Object) } else { @() }
+
+                # Only compare if both have records
+                $Differences = $null
+                if ($PreviousRecords.Count -gt 0 -and $CurrentRecords.Count -gt 0) {
+                    $Differences = Compare-Object -ReferenceObject $PreviousRecords -DifferenceObject $CurrentRecords
+                }
+
+                if ($PreviousRecords.Count -eq 0 -and $CurrentRecords.Count -gt 0) {
+                    Write-Information "New MX records detected for domain $($Domain.Domain): $($CurrentRecords -join ', ')"
+                    $Differences = 'NewRecords'
+                } elseif ($PreviousRecords.Count -gt 0 -and $CurrentRecords.Count -eq 0) {
+                    Write-Information "All MX records removed for domain $($Domain.Domain). Previous records were: $($PreviousRecords -join ', ')"
+                    $Differences = 'RemovedRecords'
+                }
+
+                if ($Differences) {
+                    "$($Domain.Domain): MX records changed from [$($PreviousRecords -join ', ')] to [$($CurrentRecords -join ', ')]"
+                }
+            } catch {
+                Write-Information "Error checking domain $($Domain.Domain): $($_.Exception.Message)"
             }
         }
         # Update cache with current data
         foreach ($Domain in $DomainData) {
-            $CurrentRecords = $Domain.ActualMXRecords.Hostname | Sort-Object
+            $CurrentRecords = @($Domain.ActualMXRecords.Hostname | Sort-Object)
             $CacheEntity = @{
                 PartitionKey    = [string]$TenantFilter
                 RowKey          = [string]$Domain.Domain

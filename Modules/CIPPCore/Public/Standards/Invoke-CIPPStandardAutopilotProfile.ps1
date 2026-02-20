@@ -52,7 +52,7 @@ function Invoke-CIPPStandardAutopilotProfile {
             Where-Object { $_.displayName -eq $Settings.DisplayName } |
             Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, outOfBoxExperienceSetting
 
-        if ($Settings.NotLocalAdmin -eq $true) { $userType = 'Standard' } else { $userType = 'Administrator' }
+        if ($Settings.NotLocalAdmin -eq $true) { $userType = 'standard' } else { $userType = 'administrator' }
         if ($Settings.SelfDeployingMode -eq $true) {
             $DeploymentMode = 'shared'
             $Settings.AllowWhiteGlove = $false

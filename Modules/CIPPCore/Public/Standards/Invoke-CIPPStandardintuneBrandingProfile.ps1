@@ -114,13 +114,13 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             displayName               = $CurrentState.displayName
             showLogo                  = $CurrentState.showLogo
             showDisplayNameNextToLogo = $CurrentState.showDisplayNameNextToLogo
-            contactITName             = $CurrentState.contactITName
-            contactITPhoneNumber      = $CurrentState.contactITPhoneNumber
-            contactITEmailAddress     = $CurrentState.contactITEmailAddress
-            contactITNotes            = $CurrentState.contactITNotes
-            onlineSupportSiteName     = $CurrentState.onlineSupportSiteName
-            onlineSupportSiteUrl      = $CurrentState.onlineSupportSiteUrl
-            privacyUrl                = $CurrentState.privacyUrl
+            contactITName             = $CurrentState.contactITName ?? ''
+            contactITPhoneNumber      = $CurrentState.contactITPhoneNumber ?? ''
+            contactITEmailAddress     = $CurrentState.contactITEmailAddress ?? ''
+            contactITNotes            = $CurrentState.contactITNotes ?? ''
+            onlineSupportSiteName     = $CurrentState.onlineSupportSiteName ?? ''
+            onlineSupportSiteUrl      = $CurrentState.onlineSupportSiteUrl ?? ''
+            privacyUrl                = $CurrentState.privacyUrl ?? ''
         }
         $ExpectedValue = @{
             displayName               = $Settings.displayName

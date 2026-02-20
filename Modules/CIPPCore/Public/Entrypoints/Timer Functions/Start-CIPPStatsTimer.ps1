@@ -6,7 +6,7 @@ function Start-CIPPStatsTimer {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
     #These stats are sent to a central server to help us understand how many tenants are using the product, and how many are using the latest version, this information allows the CIPP team to make decisions about what features to support, and what features to deprecate.
-    #We will never ship any data that is related to your instance, all we care about is the number of tenants, and the version of the API you are running, and if you completed setup.
+
 
     if ($PSCmdlet.ShouldProcess('Start-CIPPStatsTimer', 'Starting CIPP Stats Timer')) {
         if ($env:ApplicationID -ne 'LongApplicationID') {
@@ -25,13 +25,19 @@ function Start-CIPPStatsTimer {
         } catch {
             $RawExt = @{}
         }
-
+        $counts = Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly
+        $userCount = ($counts | Where-Object { $_.RowKey -eq 'Users-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $deviceCount = ($counts | Where-Object { $_.RowKey -eq 'Devices-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $groupsCount = ($counts | Where-Object { $_.RowKey -eq 'Groups-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $SendingObject = [PSCustomObject]@{
             rgid                = $env:WEBSITE_SITE_NAME
             SetupComplete       = $SetupComplete
             RunningVersionAPI   = $APIVersion.trim()
             CountOfTotalTenants = $tenantcount
             uid                 = $env:TenantID
+            UserCount           = $userCount
+            DeviceCount         = $deviceCount
+            GroupsCount         = $groupsCount
             CIPPAPI             = $RawExt.CIPPAPI.Enabled
             Hudu                = $RawExt.Hudu.Enabled
             Sherweb             = $RawExt.Sherweb.Enabled

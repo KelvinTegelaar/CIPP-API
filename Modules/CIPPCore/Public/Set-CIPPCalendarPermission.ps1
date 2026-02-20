@@ -38,6 +38,9 @@ function Set-CIPPCalendarPermission {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$FolderName"; User = $RemoveAccess }
                 $Result = "Successfully removed access for $LoggingName from calendar $($CalParam.Identity)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
+                
+                # Sync cache
+                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $RemoveAccess -Action 'Remove'
             }
         } else {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Set permissions for $LoggingName to $Permissions")) {
@@ -54,6 +57,9 @@ function Set-CIPPCalendarPermission {
                     $Result += ' A notification has been sent to the user.'
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
+                
+                # Sync cache
+                Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $UserToGetPermissions -Permissions $Permissions -Action 'Add'
             }
         }
     } catch {

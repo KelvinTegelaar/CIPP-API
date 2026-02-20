@@ -13,16 +13,18 @@ function Test-CIPPRerun {
     )
     $RerunTable = Get-CIPPTable -tablename 'RerunCache'
 
-    # Use custom interval if provided, otherwise use type-based defaults
-    if ($Interval -gt 0) {
-        $EstimatedDifference = $Interval
-    } else {
-        $EstimatedDifference = switch ($Type) {
-            'Standard' { 9800 } # 2 hours 45 minutes ish.
-            'BPA' { 85000 } # 24 hours ish.
-            'CippTests' { 85000 } # 24 hours ish.
-            'ExchangeMonitor' { 3500 } #about an hour
-            default { throw "Unknown type: $Type" }
+    if (!$ClearAll.IsPresent -and !$Clear.IsPresent) {
+        # Use custom interval if provided, otherwise use type-based defaults
+        if ($Interval -gt 0) {
+            $EstimatedDifference = $Interval
+        } else {
+            $EstimatedDifference = switch ($Type) {
+                'Standard' { 9800 } # 2 hours 45 minutes ish.
+                'BPA' { 85000 } # 24 hours ish.
+                'CippTests' { 85000 } # 24 hours ish.
+                'ExchangeMonitor' { 3500 } #about an hour
+                default { throw "Unknown type: $Type" }
+            }
         }
     }
 
@@ -31,7 +33,14 @@ function Test-CIPPRerun {
     $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
 
     try {
-        $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)'" | Where-Object { $_.RowKey -match "^$($Type)_$($API)" }
+        $Filters = [System.Collections.Generic.List[string]]::new()
+        if ($TenantFilter -ne 'AllTenants') {
+            $Filters.Add("PartitionKey eq '$TenantFilter'")
+        }
+        $Filters.Add("RowKey ge '$($Type)_$($API)' and RowKey le '$($Type)_$($API)~'") # ~ is the highest ascii character, this ensures we only get entries for this API.
+        $FilterString = [string]::Join(' and ', $Filters)
+
+        $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter $FilterString
         if ($ClearAll.IsPresent) {
             $AllRerunData = Get-CIPPAzDataTableEntity @RerunTable
             if ($AllRerunData) {

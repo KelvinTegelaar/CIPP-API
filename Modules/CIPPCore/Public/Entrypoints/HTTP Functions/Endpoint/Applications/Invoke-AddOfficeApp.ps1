@@ -1,15 +1,15 @@
 function Invoke-AddOfficeApp {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
     # Input bindings are passed in via param block.
-    $Tenants = $Request.Body.selectedTenants.defaultDomainName
     $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }

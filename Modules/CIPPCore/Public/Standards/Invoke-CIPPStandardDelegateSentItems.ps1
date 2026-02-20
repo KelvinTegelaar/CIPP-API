@@ -43,13 +43,11 @@ function Invoke-CIPPStandardDelegateSentItems {
     if ([string]::IsNullOrWhiteSpace($Settings.IncludeUserMailboxes)) {
         $Settings.IncludeUserMailboxes = $true
     }
-
+    $Mailboxes = New-CippDbRequest -TenantFilter $Tenant -Type 'Mailboxes'
     if ($Settings.IncludeUserMailboxes -eq $true) {
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -ne 'DiscoveryMailbox' -and  ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     } else {
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -eq 'SharedMailbox' -and ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     }
 
     $CurrentValue = if (!$Mailboxes) {

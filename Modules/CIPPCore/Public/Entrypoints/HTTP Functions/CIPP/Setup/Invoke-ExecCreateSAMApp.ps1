@@ -68,6 +68,15 @@ function Invoke-ExecCreateSAMApp {
                     }
                 } until ($attempt -gt 3)
             }
+
+            try {
+                $AppPolicyStatus = Update-AppManagementPolicy
+                Write-Information $AppPolicyStatus.PolicyAction
+            } catch {
+                Write-Warning "Error updating app management policy $($_.Exception.Message)."
+                Write-Information ($_.InvocationInfo.PositionMessage)
+            }
+
             $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
 
             if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {

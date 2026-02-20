@@ -160,10 +160,15 @@ function New-GraphGetRequest {
                             $WaitTime = [int]$RetryAfterHeader
                             Write-Warning "Rate limited (429). Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
+                        } else {
+                            # If no Retry-After header, use exponential backoff with jitter
+                            $WaitTime = Get-Random -Minimum 1.1 -Maximum 4.1  # Random sleep between 1-4 seconds
+                            Write-Warning "Rate limited (429) with no Retry-After header. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries. Headers: $(($HttpResponseDetails.Headers | ConvertTo-Json -Compress))"
+                            $ShouldRetry = $true
                         }
                     }
                     # Check for "Resource temporarily unavailable"
-                    elseif ($Message -like '*Resource temporarily unavailable*') {
+                    elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*') {
                         if ($RetryCount -lt $MaxRetries) {
                             $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"

@@ -37,9 +37,10 @@ function Get-CIPPLicenseOverview {
     )
 
     try {
-        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/admin/api/tenant/accountSkus'
+        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/fd/m365licensing/v3/licensedProducts?allotmentSourceOwnerType=User&allotmentSourceType=LowFrictionTrial&allotmentSourceState=Active,Deleted,Suspended,Lockout,Warning&displayNameLanguage=en-GB'
     } catch {
-        Write-Warning 'Failed to get Admin Portal Licenses'
+        Write-Warning "Failed to get Admin Portal Licenses: $($_.Exception.Message)"
+        $AdminPortalLicenses = @()
     }
 
     $Results = New-GraphBulkRequest -Requests $Requests -TenantID $TenantFilter -asapp $true
@@ -55,7 +56,14 @@ function Get-CIPPLicenseOverview {
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
-    $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value)
+    # If no excluded licenses exist, initialize them
+    if ($ExcludedSkuList.Count -lt 1) {
+        Write-Information 'Excluded licenses table is empty. Initializing from config file.'
+        $null = Initialize-CIPPExcludedLicenses
+        $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
+    }
+
+    $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value) | Sort-Object -Property displayName
     $UsersBySku = @{}
     foreach ($User in $AllLicensedUsers) {
         if (-not $User.assignedLicenses) { continue } # Skip users with no assigned licenses. Should not happens as the filter is applied, but just in case
@@ -76,7 +84,7 @@ function Get-CIPPLicenseOverview {
 
     }
 
-    $AllLicensedGroups = @(($Results | Where-Object { $_.id -eq 'licensedGroups' }).body.value)
+    $AllLicensedGroups = @(($Results | Where-Object { $_.id -eq 'licensedGroups' }).body.value) | Sort-Object -Property displayName
     $GroupsBySku = @{}
     foreach ($Group in $AllLicensedGroups) {
         if (-not $Group.assignedLicenses) { continue }
@@ -103,7 +111,7 @@ function Get-CIPPLicenseOverview {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
             if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-            $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.SkuId -eq $sku.skuId } | Select-Object -ExpandProperty Name
+            $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
 
@@ -148,5 +156,5 @@ function Get-CIPPLicenseOverview {
             }
         }
     }
-    return $GraphRequest
+    return ($GraphRequest | Sort-Object -Property License)
 }

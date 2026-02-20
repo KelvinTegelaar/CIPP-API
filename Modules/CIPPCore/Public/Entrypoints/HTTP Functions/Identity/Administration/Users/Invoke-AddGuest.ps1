@@ -1,4 +1,4 @@
-Function Invoke-AddGuest {
+function Invoke-AddGuest {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,33 +13,36 @@ Function Invoke-AddGuest {
 
 
     $TenantFilter = $Request.Body.tenantFilter
-    $UserObject = $Request.Body
+    $DisplayName = -not [string]::IsNullOrWhiteSpace($Request.Body.displayName) ? $Request.Body.displayName : $null
+    $EmailAddress = -not [string]::IsNullOrWhiteSpace($Request.Body.mail) ? $Request.Body.mail : $null
+    $Message = -not [string]::IsNullOrWhiteSpace($Request.Body.message) ? $Request.Body.message : $null
+    $RedirectURL = -not [string]::IsNullOrWhiteSpace($Request.Body.redirectUri) ? $Request.Body.redirectUri : 'https://myapps.microsoft.com'
+    $SendInvite = [System.Convert]::ToBoolean($Request.Body.sendInvite) ?? $true
+
+    Write-Information -MessageData "Received request to add guest with email $EmailAddress to tenant filter $TenantFilter with display name $DisplayName. SendInvite is set to $SendInvite. Redirect URL is $RedirectURL. Message is $Message"
 
     try {
-        if ($UserObject.RedirectURL) {
-            $BodyToShip = [pscustomobject] @{
-                'InvitedUserDisplayName'  = $UserObject.DisplayName
-                'InvitedUserEmailAddress' = $($UserObject.mail)
-                'inviteRedirectUrl'       = $($UserObject.RedirectURL)
-                'sendInvitationMessage'   = [bool]$UserObject.SendInvite
-            }
-        } else {
-            $BodyToShip = [pscustomobject] @{
-                'InvitedUserDisplayName'  = $UserObject.DisplayName
-                'InvitedUserEmailAddress' = $($UserObject.mail)
-                'sendInvitationMessage'   = [bool]$UserObject.SendInvite
-                'inviteRedirectUrl'       = 'https://myapps.microsoft.com'
-            }
+        $BodyToShip = [pscustomobject] @{
+            invitedUserDisplayName  = $DisplayName
+            invitedUserEmailAddress = $EmailAddress
+            inviteRedirectUrl       = $RedirectURL
+            sendInvitationMessage   = $SendInvite
         }
-        $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToShip -Compress
-        $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $TenantFilter -type POST -body $BodyToShip -Verbose
-        if ($UserObject.SendInvite -eq $true) {
-            $Result = "Invited Guest $($UserObject.DisplayName) with Email Invite"
-            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
-        } else {
-            $Result = "Invited Guest $($UserObject.DisplayName) with no Email Invite"
-            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
+
+        if (-not [string]::IsNullOrWhiteSpace($Message)) {
+            $BodyToShip | Add-Member -MemberType NoteProperty -Name 'invitedUserMessageInfo' -Value ([pscustomobject]@{
+                    customizedMessageBody = $Message
+                })
         }
+
+        $BodyToShipJson = ConvertTo-Json -Depth 5 -InputObject $BodyToShip
+        $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $TenantFilter -type POST -body $BodyToShipJson
+        if ($SendInvite -eq $true) {
+            $Result = "Invited Guest $($DisplayName) with Email Invite"
+        } else {
+            $Result = "Invited Guest $($DisplayName) with no Email Invite"
+        }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

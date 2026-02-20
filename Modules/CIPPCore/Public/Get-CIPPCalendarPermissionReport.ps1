@@ -31,8 +31,6 @@ function Get-CIPPCalendarPermissionReport {
     )
 
     try {
-        Write-LogMessage -API 'CalendarPermissionReport' -tenant $TenantFilter -message 'Generating calendar permission report' -sev Info
-
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {
             # Get all tenants that have calendar data
@@ -185,6 +183,7 @@ function Get-CIPPCalendarPermissionReport {
                             Calendar     = $_.MailboxDisplayName
                             CalendarUPN  = $_.MailboxUPN
                             AccessRights = $_.AccessRights
+                            FolderName   = $_.FolderName
                         }
                     })
 
@@ -209,6 +208,7 @@ function Get-CIPPCalendarPermissionReport {
                         [PSCustomObject]@{
                             User         = $_.User
                             AccessRights = $_.AccessRights
+                            FolderName   = $_.FolderName
                         }
                     })
 
@@ -216,6 +216,7 @@ function Get-CIPPCalendarPermissionReport {
                     CalendarUPN              = $CalendarUPN
                     CalendarDisplayName      = $CalendarInfo.MailboxDisplayName
                     CalendarType             = $CalendarInfo.MailboxType
+                    FolderName               = $CalendarInfo.FolderName
                     PermissionCount          = $_.Count
                     Permissions              = $PermissionDetails
                     Tenant                   = $TenantFilter

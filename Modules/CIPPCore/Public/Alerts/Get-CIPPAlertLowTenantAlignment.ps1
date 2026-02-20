@@ -27,7 +27,7 @@ function Get-CIPPAlertLowTenantAlignment {
         $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter
 
         if (-not $AlignmentData) {
-            Write-AlertMessage -tenant $TenantFilter -message "No alignment data found for tenant $TenantFilter. This may indicate no standards templates are configured or applied to this tenant."
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "No alignment data found for tenant $TenantFilter. This may indicate no standards templates are configured or applied to this tenant." -sev Warning
             return
         }
 
@@ -47,6 +47,6 @@ function Get-CIPPAlertLowTenantAlignment {
         }
 
     } catch {
-        Write-AlertMessage -tenant $TenantFilter -message "Could not get tenant alignment data for $TenantFilter`: $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get tenant alignment data for $TenantFilter`: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }
