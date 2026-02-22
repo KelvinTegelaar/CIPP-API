@@ -76,7 +76,7 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
         $CurrentValue = @{
             NotifyOutboundSpam           = $CurrentInfo.NotifyOutboundSpam
-            NotifyOutboundSpamRecipients = $CurrentInfo.NotifyOutboundSpamRecipients
+            NotifyOutboundSpamRecipients = ($CurrentInfo.NotifyOutboundSpamRecipients -join ', ')
         }
         $ExpectedValue = @{
             NotifyOutboundSpam           = $true
