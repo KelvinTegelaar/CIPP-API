@@ -100,7 +100,7 @@ function Invoke-ExecUpdateDriftDeviation {
                             Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
                         } else {
                             "could not find policy with ID $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -Sev 'Warning'
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warn'
                         }
 
 
