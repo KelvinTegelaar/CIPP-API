@@ -16,7 +16,6 @@ function Invoke-CIPPOffboardingJob {
         }
 
         Write-Information "Starting offboarding job for $Username in tenant $TenantFilter"
-        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Starting offboarding orchestration for user $Username" -sev Info
 
         # Get user information needed for various tasks
         $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName,onPremisesSyncEnabled,onPremisesImmutableId" -tenantid $TenantFilter
@@ -36,6 +35,7 @@ function Invoke-CIPPOffboardingJob {
                     username     = $Username
                     userid       = $UserID
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -46,6 +46,7 @@ function Invoke-CIPPOffboardingJob {
                     DisplayName  = $DisplayName
                     UserID       = $Username
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -56,6 +57,7 @@ function Invoke-CIPPOffboardingJob {
                     userid         = $Username
                     AccountEnabled = $false
                     APIName        = $APIName
+                    Headers        = $Headers
                 }
             }
             @{
@@ -66,6 +68,7 @@ function Invoke-CIPPOffboardingJob {
                     UserID       = $Username
                     hidefromgal  = $true
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -76,6 +79,7 @@ function Invoke-CIPPOffboardingJob {
                     tenantFilter = $TenantFilter
                     APIName      = $APIName
                     Username     = $Username
+                    Headers      = $Headers
                 }
             }
             @{
@@ -87,6 +91,7 @@ function Invoke-CIPPOffboardingJob {
                     tenantFilter   = $TenantFilter
                     APIName        = $APIName
                     RemoveAllRules = $true
+                    Headers        = $Headers
                 }
             }
             @{
@@ -97,6 +102,7 @@ function Invoke-CIPPOffboardingJob {
                     username     = $Username
                     tenantFilter = $TenantFilter
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -107,6 +113,7 @@ function Invoke-CIPPOffboardingJob {
                     Username     = $Username
                     TenantFilter = $TenantFilter
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -119,6 +126,7 @@ function Invoke-CIPPOffboardingJob {
                     ExternalMessage = $Options.OOO
                     APIName         = $APIName
                     state           = 'Enabled'
+                    Headers         = $Headers
                 }
             }
             @{
@@ -131,6 +139,7 @@ function Invoke-CIPPOffboardingJob {
                     Forward      = $Options.forward.value
                     KeepCopy     = [bool]$Options.KeepCopy
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -142,6 +151,7 @@ function Invoke-CIPPOffboardingJob {
                     tenantFilter = $TenantFilter
                     Disable      = $true
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -152,6 +162,7 @@ function Invoke-CIPPOffboardingJob {
                     userid             = $Username
                     OnedriveAccessUser = $Options.OnedriveAccess
                     APIName            = $APIName
+                    Headers            = $Headers
                 }
             }
             @{
@@ -164,6 +175,7 @@ function Invoke-CIPPOffboardingJob {
                     Automap      = $false
                     AccessRights = @('FullAccess')
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -176,6 +188,7 @@ function Invoke-CIPPOffboardingJob {
                     Automap      = $true
                     AccessRights = @('FullAccess')
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -186,6 +199,7 @@ function Invoke-CIPPOffboardingJob {
                     TenantFilter = $TenantFilter
                     UseCache     = $true
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -196,6 +210,7 @@ function Invoke-CIPPOffboardingJob {
                     TenantFilter = $TenantFilter
                     UseCache     = $true
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -207,6 +222,7 @@ function Invoke-CIPPOffboardingJob {
                     username     = $Username
                     MailboxType  = 'Shared'
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -215,6 +231,8 @@ function Invoke-CIPPOffboardingJob {
                 Parameters = @{
                     UserPrincipalName = $Username
                     TenantFilter      = $TenantFilter
+                    APIName           = $APIName
+                    Headers           = $Headers
                 }
             }
             @{
@@ -225,6 +243,7 @@ function Invoke-CIPPOffboardingJob {
                     username     = $Username
                     tenantFilter = $TenantFilter
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -236,6 +255,7 @@ function Invoke-CIPPOffboardingJob {
                     tenantFilter = $TenantFilter
                     APIName      = $APIName
                     Schedule     = $true
+                    Headers      = $Headers
                 }
             }
             @{
@@ -247,6 +267,7 @@ function Invoke-CIPPOffboardingJob {
                     TenantFilter = $TenantFilter
                     User         = $User
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
             @{
@@ -257,6 +278,7 @@ function Invoke-CIPPOffboardingJob {
                     Username     = $Username
                     TenantFilter = $TenantFilter
                     APIName      = $APIName
+                    Headers      = $Headers
                 }
             }
         )
@@ -273,7 +295,7 @@ function Invoke-CIPPOffboardingJob {
         }
 
         if ($Batch.Count -eq 0) {
-            Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "No offboarding tasks selected for user $Username" -sev Warning
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message "No offboarding tasks selected for user $Username" -sev Warning
             return "No offboarding tasks were selected for $Username"
         }
 
@@ -288,20 +310,19 @@ function Invoke-CIPPOffboardingJob {
         }
 
         # Add post-execution handler if TaskInfo is provided (from scheduled task)
-        if ($TaskInfo) {
-            $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
-                FunctionName = 'CIPPOffboardingComplete'
-                Parameters   = @{
-                    TaskInfo     = $TaskInfo
-                    TenantFilter = $TenantFilter
-                    Username     = $Username
-                }
+        $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
+            FunctionName = 'CIPPOffboardingComplete'
+            Parameters   = @{
+                TaskInfo     = $TaskInfo ?? $null
+                TenantFilter = $TenantFilter
+                Username     = $Username
+                Headers      = $Headers
             }
         }
 
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
         Write-Information "Started offboarding job for $Username with ID = '$InstanceId'"
-        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Started offboarding job for $Username with $($Batch.Count) tasks. Instance ID: $InstanceId" -sev Info
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Started offboarding job for $Username with $($Batch.Count) tasks. Instance ID: $InstanceId" -sev Info
 
         return "Offboarding job started for $Username with $($Batch.Count) tasks"
 
