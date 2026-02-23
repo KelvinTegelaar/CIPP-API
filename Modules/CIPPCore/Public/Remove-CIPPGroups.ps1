@@ -8,14 +8,38 @@ function Remove-CIPPGroups {
         $UserID
     )
 
-    if (-not $userid) {
-        $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $TenantFilter).id
+    $BulkInfoRequests = [System.Collections.Generic.List[object]]::new()
+
+    if (-not $UserID) {
+        $BulkInfoRequests.Add(@{
+                id     = 'getUserID'
+                method = 'GET'
+                url    = "users/$($Username)?`$select=id"
+            })
     }
-    $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?`$select=displayName,mailEnabled,id,groupTypes,assignedLicenses,onPremisesSyncEnabled,membershipRule&`$top=999" -tenantid $TenantFilter)
 
-    # Get user's groups
-    $UserGroups = (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserID)/GetMemberGroups" -tenantid $TenantFilter -type POST -body '{"securityEnabledOnly": false}').value
+    $BulkInfoRequests.Add(
+        @{
+            id     = 'getAllGroups'
+            method = 'GET'
+            url    = "groups/?`$select=displayName,mailEnabled,id,groupTypes,assignedLicenses,onPremisesSyncEnabled,membershipRule&`$top=999"
+        })
+    $BulkInfoRequests.Add(@{
+            id     = 'getUserGroups'
+            method = 'GET'
+            url    = "users/$($UserID ?? $Username)/memberOf/microsoft.graph.group?`$select=id"
+        })
 
+    $BulkGetResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkInfoRequests)
+
+    $UserInfo = ($BulkGetResults | Where-Object { $_.id -eq 'getUserID' }).body
+    if ($UserInfo) {
+        $UserID = $UserInfo.id
+    }
+    $AllGroups = ($BulkGetResults | Where-Object { $_.id -eq 'getAllGroups' }).body.value
+    $UserGroups = ($BulkGetResults | Where-Object { $_.id -eq 'getUserGroups' }).body.value
+
+    #users/$($User.id)/memberOf/microsoft.graph.directoryRole
     if (-not $UserGroups) {
         $Returnval = "$($Username) is not a member of any groups."
         Write-LogMessage -headers $Headers -API $APIName -message "$($Username) is not a member of any groups" -Sev 'Info' -tenant $TenantFilter
@@ -31,10 +55,10 @@ function Remove-CIPPGroups {
 
     # Process each group and prepare bulk requests
     foreach ($Group in $UserGroups) {
-        $GroupInfo = $AllGroups | Where-Object -Property id -EQ $Group
+        $GroupInfo = $AllGroups | Where-Object -Property id -EQ $Group.id
         $GroupName = $GroupInfo.displayName
         $IsMailEnabled = $GroupInfo.mailEnabled
-        $IsM365Group = $null -ne ($AllGroups | Where-Object { $_.id -eq $Group -and $_.groupTypes -contains 'Unified' })
+        $IsM365Group = $GroupInfo.groupTypes -and $GroupInfo.groupTypes -contains 'Unified'
         $IsLicensed = $GroupInfo.assignedLicenses.Count -gt 0
         $IsDynamic = -not [string]::IsNullOrWhiteSpace($GroupInfo.membershipRule)
 
@@ -51,13 +75,13 @@ function Remove-CIPPGroups {
             if ($IsM365Group -or (-not $IsMailEnabled)) {
                 # Use Graph API for M365 Groups and Security Groups
                 $BulkRequests.Add(@{
-                        id     = "removeFromGroup-$Group"
+                        id     = "removeFromGroup-$($Group.id)"
                         method = 'DELETE'
-                        url    = "groups/$Group/members/$UserID/`$ref"
+                        url    = "groups/$($Group.id)/members/$UserID/`$ref"
                     })
                 $GraphLogs.Add(@{
                         message   = "Removed $Username from $GroupName"
-                        id        = "removeFromGroup-$Group"
+                        id        = "removeFromGroup-$($Group.id)"
                         groupName = $GroupName
                     })
             } elseif ($IsMailEnabled) {
