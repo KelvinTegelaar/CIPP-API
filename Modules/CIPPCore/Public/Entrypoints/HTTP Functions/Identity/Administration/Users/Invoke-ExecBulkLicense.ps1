@@ -23,7 +23,21 @@ function Invoke-ExecBulkLicense {
         foreach ($TenantGroup in $TenantGroups) {
             $TenantFilter = $TenantGroup.Name
             $TenantRequests = $TenantGroup.Group
-            $AllUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?&`$select=id,userPrincipalName,assignedLicenses" -tenantid $TenantFilter
+
+            # Initialize list for bulk license requests
+            $LicenseRequests = [System.Collections.Generic.List[object]]::new()
+
+            # Get unique user IDs for this tenant
+            $UserIds = $TenantRequests.userIds | Select-Object -Unique
+
+            # Build OData filter for specific users only
+            $UserIdFilters = $UserIds | ForEach-Object { "id eq '$_'" }
+            $FilterQuery = $UserIdFilters -join ' or '
+
+            # Fetch only the users we need with server-side filtering
+            $AllUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=$FilterQuery&`$select=id,userPrincipalName,assignedLicenses&top=999" -tenantid $TenantFilter
+
+            # Create lookup for quick access
             $UserLookup = @{}
             foreach ($User in $AllUsers) {
                 $UserLookup[$User.id] = $User
@@ -31,37 +45,64 @@ function Invoke-ExecBulkLicense {
 
             # Process each user request
             foreach ($UserRequest in $TenantRequests) {
+                $UserId = $UserRequest.userIds
+                $User = $UserLookup[$UserId]
+                $UserPrincipalName = $User.userPrincipalName
+                $LicenseOperation = $UserRequest.LicenseOperation
+                $RemoveAllLicenses = [bool]$UserRequest.RemoveAllLicenses
+                $ReplaceAllLicenses = [bool]$UserRequest.ReplaceAllLicenses
+                $Licenses = $UserRequest.Licenses | ForEach-Object { $_.value }
+                $LicensesToRemove = $UserRequest.LicensesToRemove | ForEach-Object { $_.value }
+                $LicensesToReplace = $UserRequest.LicensesToReplace | ForEach-Object { $_.value }
+
+                # Handle license operations
+                if ($LicenseOperation -eq 'Add') {
+                    $AddLicenses = $Licenses
+                    $RemoveLicenses = @()
+                } elseif ($LicenseOperation -eq 'Remove') {
+                    if ($RemoveAllLicenses) {
+                        $RemoveLicenses = $User.assignedLicenses.skuId
+                    } else {
+                        # Only remove licenses the user actually has
+                        $RemoveLicenses = $LicensesToRemove | Where-Object { $_ -in $User.assignedLicenses.skuId }
+                    }
+                    $AddLicenses = @()
+                } elseif ($LicenseOperation -eq 'Replace') {
+                    $AddLicenses = $Licenses
+                    if ($ReplaceAllLicenses) {
+                        # Replace all existing licenses with new ones
+                        $RemoveLicenses = $User.assignedLicenses.skuId
+                    } else {
+                        # Only replace licenses the user actually has
+                        $RemoveLicenses = $LicensesToReplace | Where-Object { $_ -in $User.assignedLicenses.skuId }
+                    }
+                }
+
+                # Add to processing list if there are licenses to add or remove
+                if ($AddLicenses.Count -gt 0 -or $RemoveLicenses.Count -gt 0) {
+                    $LicenseRequests.Add([PSCustomObject]@{
+                            UserId            = $UserId
+                            UserPrincipalName = $UserPrincipalName
+                            AddLicenses       = $AddLicenses
+                            RemoveLicenses    = $RemoveLicenses
+                            IsReplace         = ($LicenseOperation -eq 'Replace' -and $ReplaceAllLicenses)
+                        })
+                } else {
+                    $Results.Add("No license changes needed for user $UserPrincipalName")
+                }
+            }
+
+            # Process all license changes in bulk
+            if ($LicenseRequests.Count -gt 0) {
                 try {
-                    $UserId = $UserRequest.userIds
-                    $User = $UserLookup[$UserId]
-                    $UserPrincipalName = $User.userPrincipalName
-                    $LicenseOperation = $UserRequest.LicenseOperation
-                    $RemoveAllLicenses = [bool]$UserRequest.RemoveAllLicenses
-                    $Licenses = $UserRequest.Licenses | ForEach-Object { $_.value }
-                    # Handle license operations
-                    if ($LicenseOperation -eq 'Add' -or $LicenseOperation -eq 'Replace') {
-                        $AddLicenses = $Licenses
+                    $BulkResults = Set-CIPPUserLicense -LicenseRequests $LicenseRequests -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+                    foreach ($Result in $BulkResults) {
+                        $Results.Add($Result)
                     }
-
-                    if ($LicenseOperation -eq 'Remove' -and $RemoveAllLicenses) {
-                        $RemoveLicenses = $User.assignedLicenses.skuId
-                    } elseif ($LicenseOperation -eq 'Remove') {
-                        $RemoveLicenses = $Licenses
-                    } elseif ($LicenseOperation -eq 'Replace') {
-                        $RemoveReplace = $User.assignedLicenses.skuId
-                        if ($RemoveReplace) { Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -RemoveLicenses $RemoveReplace -APIName $APIName -Headers $Headers }
-                    } elseif ($RemoveAllLicenses) {
-                        $RemoveLicenses = $User.assignedLicenses.skuId
-                    }
-                    #todo: Actually build bulk support into set-cippuserlicense.
-                    $TaskResults = Set-CIPPUserLicense -UserId $UserId -TenantFilter $TenantFilter -AddLicenses $AddLicenses -RemoveLicenses $RemoveLicenses -APIName $APIName -Headers $Headers
-
-                    $Results.Add($TaskResults)
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Successfully processed licenses for user $UserPrincipalName" -Sev 'Info'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
-                    $Results.Add("Failed to process licenses for user $($UserRequest.userIds). Error: $($ErrorMessage.NormalizedError)")
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to process licenses for user $($UserRequest.userIds). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                    $Results.Add("Failed to process bulk license operation for tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)")
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to process bulk license operation. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
