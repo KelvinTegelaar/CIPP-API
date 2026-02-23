@@ -8,6 +8,9 @@ function Invoke-ExecEditMailboxPermissions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+
+    # This endpoint is not called in the frontend at all. This can only be called manually via the scheduler, via the API, or via the CIPPAPIModule -Bobby
+
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
