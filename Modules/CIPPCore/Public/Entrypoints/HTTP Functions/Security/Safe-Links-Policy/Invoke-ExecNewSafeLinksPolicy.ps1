@@ -124,13 +124,13 @@ function Invoke-ExecNewSafeLinksPolicy {
     try {
         # Check if policy already exists
         if (Test-PolicyExists -TenantFilter $TenantFilter -PolicyName $PolicyName) {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy '$PolicyName' already exists" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy '$PolicyName' already exists" -sev 'Warn'
             return "Policy '$PolicyName' already exists in tenant $TenantFilter"
         }
 
         # Check if rule already exists
         if (Test-RuleExists -TenantFilter $TenantFilter -RuleName $RuleName) {
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule '$RuleName' already exists" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule '$RuleName' already exists" -sev 'Warn'
             return "Rule '$RuleName' already exists in tenant $TenantFilter"
         }
 
