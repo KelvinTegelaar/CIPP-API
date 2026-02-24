@@ -179,7 +179,7 @@ Function Invoke-ListSafeLinksPolicy {
         $BuiltInOnlyConfigs = ($SortedOutput | Where-Object { $_.ConfigurationStatus -like "*Built-In Rule Only*" }).Count
 
         if ($PolicyOnlyConfigs -gt 0 -or $RuleOnlyConfigs -gt 0) {
-            Write-LogMessage -headers $Headers -API $APIName -message "Found $($PolicyOnlyConfigs + $RuleOnlyConfigs) orphaned SafeLinks configurations that may need attention" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message "Found $($PolicyOnlyConfigs + $RuleOnlyConfigs) orphaned SafeLinks configurations that may need attention" -sev 'Warn'
         }
 
         $StatusCode = [HttpStatusCode]::OK

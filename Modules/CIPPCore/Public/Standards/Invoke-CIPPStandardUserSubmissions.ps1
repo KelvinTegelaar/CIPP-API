@@ -70,8 +70,11 @@ function Invoke-CIPPStandardUserSubmissions {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $true) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $false) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $false) -and
-            ($PolicyState.ReportPhishToCustomizedAddress -eq $false)
-            $RuleIsCorrect = $true
+            ($PolicyState.ReportPhishToCustomizedAddress -eq $false) -and
+            ($PolicyState.ReportJunkAddresses.Count -eq 0) -and
+            ($PolicyState.ReportNotJunkAddresses.Count -eq 0) -and
+            ($PolicyState.ReportPhishAddresses.Count -eq 0)
+            $RuleIsCorrect = ($RuleState.length -eq 0) -or ($RuleState.State -ne 'Enabled')
         } else {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $true) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $true) -and
@@ -91,8 +94,11 @@ function Invoke-CIPPStandardUserSubmissions {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $false) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $false) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $false) -and
-            ($PolicyState.ReportPhishToCustomizedAddress -eq $false)
-            $RuleIsCorrect = $true
+            ($PolicyState.ReportPhishToCustomizedAddress -eq $false) -and
+            ($PolicyState.ReportJunkAddresses.Count -eq 0) -and
+            ($PolicyState.ReportNotJunkAddresses.Count -eq 0) -and
+            ($PolicyState.ReportPhishAddresses.Count -eq 0)
+            $RuleIsCorrect = ($RuleState.length -eq 0) -or ($RuleState.State -ne 'Enabled')
         }
     }
 
@@ -132,8 +138,11 @@ function Invoke-CIPPStandardUserSubmissions {
                 $PolicyParams = @{
                     EnableReportToMicrosoft          = $false
                     ReportJunkToCustomizedAddress    = $false
+                    ReportJunkAddresses              = $null
                     ReportNotJunkToCustomizedAddress = $false
+                    ReportNotJunkAddresses           = $null
                     ReportPhishToCustomizedAddress   = $false
+                    ReportPhishAddresses             = $null
                 }
             }
 
@@ -177,6 +186,14 @@ function Invoke-CIPPStandardUserSubmissions {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable User Submission rule. Error: $($ErrorMessage.NormalizedError)" -sev Error
                     }
                 }
+            } elseif ($RuleState.length -gt 0 -and $RuleState.State -eq 'Enabled') {
+                try {
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Remove-ReportSubmissionRule' -cmdParams @{ Identity = 'DefaultReportSubmissionRule' } -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission rule removed.' -sev Info
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to remove User Submission rule. Error: $($ErrorMessage.NormalizedError)" -sev Error
+                }
             }
         }
     }
@@ -211,12 +228,12 @@ function Invoke-CIPPStandardUserSubmissions {
             ReportJunkToCustomizedAddress    = $PolicyState.ReportJunkToCustomizedAddress
             ReportNotJunkToCustomizedAddress = $PolicyState.ReportNotJunkToCustomizedAddress
             ReportPhishToCustomizedAddress   = $PolicyState.ReportPhishToCustomizedAddress
-            ReportJunkAddresses              = $PolicyState.ReportJunkAddresses
-            ReportNotJunkAddresses           = $PolicyState.ReportNotJunkAddresses
-            ReportPhishAddresses             = $PolicyState.ReportPhishAddresses
+            ReportJunkAddresses              = @($PolicyState.ReportJunkAddresses)
+            ReportNotJunkAddresses           = @($PolicyState.ReportNotJunkAddresses)
+            ReportPhishAddresses             = @($PolicyState.ReportPhishAddresses)
             RuleState                        = @{
-                State  = $RuleState.State
-                SentTo = $RuleState.SentTo
+                State  = if ($RuleState.length -eq 0) { 'Disabled' } else { $RuleState.State }
+                SentTo = if ($RuleState.length -eq 0) { $null } else { @($RuleState.SentTo) }
             }
         }
         $ExpectedValue = @{
@@ -224,10 +241,10 @@ function Invoke-CIPPStandardUserSubmissions {
             ReportJunkToCustomizedAddress    = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }
             ReportNotJunkToCustomizedAddress = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }
             ReportPhishToCustomizedAddress   = if ([string]::IsNullOrWhiteSpace($Email)) { $false } else { $true }
-            ReportJunkAddresses              = if ([string]::IsNullOrWhiteSpace($Email)) { $null } else { @($Email) }
-            ReportNotJunkAddresses           = if ([string]::IsNullOrWhiteSpace($Email)) { $null } else { @($Email) }
-            ReportPhishAddresses             = if ([string]::IsNullOrWhiteSpace($Email)) { $null } else { @($Email) }
-            RuleState                        = if ([string]::IsNullOrWhiteSpace($Email)) {
+            ReportJunkAddresses              = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
+            ReportNotJunkAddresses           = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
+            ReportPhishAddresses             = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
+            RuleState                        = if ([string]::IsNullOrWhiteSpace($Email) -or $state -eq 'disable') {
                 @{
                     State  = 'Disabled'
                     SentTo = $null

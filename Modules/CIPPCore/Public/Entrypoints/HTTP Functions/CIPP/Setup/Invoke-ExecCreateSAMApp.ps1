@@ -70,7 +70,8 @@ function Invoke-ExecCreateSAMApp {
             }
 
             try {
-                $AppPolicyStatus = Update-AppManagementPolicy
+
+                $AppPolicyStatus = Update-AppManagementPolicy -Headers @{ authorization = "Bearer $($Token.access_token)" } -ApplicationId $appId.appId
                 Write-Information $AppPolicyStatus.PolicyAction
             } catch {
                 Write-Warning "Error updating app management policy $($_.Exception.Message)."
@@ -88,10 +89,8 @@ function Invoke-ExecCreateSAMApp {
                 $Secret | Add-Member -MemberType NoteProperty -Name 'tenantid' -Value $TenantId -Force
                 $Secret | Add-Member -MemberType NoteProperty -Name 'applicationid' -Value $AppId.appId -Force
                 $Secret | Add-Member -MemberType NoteProperty -Name 'applicationsecret' -Value $AppPassword -Force
-                Write-Information ($Secret | ConvertTo-Json -Depth 5)
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
             } else {
-
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
                 Set-CippKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $AppPassword -AsPlainText -Force)

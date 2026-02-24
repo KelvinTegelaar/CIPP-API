@@ -15,7 +15,8 @@ function Update-AppManagementPolicy {
     [CmdletBinding()]
     param(
         $TenantFilter = $env:TenantID,
-        $ApplicationId = $env:ApplicationID
+        $ApplicationId = $env:ApplicationID,
+        $headers
     )
 
     try {
@@ -39,8 +40,7 @@ function Update-AppManagementPolicy {
         )
 
         # Execute bulk request
-        $Results = New-GraphBulkRequest -Requests $Requests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter
-
+        $Results = New-GraphBulkRequest -Requests $Requests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter -headers $headers
         # Parse results
         $DefaultPolicy = ($Results | Where-Object { $_.id -eq 'defaultPolicy' }).body
         $AppPolicies = ($Results | Where-Object { $_.id -eq 'appPolicies' }).body.value
@@ -60,8 +60,7 @@ function Update-AppManagementPolicy {
                 })
 
             if ($AppliesToRequests.Count -gt 0) {
-                $AppliesToResults = New-GraphBulkRequest -Requests $AppliesToRequests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter
-
+                $AppliesToResults = New-GraphBulkRequest -Requests $AppliesToRequests -NoAuthCheck $true -asapp $true -tenantid $TenantFilter -headers $headers
                 # Find which policy (if any) targets the app
                 $CIPPPolicyResult = $AppliesToResults | Where-Object { $_.body.value.appId -contains $ApplicationId } | Select-Object -First 1
                 if ($CIPPPolicyResult) {
@@ -171,18 +170,18 @@ function Update-AppManagementPolicy {
 
                     if ($CIPPAppPolicyId) {
                         # Update existing policy that's already assigned to the app
-                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$CIPPAppPolicyId" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$CIPPAppPolicyId" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
                         $PolicyAction = "Updated existing policy $CIPPAppPolicyId to allow credentials"
                     } elseif ($ExistingExemptionPolicy) {
                         # Exemption policy exists but not assigned to app - update and assign it
-                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -headers $headers
 
                         if ($CIPPApp.id) {
                             # Assign existing policy to CIPP-SAM application
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
                             $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
                             $CIPPAppPolicyId = $ExistingExemptionPolicy.id
                             $CIPPAppTargeted = $true
@@ -191,14 +190,14 @@ function Update-AppManagementPolicy {
                         }
                     } else {
                         # Create new policy and assign to CIPP-SAM app
-                        $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true
+                        $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -headers $headers
 
                         if ($CIPPApp.id) {
                             # Assign policy to CIPP-SAM application using beta endpoint
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($CreatedPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -headers $headers
                             $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
                             $CIPPAppPolicyId = $CreatedPolicy.id
                             $CIPPAppTargeted = $true

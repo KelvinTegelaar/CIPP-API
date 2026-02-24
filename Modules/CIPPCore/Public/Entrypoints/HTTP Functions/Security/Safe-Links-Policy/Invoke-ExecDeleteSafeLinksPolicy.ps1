@@ -39,7 +39,7 @@ function Invoke-ExecDeleteSafeLinksPolicy {
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $ResultMessages.Add("Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -sev 'Warn'
             }
         }
         else {
@@ -66,7 +66,7 @@ function Invoke-ExecDeleteSafeLinksPolicy {
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $ResultMessages.Add("Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -sev 'Warn'
             }
         }
         else {
