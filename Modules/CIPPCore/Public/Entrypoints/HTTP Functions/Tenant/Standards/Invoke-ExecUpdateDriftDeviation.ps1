@@ -58,9 +58,9 @@ function Invoke-ExecUpdateDriftDeviation {
                             $Settings = $StandardTemplate
                         } else {
                             $StandardTemplate = $StandardTemplate.standardSettings.$Setting
-                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
-                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
-                            $Settings = $StandardTemplate.standards.$Setting
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                            $Settings = $StandardTemplate
                         }
                         $TaskBody = @{
                             TenantFilter  = $TenantFilter
