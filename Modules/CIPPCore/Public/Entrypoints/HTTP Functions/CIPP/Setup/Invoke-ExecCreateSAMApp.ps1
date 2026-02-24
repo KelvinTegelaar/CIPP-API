@@ -70,7 +70,8 @@ function Invoke-ExecCreateSAMApp {
             }
 
             try {
-                $AppPolicyStatus = Update-AppManagementPolicy
+
+                $AppPolicyStatus = Update-AppManagementPolicy -Headers @{ authorization = "Bearer $($Token.access_token)" } -ApplicationId $appId.appId
                 Write-Information $AppPolicyStatus.PolicyAction
             } catch {
                 Write-Warning "Error updating app management policy $($_.Exception.Message)."
