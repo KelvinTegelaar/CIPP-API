@@ -55,7 +55,7 @@ function New-PwPushLink {
                 'Exception' = Get-CippException -Exception $_
             }
             Write-LogMessage -API PwPush -Message "Failed to create a new PwPush link: $($_.Exception.Message)" -Sev 'Error' -LogData $LogData
-            Write-LogMessage -API PwPush -Message "Continuing without PwPush link due to error" -Sev 'Warning'
+            Write-LogMessage -API PwPush -Message "Continuing without PwPush link due to error" -sev 'Warn'
             return $false
         }
     } catch {

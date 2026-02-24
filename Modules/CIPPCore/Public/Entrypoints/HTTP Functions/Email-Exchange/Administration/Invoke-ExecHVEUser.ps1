@@ -75,7 +75,7 @@ function Invoke-ExecHVEUser {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         $Message = "Failed to exclude from CA policy '$($Policy.displayName)': $($ErrorMessage.NormalizedError)"
-                        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Warning' -LogData $ErrorMessage
+                        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -sev 'Warn' -LogData $ErrorMessage
                         $Results.Add($Message)
                     }
                 }
@@ -85,7 +85,7 @@ function Invoke-ExecHVEUser {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Message = "Failed to check/update Conditional Access policies: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Warning' -LogData $ErrorMessage
+            Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -sev 'Warn' -LogData $ErrorMessage
             $Results.Add($Message)
         }
 
