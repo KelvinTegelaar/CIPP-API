@@ -18,7 +18,7 @@ function Invoke-ExecGDAPRoleTemplate {
     if ($Request.Query.TemplateId) {
         $Template = $Templates | Where-Object -Property RowKey -EQ $Request.Query.TemplateId
         if (!$Template) {
-            Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$($Request.Query.TemplateId)' not found" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$($Request.Query.TemplateId)' not found" -sev 'Warn'
             $Body = @{}
         } else {
             Write-LogMessage -headers $Headers -API $APIName -message "Retrieved GDAP role template '$($Request.Query.TemplateId)'" -Sev 'Info'
@@ -50,7 +50,7 @@ function Invoke-ExecGDAPRoleTemplate {
                 $Template = $Templates | Where-Object -Property RowKey -EQ $OriginalRowKey
                 if ($Template) {
                     $RoleMappings = $Request.Body.RoleMappings
-                    
+
                     # If the template ID is being changed, delete the old one and create a new one
                     if ($OriginalRowKey -ne $NewRowKey) {
                         Remove-AzDataTableEntity -Force @Table -Entity $Template
@@ -68,7 +68,7 @@ function Invoke-ExecGDAPRoleTemplate {
                         }
                     }
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$OriginalRowKey' not found for editing" -Sev 'Warning'
+                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$OriginalRowKey' not found for editing" -sev 'Warn'
                     $Body = @{
                         Results = "Template $OriginalRowKey not found"
                     }
@@ -84,7 +84,7 @@ function Invoke-ExecGDAPRoleTemplate {
                         Results = "Deleted template $RowKey"
                     }
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$RowKey' not found for deletion" -Sev 'Warning'
+                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$RowKey' not found for deletion" -sev 'Warn'
                     $Body = @{
                         Results = "Template $RowKey not found"
                     }

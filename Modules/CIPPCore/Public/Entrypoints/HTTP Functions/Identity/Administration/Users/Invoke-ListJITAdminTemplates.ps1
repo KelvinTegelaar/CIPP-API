@@ -34,7 +34,7 @@ function Invoke-ListJITAdminTemplates {
             $data | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $row.RowKey -Force
             $data
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -message "Failed to process JIT Admin template: $($row.RowKey) - $($_.Exception.Message)" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to process JIT Admin template: $($row.RowKey) - $($_.Exception.Message)" -sev 'Warn'
         }
     }
 

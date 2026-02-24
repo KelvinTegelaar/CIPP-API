@@ -12,11 +12,16 @@ function New-GraphBulkRequest {
         $Requests,
         $NoPaginateIds = @(),
         [ValidateSet('v1.0', 'beta')]
-        $Version = 'beta'
+        $Version = 'beta',
+        $Headers
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
-        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+        if ($Headers) {
+            $Headers = $Headers
+        } else {
+            $Headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+        }
 
         if ($script:XMsThrottlePriority) {
             $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
@@ -56,13 +61,14 @@ function New-GraphBulkRequest {
                 }
                 Write-Host 'Getting more'
                 Write-Host $MoreData.body.'@odata.nextLink'
-                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck $NoAuthCheck -scope $scope -AsApp $asapp
+                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck $NoAuthCheck -scope $scope -AsApp $asapp -headers $Headers
                 $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                 $AdditionalValues | ForEach-Object { $NewValues.add($_) }
                 $MoreData.body.value = $NewValues
             }
 
         } catch {
+            Write-Host 'updating graph table because something failed.'
             # Try to parse ErrorDetails.Message as JSON
             if ($_.ErrorDetails.Message) {
                 try {
@@ -91,7 +97,6 @@ function New-GraphBulkRequest {
             $Tenant.LastGraphError = ''
         }
         Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
-
         return $ReturnedData.responses
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

@@ -15,6 +15,7 @@ function Push-CIPPOffboardingComplete {
     $TaskInfo = $Item.Parameters.TaskInfo
     $TenantFilter = $Item.Parameters.TenantFilter
     $Username = $Item.Parameters.Username
+    $Headers = $Item.Parameters.Headers
     $Results = $Item.Results  # Results come from orchestrator, not Parameters
 
     try {
@@ -102,19 +103,19 @@ function Push-CIPPOffboardingComplete {
                 TaskState    = 'Completed'
             }
 
-            Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed successfully for $Username" -sev Info
+            Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed successfully for $Username" -sev Info -headers $Headers
 
             # Send post-execution alerts if configured
             if ($TaskInfo.PostExecution -and $ProcessedResults) {
                 Send-CIPPScheduledTaskAlert -Results $ProcessedResults -TaskInfo $TaskInfo -TenantFilter $TenantFilter
             }
         }
-
+        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed for $Username" -sev Info -headers $Headers
         return "Offboarding completed for $Username"
 
     } catch {
         $ErrorMsg = "Failed to complete offboarding for $Username : $($_.Exception.Message)"
-        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message $ErrorMsg -sev Error
+        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message $ErrorMsg -sev Error -headers $Headers -LogData (Get-CippException -Exception $_)
         throw $ErrorMsg
     }
 }

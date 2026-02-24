@@ -64,7 +64,7 @@ function Start-BackupRetentionCleanup {
                             $BlobDeletedCount++
                             Write-Host "Deleted blob: $BlobPath"
                         } catch {
-                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -Sev 'Warning'
+                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warn'
                         }
                     }
                 }
@@ -124,7 +124,7 @@ function Start-BackupRetentionCleanup {
                             $BlobDeletedCount++
                             Write-Host "Deleted blob: $BlobPath"
                         } catch {
-                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -Sev 'Warning'
+                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warn'
                         }
                     }
                 }
