@@ -317,13 +317,12 @@ function Push-ExecScheduledCommand {
         }
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
-    Write-Information 'Sending task results to target. Updating the task state.'
 
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
     if ($Results -and $Item.Command -notin $OrchestratorBasedCommands) {
+        Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
         Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
     }
-    Write-Information 'Sent the results to the target. Updating the task state.'
 
     try {
         # For orchestrator-based commands, skip task state update as it will be handled by post-execution

@@ -46,7 +46,7 @@ function Remove-CIPPMailboxRule {
             try {
                 Remove-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' -ItemId $RuleId
             } catch {
-                Write-LogMessage -headers $Headers -API $APIName -message "Rule deleted but failed to remove from cache: $($_.Exception.Message)" -Sev 'Warning' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Rule deleted but failed to remove from cache: $($_.Exception.Message)" -sev 'Warn' -tenant $TenantFilter
             }
 
             return $Message
