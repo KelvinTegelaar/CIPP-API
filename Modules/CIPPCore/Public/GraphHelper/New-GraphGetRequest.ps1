@@ -17,7 +17,8 @@ function New-GraphGetRequest {
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders,
         [hashtable]$extraHeaders,
-        [switch]$ReturnRawResponse
+        [switch]$ReturnRawResponse,
+        $Headers
     )
 
     if ($NoAuthCheck -eq $false) {
@@ -27,12 +28,15 @@ function New-GraphGetRequest {
     }
 
     if ($NoAuthCheck -eq $true -or $IsAuthorised) {
-        if ($scope -eq 'ExchangeOnline') {
-            $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
+        if ($headers) {
+            $headers = $Headers
         } else {
-            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+            if ($scope -eq 'ExchangeOnline') {
+                $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
+            } else {
+                $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+            }
         }
-
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
         }

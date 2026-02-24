@@ -112,9 +112,9 @@ function Remove-CIPPCalendarPermissions {
                         } catch {
                             Write-Verbose "Failed to sync cache: $_"
                         }
-                        
+
                         $ErrorMsg = "Failed to remove $UserToRemove from calendar $($CalPermEntry.CalendarUPN): $($_.Exception.Message)"
-                        Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Warning' -tenant $TenantFilter
+                        Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -sev 'Warn' -tenant $TenantFilter
                         $Results.Add($ErrorMsg)
                     }
                 }
@@ -156,7 +156,7 @@ function Remove-CIPPCalendarPermissions {
                 # Sync cache even on error (permission might not exist)
                 $MailboxUPN = if ($CalendarIdentity -match '^([^:]+):') { $Matches[1] } else { $CalendarIdentity }
                 $Folder = if ($CalendarIdentity -match ':\\(.+)$') { $Matches[1] } else { $FolderName }
-                
+
                 try {
                     Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $MailboxUPN -FolderName $Folder -User $UserToRemove -Action 'Remove'
                 } catch {
