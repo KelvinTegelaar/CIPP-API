@@ -123,7 +123,7 @@ function Invoke-ExecCreateAppTemplate {
                 $Permissions = @($DelegateResourceAccess) + @($ApplicationResourceAccess) | Where-Object { $_ -ne $null }
 
                 if ($Permissions.Count -eq 0) {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId via any method" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId via any method" -sev 'Warn'
                 } else {
                     Write-LogMessage -headers $Request.headers -API $APINAME -message "Extracted $($Permissions.Count) resource permission(s) from service principal grants" -Sev 'Info'
                 }
@@ -245,7 +245,7 @@ function Invoke-ExecCreateAppTemplate {
                         })
                     $RequestIndex++
                 } else {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found in tenant for appId: $ResourceAppId" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found in tenant for appId: $ResourceAppId" -sev 'Warn'
                 }
             }
 
@@ -274,7 +274,7 @@ function Invoke-ExecCreateAppTemplate {
                 $ResourceSP = $SPLookup[$ResourceAppId]
 
                 if (!$ResourceSP) {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found for appId: $ResourceAppId - skipping permission translation" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found for appId: $ResourceAppId - skipping permission translation" -sev 'Warn'
                     continue
                 }
 
@@ -291,7 +291,7 @@ function Invoke-ExecCreateAppTemplate {
                             }
                             [void]$AppPerms.Add($PermObj)
                         } else {
-                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Application permission $($Access.id) not found in $ResourceAppId appRoles" -Sev 'Warning'
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Application permission $($Access.id) not found in $ResourceAppId appRoles" -sev 'Warn'
                         }
                     } elseif ($Access.type -eq 'Scope') {
                         Write-Information "Processing delegated permission with id $($Access.id) for resource appId $ResourceAppId"
@@ -364,14 +364,14 @@ function Invoke-ExecCreateAppTemplate {
                             $PermissionSetId = $TemplateData.PermissionSetId
                             Write-LogMessage -headers $Request.headers -API $APINAME -message "Found existing permission set ID: $PermissionSetId in template" -Sev 'Info'
                         } else {
-                            Write-LogMessage -headers $Request.headers -API $APINAME -message 'Existing template found but has no PermissionSetId' -Sev 'Warning'
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message 'Existing template found but has no PermissionSetId' -sev 'Warn'
                         }
                         break
                     }
                 }
             } catch {
                 # Ignore lookup errors
-                Write-LogMessage -headers $Request.headers -API $APINAME -message "Error during template lookup: $($_.Exception.Message)" -Sev 'Warning'
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Error during template lookup: $($_.Exception.Message)" -sev 'Warn'
             }
         }
 

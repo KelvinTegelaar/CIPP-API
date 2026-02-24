@@ -106,12 +106,12 @@ function Invoke-CIPPStandardMailContacts {
     }
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            marketingNotificationEmails = $CurrentInfo.marketingNotificationEmails
+            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails)
             technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails)
             contactEmail                = $CurrentInfo.privacyProfile.contactEmail
         }
         $ExpectedValue = @{
-            marketingNotificationEmails = $Contacts.MarketingContact
+            marketingNotificationEmails = @($Contacts.MarketingContact)
             technicalNotificationMails  = @($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null }
             contactEmail                = $Contacts.GeneralContact
         }

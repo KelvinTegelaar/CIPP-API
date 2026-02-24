@@ -293,7 +293,7 @@ Function Invoke-ExecModifyMBPerms {
     }
 
     if ($CmdletArray.Count -eq 0) {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No valid cmdlets to process' -Sev 'Warning' -tenant $TenantFilter
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'No valid cmdlets to process' -sev 'Warn' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = @("No valid permission changes to process") }
         return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
@@ -327,7 +327,7 @@ Function Invoke-ExecModifyMBPerms {
                                 Write-LogMessage -headers $Request.Headers -API $APINAME -message "Success for operation $operationGuid`: $($metadata.ExpectedResult)" -Sev 'Info' -tenant $TenantFilter
                             }
                         } else {
-                            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not map result to operation. GUID: $operationGuid, Available GUIDs: $($GuidToMetadataMap.Keys -join ', ')" -Sev 'Warning' -tenant $TenantFilter
+                            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not map result to operation. GUID: $operationGuid, Available GUIDs: $($GuidToMetadataMap.Keys -join ', ')" -sev 'Warn' -tenant $TenantFilter
 
                             # Fallback for unmapped results
                             if ($result.error) {

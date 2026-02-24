@@ -128,8 +128,8 @@ function Get-CIPPTenantAlignment {
                         $TenantValues.Add($filterItem.value)
                     }
                 }
-`
-                    if ($TenantValues -contains 'AllTenants') {
+
+                if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
                 } elseif ($TenantValues.Count -gt 0) {
                     $TemplateAssignedTenants = @($TenantValues)

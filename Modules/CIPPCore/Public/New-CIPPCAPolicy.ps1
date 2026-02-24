@@ -89,7 +89,7 @@ function New-CIPPCAPolicy {
     $displayName = ($RawJSON | ConvertFrom-Json).displayName
 
     $JSONobj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
-    Remove-EmptyArrays -Object $JSONobj
+    Remove-EmptyArrays $JSONobj
     #Remove context as it does not belong in the payload.
     try {
         if ($JSONobj.grantControls) {

@@ -16,8 +16,9 @@ function Invoke-ListMailQuarantine {
         } else {
             $Table = Get-CIPPTable -TableName cacheQuarantineMessages
             $PartitionKey = 'QuarantineMessage'
-            $Filter = "PartitionKey eq '$PartitionKey'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
+            $30MinutesAgo = (Get-Date).AddMinutes(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $Filter = "PartitionKey eq '$PartitionKey' and Timestamp gt datetime'$30MinutesAgo'"
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
             $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             # If a queue is running, we will not start a new one

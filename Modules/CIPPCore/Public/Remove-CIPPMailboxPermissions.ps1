@@ -43,7 +43,7 @@ function Remove-CIPPMailboxPermissions {
                     }
                 } catch {
                     $ErrorMsg = "Failed to remove permissions from $MailboxUPN for $AccessUser : $($_.Exception.Message)"
-                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -Sev 'Warning' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMsg -sev 'Warn' -tenant $TenantFilter
                     $Results.Add($ErrorMsg)
                 }
             }

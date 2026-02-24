@@ -31,7 +31,7 @@ function Set-CIPPAssignedPolicy {
                 Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
             } else {
                 $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy assigned without filter."
-                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Warning' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warn' -tenant $TenantFilter
                 Write-Host $ErrorMessage
             }
         }
@@ -95,7 +95,7 @@ function Set-CIPPAssignedPolicy {
 
                 if (-not $resolvedGroupIds -or $resolvedGroupIds.Count -eq 0) {
                     $ErrorMessage = "No groups found matching the specified name(s): $GroupName. Policy not assigned."
-                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Warning' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warn' -tenant $TenantFilter
                     throw $ErrorMessage
                 }
 

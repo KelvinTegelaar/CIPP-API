@@ -82,7 +82,7 @@ function Invoke-ListLogs {
         }
     } else {
         if ($request.Query.Filter -eq 'True') {
-            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' }
+            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'
             $TenantFilter = $Request.Query.Tenant
@@ -102,7 +102,7 @@ function Invoke-ListLogs {
                 $Filter = "PartitionKey eq '{0}'" -f (Get-Date -UFormat '%Y%m%d')
             }
         } else {
-            $LogLevel = 'Info', 'Warn', 'Error', 'Critical', 'Alert'
+            $LogLevel = 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert'
             $PartitionKey = Get-Date -UFormat '%Y%m%d'
             $username = '*'
             $TenantFilter = $null

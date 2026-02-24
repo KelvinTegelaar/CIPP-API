@@ -43,7 +43,7 @@ function Invoke-ListSafeLinksPolicyDetails {
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $LogMessages.Add("Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks policy '$PolicyName'. Error: $($ErrorMessage.NormalizedError)" -sev 'Warn'
                 $Result.PolicyError = "Failed to retrieve: $($ErrorMessage.NormalizedError)"
             }
         }
@@ -72,7 +72,7 @@ function Invoke-ListSafeLinksPolicyDetails {
             catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 $LogMessages.Add("Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)") | Out-Null
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to retrieve details for SafeLinks rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)" -sev 'Warn'
                 $Result.RuleError = "Failed to retrieve: $($ErrorMessage.NormalizedError)"
             }
         }
