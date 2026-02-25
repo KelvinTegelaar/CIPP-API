@@ -76,7 +76,7 @@ function Invoke-EditJITAdminTemplate {
                         Write-LogMessage -headers $Headers -API $APIName -message "Unset default flag for existing template: $($data.templateName)" -Sev 'Info'
                     }
                 } catch {
-                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to update existing template: $($_.Exception.Message)" -Sev 'Warning'
+                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to update existing template: $($_.Exception.Message)" -sev 'Warn'
                 }
             }
         }
@@ -121,7 +121,7 @@ function Invoke-EditJITAdminTemplate {
             if (![string]::IsNullOrWhiteSpace($Request.Body.defaultUserName)) {
                 $TemplateObject.defaultUserName = $Request.Body.defaultUserName
             }
-            
+
             # defaultDomain is only saved for specific tenant templates (not AllTenants)
             if ($TenantFilter -ne 'AllTenants' -and $Request.Body.defaultDomain) {
                 if ($Request.Body.defaultDomain -is [string]) {

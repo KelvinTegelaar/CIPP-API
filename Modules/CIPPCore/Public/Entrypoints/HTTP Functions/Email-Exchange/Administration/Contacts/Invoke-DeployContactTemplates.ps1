@@ -24,7 +24,7 @@ Function Invoke-DeployContactTemplates {
             if ($TenantItem.value) {
                 $SelectedTenants.Add($TenantItem.value)
             } else {
-                Write-LogMessage -headers $Headers -API $APIName -message "Tenant item missing value property: $($TenantItem | ConvertTo-Json -Compress)" -Sev 'Warning'
+                Write-LogMessage -headers $Headers -API $APIName -message "Tenant item missing value property: $($TenantItem | ConvertTo-Json -Compress)" -sev 'Warn'
             }
         }
 
@@ -46,7 +46,7 @@ Function Invoke-DeployContactTemplates {
                 if ($TemplateItem.value) {
                     $ContactTemplates.Add($TemplateItem.value)
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "Template item missing value property: $($TemplateItem | ConvertTo-Json -Compress)" -Sev 'Warning'
+                    Write-LogMessage -headers $Headers -API $APIName -message "Template item missing value property: $($TemplateItem | ConvertTo-Json -Compress)" -sev 'Warn'
                 }
             }
         } else {
@@ -74,7 +74,7 @@ Function Invoke-DeployContactTemplates {
                     $ContactExists = $ExistingContacts | Where-Object { $_.ExternalEmailAddress -eq $ContactTemplate.email }
 
                     if ($ContactExists) {
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Contact with email '$($ContactTemplate.email)' already exists in tenant $TenantFilter" -Sev 'Warning'
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Contact with email '$($ContactTemplate.email)' already exists in tenant $TenantFilter" -sev 'Warn'
                         "Contact '$($ContactTemplate.displayName)' with email '$($ContactTemplate.email)' already exists in tenant $TenantFilter"
                         continue
                     }
