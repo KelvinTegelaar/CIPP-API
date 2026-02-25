@@ -1,0 +1,1853 @@
+Folder PATH listing
+Volume serial number is 6A99-EBC9
+C:.
+|   .dockerignore
+|   .editorconfig
+|   .gitattributes
+|   .gitignore
+|   CIPP-Permissions.json
+|   CIPPTimers.json
+|   CommunityRepos.json
+|   ConversionTable.csv
+|   cspell.json
+|   dirlist.txt
+|   docker-compose.yml
+|   Dockerfile
+|   host.json
+|   intuneCollection.json
+|   LICENSE.CustomLicenses
+|   license.md
+|   nginx.conf
+|   openapi.json
+|   package-lock.json
+|   package.json
+|   profile.ps1
+|   requirements.psd1
+|   TemplateEmail.html
+|   version_latest.txt
+|   words.txt
+|   
++---.github
+|   |   pull.yml
+|   |   
+|   \---workflows
+|           dev_api.yml
+|           dev_api_proc.yml
+|           dev_cippahmcc.yml
+|           dev_cippmpiii.yml
+|           master_cipp2w6m3.yml
+|           PR_Branch_Check.yml
+|           publish_prerelease.yml
+|           publish_release.yml
+|           update-fork.yml
+|           upload_dev.yml
+|           
++---.vscode
+|       extensions.json
+|       
++---AddChocoApp
+|   |   Choco.app.json
+|   |   Choco.App.xml
+|   |   IntunePackage.intunewin
+|   |   
+|   \---IntunePackage
+|           Install.ps1
+|           Uninstall.ps1
+|           
++---AddMSPApp
+|       automate.app.json
+|       automate.app.xml
+|       automate.detection.ps1
+|       automate.intunewin
+|       cwcommand.app.json
+|       cwcommand.app.xml
+|       cwcommand.intunewin
+|       datto.app.json
+|       datto.app.xml
+|       datto.intunewin
+|       huntress.app.json
+|       huntress.app.xml
+|       huntress.intunewin
+|       immy.app.xml
+|       immy.intunewin
+|       Immybot.app.json
+|       ninjarmm.app.json
+|       ninjarmm.app.xml
+|       syncro.app.json
+|       syncro.app.xml
+|       syncro.intunewin
+|       
++---Cache_SAMSetup
+|       PermissionsTranslator.json
+|       SAMManifest.json
+|       
++---CIPPActivityFunction
+|       function.json
+|       
++---CIPPHttpTrigger
+|       function.json
+|       
++---CIPPOrchestrator
+|       function.json
+|       
++---CIPPTimer
+|       function.json
+|       
++---Config
+|       49a8069e-3b46-4680-a035-9250bc675446.CATemplate.json
+|       4d9206b0-4f96-41e6-86a5-f78cdcff5069.IntuneTemplate.json
+|       4ec40975-c530-44d1-be9e-12f90cac6e95.TransportRuleTemplate.json
+|       59bd753c-4204-4b3a-b84b-850d4b69f494.IntuneTemplate.json
+|       5e4ce5db-1dcd-4423-8131-1379fa2e7621.TransportRuleTemplate.json
+|       7547f73c-3cb0-460c-a4bd-391944908007.IntuneTemplate.json
+|       7b41924e-3051-4a23-b0d0-8cdeadc2c05a.IntuneTemplate.json
+|       7e06b0de-0469-4aae-89be-d83c44b5799f.IntuneTemplate.json
+|       8d57edc3-071d-42e7-86b1-126720645ac6.TransportRuleTemplate.json
+|       adf9f6d1-36fb-438b-a82b-71f3af402b6c.TransportRuleTemplate.json
+|       b39b8d85-1531-420e-baeb-b388f565418b.TransportRuleTemplate.json
+|       b79d0123-3105-4c5d-9f15-62cc7a7eb7e1.IntuneTemplate.json
+|       cba836bb-33b7-4c50-88be-ee80f74cbeac.CATemplate.json
+|       cipp-roles.json
+|       CIPPDefaultTable.BPATemplate.json
+|       CIPPDefaultTenantPage.BPATemplate.json
+|       CIPPTenantFeatures.BPATemplate.json
+|       CyberEssentials.BPATemplate.json
+|       e82dd7d8-3f13-43cd-bdd4-896e0958493b.TransportRuleTemplate.json
+|       ExcludeSkuList.JSON
+|       f8be7e58-2419-40a8-a739-714bf5deff90.CATemplate.json
+|       schemaDefinitions.json
+|       SharePoint.BPATemplate.json
+|       standards.json
+|       StandardsTable.BPATemplate.json
+|       
++---ExecMaintenanceScripts
+|   \---Scripts
+|           Add-CippUser.ps1
+|           Enable-FunctionAppGitHubActions.ps1
+|           Grant-CippConditionalAccess.ps1
+|           
++---Modules
+|   +---Az.Accounts
+|   |   \---4.0.2
+|   |       |   .signature.p7s
+|   |       |   Accounts.format.ps1xml
+|   |       |   Accounts.generated.format.ps1xml
+|   |       |   Accounts.types.ps1xml
+|   |       |   Az.Accounts.psd1
+|   |       |   Az.Accounts.psm1
+|   |       |   FuzzySharp.dll
+|   |       |   Hyak.Common.dll
+|   |       |   Microsoft.ApplicationInsights.dll
+|   |       |   Microsoft.Azure.Common.dll
+|   |       |   Microsoft.Azure.PowerShell.AssemblyLoading.dll
+|   |       |   Microsoft.Azure.PowerShell.Authentication.Abstractions.dll
+|   |       |   Microsoft.Azure.PowerShell.Authentication.dll
+|   |       |   Microsoft.Azure.PowerShell.Authentication.ResourceManager.dll
+|   |       |   Microsoft.Azure.PowerShell.AuthenticationAssemblyLoadContext.dll
+|   |       |   Microsoft.Azure.PowerShell.Authenticators.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Aks.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Authorization.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Compute.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Graph.Rbac.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.KeyVault.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Monitor.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Network.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.PolicyInsights.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.ResourceManager.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Storage.Management.dll
+|   |       |   Microsoft.Azure.PowerShell.Clients.Websites.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Accounts.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Accounts.dll-Help.xml
+|   |       |   Microsoft.Azure.PowerShell.Common.dll
+|   |       |   Microsoft.Azure.PowerShell.Common.Share.dll
+|   |       |   Microsoft.Azure.PowerShell.Storage.dll
+|   |       |   Microsoft.Azure.PowerShell.Strategies.dll
+|   |       |   Microsoft.Rest.ClientRuntime.Azure.dll
+|   |       |   Microsoft.Rest.ClientRuntime.dll
+|   |       |   Microsoft.WindowsAzure.Storage.dll
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       +---en-US
+|   |       |       about_az.help.txt
+|   |       |       
+|   |       +---lib
+|   |       |   +---netfx
+|   |       |   |       Newtonsoft.Json.dll
+|   |       |   |       System.Diagnostics.DiagnosticSource.dll
+|   |       |   |       System.Numerics.Vectors.dll
+|   |       |   |       System.Reflection.DispatchProxy.dll
+|   |       |   |       System.Runtime.CompilerServices.Unsafe.dll
+|   |       |   |       System.Security.Cryptography.Cng.dll
+|   |       |   |       System.Security.Cryptography.ProtectedData.dll
+|   |       |   |       System.Text.Encodings.Web.dll
+|   |       |   |       System.Xml.ReaderWriter.dll
+|   |       |   |       
+|   |       |   \---netstandard2.0
+|   |       |           Azure.Core.dll
+|   |       |           Azure.Identity.Broker.dll
+|   |       |           Azure.Identity.dll
+|   |       |           Microsoft.Bcl.AsyncInterfaces.dll
+|   |       |           Microsoft.Identity.Client.Broker.dll
+|   |       |           Microsoft.Identity.Client.dll
+|   |       |           Microsoft.Identity.Client.Extensions.Msal.dll
+|   |       |           Microsoft.Identity.Client.NativeInterop.dll
+|   |       |           Microsoft.IdentityModel.Abstractions.dll
+|   |       |           msalruntime.dll
+|   |       |           msalruntime_arm64.dll
+|   |       |           msalruntime_x86.dll
+|   |       |           System.Buffers.dll
+|   |       |           System.ClientModel.dll
+|   |       |           System.Memory.Data.dll
+|   |       |           System.Memory.dll
+|   |       |           System.Net.Http.WinHttpHandler.dll
+|   |       |           System.Private.ServiceModel.dll
+|   |       |           System.Security.AccessControl.dll
+|   |       |           System.Security.Permissions.dll
+|   |       |           System.Security.Principal.Windows.dll
+|   |       |           System.ServiceModel.Primitives.dll
+|   |       |           System.Text.Json.dll
+|   |       |           System.Threading.Tasks.Extensions.dll
+|   |       |           
+|   |       +---PostImportScripts
+|   |       |       LoadAuthenticators.ps1
+|   |       |       
+|   |       \---StartupScripts
+|   |               AzError.ps1
+|   |               InitializeAssemblyResolver.ps1
+|   |               InitializePSStyle.ps1
+|   |               
+|   +---Az.Functions
+|   |   \---4.2.0
+|   |       |   .signature.p7s
+|   |       |   Az.Functions.psd1
+|   |       |   Az.Functions.psm1
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       \---Functions.Autorest
+|   |           |   Az.Functions.format.ps1xml
+|   |           |   Az.Functions.psm1
+|   |           |   
+|   |           +---bin
+|   |           |       Az.Functions.private.dll
+|   |           |       
+|   |           +---custom
+|   |           |   |   Az.Functions.custom.psm1
+|   |           |   |   Functions.format.ps1xml
+|   |           |   |   Functions.types.ps1xml
+|   |           |   |   Get-AzFunctionApp.ps1
+|   |           |   |   Get-AzFunctionAppAvailableLocation.ps1
+|   |           |   |   Get-AzFunctionAppPlan.ps1
+|   |           |   |   Get-AzFunctionAppSetting.ps1
+|   |           |   |   HelperFunctions.ps1
+|   |           |   |   New-AzFunctionApp.ps1
+|   |           |   |   New-AzFunctionAppPlan.ps1
+|   |           |   |   Remove-AzFunctionApp.ps1
+|   |           |   |   Remove-AzFunctionAppPlan.ps1
+|   |           |   |   Remove-AzFunctionAppSetting.ps1
+|   |           |   |   Restart-AzFunctionApp.ps1
+|   |           |   |   Start-AzFunctionApp.ps1
+|   |           |   |   Stop-AzFunctionApp.ps1
+|   |           |   |   Update-AzFunctionApp.ps1
+|   |           |   |   Update-AzFunctionAppPlan.ps1
+|   |           |   |   Update-AzFunctionAppSetting.ps1
+|   |           |   |   
+|   |           |   +---api
+|   |           |   |   \---Support
+|   |           |   |           AvailablePlanType.cs
+|   |           |   |           FunctionAppManagedServiceIdentityCreateType.cs
+|   |           |   |           FunctionAppManagedServiceIdentityUpdateType.cs
+|   |           |   |           PlanType.cs
+|   |           |   |           SkuType.cs
+|   |           |   |           WorkerType.cs
+|   |           |   |           
+|   |           |   +---Api20231201
+|   |           |   |       AppServicePlan.cs
+|   |           |   |       Site.cs
+|   |           |   |       
+|   |           |   \---FunctionsStack
+|   |           |           functionAppStacks.json
+|   |           |           
+|   |           +---exports
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           +---internal
+|   |           |       Az.Functions.internal.psm1
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           \---utils
+|   |                   Get-SubscriptionIdTestSafe.ps1
+|   |                   Unprotect-SecureString.ps1
+|   |                   
+|   +---Az.KeyVault
+|   |   \---6.3.1
+|   |       |   .signature.p7s
+|   |       |   Az.KeyVault.psd1
+|   |       |   Az.KeyVault.psm1
+|   |       |   Azure.Security.KeyVault.Administration.dll
+|   |       |   Azure.Security.KeyVault.Certificates.dll
+|   |       |   Azure.Security.KeyVault.Keys.dll
+|   |       |   BouncyCastle.Crypto.dll
+|   |       |   KeyVault.format.ps1xml
+|   |       |   keyvault.generated.format.ps1xml
+|   |       |   Microsoft.Azure.KeyVault.dll
+|   |       |   Microsoft.Azure.KeyVault.WebKey.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.KeyVault.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.KeyVault.dll-Help.xml
+|   |       |   Microsoft.Azure.PowerShell.KeyVault.Management.Sdk.dll
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       +---Az.KeyVault.Extension
+|   |       |       Az.KeyVault.Extension.psd1
+|   |       |       Az.KeyVault.Extension.psm1
+|   |       |       
+|   |       \---KeyVault.Autorest
+|   |           |   Az.KeyVault.format.ps1xml
+|   |           |   Az.KeyVault.psm1
+|   |           |   
+|   |           +---bin
+|   |           |       Az.KeyVault.private.dll
+|   |           |       
+|   |           +---custom
+|   |           |       Add-AzKeyVaultManagedHsmRegion.ps1
+|   |           |       Az.KeyVault.custom.psm1
+|   |           |       Get-ParameterForRegion.cs
+|   |           |       ManagedHsm.json.cs
+|   |           |       Remove-AzKeyVaultManagedHsmRegion.ps1
+|   |           |       
+|   |           +---exports
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           +---internal
+|   |           |       Az.KeyVault.internal.psm1
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           \---utils
+|   |                   Get-SubscriptionIdTestSafe.ps1
+|   |                   Unprotect-SecureString.ps1
+|   |                   
+|   +---Az.Storage
+|   |   \---8.1.0
+|   |       |   .signature.p7s
+|   |       |   Az.Storage.psd1
+|   |       |   Az.Storage.psm1
+|   |       |   Azure.Data.Tables.dll
+|   |       |   Azure.Storage.Blobs.dll
+|   |       |   Azure.Storage.Common.dll
+|   |       |   Azure.Storage.Files.DataLake.dll
+|   |       |   Azure.Storage.Files.Shares.dll
+|   |       |   Azure.Storage.Queues.dll
+|   |       |   Microsoft.Azure.Cosmos.Table.dll
+|   |       |   Microsoft.Azure.DocumentDB.Core.dll
+|   |       |   Microsoft.Azure.KeyVault.Core.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Storage.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Storage.dll-Help.xml
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Storage.Management.dll
+|   |       |   Microsoft.Azure.PowerShell.Cmdlets.Storage.Management.dll-Help.xml
+|   |       |   Microsoft.Azure.PowerShell.Storage.Common.dll
+|   |       |   Microsoft.Azure.PowerShell.Storage.Management.Sdk.dll
+|   |       |   Microsoft.Azure.Storage.Blob.dll
+|   |       |   Microsoft.Azure.Storage.Common.dll
+|   |       |   Microsoft.Azure.Storage.DataMovement.dll
+|   |       |   Microsoft.Azure.Storage.File.dll
+|   |       |   Microsoft.Azure.Storage.Queue.dll
+|   |       |   Microsoft.OData.Core.dll
+|   |       |   Microsoft.OData.Edm.dll
+|   |       |   Microsoft.Spatial.dll
+|   |       |   PSGetModuleInfo.xml
+|   |       |   Storage.format.ps1xml
+|   |       |   Storage.generated.format.ps1xml
+|   |       |   Storage.Management.format.ps1xml
+|   |       |   System.IO.Hashing.dll
+|   |       |   
+|   |       \---Storage.Autorest
+|   |           |   Az.Storage.format.ps1xml
+|   |           |   Az.Storage.psm1
+|   |           |   
+|   |           +---bin
+|   |           |       Az.Storage.private.dll
+|   |           |       
+|   |           +---custom
+|   |           |       Az.Storage.custom.psm1
+|   |           |       Start-AzStorageAccountMigration.ps1
+|   |           |       
+|   |           +---exports
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           +---internal
+|   |           |       Az.Storage.internal.psm1
+|   |           |       ProxyCmdletDefinitions.ps1
+|   |           |       
+|   |           \---utils
+|   |                   Get-SubscriptionIdTestSafe.ps1
+|   |                   Unprotect-SecureString.ps1
+|   |                   
+|   +---AzBobbyTables
+|   |   \---3.3.1
+|   |       |   AzBobbyTables.PS.dll
+|   |       |   AzBobbyTables.PS.pdb
+|   |       |   AzBobbyTables.psd1
+|   |       |   CHANGELOG.md
+|   |       |   LICENSE
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       +---dependencies
+|   |       |       AzBobbyTables.Core.dll
+|   |       |       AzBobbyTables.Core.pdb
+|   |       |       Azure.Core.dll
+|   |       |       Azure.Data.Tables.dll
+|   |       |       Microsoft.Bcl.AsyncInterfaces.dll
+|   |       |       Microsoft.VisualStudio.Threading.dll
+|   |       |       Microsoft.VisualStudio.Validation.dll
+|   |       |       Microsoft.Win32.Registry.dll
+|   |       |       System.Buffers.dll
+|   |       |       System.ClientModel.dll
+|   |       |       System.Diagnostics.DiagnosticSource.dll
+|   |       |       System.Linq.Async.dll
+|   |       |       System.Memory.Data.dll
+|   |       |       System.Memory.dll
+|   |       |       System.Numerics.Vectors.dll
+|   |       |       System.Runtime.CompilerServices.Unsafe.dll
+|   |       |       System.Security.AccessControl.dll
+|   |       |       System.Security.Principal.Windows.dll
+|   |       |       System.Text.Encodings.Web.dll
+|   |       |       System.Text.Json.dll
+|   |       |       System.Threading.Tasks.Extensions.dll
+|   |       |       
+|   |       \---en-US
+|   |               AzBobbyTables.PS.dll-Help.xml
+|   |               
+|   +---AzureFunctions.PowerShell.Durable.SDK
+|   |   \---1.1.0
+|   |       |   AzureFunctions.PowerShell.Durable.SDK.dll
+|   |       |   AzureFunctions.PowerShell.Durable.SDK.pdb
+|   |       |   AzureFunctions.PowerShell.Durable.SDK.psd1
+|   |       |   AzureFunctions.PowerShell.Durable.SDK.psm1
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       +---Dependencies
+|   |       |       Castle.Core.dll
+|   |       |       DurableEngine.dll
+|   |       |       DurableEngine.pdb
+|   |       |       DurableTask.Core.dll
+|   |       |       Microsoft.Bcl.AsyncInterfaces.dll
+|   |       |       Microsoft.DurableTask.Abstractions.dll
+|   |       |       Microsoft.DurableTask.Client.dll
+|   |       |       Microsoft.DurableTask.Worker.dll
+|   |       |       Microsoft.Extensions.Configuration.Abstractions.dll
+|   |       |       Microsoft.Extensions.DependencyInjection.Abstractions.dll
+|   |       |       Microsoft.Extensions.FileProviders.Abstractions.dll
+|   |       |       Microsoft.Extensions.Hosting.Abstractions.dll
+|   |       |       Microsoft.Extensions.Logging.Abstractions.dll
+|   |       |       Microsoft.Extensions.Options.dll
+|   |       |       Microsoft.Extensions.Primitives.dll
+|   |       |       Newtonsoft.Json.dll
+|   |       |       System.Diagnostics.EventLog.dll
+|   |       |       System.Reactive.Core.dll
+|   |       |       System.Reactive.dll
+|   |       |       System.Reactive.Interfaces.dll
+|   |       |       System.Reactive.Linq.dll
+|   |       |       System.Reactive.PlatformServices.dll
+|   |       |       System.Reactive.Providers.dll
+|   |       |       
+|   |       \---_manifest
+|   |           |   manifest.json
+|   |           |   manifest.json.sha256
+|   |           |   
+|   |           \---spdx_2.2
+|   |                   manifest.spdx.json
+|   |                   manifest.spdx.json.sha256
+|   |                   
+|   +---CIPPCore
+|   |   |   CippCore.psd1
+|   |   |   CIPPCore.psm1
+|   |   |   
+|   |   +---lib
+|   |   |       NCrontab.Advanced.dll
+|   |   |       
+|   |   +---Private
+|   |   |       Convert-QuarantinePermissionsValue.ps1
+|   |   |       Get-ExoOnlineStringBytes.ps1
+|   |   |       Get-StringHash.ps1
+|   |   |       
+|   |   \---Public
+|   |       |   Add-CIPPAlias.ps1
+|   |       |   Add-CIPPApplicationPermission.ps1
+|   |       |   Add-CIPPAzDataTableEntity.ps1
+|   |       |   Add-CIPPBPAField.ps1
+|   |       |   Add-CIPPDelegatedPermission.ps1
+|   |       |   Add-CIPPGDAPRoleTemplate.ps1
+|   |       |   Add-CIPPGroupMember.ps1
+|   |       |   Add-CIPPScheduledTask.ps1
+|   |       |   AdditionalPermissions.json
+|   |       |   Assert-CippVersion.ps1
+|   |       |   blank.json
+|   |       |   Clear-CippDurables.ps1
+|   |       |   Clear-CIPPImmutableId.ps1
+|   |       |   Compare-CIPPIntuneObject.ps1
+|   |       |   ConversionTable.csv
+|   |       |   Get-CIPPAuthentication.ps1
+|   |       |   Get-CIPPAzDatatableEntity.ps1
+|   |       |   Get-CIPPBackup.ps1
+|   |       |   Get-CIPPBitlockerKey.ps1
+|   |       |   Get-CippCustomDataAttributes.ps1
+|   |       |   Get-CIPPDomainAnalyser.ps1
+|   |       |   Get-CIPPDrift.ps1
+|   |       |   Get-CIPPGeoIPLocation.ps1
+|   |       |   Get-CIPPIntunePolicy.ps1
+|   |       |   Get-CIPPLAPSPassword.ps1
+|   |       |   Get-CIPPLicenseOverview.ps1
+|   |       |   Get-CIPPMFAState.ps1
+|   |       |   Get-CIPPOutOfOffice.ps1
+|   |       |   Get-CIPPPartnerAzSubscriptions.ps1
+|   |       |   Get-CIPPPerUserMFA.ps1
+|   |       |   Get-CIPPSchemaExtensions.ps1
+|   |       |   Get-CIPPSPOTenant.ps1
+|   |       |   Get-CIPPTenantCapabilities.ps1
+|   |       |   Get-CIPPTextReplacement.ps1
+|   |       |   Get-CIPPTimerFunctions.ps1
+|   |       |   Get-SlackAlertBlocks.ps1
+|   |       |   Get-TenantIdFromSubscriptionId.ps1
+|   |       |   Get-TenantProperties.ps1
+|   |       |   Invoke-RemoveQueuedApp.ps1
+|   |       |   New-CIPPAlertTemplate.ps1
+|   |       |   New-CIPPApplicationCopy.ps1
+|   |       |   New-CIPPBackup.ps1
+|   |       |   New-CIPPBackupTask.ps1
+|   |       |   New-CIPPCAPolicy.ps1
+|   |       |   New-CIPPCATemplate.ps1
+|   |       |   New-CIPPDeviceAction.ps1
+|   |       |   New-CIPPIntuneTemplate.ps1
+|   |       |   New-CIPPOneDriveShortCut.ps1
+|   |       |   New-CIPPRestore.ps1
+|   |       |   New-CIPPRestoreTask.ps1
+|   |       |   New-CIPPSharepointSite.ps1
+|   |       |   New-CIPPTAP.ps1
+|   |       |   New-CIPPTemplateRun.ps1
+|   |       |   New-CippUser.ps1
+|   |       |   New-CIPPUserTask.ps1
+|   |       |   OrganizationManagementRoles.json
+|   |       |   PermissionsTranslator.json
+|   |       |   Remove-CIPPCalendarInvites.ps1
+|   |       |   Remove-CIPPGroup.ps1
+|   |       |   Remove-CIPPGroupMember.ps1
+|   |       |   Remove-CIPPGroups.ps1
+|   |       |   Remove-CIPPLicense.ps1
+|   |       |   Remove-CIPPMailboxPermissions.ps1
+|   |       |   Remove-CIPPMailboxRule.ps1
+|   |       |   Remove-CIPPMobileDevice.ps1
+|   |       |   Remove-CIPPUser.ps1
+|   |       |   Remove-CIPPUserMFA.ps1
+|   |       |   Request-CIPPSPOPersonalSite.ps1
+|   |       |   Revoke-CIPPSessions.ps1
+|   |       |   SAMManifest.json
+|   |       |   Send-CIPPAlert.ps1
+|   |       |   Set-CIPPAlwaysShowFrom.ps1
+|   |       |   Set-CIPPAssignedApplication.ps1
+|   |       |   Set-CIPPAssignedPolicy.ps1
+|   |       |   Set-CIPPAuthenticationPolicy.ps1
+|   |       |   Set-CIPPCAExclusion.ps1
+|   |       |   Set-CIPPCalendarPermission.ps1
+|   |       |   Set-CIPPCAPolicyServiceException.ps1
+|   |       |   Set-CIPPCopyGroupMembers.ps1
+|   |       |   Set-CIPPCPVConsent.ps1
+|   |       |   Set-CIPPDefaultAPDeploymentProfile.ps1
+|   |       |   Set-CIPPDefaultAPEnrollment.ps1
+|   |       |   Set-CIPPDeviceState.ps1
+|   |       |   Set-CIPPDriftDeviation.ps1
+|   |       |   Set-CIPPForwarding.ps1
+|   |       |   Set-CIPPGDAPAutoExtend.ps1
+|   |       |   Set-CIPPGDAPInviteGroups.ps1
+|   |       |   Set-CIPPGraphSubscription.ps1
+|   |       |   Set-CIPPGroupAuthentication.ps1
+|   |       |   Set-CIPPGroupGAL.ps1
+|   |       |   Set-CIPPHideFromGAL.ps1
+|   |       |   Set-CIPPIntunePolicy.ps1
+|   |       |   Set-CIPPIntuneTemplate.ps1
+|   |       |   Set-CIPPMailboxAccess.ps1
+|   |       |   Set-CIPPMailboxArchive.ps1
+|   |       |   Set-CIPPMailboxLocale.ps1
+|   |       |   Set-CIPPMailboxRule.ps1
+|   |       |   Set-CIPPMailboxType.ps1
+|   |       |   Set-CIPPManager.ps1
+|   |       |   Set-CippMaxEmailSize.ps1
+|   |       |   Set-CIPPMessageCopy.ps1
+|   |       |   Set-CIPPMobileDevice.ps1
+|   |       |   Set-CIPPNamedLocation.ps1
+|   |       |   Set-CIPPNotificationConfig.ps1
+|   |       |   Set-CIPPOutOfoffice.ps1
+|   |       |   Set-CIPPPerUserMFA.ps1
+|   |       |   Set-CIPPProfilePhoto.ps1
+|   |       |   Set-CIPPQuarantinePolicy.ps1
+|   |       |   Set-CIPPResetPassword.ps1
+|   |       |   Set-CIPPSAMAdminRoles.ps1
+|   |       |   Set-CIPPSharePointPerms.ps1
+|   |       |   Set-CIPPSherwebLicense.ps1
+|   |       |   Set-CIPPSignature.ps1
+|   |       |   Set-CIPPSignInState.ps1
+|   |       |   Set-CIPPSponsor.ps1
+|   |       |   Set-CIPPSPOTenant.ps1
+|   |       |   Set-CIPPStandardsCompareField.ps1
+|   |       |   Set-CIPPUserJITAdmin.ps1
+|   |       |   Set-CIPPUserJITAdminProperties.ps1
+|   |       |   Set-CIPPUserLicense.ps1
+|   |       |   Set-CIPPUserSchemaProperties.ps1
+|   |       |   Test-CIPPAccessPermissions.ps1
+|   |       |   Test-CIPPAccessTenant.ps1
+|   |       |   Test-CIPPGDAPRelationships.ps1
+|   |       |   Test-CIPPRerun.ps1
+|   |       |   
+|   |       +---Alerts
+|   |       |       Get-CIPPAlertAdminPassword.ps1
+|   |       |       Get-CIPPAlertApnCertExpiry.ps1
+|   |       |       Get-CIPPAlertAppCertificateExpiry.ps1
+|   |       |       Get-CIPPAlertAppleTerms.ps1
+|   |       |       Get-CIPPAlertAppSecretExpiry.ps1
+|   |       |       Get-CippAlertBreachAlert.ps1
+|   |       |       Get-CIPPAlertDefenderIncidents.ps1
+|   |       |       Get-CIPPAlertDefenderMalware.ps1
+|   |       |       Get-CIPPAlertDefenderStatus.ps1
+|   |       |       Get-CIPPAlertDepTokenExpiry.ps1
+|   |       |       Get-CIPPAlertDeviceCompliance.ps1
+|   |       |       Get-CIPPAlertEntraConnectSyncStatus.ps1
+|   |       |       Get-CIPPAlertEntraLicenseUtilization.ps1
+|   |       |       Get-CIPPAlertExpiringLicenses.ps1
+|   |       |       Get-CIPPAlertGlobalAdminNoAltEmail.ps1
+|   |       |       Get-CIPPAlertHuntressRogueApps.ps1
+|   |       |       Get-CIPPAlertInactiveLicensedUsers.ps1
+|   |       |       Get-CIPPAlertLicenseAssignmentErrors.ps1
+|   |       |       Get-CIPPAlertLowDomainScore.ps1
+|   |       |       Get-CIPPAlertLowTenantAlignment.ps1
+|   |       |       Get-CIPPAlertMFAAdmins.ps1
+|   |       |       Get-CIPPAlertMFAAlertUsers.ps1
+|   |       |       Get-CIPPAlertNewAppApproval.ps1
+|   |       |       Get-CIPPAlertNewRiskyUsers.ps1
+|   |       |       Get-CIPPAlertNewRole.ps1
+|   |       |       Get-CIPPAlertNoCAConfig.ps1
+|   |       |       Get-CIPPAlertOnedriveQuota.ps1
+|   |       |       Get-CIPPAlertOverusedLicenses.ps1
+|   |       |       Get-CIPPAlertQuotaUsed.ps1
+|   |       |       Get-CIPPAlertSecDefaultsUpsell.ps1
+|   |       |       Get-CIPPAlertSharepointQuota.ps1
+|   |       |       Get-CIPPAlertSoftDeletedMailboxes.ps1
+|   |       |       Get-CIPPAlertTERRL.ps1
+|   |       |       Get-CIPPAlertUnusedLicenses.ps1
+|   |       |       Get-CIPPAlertVppTokenExpiry.ps1
+|   |       |       Get-CIPPAlertVulnerabilities.ps1
+|   |       |       
+|   |       +---AuditLogs
+|   |       |       Get-CippAuditLogSearches.ps1
+|   |       |       Get-CippAuditLogSearchResults.ps1
+|   |       |       Get-CippLastAuditLogSearch.ps1
+|   |       |       New-CippAuditLogSearch.ps1
+|   |       |       New-CIPPAuditLogSearchResultsCache.ps1
+|   |       |       Remove-CippAuditLogSearch.ps1
+|   |       |       
+|   |       +---Authentication
+|   |       |       Get-CIPPAccessRole.ps1
+|   |       |       Get-CippAllowedPermissions.ps1
+|   |       |       Get-CippApiAuth.ps1
+|   |       |       Get-CippApiClient.ps1
+|   |       |       Get-CIPPHttpFunctions.ps1
+|   |       |       Get-CIPPRolePermissions.ps1
+|   |       |       New-CIPPAPIConfig.ps1
+|   |       |       Set-CIPPAccessRole.ps1
+|   |       |       Set-CippApiAuth.ps1
+|   |       |       Test-CIPPAccess.ps1
+|   |       |       Test-CIPPAccessUserRole.ps1
+|   |       |       Test-IpInRange.ps1
+|   |       |       
+|   |       +---CippQueue
+|   |       |       Invoke-ListCippQueue.ps1
+|   |       |       Invoke-RemoveCippQueue.ps1
+|   |       |       New-CippQueueEntry.ps1
+|   |       |       Set-CippQueueTask.ps1
+|   |       |       Update-CippQueueEntry.ps1
+|   |       |       
+|   |       +---CustomData
+|   |       |       Invoke-CustomDataSync.ps1
+|   |       |       
+|   |       +---DeltaQueries
+|   |       |       New-GraphDeltaQuery.ps1
+|   |       |       
+|   |       +---Entrypoints
+|   |       |   |   Invoke-ExecBreachSearch.ps1
+|   |       |   |   Invoke-ExecCSPLicense.ps1
+|   |       |   |   Invoke-ExecExtensionNinjaOneQueue.ps1
+|   |       |   |   Invoke-ExecListAppId.ps1
+|   |       |   |   Invoke-ExecSchedulerBillingRun.ps1
+|   |       |   |   Invoke-ExecSendOrgMessage.ps1
+|   |       |   |   Invoke-ExecUniversalSearch.ps1
+|   |       |   |   Invoke-ExecUserSettings.ps1
+|   |       |   |   Invoke-ListAllTenantDeviceCompliance.ps1
+|   |       |   |   Invoke-ListAppStatus.ps1
+|   |       |   |   Invoke-ListBreachesAccount.ps1
+|   |       |   |   Invoke-ListBreachesTenant.ps1
+|   |       |   |   Invoke-ListCSPLicenses.ps1
+|   |       |   |   Invoke-ListCSPsku.ps1
+|   |       |   |   Invoke-ListDeviceDetails.ps1
+|   |       |   |   Invoke-ListExtensionsConfig.ps1
+|   |       |   |   Invoke-ListExternalTenantInfo.ps1
+|   |       |   |   Invoke-ListFunctionParameters.ps1
+|   |       |   |   Invoke-ListFunctionStats.ps1
+|   |       |   |   Invoke-ListGenericTestFunction.ps1
+|   |       |   |   Invoke-ListGraphExplorerPresets.ps1
+|   |       |   |   Invoke-ListHaloClients.ps1
+|   |       |   |   Invoke-ListIntuneIntents.ps1
+|   |       |   |   Invoke-ListIPWhitelist.ps1
+|   |       |   |   Invoke-ListKnownIPDb.ps1
+|   |       |   |   Invoke-ListLogs.ps1
+|   |       |   |   Invoke-ListNamedLocations.ps1
+|   |       |   |   Invoke-ListNotificationConfig.ps1
+|   |       |   |   Invoke-ListOrg.ps1
+|   |       |   |   Invoke-ListPartnerRelationships.ps1
+|   |       |   |   Invoke-ListPendingWebhooks.ps1
+|   |       |   |   Invoke-ListPotentialApps.ps1
+|   |       |   |   Invoke-ListRoles.ps1
+|   |       |   |   Invoke-ListTenantAllowBlockList.ps1
+|   |       |   |   Invoke-PublicPhishingCheck.ps1
+|   |       |   |   Invoke-RemoveTenantAllowBlockList.ps1
+|   |       |   |   
+|   |       |   +---Activity Triggers
+|   |       |   |   |   Push-CIPPAccessTenantTest.ps1
+|   |       |   |   |   Push-ExecAddMultiTenantApp.ps1
+|   |       |   |   |   Push-ExecAlertsListAllTenants.ps1
+|   |       |   |   |   Push-ExecAppApprovalTemplate.ps1
+|   |       |   |   |   Push-ExecApplicationCopy.ps1
+|   |       |   |   |   Push-ExecGDAPInviteQueue.ps1
+|   |       |   |   |   Push-ExecIncidentsListAllTenants.ps1
+|   |       |   |   |   Push-ExecJITAdminListAllTenants.ps1
+|   |       |   |   |   Push-ExecOffboardingMailboxPermissions.ps1
+|   |       |   |   |   Push-ExecOnboardTenantQueue.ps1
+|   |       |   |   |   Push-ExecScheduledCommand.ps1
+|   |       |   |   |   Push-GetPendingWebhooks.ps1
+|   |       |   |   |   Push-GetTenants.ps1
+|   |       |   |   |   Push-ListBasicAuthAllTenants.ps1
+|   |       |   |   |   Push-ListLicensesQueue.ps1
+|   |       |   |   |   Push-ListMailboxRulesQueue.ps1
+|   |       |   |   |   Push-ListMailQuarantineAllTenants.ps1
+|   |       |   |   |   Push-ListMFAUsersQueue.ps1
+|   |       |   |   |   Push-ListTransportRulesAllTenants.ps1
+|   |       |   |   |   Push-SchedulerCIPPNotifications.ps1
+|   |       |   |   |   Push-UpdatePermissionsQueue.ps1
+|   |       |   |   |   Push-UpdateTenants.ps1
+|   |       |   |   |   Push-Z_CIPPQueueTrigger.ps1
+|   |       |   |   |   
+|   |       |   |   +---Applications
+|   |       |   |   |       Push-GetApplicationQueue.ps1
+|   |       |   |   |       Push-UploadApplication.ps1
+|   |       |   |   |       
+|   |       |   |   +---BEC
+|   |       |   |   |       Push-BECRun.ps1
+|   |       |   |   |       
+|   |       |   |   +---BPA
+|   |       |   |   |       Push-BPACollectData.ps1
+|   |       |   |   |       
+|   |       |   |   +---Domain Analyser
+|   |       |   |   |       Push-DomainAnalyserDomain.ps1
+|   |       |   |   |       Push-DomainAnalyserTenant.ps1
+|   |       |   |   |       Push-GetTenantDomains.ps1
+|   |       |   |   |       
+|   |       |   |   +---Graph Requests
+|   |       |   |   |       Push-ListGraphRequestQueue.ps1
+|   |       |   |   |       
+|   |       |   |   +---Maintenance
+|   |       |   |   |       Push-TableCleanupTask.ps1
+|   |       |   |   |       
+|   |       |   |   +---Standards
+|   |       |   |   |       Push-CIPPDriftManagement.ps1
+|   |       |   |   |       Push-CIPPStandard.ps1
+|   |       |   |   |       Push-GetStandards.ps1
+|   |       |   |   |       
+|   |       |   |   \---Webhooks
+|   |       |   |           Push-AuditLogBundleProcessing.ps1
+|   |       |   |           Push-AuditLogTenantDownload.ps1
+|   |       |   |           Push-AuditLogTenantProcess.ps1
+|   |       |   |           Push-PublicWebhookProcess.ps1
+|   |       |   |           Push-Schedulerwebhookcreation.ps1
+|   |       |   |           
+|   |       |   +---HTTP Functions
+|   |       |   |   +---CIPP
+|   |       |   |   |   +---Core
+|   |       |   |   |   |       Invoke-ExecAddAlert.ps1
+|   |       |   |   |   |       Invoke-ExecAzBobbyTables.ps1
+|   |       |   |   |   |       Invoke-ExecCippFunction.ps1
+|   |       |   |   |   |       Invoke-ExecCPVRefresh.ps1
+|   |       |   |   |   |       Invoke-ExecDurableFunctions.ps1
+|   |       |   |   |   |       Invoke-ExecEditTemplate.ps1
+|   |       |   |   |   |       Invoke-ExecGeoIPLookup.ps1
+|   |       |   |   |   |       Invoke-ExecListBackup.ps1
+|   |       |   |   |   |       Invoke-ExecPartnerWebhook.ps1
+|   |       |   |   |   |       Invoke-ExecServicePrincipals.ps1
+|   |       |   |   |   |       Invoke-ExecSetCIPPAutoBackup.ps1
+|   |       |   |   |   |       Invoke-GetCippAlerts.ps1
+|   |       |   |   |   |       Invoke-GetVersion.ps1
+|   |       |   |   |   |       Invoke-ListAdminPortalLicenses.ps1
+|   |       |   |   |   |       Invoke-ListApiTest.ps1
+|   |       |   |   |   |       Invoke-ListDirectoryObjects.ps1
+|   |       |   |   |   |       invoke-ListEmptyResults.ps1
+|   |       |   |   |   |       Invoke-ListExtensionCacheData.ps1
+|   |       |   |   |   |       Invoke-ListGraphBulkRequest.ps1
+|   |       |   |   |   |       Invoke-ListGraphRequest.ps1
+|   |       |   |   |   |       Invoke-PublicPing.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Extensions
+|   |       |   |   |   |       Invoke-ExecExtensionMapping.ps1
+|   |       |   |   |   |       Invoke-ExecExtensionsConfig.ps1
+|   |       |   |   |   |       Invoke-ExecExtensionSync.ps1
+|   |       |   |   |   |       Invoke-ExecExtensionTest.ps1
+|   |       |   |   |   |       Invoke-ListExtensionSync.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Scheduler
+|   |       |   |   |   |       Invoke-AddScheduledItem.ps1
+|   |       |   |   |   |       Invoke-ListScheduledItemDetails.ps1
+|   |       |   |   |   |       Invoke-ListScheduledItems.ps1
+|   |       |   |   |   |       Invoke-RemoveScheduledItem.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Settings
+|   |       |   |   |   |       Invoke-ExecAccessChecks.ps1
+|   |       |   |   |   |       Invoke-ExecAddTrustedIP.ps1
+|   |       |   |   |   |       Invoke-ExecApiClient.ps1
+|   |       |   |   |   |       Invoke-ExecAPIPermissionList.ps1
+|   |       |   |   |   |       Invoke-ExecBackendURLs.ps1
+|   |       |   |   |   |       Invoke-ExecBrandingSettings.ps1
+|   |       |   |   |   |       Invoke-ExecCippReplacemap.ps1
+|   |       |   |   |   |       Invoke-ExecCPVPermissions.ps1
+|   |       |   |   |   |       Invoke-ExecCustomData.ps1
+|   |       |   |   |   |       Invoke-ExecCustomRole.ps1
+|   |       |   |   |   |       Invoke-ExecDnsConfig.ps1
+|   |       |   |   |   |       Invoke-ExecExchangeRoleRepair.ps1
+|   |       |   |   |   |       Invoke-ExecExcludeLicenses.ps1
+|   |       |   |   |   |       Invoke-ExecExcludeTenant.ps1
+|   |       |   |   |   |       Invoke-ExecMaintenanceScripts.ps1
+|   |       |   |   |   |       Invoke-ExecNotificationConfig.ps1
+|   |       |   |   |   |       Invoke-ExecOffloadFunctions.ps1
+|   |       |   |   |   |       Invoke-ExecPartnerMode.ps1
+|   |       |   |   |   |       Invoke-ExecPasswordConfig.ps1
+|   |       |   |   |   |       Invoke-ExecPermissionRepair.ps1
+|   |       |   |   |   |       Invoke-ExecRemoveTenant.ps1
+|   |       |   |   |   |       Invoke-ExecRestoreBackup.ps1
+|   |       |   |   |   |       Invoke-ExecRunBackup.ps1
+|   |       |   |   |   |       Invoke-ExecSAMAppPermissions.ps1
+|   |       |   |   |   |       Invoke-ExecSAMRoles.ps1
+|   |       |   |   |   |       Invoke-ExecTenantGroup.ps1
+|   |       |   |   |   |       Invoke-ExecWebhookSubscriptions.ps1
+|   |       |   |   |   |       Invoke-ListCustomRole.ps1
+|   |       |   |   |   |       Invoke-ListTenantGroups.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   \---Setup
+|   |       |   |   |           Invoke-ExecAddTenant.ps1
+|   |       |   |   |           Invoke-ExecCombinedSetup.ps1
+|   |       |   |   |           Invoke-ExecCreateSAMApp.ps1
+|   |       |   |   |           Invoke-ExecDeviceCodeLogon.ps1
+|   |       |   |   |           Invoke-ExecSAMSetup.ps1
+|   |       |   |   |           Invoke-ExecTokenExchange.ps1
+|   |       |   |   |           Invoke-ExecUpdateRefreshToken.ps1
+|   |       |   |   |           
+|   |       |   |   +---Email-Exchange
+|   |       |   |   |   +---Administration
+|   |       |   |   |   |   |   Invoke-AddSharedMailbox.ps1
+|   |       |   |   |   |   |   Invoke-ExecConvertMailbox.ps1
+|   |       |   |   |   |   |   Invoke-ExecCopyForSent.ps1
+|   |       |   |   |   |   |   Invoke-ExecEditCalendarPermissions.ps1
+|   |       |   |   |   |   |   Invoke-ExecEditMailboxPermissions.ps1
+|   |       |   |   |   |   |   Invoke-ExecEmailForward.ps1
+|   |       |   |   |   |   |   Invoke-ExecEnableArchive.ps1
+|   |       |   |   |   |   |   Invoke-ExecEnableAutoExpandingArchive.ps1
+|   |       |   |   |   |   |   Invoke-ExecGroupsDelete.ps1
+|   |       |   |   |   |   |   Invoke-ExecGroupsDeliveryManagement.ps1
+|   |       |   |   |   |   |   Invoke-ExecGroupsHideFromGAL.ps1
+|   |       |   |   |   |   |   Invoke-ExecHideFromGAL.ps1
+|   |       |   |   |   |   |   Invoke-ExecMailboxMobileDevices.ps1
+|   |       |   |   |   |   |   Invoke-ExecModifyCalPerms.ps1
+|   |       |   |   |   |   |   Invoke-ExecModifyMBPerms.ps1
+|   |       |   |   |   |   |   Invoke-ExecRemoveMailboxRule.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetCalendarProcessing.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetLitigationHold.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetMailboxEmailSize.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetMailboxLocale.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetMailboxQuota.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetMailboxRule.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetOoO.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetRecipientLimits.ps1
+|   |       |   |   |   |   |   Invoke-ExecSetRetentionHold.ps1
+|   |       |   |   |   |   |   Invoke-ExecStartManagedFolderAssistant.ps1
+|   |       |   |   |   |   |   Invoke-ListCalendarPermissions.ps1
+|   |       |   |   |   |   |   Invoke-ListMailboxes.ps1
+|   |       |   |   |   |   |   Invoke-ListMailboxMobileDevices.ps1
+|   |       |   |   |   |   |   Invoke-ListmailboxPermissions.ps1
+|   |       |   |   |   |   |   Invoke-ListMailboxRules.ps1
+|   |       |   |   |   |   |   Invoke-ListOoO.ps1
+|   |       |   |   |   |   |   Invoke-ListSharedMailboxStatistics.ps1
+|   |       |   |   |   |   |   
+|   |       |   |   |   |   \---Contacts
+|   |       |   |   |   |           Invoke-AddContact.ps1
+|   |       |   |   |   |           Invoke-AddContactTemplates.ps1
+|   |       |   |   |   |           Invoke-DeployContactTemplates.ps1
+|   |       |   |   |   |           Invoke-EditContact.ps1
+|   |       |   |   |   |           Invoke-EditContactTemplates.ps1
+|   |       |   |   |   |           Invoke-ListContacts.ps1
+|   |       |   |   |   |           Invoke-ListContactTemplates.ps1
+|   |       |   |   |   |           Invoke-RemoveContact.ps1
+|   |       |   |   |   |           Invoke-RemoveContactTemplates.ps1
+|   |       |   |   |   |           
+|   |       |   |   |   +---Reports
+|   |       |   |   |   |       Invoke-ListAntiPhishingFilters.ps1
+|   |       |   |   |   |       Invoke-ListGlobalAddressList.ps1
+|   |       |   |   |   |       Invoke-ListMailboxCAS.ps1
+|   |       |   |   |   |       Invoke-ListMalwareFilters.ps1
+|   |       |   |   |   |       Invoke-ListSafeAttachmentsFilters.ps1
+|   |       |   |   |   |       Invoke-ListSharedMailboxAccountEnabled.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Resources
+|   |       |   |   |   |       Invoke-AddEquipmentMailbox.ps1
+|   |       |   |   |   |       Invoke-AddRoomList.ps1
+|   |       |   |   |   |       Invoke-AddRoomMailbox.ps1
+|   |       |   |   |   |       Invoke-EditEquipmentMailbox.ps1
+|   |       |   |   |   |       Invoke-EditRoomList.ps1
+|   |       |   |   |   |       Invoke-EditRoomMailbox.ps1
+|   |       |   |   |   |       Invoke-ListEquipment.ps1
+|   |       |   |   |   |       Invoke-ListRoomLists.ps1
+|   |       |   |   |   |       Invoke-ListRooms.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Spamfilter
+|   |       |   |   |   |       Invoke-AddQuarantinePolicy.ps1
+|   |       |   |   |   |       Invoke-AddSpamFilter.ps1
+|   |       |   |   |   |       Invoke-AddSpamFilterTemplate.ps1
+|   |       |   |   |   |       Invoke-AddTenantAllowBlockList.ps1
+|   |       |   |   |   |       Invoke-EditAntiPhishingFilter.ps1
+|   |       |   |   |   |       Invoke-EditMalwareFilter.ps1
+|   |       |   |   |   |       Invoke-EditQuarantinePolicy.ps1
+|   |       |   |   |   |       Invoke-EditSafeAttachmentsFilter.ps1
+|   |       |   |   |   |       Invoke-EditSpamFilter.ps1
+|   |       |   |   |   |       Invoke-ExecQuarantineManagement.ps1
+|   |       |   |   |   |       Invoke-ListConnectionFilter.ps1
+|   |       |   |   |   |       Invoke-ListConnectionFilterTemplates.ps1
+|   |       |   |   |   |       Invoke-ListMailQuarantine.ps1
+|   |       |   |   |   |       Invoke-ListMailQuarantineMessage.ps1
+|   |       |   |   |   |       Invoke-ListQuarantinePolicy.ps1
+|   |       |   |   |   |       Invoke-ListSpamfilter.ps1
+|   |       |   |   |   |       Invoke-ListSpamFilterTemplates.ps1
+|   |       |   |   |   |       Invoke-RemoveConnectionfilterTemplate.ps1
+|   |       |   |   |   |       Invoke-RemoveQuarantinePolicy.ps1
+|   |       |   |   |   |       Invoke-RemoveSpamfilter.ps1
+|   |       |   |   |   |       Invoke-RemoveSpamfilterTemplate.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Tools
+|   |       |   |   |   |       Invoke-ExecMailboxRestore.ps1
+|   |       |   |   |   |       Invoke-ExecMailTest.ps1
+|   |       |   |   |   |       Invoke-ListExoRequest.ps1
+|   |       |   |   |   |       Invoke-ListMailboxRestores.ps1
+|   |       |   |   |   |       Invoke-ListMessageTrace.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   \---Transport
+|   |       |   |   |           Invoke-AddConnectionFilter.ps1
+|   |       |   |   |           Invoke-AddConnectionFilterTemplate.ps1
+|   |       |   |   |           Invoke-AddExConnector.ps1
+|   |       |   |   |           Invoke-AddExConnectorTemplate.ps1
+|   |       |   |   |           Invoke-AddTransportRule.ps1
+|   |       |   |   |           Invoke-AddTransportTemplate.ps1
+|   |       |   |   |           Invoke-EditExConnector.ps1
+|   |       |   |   |           Invoke-EditTransportRule.ps1
+|   |       |   |   |           Invoke-ListExchangeConnectors.ps1
+|   |       |   |   |           Invoke-ListExConnectorTemplates.ps1
+|   |       |   |   |           Invoke-ListTransportRules.ps1
+|   |       |   |   |           Invoke-ListTransportRulesTemplates.ps1
+|   |       |   |   |           Invoke-RemoveExConnector.ps1
+|   |       |   |   |           Invoke-RemoveExConnectorTemplate.ps1
+|   |       |   |   |           Invoke-RemoveTransportRule.ps1
+|   |       |   |   |           Invoke-RemoveTransportRuleTemplate.ps1
+|   |       |   |   |           
+|   |       |   |   +---Endpoint
+|   |       |   |   |   +---Applications
+|   |       |   |   |   |       Invoke-AddChocoApp.ps1
+|   |       |   |   |   |       Invoke-AddMSPApp.ps1
+|   |       |   |   |   |       Invoke-AddOfficeApp.ps1
+|   |       |   |   |   |       Invoke-AddStoreApp.ps1
+|   |       |   |   |   |       Invoke-ExecAppUpload.ps1
+|   |       |   |   |   |       Invoke-ExecAssignApp.ps1
+|   |       |   |   |   |       Invoke-ListApplicationQueue.ps1
+|   |       |   |   |   |       Invoke-ListApps.ps1
+|   |       |   |   |   |       Invoke-ListAppsRepository.ps1
+|   |       |   |   |   |       Invoke-RemoveApp.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Autopilot
+|   |       |   |   |   |       Invoke-AddAPDevice.ps1
+|   |       |   |   |   |       Invoke-AddAutopilotConfig.ps1
+|   |       |   |   |   |       Invoke-AddEnrollment.ps1
+|   |       |   |   |   |       Invoke-ExecAssignAPDevice.ps1
+|   |       |   |   |   |       Invoke-ExecRenameAPDevice.ps1
+|   |       |   |   |   |       Invoke-ExecSetAPDeviceGroupTag.ps1
+|   |       |   |   |   |       Invoke-ExecSyncAPDevices.ps1
+|   |       |   |   |   |       Invoke-ListAPDevices.ps1
+|   |       |   |   |   |       Invoke-ListAutopilotconfig.ps1
+|   |       |   |   |   |       Invoke-RemoveAPDevice.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---MEM
+|   |       |   |   |   |       Invoke-AddDefenderDeployment.ps1
+|   |       |   |   |   |       Invoke-AddIntuneTemplate.ps1
+|   |       |   |   |   |       Invoke-AddPolicy.ps1
+|   |       |   |   |   |       Invoke-EditIntunePolicy.ps1
+|   |       |   |   |   |       Invoke-EditIntuneScript.ps1
+|   |       |   |   |   |       Invoke-EditPolicy.ps1
+|   |       |   |   |   |       Invoke-ExecAssignPolicy.ps1
+|   |       |   |   |   |       Invoke-ExecDeviceAction.ps1
+|   |       |   |   |   |       Invoke-ExecGetLocalAdminPassword.ps1
+|   |       |   |   |   |       Invoke-ExecGetRecoveryKey.ps1
+|   |       |   |   |   |       Invoke-ListDefenderState.ps1
+|   |       |   |   |   |       Invoke-ListDefenderTVM.ps1
+|   |       |   |   |   |       Invoke-ListIntunePolicy.ps1
+|   |       |   |   |   |       Invoke-ListIntuneScript.ps1
+|   |       |   |   |   |       Invoke-ListIntuneTemplates.ps1
+|   |       |   |   |   |       Invoke-RemoveIntuneScript.ps1
+|   |       |   |   |   |       Invoke-RemoveIntuneTemplate.ps1
+|   |       |   |   |   |       Invoke-RemovePolicy.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   \---Reports
+|   |       |   |   |           Invoke-ListDevices.ps1
+|   |       |   |   |           
+|   |       |   |   +---Identity
+|   |       |   |   |   +---Administration
+|   |       |   |   |   |   +---Devices
+|   |       |   |   |   |   |       Invoke-ExecDeviceDelete.ps1
+|   |       |   |   |   |   |       
+|   |       |   |   |   |   +---Groups
+|   |       |   |   |   |   |       Invoke-AddGroup.ps1
+|   |       |   |   |   |   |       Invoke-AddGroupTemplate.ps1
+|   |       |   |   |   |   |       Invoke-EditGroup.ps1
+|   |       |   |   |   |   |       Invoke-ListGroups.ps1
+|   |       |   |   |   |   |       Invoke-ListGroupSenderAuthentication.ps1
+|   |       |   |   |   |   |       Invoke-ListGroupTemplates.ps1
+|   |       |   |   |   |   |       Invoke-RemoveGroupTemplate.ps1
+|   |       |   |   |   |   |       
+|   |       |   |   |   |   \---Users
+|   |       |   |   |   |           Invoke-AddGuest.ps1
+|   |       |   |   |   |           Invoke-AddUser.ps1
+|   |       |   |   |   |           Invoke-AddUserBulk.ps1
+|   |       |   |   |   |           Invoke-CIPPOffboardingJob.ps1
+|   |       |   |   |   |           Invoke-EditUser.ps1
+|   |       |   |   |   |           Invoke-EditUserAliases.ps1
+|   |       |   |   |   |           Invoke-ExecBECCheck.ps1
+|   |       |   |   |   |           Invoke-ExecBECRemediate.ps1
+|   |       |   |   |   |           Invoke-ExecBulkLicense.ps1
+|   |       |   |   |   |           Invoke-ExecClrImmId.ps1
+|   |       |   |   |   |           Invoke-ExecCreateTAP.ps1
+|   |       |   |   |   |           Invoke-ExecDisableUser.ps1
+|   |       |   |   |   |           Invoke-ExecDismissRiskyUser.ps1
+|   |       |   |   |   |           Invoke-ExecJITAdmin.ps1
+|   |       |   |   |   |           Invoke-ExecOffboardUser.ps1
+|   |       |   |   |   |           Invoke-ExecOnedriveProvision.ps1
+|   |       |   |   |   |           Invoke-ExecOneDriveShortCut.ps1
+|   |       |   |   |   |           Invoke-ExecPasswordNeverExpires.ps1
+|   |       |   |   |   |           Invoke-ExecPerUserMFA.ps1
+|   |       |   |   |   |           Invoke-ExecResetMFA.ps1
+|   |       |   |   |   |           Invoke-ExecResetPass.ps1
+|   |       |   |   |   |           Invoke-ExecRestoreDeleted.ps1
+|   |       |   |   |   |           Invoke-ExecRevokeSessions.ps1
+|   |       |   |   |   |           Invoke-ExecSendPush.ps1
+|   |       |   |   |   |           Invoke-ListDeletedItems.ps1
+|   |       |   |   |   |           Invoke-ListPerUserMFA.ps1
+|   |       |   |   |   |           Invoke-ListUserConditionalAccessPolicies.ps1
+|   |       |   |   |   |           Invoke-ListUserCounts.ps1
+|   |       |   |   |   |           Invoke-ListUserDevices.ps1
+|   |       |   |   |   |           Invoke-ListUserGroups.ps1
+|   |       |   |   |   |           Invoke-ListUserMailboxDetails.ps1
+|   |       |   |   |   |           Invoke-ListUserMailboxRules.ps1
+|   |       |   |   |   |           Invoke-ListUserPhoto.ps1
+|   |       |   |   |   |           Invoke-ListUsers.ps1
+|   |       |   |   |   |           Invoke-ListUserSettings.ps1
+|   |       |   |   |   |           Invoke-ListUserSigninLogs.ps1
+|   |       |   |   |   |           Invoke-PatchUser.ps1
+|   |       |   |   |   |           Invoke-RemoveDeletedObject.ps1
+|   |       |   |   |   |           Invoke-RemoveUser.ps1
+|   |       |   |   |   |           
+|   |       |   |   |   \---Reports
+|   |       |   |   |           Invoke-ListAzureADConnectStatus.ps1
+|   |       |   |   |           Invoke-ListBasicAuth.ps1
+|   |       |   |   |           Invoke-ListInactiveAccounts.ps1
+|   |       |   |   |           Invoke-ListMFAUsers.ps1
+|   |       |   |   |           Invoke-ListSignIns.ps1
+|   |       |   |   |           
+|   |       |   |   +---Security
+|   |       |   |   |   |   Invoke-ExecAlertsList.ps1
+|   |       |   |   |   |   Invoke-ExecIncidentsList.ps1
+|   |       |   |   |   |   Invoke-ExecSetSecurityAlert.ps1
+|   |       |   |   |   |   Invoke-ExecSetSecurityIncident.ps1
+|   |       |   |   |   |   
+|   |       |   |   |   \---Safe-Links-Policy
+|   |       |   |   |           Invoke-AddSafeLinksPolicyFromTemplate.ps1
+|   |       |   |   |           Invoke-AddSafeLinksPolicyTemplate.ps1
+|   |       |   |   |           Invoke-CreateSafeLinksPolicyTemplate.ps1
+|   |       |   |   |           Invoke-EditSafeLinksPolicy.ps1
+|   |       |   |   |           Invoke-EditSafeLinksPolicyTemplate.ps1
+|   |       |   |   |           Invoke-ExecDeleteSafeLinksPolicy.ps1
+|   |       |   |   |           Invoke-ExecNewSafeLinksPolicy.ps1
+|   |       |   |   |           Invoke-ListSafeLinksPolicy.ps1
+|   |       |   |   |           Invoke-ListSafeLinksPolicyDetails.ps1
+|   |       |   |   |           Invoke-ListSafeLinksPolicyTemplateDetails.ps1
+|   |       |   |   |           Invoke-ListSafeLinksPolicyTemplates.ps1
+|   |       |   |   |           Invoke-RemoveSafeLinksPolicyTemplate.ps1
+|   |       |   |   |           
+|   |       |   |   +---Teams-Sharepoint
+|   |       |   |   |       Invoke-AddSite.ps1
+|   |       |   |   |       Invoke-AddSiteBulk.ps1
+|   |       |   |   |       Invoke-AddTeam.ps1
+|   |       |   |   |       Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment.ps1
+|   |       |   |   |       Invoke-ExecSetSharePointMember.ps1
+|   |       |   |   |       Invoke-ExecSharePointPerms.ps1
+|   |       |   |   |       Invoke-ExecTeamsVoicePhoneNumberAssignment.ps1
+|   |       |   |   |       Invoke-ListSharepointAdminUrl.ps1
+|   |       |   |   |       Invoke-ListSharepointQuota.ps1
+|   |       |   |   |       Invoke-ListSharepointSettings.ps1
+|   |       |   |   |       Invoke-ListSites.ps1
+|   |       |   |   |       Invoke-ListTeams.ps1
+|   |       |   |   |       Invoke-ListTeamsActivity.ps1
+|   |       |   |   |       Invoke-ListTeamsLisLocation.ps1
+|   |       |   |   |       Invoke-ListTeamsVoice.ps1
+|   |       |   |   |       
+|   |       |   |   +---Tenant
+|   |       |   |   |   +---Administration
+|   |       |   |   |   |   |   Invoke-ExecAddSPN.ps1
+|   |       |   |   |   |   |   Invoke-ExecOffboardTenant.ps1
+|   |       |   |   |   |   |   Invoke-ExecOnboardTenant.ps1
+|   |       |   |   |   |   |   Invoke-ExecUpdateSecureScore.ps1
+|   |       |   |   |   |   |   Invoke-ListAppConsentRequests.ps1
+|   |       |   |   |   |   |   Invoke-ListDomains.ps1
+|   |       |   |   |   |   |   Invoke-ListTenantOnboarding.ps1
+|   |       |   |   |   |   |   Invoke-SetAuthMethod.ps1
+|   |       |   |   |   |   |   
+|   |       |   |   |   |   +---Alerts
+|   |       |   |   |   |   |       Invoke-AddAlert.ps1
+|   |       |   |   |   |   |       Invoke-ExecAuditLogSearch.ps1
+|   |       |   |   |   |   |       Invoke-ListAlertsQueue.ps1
+|   |       |   |   |   |   |       Invoke-ListAuditLogs.ps1
+|   |       |   |   |   |   |       Invoke-ListAuditLogSearches.ps1
+|   |       |   |   |   |   |       Invoke-ListAuditLogTest.ps1
+|   |       |   |   |   |   |       Invoke-ListWebhookAlert.ps1
+|   |       |   |   |   |   |       Invoke-PublicWebhooks.ps1
+|   |       |   |   |   |   |       Invoke-RemoveQueuedAlert.ps1
+|   |       |   |   |   |   |       
+|   |       |   |   |   |   +---Application Approval
+|   |       |   |   |   |   |       Invoke-ExecAddMultiTenantApp.ps1
+|   |       |   |   |   |   |       Invoke-ExecAppApproval.ps1
+|   |       |   |   |   |   |       Invoke-ExecAppApprovalTemplate.ps1
+|   |       |   |   |   |   |       Invoke-ExecApplication.ps1
+|   |       |   |   |   |   |       Invoke-ExecAppPermissionTemplate.ps1
+|   |       |   |   |   |   |       Invoke-ListAppApprovalTemplates.ps1
+|   |       |   |   |   |   |       
+|   |       |   |   |   |   \---Tenant
+|   |       |   |   |   |           Invoke-AddTenant.ps1
+|   |       |   |   |   |           Invoke-EditTenant.ps1
+|   |       |   |   |   |           Invoke-ListTenantDetails.ps1
+|   |       |   |   |   |           Invoke-ListTenants.ps1
+|   |       |   |   |   |           
+|   |       |   |   |   +---Conditional
+|   |       |   |   |   |       Invoke-AddCAPolicy.ps1
+|   |       |   |   |   |       Invoke-AddCATemplate.ps1
+|   |       |   |   |   |       Invoke-AddNamedLocation.ps1
+|   |       |   |   |   |       Invoke-EditCAPolicy.ps1
+|   |       |   |   |   |       Invoke-ExecCACheck.ps1
+|   |       |   |   |   |       Invoke-ExecCAExclusion.ps1
+|   |       |   |   |   |       Invoke-ExecCAServiceExclusion.ps1
+|   |       |   |   |   |       Invoke-ExecNamedLocation.ps1
+|   |       |   |   |   |       Invoke-ListCAtemplates.ps1
+|   |       |   |   |   |       Invoke-ListConditionalAccessPolicies.ps1
+|   |       |   |   |   |       Invoke-ListConditionalAccessPolicyChanges.ps1
+|   |       |   |   |   |       Invoke-RemoveCAPolicy.ps1
+|   |       |   |   |   |       Invoke-RemoveCATemplate.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---GDAP
+|   |       |   |   |   |       Invoke-ExecAddGDAPRole.ps1
+|   |       |   |   |   |       Invoke-ExecAutoExtendGDAP.ps1
+|   |       |   |   |   |       Invoke-ExecDeleteGDAPRelationship.ps1
+|   |       |   |   |   |       Invoke-ExecDeleteGDAPRoleMapping.ps1
+|   |       |   |   |   |       Invoke-ExecGDAPAccessAssignment.ps1
+|   |       |   |   |   |       Invoke-ExecGDAPInvite.ps1
+|   |       |   |   |   |       Invoke-ExecGDAPInviteApproved.ps1
+|   |       |   |   |   |       Invoke-ExecGDAPRemoveGArole.ps1
+|   |       |   |   |   |       Invoke-ExecGDAPRoleTemplate.ps1
+|   |       |   |   |   |       Invoke-ListGDAPAccessAssignments.ps1
+|   |       |   |   |   |       Invoke-ListGDAPInvite.ps1
+|   |       |   |   |   |       Invoke-ListGDAPRoles.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Reports
+|   |       |   |   |   |       Invoke-ListLicenses.ps1
+|   |       |   |   |   |       Invoke-ListOAuthApps.ps1
+|   |       |   |   |   |       Invoke-ListServiceHealth.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   +---Standards
+|   |       |   |   |   |       Invoke-AddStandardsDeploy.ps1
+|   |       |   |   |   |       Invoke-AddStandardsTemplate.ps1
+|   |       |   |   |   |       Invoke-BestPracticeAnalyser_List.ps1
+|   |       |   |   |   |       Invoke-CIPPStandardsRun.ps1
+|   |       |   |   |   |       invoke-DomainAnalyser_List.ps1
+|   |       |   |   |   |       Invoke-ExecBPA.ps1
+|   |       |   |   |   |       Invoke-ExecDomainAnalyser.ps1
+|   |       |   |   |   |       Invoke-ExecStandardConvert.ps1
+|   |       |   |   |   |       Invoke-ExecStandardsRun.ps1
+|   |       |   |   |   |       Invoke-ExecUpdateDriftDeviation.ps1
+|   |       |   |   |   |       Invoke-ListBPA.ps1
+|   |       |   |   |   |       Invoke-ListBPATemplates.ps1
+|   |       |   |   |   |       Invoke-ListDomainAnalyser.ps1
+|   |       |   |   |   |       Invoke-ListDomainHealth.ps1
+|   |       |   |   |   |       Invoke-ListStandards.ps1
+|   |       |   |   |   |       Invoke-ListStandardsCompare.ps1
+|   |       |   |   |   |       Invoke-listStandardTemplates.ps1
+|   |       |   |   |   |       Invoke-ListTenantAlignment.ps1
+|   |       |   |   |   |       Invoke-ListTenantDrift.ps1
+|   |       |   |   |   |       Invoke-RemoveBPATemplate.ps1
+|   |       |   |   |   |       Invoke-RemoveStandard.ps1
+|   |       |   |   |   |       Invoke-RemoveStandardTemplate.ps1
+|   |       |   |   |   |       
+|   |       |   |   |   \---Tools
+|   |       |   |   |           Invoke-AddBPATemplate.ps1
+|   |       |   |   |           Invoke-ExecGraphExplorerPreset.ps1
+|   |       |   |   |           
+|   |       |   |   \---Tools
+|   |       |   |       \---GitHub
+|   |       |   |               Invoke-ExecCommunityRepo.ps1
+|   |       |   |               Invoke-ExecGitHubAction.ps1
+|   |       |   |               Invoke-ListCommunityRepos.ps1
+|   |       |   |               
+|   |       |   +---Orchestrator Functions
+|   |       |   |       Start-ApplicationOrchestrator.ps1
+|   |       |   |       Start-AuditLogOrchestrator.ps1
+|   |       |   |       Start-AuditLogProcessingOrchestrator.ps1
+|   |       |   |       Start-AuditLogSearchCreation.ps1
+|   |       |   |       Start-BPAOrchestrator.ps1
+|   |       |   |       Start-DomainOrchestrator.ps1
+|   |       |   |       Start-DriftStandardsOrchestrator.ps1
+|   |       |   |       Start-ExtensionOrchestrator.ps1
+|   |       |   |       Start-SchedulerOrchestrator.ps1
+|   |       |   |       Start-StandardsOrchestrator.ps1
+|   |       |   |       Start-UpdatePermissionsOrchestrator.ps1
+|   |       |   |       Start-UserTasksOrchestrator.ps1
+|   |       |   |       Start-WebhookOrchestrator.ps1
+|   |       |   |       
+|   |       |   \---Timer Functions
+|   |       |           Start-BillingTimer.ps1
+|   |       |           Start-CIPPGraphSubscriptionRenewalTimer.ps1
+|   |       |           Start-CIPPProcessorQueue.ps1
+|   |       |           Start-CIPPStatsTimer.ps1
+|   |       |           Start-DurableCleanup.ps1
+|   |       |           Start-TableCleanup.ps1
+|   |       |           Start-UpdateTokensTimer.ps1
+|   |       |           
+|   |       +---Functions
+|   |       |       Expand-CIPPTenantGroups.ps1
+|   |       |       Get-CIPPTenantAlignment.ps1
+|   |       |       Get-CIPPURLName.ps1
+|   |       |       Get-TenantGroups.ps1
+|   |       |       Test-CIPPStandardLicense.ps1
+|   |       |       
+|   |       +---GraphHelper
+|   |       |       Convert-SKUName.ps1
+|   |       |       Get-AuthorisedRequest.ps1
+|   |       |       Get-CippException.ps1
+|   |       |       Get-CippSamPermissions.ps1
+|   |       |       Get-CIPPTable.ps1
+|   |       |       Get-ClassicAPIToken.ps1
+|   |       |       Get-GraphBulkResultByID.ps1
+|   |       |       Get-GraphToken.ps1
+|   |       |       Get-GraphTokenFromCert.ps1
+|   |       |       Get-NormalizedError.ps1
+|   |       |       Get-SharePointAdminLink.ps1
+|   |       |       Get-Tenants.ps1
+|   |       |       New-ClassicAPIGetRequest.ps1
+|   |       |       New-DeviceLogin.ps1
+|   |       |       New-ExoBulkRequest.ps1
+|   |       |       New-ExoRequest.ps1
+|   |       |       New-GraphBulkRequest.ps1
+|   |       |       New-GraphGetRequest.ps1
+|   |       |       New-GraphPOSTRequest.ps1
+|   |       |       New-passwordString.ps1
+|   |       |       New-TeamsAPIGetRequest.ps1
+|   |       |       New-TeamsRequest.ps1
+|   |       |       Read-JwtAccessDetails.ps1
+|   |       |       Remove-CIPPCache.ps1
+|   |       |       Write-AlertMessage.ps1
+|   |       |       Write-AlertTrace.ps1
+|   |       |       Write-CippFunctionStats.ps1
+|   |       |       Write-LogMessage.ps1
+|   |       |       Write-StandardsAlert.ps1
+|   |       |       
+|   |       +---GraphRequests
+|   |       |       Get-GraphRequestList.ps1
+|   |       |       
+|   |       +---Standards
+|   |       |       Convert-SingleStandardObject.ps1
+|   |       |       ConvertTo-CippStandardObject.ps1
+|   |       |       Get-CIPPStandards.ps1
+|   |       |       Invoke-CIPPStandardActivityBasedTimeout.ps1
+|   |       |       Invoke-CIPPStandardAddDKIM.ps1
+|   |       |       Invoke-CIPPStandardAddDMARCToMOERA.ps1
+|   |       |       Invoke-CIPPStandardallowOAuthTokens.ps1
+|   |       |       Invoke-CIPPStandardallowOTPTokens.ps1
+|   |       |       Invoke-CIPPStandardAnonReportDisable.ps1
+|   |       |       Invoke-CIPPStandardAntiPhishPolicy.ps1
+|   |       |       Invoke-CIPPStandardAntiSpamSafeList.ps1
+|   |       |       Invoke-CIPPStandardAppDeploy.ps1
+|   |       |       Invoke-CIPPStandardAtpPolicyForO365.ps1
+|   |       |       Invoke-CIPPStandardAuditLog.ps1
+|   |       |       Invoke-CIPPStandardAuthMethodsPolicyMigration.ps1
+|   |       |       Invoke-CIPPStandardAuthMethodsSettings.ps1
+|   |       |       Invoke-CIPPStandardAutoAddProxy.ps1
+|   |       |       Invoke-CIPPStandardAutoExpandArchive.ps1
+|   |       |       Invoke-CIPPStandardAutopilotProfile.ps1
+|   |       |       Invoke-CIPPStandardAutopilotStatusPage.ps1
+|   |       |       Invoke-CIPPStandardAzurePortal.ps1
+|   |       |       Invoke-CIPPStandardBookings.ps1
+|   |       |       Invoke-CIPPStandardBranding.ps1
+|   |       |       Invoke-CIPPStandardcalDefault.ps1
+|   |       |       Invoke-CIPPStandardCloudMessageRecall.ps1
+|   |       |       Invoke-CIPPStandardConditionalAccessTemplate.ps1
+|   |       |       Invoke-CIPPStandardCustomBannedPasswordList.ps1
+|   |       |       Invoke-CIPPStandardDefaultPlatformRestrictions.ps1
+|   |       |       Invoke-CIPPStandardDefaultSharingLink.ps1
+|   |       |       Invoke-CIPPStandardDelegateSentItems.ps1
+|   |       |       Invoke-CIPPStandardDeletedUserRentention.ps1
+|   |       |       Invoke-CIPPStandardDeployContactTemplates.ps1
+|   |       |       Invoke-CIPPStandardDeployMailContact.ps1
+|   |       |       Invoke-CIPPStandardDisableAdditionalStorageProviders.ps1
+|   |       |       Invoke-CIPPStandardDisableAddShortcutsToOneDrive.ps1
+|   |       |       Invoke-CIPPStandardDisableAppCreation.ps1
+|   |       |       Invoke-CIPPStandardDisableBasicAuth.ps1
+|   |       |       Invoke-CIPPStandardDisableBasicAuthSMTP.ps1
+|   |       |       Invoke-CIPPStandardDisableEmail.ps1
+|   |       |       Invoke-CIPPStandardDisableEntraPortal.ps1
+|   |       |       Invoke-CIPPStandardDisableExchangeOnlinePowerShell.ps1
+|   |       |       Invoke-CIPPStandardDisableExternalCalendarSharing.ps1
+|   |       |       Invoke-CIPPStandardDisableGuestDirectory.ps1
+|   |       |       Invoke-CIPPStandardDisableGuests.ps1
+|   |       |       Invoke-CIPPStandardDisableM365GroupUsers.ps1
+|   |       |       Invoke-CIPPStandarddisableMacSync.ps1
+|   |       |       Invoke-CIPPStandardDisableOutlookAddins.ps1
+|   |       |       Invoke-CIPPStandardDisableQRCodePin.ps1
+|   |       |       Invoke-CIPPStandardDisableReshare.ps1
+|   |       |       Invoke-CIPPStandardDisableResourceMailbox.ps1
+|   |       |       Invoke-CIPPStandardDisableSecurityGroupUsers.ps1
+|   |       |       Invoke-CIPPStandardDisableSelfServiceLicenses.ps1
+|   |       |       Invoke-CIPPStandardDisableSharedMailbox.ps1
+|   |       |       Invoke-CIPPStandardDisableSharePointLegacyAuth.ps1
+|   |       |       Invoke-CIPPStandardDisableSMS.ps1
+|   |       |       Invoke-CIPPStandardDisableTenantCreation.ps1
+|   |       |       Invoke-CIPPStandardDisableTNEF.ps1
+|   |       |       Invoke-CIPPStandardDisableUserSiteCreate.ps1
+|   |       |       Invoke-CIPPStandardDisableViva.ps1
+|   |       |       Invoke-CIPPStandardDisableVoice.ps1
+|   |       |       Invoke-CIPPStandardDisablex509Certificate.ps1
+|   |       |       Invoke-CIPPStandardEnableAppConsentRequests.ps1
+|   |       |       Invoke-CIPPStandardEnableCustomerLockbox.ps1
+|   |       |       Invoke-CIPPStandardEnableFIDO2.ps1
+|   |       |       Invoke-CIPPStandardEnableHardwareOAuth.ps1
+|   |       |       Invoke-CIPPStandardEnableLitigationHold.ps1
+|   |       |       Invoke-CIPPStandardEnableMailboxAuditing.ps1
+|   |       |       Invoke-CIPPStandardEnableMailTips.ps1
+|   |       |       Invoke-CIPPStandardEnableNamePronunciation.ps1
+|   |       |       Invoke-CIPPStandardEnableOnlineArchiving.ps1
+|   |       |       Invoke-CIPPStandardEnablePronouns.ps1
+|   |       |       Invoke-CIPPStandardExcludedfileExt.ps1
+|   |       |       Invoke-CIPPStandardExConnector.ps1
+|   |       |       Invoke-CIPPStandardEXODirectSend.ps1
+|   |       |       Invoke-CIPPStandardEXODisableAutoForwarding.ps1
+|   |       |       Invoke-CIPPStandardEXOOutboundSpamLimits.ps1
+|   |       |       Invoke-CIPPStandardExternalMFATrusted.ps1
+|   |       |       Invoke-CIPPStandardFocusedInbox.ps1
+|   |       |       Invoke-CIPPStandardFormsPhishingProtection.ps1
+|   |       |       Invoke-CIPPStandardfwdAdminAlerts.ps1
+|   |       |       Invoke-CIPPStandardGlobalQuarantineNotifications.ps1
+|   |       |       Invoke-CIPPStandardGroupTemplate.ps1
+|   |       |       Invoke-CIPPStandardGuestInvite.ps1
+|   |       |       Invoke-CIPPStandardintuneBrandingProfile.ps1
+|   |       |       Invoke-CIPPStandardIntuneComplianceSettings.ps1
+|   |       |       Invoke-CIPPStandardintuneDeviceReg.ps1
+|   |       |       Invoke-CIPPStandardintuneDeviceRetirementDays.ps1
+|   |       |       Invoke-CIPPStandardintuneRequireMFA.ps1
+|   |       |       Invoke-CIPPStandardIntuneTemplate.ps1
+|   |       |       Invoke-CIPPStandardlaps.ps1
+|   |       |       Invoke-CIPPStandardLegacyMFA.ps1
+|   |       |       Invoke-CIPPStandardLegacyMFACleanup.ps1
+|   |       |       Invoke-CIPPStandardMailboxRecipientLimits.ps1
+|   |       |       Invoke-CIPPStandardMailContacts.ps1
+|   |       |       Invoke-CIPPStandardMalwareFilterPolicy.ps1
+|   |       |       Invoke-CIPPStandardMDMScope.ps1
+|   |       |       Invoke-CIPPStandardMessageExpiration.ps1
+|   |       |       Invoke-CIPPStandardModernAuth.ps1
+|   |       |       Invoke-CIPPStandardNudgeMFA.ps1
+|   |       |       Invoke-CIPPStandardOauthConsent.ps1
+|   |       |       Invoke-CIPPStandardOauthConsentLowSec.ps1
+|   |       |       Invoke-CIPPStandardOutBoundSpamAlert.ps1
+|   |       |       Invoke-CIPPStandardPasswordExpireDisabled.ps1
+|   |       |       Invoke-CIPPStandardPerUserMFA.ps1
+|   |       |       Invoke-CIPPStandardPhishingSimulations.ps1
+|   |       |       Invoke-CIPPStandardPhishProtection.ps1
+|   |       |       Invoke-CIPPStandardPhishSimSpoofIntelligence.ps1
+|   |       |       Invoke-CIPPStandardProfilePhotos.ps1
+|   |       |       Invoke-CIPPStandardPWcompanionAppAllowedState.ps1
+|   |       |       Invoke-CIPPStandardPWdisplayAppInformationRequiredState.ps1
+|   |       |       Invoke-CIPPStandardPWnumberMatchingRequiredState.ps1
+|   |       |       Invoke-CIPPStandardQuarantineRequestAlert.ps1
+|   |       |       Invoke-CIPPStandardQuarantineTemplate.ps1
+|   |       |       Invoke-CIPPStandardRestrictThirdPartyStorageServices.ps1
+|   |       |       Invoke-CIPPStandardRetentionPolicyTag.ps1
+|   |       |       Invoke-CIPPStandardRotateDKIM.ps1
+|   |       |       Invoke-CIPPStandardSafeAttachmentPolicy.ps1
+|   |       |       Invoke-CIPPStandardSafeLinksPolicy.ps1
+|   |       |       Invoke-CIPPStandardSafeLinksTemplatePolicy.ps1
+|   |       |       Invoke-CIPPStandardSafeSendersDisable.ps1
+|   |       |       Invoke-CIPPStandardSecurityDefaults.ps1
+|   |       |       Invoke-CIPPStandardSendFromAlias.ps1
+|   |       |       Invoke-CIPPStandardSendReceiveLimitTenant.ps1
+|   |       |       Invoke-CIPPStandardSharePointMassDeletionAlert.ps1
+|   |       |       Invoke-CIPPStandardsharingCapability.ps1
+|   |       |       Invoke-CIPPStandardsharingDomainRestriction.ps1
+|   |       |       Invoke-CIPPStandardShortenMeetings.ps1
+|   |       |       Invoke-CIPPStandardSpamFilterPolicy.ps1
+|   |       |       Invoke-CIPPStandardSPAzureB2B.ps1
+|   |       |       Invoke-CIPPStandardSPDirectSharing.ps1
+|   |       |       Invoke-CIPPStandardSPDisableLegacyWorkflows.ps1
+|   |       |       Invoke-CIPPStandardSPDisallowInfectedFiles.ps1
+|   |       |       Invoke-CIPPStandardSPEmailAttestation.ps1
+|   |       |       Invoke-CIPPStandardSPExternalUserExpiration.ps1
+|   |       |       Invoke-CIPPStandardSPFileRequests.ps1
+|   |       |       Invoke-CIPPStandardSpoofWarn.ps1
+|   |       |       Invoke-CIPPStandardSPSyncButtonState.ps1
+|   |       |       Invoke-CIPPStandardSSPR.ps1
+|   |       |       Invoke-CIPPStandardStaleEntraDevices.ps1
+|   |       |       Invoke-CIPPStandardTAP.ps1
+|   |       |       Invoke-CIPPStandardTeamsEmailIntegration.ps1
+|   |       |       Invoke-CIPPStandardTeamsEnrollUser.ps1
+|   |       |       Invoke-CIPPStandardTeamsExternalAccessPolicy.ps1
+|   |       |       Invoke-CIPPStandardTeamsExternalFileSharing.ps1
+|   |       |       Invoke-CIPPStandardTeamsFederationConfiguration.ps1
+|   |       |       Invoke-CIPPStandardTeamsGlobalMeetingPolicy.ps1
+|   |       |       Invoke-CIPPStandardTeamsGuestAccess.ps1
+|   |       |       Invoke-CIPPStandardTeamsMeetingRecordingExpiration.ps1
+|   |       |       Invoke-CIPPStandardTeamsMeetingsByDefault.ps1
+|   |       |       Invoke-CIPPStandardTeamsMeetingVerification.ps1
+|   |       |       Invoke-CIPPStandardTeamsMessagingPolicy.ps1
+|   |       |       Invoke-CIPPStandardTenantDefaultTimezone.ps1
+|   |       |       Invoke-CIPPStandardTransportRuleTemplate.ps1
+|   |       |       Invoke-CIPPStandardTwoClickEmailProtection.ps1
+|   |       |       Invoke-CIPPStandardUndoOauth.ps1
+|   |       |       Invoke-CIPPStandardUndoSSPR.ps1
+|   |       |       Invoke-CIPPStandardunmanagedSync.ps1
+|   |       |       Invoke-CIPPStandardUserPreferredLanguage.ps1
+|   |       |       Invoke-CIPPStandardUserSubmissions.ps1
+|   |       |       Merge-CippStandards.ps1
+|   |       |       
+|   |       +---Tools
+|   |       |       Import-CommunityTemplate.ps1
+|   |       |       Remove-ODataProperties.ps1
+|   |       |       
+|   |       \---Webhooks
+|   |               Get-CIPPAuditLogContent.ps1
+|   |               Get-CIPPAuditLogContentBundles.ps1
+|   |               Invoke-CIPPGraphWebhookProcessing.ps1
+|   |               Invoke-CIPPGraphWebhookRenewal.ps1
+|   |               Invoke-CIPPPartnerWebhookProcessing.ps1
+|   |               Invoke-CIPPWebhookProcessing.ps1
+|   |               Invoke-RemoveWebhookAlert.ps1
+|   |               New-CIPPGraphSubscription.ps1
+|   |               Remove-CIPPGraphSubscription.ps1
+|   |               Test-CIPPAuditLogRules.ps1
+|   |               
+|   +---CippEntrypoints
+|   |       CippEntrypoints.psm1
+|   |       
+|   +---CippExtensions
+|   |   |   CippExtensions.psd1
+|   |   |   CippExtensions.psm1
+|   |   |   ConversionTable.csv
+|   |   |   
+|   |   +---Private
+|   |   |   |   Get-StringHash.ps1
+|   |   |   |   
+|   |   |   \---Hudu
+|   |   |           Get-HuduFormattedBlock.ps1
+|   |   |           Get-HuduFormattedField.ps1
+|   |   |           Get-HuduLinkBlock.ps1
+|   |   |           
+|   |   \---Public
+|   |       |   ConversionTable.csv
+|   |       |   Get-ExtensionRateLimit.ps1
+|   |       |   New-CippExtAlert.ps1
+|   |       |   
+|   |       +---Extension Functions
+|   |       |       Add-HuduAssetLayoutField.ps1
+|   |       |       Get-ExtensionAPIKey.ps1
+|   |       |       Get-ExtensionCacheData.ps1
+|   |       |       Get-ExtensionMapping.ps1
+|   |       |       Push-CippExtensionData.ps1
+|   |       |       Register-CippExtensionScheduledTasks.ps1
+|   |       |       Set-ExtensionAPIKey.ps1
+|   |       |       Set-ExtensionFieldMapping.ps1
+|   |       |       Sync-CippExtensionData.ps1
+|   |       |       
+|   |       +---GitHub
+|   |       |       Get-GitHubBranch.ps1
+|   |       |       Get-GitHubFileContents.ps1
+|   |       |       Get-GitHubFileTree.ps1
+|   |       |       Invoke-GitHubApiRequest.ps1
+|   |       |       New-GitHubRepo.ps1
+|   |       |       Push-GitHubContent.ps1
+|   |       |       Search-GitHub.ps1
+|   |       |       
+|   |       +---Gradient
+|   |       |       Get-GradientToken.ps1
+|   |       |       New-GradientAlert.ps1
+|   |       |       New-GradientServiceSyncRun.ps1
+|   |       |       
+|   |       +---Halo
+|   |       |       Get-HaloMapping.ps1
+|   |       |       Get-HaloTicketType.ps1
+|   |       |       Get-HaloToken.ps1
+|   |       |       New-HaloPSATicket.ps1
+|   |       |       Set-HaloMapping.ps1
+|   |       |       
+|   |       +---HIBP
+|   |       |       Get-BreachInfo.ps1
+|   |       |       Get-HIBPAuth.ps1
+|   |       |       Get-HIBPConnectionTest.ps1
+|   |       |       Get-HIBPRequest.ps1
+|   |       |       New-BreachTenantSearch.ps1
+|   |       |       
+|   |       +---Hudu
+|   |       |       Connect-HuduAPI.ps1
+|   |       |       Get-HuduFieldMapping.ps1
+|   |       |       Get-HuduMapping.ps1
+|   |       |       Invoke-HuduExtensionSync.ps1
+|   |       |       Set-HuduMapping.ps1
+|   |       |       
+|   |       +---NinjaOne
+|   |       |       Get-NinjaOneFieldMapping.ps1
+|   |       |       Get-NinjaOneOrgMapping.ps1
+|   |       |       Get-NinjaOneToken.ps1
+|   |       |       Invoke-NinjaOneDeviceWebhook.ps1
+|   |       |       Invoke-NinjaOneDocumentTemplate.ps1
+|   |       |       Invoke-NinjaOneExtensionScheduler.ps1
+|   |       |       Invoke-NinjaOneOrgMapping.ps1
+|   |       |       Invoke-NinjaOneOrgMappingTenant.ps1
+|   |       |       Invoke-NinjaOneSync.ps1
+|   |       |       Invoke-NinjaOneTenantSync.ps1
+|   |       |       NinjaOneHelper.ps1
+|   |       |       Push-NinjaOneQueue.ps1
+|   |       |       Set-NinjaOneFieldMapping.ps1
+|   |       |       Set-NinjaOneOrgMapping.ps1
+|   |       |       
+|   |       +---PwPush
+|   |       |       Get-PwPushAccount.ps1
+|   |       |       New-PwPushLink.ps1
+|   |       |       Set-PwPushConfig.ps1
+|   |       |       
+|   |       \---Sherweb
+|   |               Get-SherwebAuthentication.ps1
+|   |               Get-SherwebCatalog.ps1
+|   |               Get-SherwebCurrentSubscription.ps1
+|   |               Get-SherwebCustomerConfiguration.ps1
+|   |               Get-SherwebCustomers.ps1
+|   |               Get-SherwebMapping.ps1
+|   |               Get-SherwebOrderStatus.ps1
+|   |               Remove-SherwebSubscription.ps1
+|   |               Set-SherwebMapping.ps1
+|   |               Set-SherwebSubscription.ps1
+|   |               Test-SherwebMigrationAccounts.ps1
+|   |               
+|   +---DNSHealth
+|   |   \---1.1.0
+|   |       |   DNSHealth.psd1
+|   |       |   DNSHealth.psm1
+|   |       |   PSGetModuleInfo.xml
+|   |       |   
+|   |       \---MailProviders
+|   |               AppRiver.json
+|   |               BarracudaESS.json
+|   |               Google.json
+|   |               HornetSecurity.json
+|   |               Intermedia.json
+|   |               Microsoft365.json
+|   |               Mimecast.json
+|   |               Null.json
+|   |               Proofpoint.json
+|   |               Reflexion.json
+|   |               Sophos.json
+|   |               SpamTitan.json
+|   |               SymantecCloud.json
+|   |               _template.json
+|   |               
+|   +---HuduAPI
+|   |   \---2.4.9
+|   |           HuduAPI.psd1
+|   |           HuduAPI.psm1
+|   |           PSGetModuleInfo.xml
+|   |           
+|   +---MicrosoftTeams
+|   |   +---6.4.0
+|   |   |   +---bin
+|   |   |   |       BrotliSharpLib.dll
+|   |   |   |       Microsoft.Teams.ConfigAPI.Cmdlets.private.dll
+|   |   |   |       
+|   |   |   \---netcoreapp3.1
+|   |   |           Microsoft.Applications.Events.Server.dll
+|   |   |           Microsoft.Extensions.Logging.Abstractions.dll
+|   |   |           Microsoft.Extensions.Logging.dll
+|   |   |           Microsoft.Ic3.TenantAdminApi.Common.Helper.dll
+|   |   |           Microsoft.Identity.Client.dll
+|   |   |           Microsoft.IdentityModel.JsonWebTokens.dll
+|   |   |           Microsoft.IdentityModel.Logging.dll
+|   |   |           Microsoft.IdentityModel.Tokens.dll
+|   |   |           Microsoft.Teams.ConfigAPI.CmdletHostContract.dll
+|   |   |           Microsoft.Teams.Policy.Administration.Cmdlets.Core.dll
+|   |   |           Microsoft.Teams.Policy.Administration.Cmdlets.Providers.PolicyRp.dll
+|   |   |           Microsoft.Teams.PowerShell.Module.dll
+|   |   |           Microsoft.Teams.PowerShell.TeamsCmdlets.dll
+|   |   |           Microsoft.TeamsCmdlets.PowerShell.Connect.dll
+|   |   |           
+|   |   \---6.9.0
+|   |       |   GetTeamSettings.format.ps1xml
+|   |       |   LICENSE.txt
+|   |       |   Microsoft.Teams.ConfigAPI.Cmdlets.custom.format.ps1xml
+|   |       |   Microsoft.Teams.ConfigAPI.Cmdlets.format.ps1xml
+|   |       |   Microsoft.Teams.ConfigAPI.Cmdlets.psd1
+|   |       |   Microsoft.Teams.ConfigAPI.Cmdlets.psm1
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.oce.psd1
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.OnlineDialinConferencing.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.OnlineVoicemail.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.preview.psd1
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.psd1
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.psm1
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsAppPolicyConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsMeetingConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsMigrationConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsMultiTenantOrganizationConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsRoutingConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TeamsSipDevicesConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.TenantConfiguration.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.VoicemailConfig.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreAIPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreAudioConferencing.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreBYODAndDesksPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreMediaConnectivityPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreRecordingRollOutPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreVirtualAppointmentsPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.Cmdlets.CoreWorkLocationDetectionPolicy.format.ps1xml
+|   |       |   Microsoft.Teams.Policy.Administration.psd1
+|   |       |   Microsoft.Teams.Policy.Administration.psm1
+|   |       |   Microsoft.Teams.Policy.Administration.xml
+|   |       |   Microsoft.Teams.PowerShell.Module.xml
+|   |       |   Microsoft.Teams.PowerShell.TeamsCmdlets.dll-Help.xml
+|   |       |   Microsoft.Teams.PowerShell.TeamsCmdlets.psd1
+|   |       |   Microsoft.Teams.PowerShell.TeamsCmdlets.psm1
+|   |       |   Microsoft.Teams.PowerShell.TeamsCmdlets.xml
+|   |       |   MicrosoftTeams.psd1
+|   |       |   MicrosoftTeams.psm1
+|   |       |   PSGetModuleInfo.xml
+|   |       |   SetMSTeamsReleaseEnvironment.ps1
+|   |       |   SfbRpsModule.format.ps1xml
+|   |       |   
+|   |       +---bin
+|   |       |       BrotliSharpLib.dll
+|   |       |       Microsoft.IdentityModel.JsonWebTokens.dll
+|   |       |       Microsoft.IdentityModel.Logging.dll
+|   |       |       Microsoft.IdentityModel.Tokens.dll
+|   |       |       Microsoft.Teams.ConfigAPI.CmdletHostContract.dll
+|   |       |       Microsoft.Teams.ConfigAPI.Cmdlets.private.deps.json
+|   |       |       Microsoft.Teams.ConfigAPI.Cmdlets.private.dll
+|   |       |       System.IdentityModel.Tokens.Jwt.dll
+|   |       |       
+|   |       +---custom
+|   |       |       CmdletConfig.json
+|   |       |       Merged_custom_PsExt.ps1
+|   |       |       Microsoft.Teams.ConfigAPI.Cmdlets.custom.psm1
+|   |       |       
+|   |       +---en-US
+|   |       |       Microsoft.Teams.Policy.Administration.Cmdlets.Core.dll-Help.xml
+|   |       |       Microsoft.Teams.PowerShell.TeamsCmdlets.dll-Help.xml
+|   |       |       Microsoft.TeamsCmdlets.PowerShell.Connect.dll-Help.xml
+|   |       |       MicrosoftTeams-help.xml
+|   |       |       
+|   |       +---exports
+|   |       |       ProxyCmdletDefinitionsWithHelp.ps1
+|   |       |       
+|   |       +---internal
+|   |       |       Merged_internal.ps1
+|   |       |       Microsoft.Teams.ConfigAPI.Cmdlets.internal.psm1
+|   |       |       
+|   |       +---net472
+|   |       |   |   CmdletSettings.json
+|   |       |   |   Microsoft.ApplicationInsights.dll
+|   |       |   |   Microsoft.Applications.Events.Server.dll
+|   |       |   |   Microsoft.Azure.KeyVault.AzureServiceDeploy.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Core.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Cryptography.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Jose.dll
+|   |       |   |   Microsoft.Data.Sqlite.dll
+|   |       |   |   Microsoft.Extensions.Configuration.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Configuration.dll
+|   |       |   |   Microsoft.Extensions.DependencyInjection.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Logging.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Logging.dll
+|   |       |   |   Microsoft.Extensions.Primitives.dll
+|   |       |   |   Microsoft.Ic3.TenantAdminApi.Common.Helper.dll
+|   |       |   |   Microsoft.Identity.Client.Broker.dll
+|   |       |   |   Microsoft.Identity.Client.Desktop.dll
+|   |       |   |   Microsoft.Identity.Client.dll
+|   |       |   |   Microsoft.Identity.Client.Extensions.Msal.dll
+|   |       |   |   Microsoft.Identity.Client.NativeInterop.dll
+|   |       |   |   Microsoft.IdentityModel.Abstractions.dll
+|   |       |   |   Microsoft.IdentityModel.JsonWebTokens.dll
+|   |       |   |   Microsoft.IdentityModel.Logging.dll
+|   |       |   |   Microsoft.IdentityModel.Tokens.dll
+|   |       |   |   Microsoft.Rest.ClientRuntime.Azure.dll
+|   |       |   |   Microsoft.Rest.ClientRuntime.dll
+|   |       |   |   Microsoft.Teams.ConfigAPI.CmdletHostContract.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.OCE.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Providers.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Providers.PolicyRp.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.dll
+|   |       |   |   Microsoft.Teams.PowerShell.Module.dll
+|   |       |   |   Microsoft.Teams.PowerShell.Module.pdb
+|   |       |   |   Microsoft.Teams.PowerShell.Module.xml
+|   |       |   |   Microsoft.Teams.PowerShell.TeamsCmdlets.dll
+|   |       |   |   Microsoft.TeamsCmdlets.PowerShell.Connect.dll
+|   |       |   |   Microsoft.Web.WebView2.Core.dll
+|   |       |   |   Microsoft.Web.WebView2.WinForms.dll
+|   |       |   |   Microsoft.Web.WebView2.Wpf.dll
+|   |       |   |   Newtonsoft.Json.dll
+|   |       |   |   OneCollectorChannel.dll
+|   |       |   |   Polly.Contrib.WaitAndRetry.dll
+|   |       |   |   Polly.dll
+|   |       |   |   System.Buffers.dll
+|   |       |   |   System.Diagnostics.DiagnosticSource.dll
+|   |       |   |   System.IdentityModel.Tokens.Jwt.dll
+|   |       |   |   System.IO.FileSystem.AccessControl.dll
+|   |       |   |   System.Management.Automation.dll
+|   |       |   |   System.Memory.dll
+|   |       |   |   System.Numerics.Vectors.dll
+|   |       |   |   System.Runtime.CompilerServices.Unsafe.dll
+|   |       |   |   System.Security.AccessControl.dll
+|   |       |   |   System.Security.Cryptography.ProtectedData.dll
+|   |       |   |   System.Security.Principal.Windows.dll
+|   |       |   |   System.ValueTuple.dll
+|   |       |   |   
+|   |       |   \---runtimes
+|   |       |       +---win-arm64
+|   |       |       |   \---native
+|   |       |       |           msalruntime_arm64.dll
+|   |       |       |           
+|   |       |       +---win-x64
+|   |       |       |   \---native
+|   |       |       |           msalruntime.dll
+|   |       |       |           
+|   |       |       \---win-x86
+|   |       |           \---native
+|   |       |                   msalruntime_x86.dll
+|   |       |                   
+|   |       +---netcoreapp3.1
+|   |       |   |   CmdletSettings.json
+|   |       |   |   Microsoft.ApplicationInsights.dll
+|   |       |   |   Microsoft.Applications.Events.Server.dll
+|   |       |   |   Microsoft.Azure.KeyVault.AzureServiceDeploy.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Core.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Cryptography.dll
+|   |       |   |   Microsoft.Azure.KeyVault.Jose.dll
+|   |       |   |   Microsoft.Data.Sqlite.dll
+|   |       |   |   Microsoft.Extensions.Configuration.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Configuration.dll
+|   |       |   |   Microsoft.Extensions.DependencyInjection.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Logging.Abstractions.dll
+|   |       |   |   Microsoft.Extensions.Logging.dll
+|   |       |   |   Microsoft.Extensions.Primitives.dll
+|   |       |   |   Microsoft.Ic3.TenantAdminApi.Common.Helper.dll
+|   |       |   |   Microsoft.Identity.Client.Broker.dll
+|   |       |   |   Microsoft.Identity.Client.Desktop.dll
+|   |       |   |   Microsoft.Identity.Client.dll
+|   |       |   |   Microsoft.Identity.Client.Extensions.Msal.dll
+|   |       |   |   Microsoft.Identity.Client.NativeInterop.dll
+|   |       |   |   Microsoft.IdentityModel.Abstractions.dll
+|   |       |   |   Microsoft.IdentityModel.JsonWebTokens.dll
+|   |       |   |   Microsoft.IdentityModel.Logging.dll
+|   |       |   |   Microsoft.IdentityModel.Tokens.dll
+|   |       |   |   Microsoft.Rest.ClientRuntime.Azure.dll
+|   |       |   |   Microsoft.Rest.ClientRuntime.dll
+|   |       |   |   Microsoft.Teams.ConfigAPI.CmdletHostContract.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Core.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.OCE.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Providers.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.Cmdlets.Providers.PolicyRp.dll
+|   |       |   |   Microsoft.Teams.Policy.Administration.dll
+|   |       |   |   Microsoft.Teams.PowerShell.Module.deps.json
+|   |       |   |   Microsoft.Teams.PowerShell.Module.dll
+|   |       |   |   Microsoft.Teams.PowerShell.Module.pdb
+|   |       |   |   Microsoft.Teams.PowerShell.Module.xml
+|   |       |   |   Microsoft.Teams.PowerShell.TeamsCmdlets.dll
+|   |       |   |   Microsoft.TeamsCmdlets.PowerShell.Connect.dll
+|   |       |   |   Microsoft.Web.WebView2.Core.dll
+|   |       |   |   Microsoft.Web.WebView2.WinForms.dll
+|   |       |   |   Microsoft.Web.WebView2.Wpf.dll
+|   |       |   |   Newtonsoft.Json.dll
+|   |       |   |   OneCollectorChannel.dll
+|   |       |   |   Polly.Contrib.WaitAndRetry.dll
+|   |       |   |   Polly.dll
+|   |       |   |   System.Diagnostics.DiagnosticSource.dll
+|   |       |   |   System.IdentityModel.Tokens.Jwt.dll
+|   |       |   |   System.IO.FileSystem.AccessControl.dll
+|   |       |   |   System.Management.Automation.dll
+|   |       |   |   System.Management.dll
+|   |       |   |   System.Runtime.CompilerServices.Unsafe.dll
+|   |       |   |   System.Security.AccessControl.dll
+|   |       |   |   System.Security.Cryptography.ProtectedData.dll
+|   |       |   |   System.Security.Principal.Windows.dll
+|   |       |   |   
+|   |       |   \---runtimes
+|   |       |       +---win-arm64
+|   |       |       |   \---native
+|   |       |       |           msalruntime_arm64.dll
+|   |       |       |           
+|   |       |       +---win-x64
+|   |       |       |   \---native
+|   |       |       |           msalruntime.dll
+|   |       |       |           
+|   |       |       \---win-x86
+|   |       |           \---native
+|   |       |                   msalruntime_x86.dll
+|   |       |                   
+|   |       \---_manifest
+|   |           \---spdx_2.2
+|   |                   bsi.cose
+|   |                   bsi.json
+|   |                   manifest.cat
+|   |                   manifest.spdx.cose
+|   |                   manifest.spdx.json
+|   |                   manifest.spdx.json.sha256
+|   |                   response-cose.json
+|   |                   
+|   \---PassPushPosh
+|       \---1.3.2
+|               PassPushPosh.psd1
+|               PassPushPosh.psm1
+|               PSGetModuleInfo.xml
+|               
+\---Tools
+    |   cipp-openapispec.json
+    |   Clear-DevEnvironment.ps1
+    |   Confirm-FunctionRequirements.ps1
+    |   endpoint-openapispec.json
+    |   identity-openapispec.json
+    |   Initialize-DevEnvironment.ps1
+    |   security-openapispec.json
+    |   teams-share-openapispec.json
+    |   tenant-openapispec.json
+    |   tools-openapispec.json
+    |   Update-LicenseSKUFiles.ps1
+    |   Update-StandardsComments.ps1
+    |   Update-StandardsJson.ps1
+    |   
+    \---IntuneWin
+            Get-IntuneWinPackageContents.ps1
+            IntuneWinAppUtil.exe
+            IntuneWinAppUtilDecoder.exe
+            New-IntuneWinPackage.ps1
+            
