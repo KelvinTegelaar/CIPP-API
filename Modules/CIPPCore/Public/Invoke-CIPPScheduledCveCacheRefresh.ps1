@@ -7,8 +7,8 @@ function Invoke-CIPPScheduledCveCacheRefresh {
     .SYNOPSIS
         (Label) Refresh CVE Cache from Defender TVM
     .DESCRIPTION
-        (Helptext) Pulls Defender TVM vulnerabilities for each tenant and stores them in Azure Tables for faster access and exception management.
-        (DocsDescription) This scheduled task queries Microsoft Defender Threat & Vulnerability Management (TVM) for all software vulnerabilities affecting devices in the tenant. Results are stored in the CveCache Azure Table for use by the Vulnerability Management page and NinjaOne sync.
+        (Helptext) Pulls Defender TVM vulnerabilities for each tenant and stores them in the CveCache Azure Table.
+        (DocsDescription) This scheduled task queries Microsoft Defender Threat & Vulnerability Management (TVM) for all software vulnerabilities affecting devices in the tenant. Results are stored in the CveCache Azure Table for use by the Vulnerability Management page.
     .NOTES
         CAT
             Scheduled Tasks
@@ -25,46 +25,36 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         $Tenant
     )
 
-    Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Starting CVE Cache Refresh for tenant" -Sev 'Info'
+    Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Starting CVE Cache Refresh" -Sev 'Info'
 
     try {
         # ============================
-        # 1. GET CVE CACHE TABLE CONTEXT
+        # 1. GET CVE CACHE TABLE
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Getting CveCache table context" -Sev 'Debug'
         
         $CveCacheTable = Get-CIPPTable -TableName 'CveCache'
-        
-        if (-not $CveCacheTable) {
-            throw "Failed to get CveCache table context"
-        }
 
         # ============================
-        # 2. QUERY DEFENDER TVM
+        # 2. PULL CVE DATA FROM DEFENDER TVM
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Pulling Defender TVM data via Get-DefenderTvmRaw" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Pulling CVE data from Defender TVM" -Sev 'Debug'
         
         $AllVulns = Get-DefenderTvmRaw -TenantId $Tenant -MaxPages 0
         
         if (-not $AllVulns) {
             Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "No vulnerability data returned from Defender TVM" -Sev 'Warning'
-            $AllVulns = @()
-        }
-
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Retrieved $($AllVulns.Count) vulnerability records from Defender TVM" -Sev 'Info'
-
-        if ($AllVulns.Count -eq 0) {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "No vulnerabilities found for this tenant" -Sev 'Info'
             return
         }
+
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Retrieved $($AllVulns.Count) CVE records from Defender TVM" -Sev 'Info'
 
         # ============================
         # 3. DELETE OLD ENTRIES FOR THIS TENANT
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Cleaning up old cache entries for tenant" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Removing old cache entries for this tenant" -Sev 'Debug'
         
         try {
-            # Get all existing entries for this tenant
             $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$Tenant'"
             
             if ($ExistingEntries) {
@@ -90,87 +80,71 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         }
 
         # ============================
-        # 4. TRANSFORM TO CACHE ENTITIES
+        # 4. WRITE NEW ENTRIES TO TABLE
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Transforming CVE data into cache entities" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Writing CVE data to cache table" -Sev 'Debug'
         
-        $CacheEntities = @()
+        $Entities = @()
         $SkippedCount = 0
-        $ProcessedCves = @{}
 
-        foreach ($item in $AllVulns) {
-            # Validate required fields
-            if ([string]::IsNullOrWhiteSpace($item.cveId) -or 
-                [string]::IsNullOrWhiteSpace($item.deviceId) -or
-                [string]::IsNullOrWhiteSpace($item.customerId)) {
+        foreach ($vuln in $AllVulns) {
+            # Skip if missing required fields
+            if ([string]::IsNullOrWhiteSpace($vuln.cveId) -or 
+                [string]::IsNullOrWhiteSpace($vuln.deviceId) -or
+                [string]::IsNullOrWhiteSpace($vuln.customerId)) {
                 $SkippedCount++
                 continue
             }
 
-            # Use CVE-ID as PartitionKey for efficient querying
-            $PartitionKey = $item.cveId
-            
-            # Use customerId_deviceId as RowKey for uniqueness per tenant/device
-            $RowKey = "$($item.customerId)_$($item.deviceId)"
-
-            # Track CVE-tenant combinations for summary
-            $CveKey = "$($item.cveId)|$($item.customerId)"
-            if (-not $ProcessedCves.ContainsKey($CveKey)) {
-                $ProcessedCves[$CveKey] = 0
-            }
-            $ProcessedCves[$CveKey]++
-
-            # Create entity with all relevant fields
+            # Create table entity
+            # PartitionKey = CVE ID (for efficient querying by CVE)
+            # RowKey = customerId_deviceId (unique per tenant per device)
             $Entity = @{
-                PartitionKey            = $PartitionKey
-                RowKey                  = $RowKey
-                cveId                   = $item.cveId
-                customerId              = $item.customerId
-                deviceId                = $item.deviceId
-                deviceName              = if ($item.deviceName) { $item.deviceName } else { "" }
-                severity                = if ($item.vulnerabilitySeverityLevel) { $item.vulnerabilitySeverityLevel } else { "Unknown" }
-                cvssScore               = if ($item.cvssScore) { [double]$item.cvssScore } else { 0.0 }
-                exploitabilityLevel     = if ($item.exploitabilityLevel) { $item.exploitabilityLevel } else { "Unknown" }
-                softwareName            = if ($item.softwareName) { $item.softwareName } else { "" }
-                softwareVendor          = if ($item.softwareVendor) { $item.softwareVendor } else { "" }
-                softwareVersion         = if ($item.softwareVersion) { $item.softwareVersion } else { "" }
-                osPlatform              = if ($item.osPlatform) { $item.osPlatform } else { "" }
-                firstSeenTimestamp      = if ($item.firstSeenTimestamp) { $item.firstSeenTimestamp } else { "" }
-                lastSeenTimestamp       = if ($item.lastSeenTimestamp) { $item.lastSeenTimestamp } else { "" }
-                cveMitigationStatus     = if ($item.cveMitigationStatus) { $item.cveMitigationStatus } else { "" }
-                securityUpdateAvailable = if ($null -ne $item.securityUpdateAvailable) { [bool]$item.securityUpdateAvailable } else { $false }
+                PartitionKey            = $vuln.cveId
+                RowKey                  = "$($vuln.customerId)_$($vuln.deviceId)"
+                cveId                   = $vuln.cveId
+                customerId              = $vuln.customerId
+                deviceId                = $vuln.deviceId
+                deviceName              = if ($vuln.deviceName) { $vuln.deviceName } else { "" }
+                severity                = if ($vuln.vulnerabilitySeverityLevel) { $vuln.vulnerabilitySeverityLevel } else { "" }
+                cvssScore               = if ($vuln.cvssScore) { [double]$vuln.cvssScore } else { 0.0 }
+                exploitabilityLevel     = if ($vuln.exploitabilityLevel) { $vuln.exploitabilityLevel } else { "" }
+                softwareName            = if ($vuln.softwareName) { $vuln.softwareName } else { "" }
+                softwareVendor          = if ($vuln.softwareVendor) { $vuln.softwareVendor } else { "" }
+                softwareVersion         = if ($vuln.softwareVersion) { $vuln.softwareVersion } else { "" }
+                osPlatform              = if ($vuln.osPlatform) { $vuln.osPlatform } else { "" }
+                firstSeenTimestamp      = if ($vuln.firstSeenTimestamp) { $vuln.firstSeenTimestamp } else { "" }
+                lastSeenTimestamp       = if ($vuln.lastSeenTimestamp) { $vuln.lastSeenTimestamp } else { "" }
+                securityUpdateAvailable = if ($null -ne $vuln.securityUpdateAvailable) { [bool]$vuln.securityUpdateAvailable } else { $false }
                 lastUpdated             = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             }
 
-            $CacheEntities += $Entity
+            $Entities += $Entity
         }
 
         if ($SkippedCount -gt 0) {
             Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
-                -message "Skipped $SkippedCount vulnerability records due to missing required fields" -Sev 'Warning'
+                -message "Skipped $SkippedCount records due to missing required fields" -Sev 'Warning'
         }
 
-        if ($CacheEntities.Count -eq 0) {
+        if ($Entities.Count -eq 0) {
             Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
                 -message "No valid CVE records to cache" -Sev 'Warning'
             return
         }
 
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
-            -message "Prepared $($CacheEntities.Count) cache entities from $($AllVulns.Count) raw records" -Sev 'Info'
-
         # ============================
-        # 5. WRITE TO AZURE TABLE
+        # 5. BATCH WRITE TO TABLE
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
-            -message "Writing $($CacheEntities.Count) entities to CveCache table" -Sev 'Info'
+            -message "Writing $($Entities.Count) entities to CveCache table" -Sev 'Info'
         
         $SuccessCount = 0
         $FailCount = 0
-        $BatchSize = 100  # Process in batches for better performance
+        $BatchSize = 100
         
-        for ($i = 0; $i -lt $CacheEntities.Count; $i += $BatchSize) {
-            $Batch = $CacheEntities[$i..[Math]::Min($i + $BatchSize - 1, $CacheEntities.Count - 1)]
+        for ($i = 0; $i -lt $Entities.Count; $i += $BatchSize) {
+            $Batch = $Entities[$i..[Math]::Min($i + $BatchSize - 1, $Entities.Count - 1)]
             
             try {
                 Add-CIPPAzDataTableEntity @CveCacheTable `
@@ -179,9 +153,6 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                     -OperationType 'UpsertReplace'
                 
                 $SuccessCount += $Batch.Count
-                
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
-                    -message "Batch progress: $SuccessCount/$($CacheEntities.Count) entities written" -Sev 'Debug'
             }
             catch {
                 $FailCount += $Batch.Count
@@ -192,22 +163,12 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         }
 
         # ============================
-        # 6. LOG SUMMARY
+        # 6. LOG COMPLETION
         # ============================
-        $UniqueCves = ($ProcessedCves.Keys | ForEach-Object { $_.Split('|')[0] } | Select-Object -Unique).Count
+        $UniqueCves = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
         
         Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
             -message "CVE Cache Refresh completed. Success: $SuccessCount, Failed: $FailCount, Unique CVEs: $UniqueCves" -Sev 'Info'
-
-        # Return summary for logging
-        return @{
-            TenantId      = $Tenant
-            TotalRecords  = $AllVulns.Count
-            CachedEntries = $SuccessCount
-            FailedEntries = $FailCount
-            UniqueCves    = $UniqueCves
-            Timestamp     = (Get-Date).ToUniversalTime()
-        }
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
