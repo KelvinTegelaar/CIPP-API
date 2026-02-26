@@ -66,7 +66,7 @@ function Start-LogRetentionCleanup {
                 Write-Host "Processing batch $BatchNumber..."
 
                 # Fetch up to 10k old log entries
-                $OldLogs = Get-AzDataTableEntity @CippLogsTable -Filter $CutoffFilter -Property @('PartitionKey', 'RowKey', 'ETag') -First $BatchSize
+                $OldLogs = Get-AzDataTableEntity @CippLogsTable -Filter $CutoffFilter -Property @('PartitionKey', 'RowKey') -First $BatchSize
 
                 if ($OldLogs -and ($OldLogs | Measure-Object).Count -gt 0) {
                     $BatchCount = ($OldLogs | Measure-Object).Count
