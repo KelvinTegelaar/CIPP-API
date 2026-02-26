@@ -99,6 +99,13 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Settings.TemplateList.value)'"
         $Policy = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 10
 
+        # Override the template's state with the Drift Standard's state if specified
+        # This ensures drift detection compares against the desired state, not the original template state
+        if ($Settings.state -and $Settings.state -ne 'donotchange') {
+            Write-Information "Overriding template state from '$($Policy.state)' to '$($Settings.state)' for drift comparison"
+            $Policy.state = $Settings.state
+        }
+
         $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Settings.TemplateList.label
         if (!$CheckExististing) {
             if ($Policy.conditions.userRiskLevels.Count -gt 0 -or $Policy.conditions.signInRiskLevels.Count -gt 0) {
