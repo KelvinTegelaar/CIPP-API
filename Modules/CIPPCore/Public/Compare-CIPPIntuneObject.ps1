@@ -34,7 +34,8 @@ function Compare-CIPPIntuneObject {
             'agents',
             'isSynced'
             'locationInfo',
-            'templateId'
+            'templateId',
+            'source'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
