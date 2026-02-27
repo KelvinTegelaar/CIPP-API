@@ -24,7 +24,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Pulling CVE data from Defender TVM" -Sev 'Debug'
         
-        $AllVulns = Get-DefenderTvmRaw -TenantId $TenantFilter -MaxPages 0
+        $AllVulns = Get-DefenderTvmRaw -Tenant $TenantFilter -MaxPages 0
         
         if (-not $AllVulns) {
             Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "No vulnerability data returned from Defender TVM" -Sev 'Warning'
