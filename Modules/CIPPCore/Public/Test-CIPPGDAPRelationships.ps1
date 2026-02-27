@@ -53,7 +53,10 @@ function Test-CIPPGDAPRelationships {
             'M365 GDAP SharePoint Administrator',
             'M365 GDAP Authentication Policy Administrator',
             'M365 GDAP Privileged Role Administrator',
-            'M365 GDAP Privileged Authentication Administrator'
+            'M365 GDAP Privileged Authentication Administrator',
+            'M365 GDAP Billing Administrator',
+            'M365 GDAP Global Reader',
+            'M365 GDAP Domain Name Administrator'
         )
         $RoleAssignableGroups = $SAMUserMemberships | Where-Object { $_.isAssignableToRole }
         $NestedGroups = [System.Collections.Generic.List[object]]::new()
@@ -85,10 +88,10 @@ function Test-CIPPGDAPRelationships {
                     }) | Out-Null
             }
         }
-        if ($CIPPGroupCount -lt 12) {
+        if ($CIPPGroupCount -lt 15) {
             $GDAPissues.add([PSCustomObject]@{
                     Type         = 'Warning'
-                    Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                    Issue        = "We only found $($CIPPGroupCount) of the 15 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                     Tenant       = '*Partner Tenant'
                     Relationship = 'None'
                     Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'

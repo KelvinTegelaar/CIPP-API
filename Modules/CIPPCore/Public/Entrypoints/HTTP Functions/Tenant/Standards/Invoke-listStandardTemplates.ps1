@@ -1,7 +1,7 @@
 function Invoke-listStandardTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.Read
     #>
