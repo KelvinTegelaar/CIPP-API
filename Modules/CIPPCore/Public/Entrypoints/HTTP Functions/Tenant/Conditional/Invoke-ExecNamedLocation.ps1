@@ -15,7 +15,10 @@ function Invoke-ExecNamedLocation {
     $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
     $NamedLocationId = $Request.Body.namedLocationId ?? $Request.Query.namedLocationId
     $Change = $Request.Body.change ?? $Request.Query.change
-    $Content = $Request.Body.input.value ?? $Request.Query.input.value
+    $Content = $Request.Body.input ?? $Request.Query.input
+    #reintroduced because iut can come from autocomplete OR textinput.
+    if ($content.value) { $content = $content.value }
+
 
     try {
         $Results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -Change $Change -Content $Content -Headers $Headers
