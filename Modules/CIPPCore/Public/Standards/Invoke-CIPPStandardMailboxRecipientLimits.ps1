@@ -215,7 +215,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
                 }
                 # Add to alert objects list efficiently
                 foreach ($Mailbox in $MailboxesToUpdate) {
-                    $AlertObjects.Add($Mailbox)
+                    $AlertObjects.Add($Mailbox.UserPrincipalName)
                 }
             }
 
@@ -232,7 +232,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
                 }
                 # Add to alert objects list efficiently
                 foreach ($Mailbox in $MailboxesWithPlanIssues) {
-                    $AlertObjects.Add($Mailbox)
+                    $AlertObjects.Add($Mailbox.UserPrincipalName)
                 }
             }
 
