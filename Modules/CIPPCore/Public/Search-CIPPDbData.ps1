@@ -58,7 +58,7 @@ function Search-CIPPDbData {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$TenantFilter,
+        [string[]]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
         [string[]]$SearchTerms,
