@@ -3,7 +3,7 @@ function Invoke-ExecDnsConfig {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.AppSettings.ReadWrite
+        Tenant.Domains.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
