@@ -1445,7 +1445,7 @@ function Invoke-NinjaOneTenantSync {
                 $LicenseFields = @{
                     cippLicenseSummary = @{'html' = $LicenseSummaryHTML }
                     cippLicenseUsers   = @{'html' = $LicenseUsersHTML }
-                    cippLicenseID      = $License.id
+                    cippLicenseID      = $License.skuId
                 }
 
 
