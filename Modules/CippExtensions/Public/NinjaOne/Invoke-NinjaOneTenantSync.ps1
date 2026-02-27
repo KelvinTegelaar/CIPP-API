@@ -1026,13 +1026,16 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
-
-                # Format Conditional Access Polcies
-                $UserPoliciesFormatted = '<ul>'
-                foreach ($Policy in $UserPolicies) {
-                    $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
+                if ($UserPolicies) {
+                    # Format Conditional Access Policies
+                    $UserPoliciesFormatted = '<ul>'
+                    foreach ($Policy in $UserPolicies) {
+                        $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
+                    }
+                    $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
+                } else {
+                    $UserPoliciesFormatted = 'No Conditional Access Policies Assigned'
                 }
-                $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
 
 
                 $UserOverviewCard = [PSCustomObject]@{
