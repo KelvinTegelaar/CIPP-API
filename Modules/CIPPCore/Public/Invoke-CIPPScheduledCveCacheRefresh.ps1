@@ -6,40 +6,40 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         Pulls Defender TVM vulnerabilities for each tenant and stores them in the CveCache Azure Table.
     #>
     param(
-        $Tenant
+        $TenantFilter
     )
 
-    Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Starting CVE Cache Refresh" -Sev 'Info'
+    Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Starting CVE Cache Refresh" -Sev 'Info'
 
     try {
         # ============================
         # 1. GET CVE CACHE TABLE
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Getting CveCache table context" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Getting CveCache table context" -Sev 'Debug'
         
         $CveCacheTable = Get-CIPPTable -TableName 'CveCache'
 
         # ============================
         # 2. PULL CVE DATA FROM DEFENDER TVM
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Pulling CVE data from Defender TVM" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Pulling CVE data from Defender TVM" -Sev 'Debug'
         
-        $AllVulns = Get-DefenderTvmRaw -TenantId $Tenant -MaxPages 0
+        $AllVulns = Get-DefenderTvmRaw -TenantId $TenantFilter -MaxPages 0
         
         if (-not $AllVulns) {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "No vulnerability data returned from Defender TVM" -Sev 'Warning'
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "No vulnerability data returned from Defender TVM" -Sev 'Warning'
             return
         }
 
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Retrieved $($AllVulns.Count) CVE records from Defender TVM" -Sev 'Info'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Retrieved $($AllVulns.Count) CVE records from Defender TVM" -Sev 'Info'
 
         # ============================
         # 3. DELETE OLD ENTRIES FOR THIS TENANT
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Removing old cache entries for this tenant" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Removing old cache entries for this tenant" -Sev 'Debug'
         
         try {
-            $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$Tenant'"
+            $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$TenantFilter'"
             
             if ($ExistingEntries) {
                 $DeleteCount = 0
@@ -51,22 +51,22 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                             -ErrorAction Stop
                         $DeleteCount++
                     } catch {
-                        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+                        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                             -message "Failed to delete old entry: $($_.Exception.Message)" -Sev 'Warning'
                     }
                 }
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                     -message "Deleted $DeleteCount old cache entries" -Sev 'Debug'
             }
         } catch {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                 -message "Warning during cleanup: $($_.Exception.Message)" -Sev 'Warning'
         }
 
         # ============================
         # 4. WRITE NEW ENTRIES TO TABLE
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant -message "Writing CVE data to cache table" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Writing CVE data to cache table" -Sev 'Debug'
         
         $Entities = @()
         $SkippedCount = 0
@@ -107,12 +107,12 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         }
 
         if ($SkippedCount -gt 0) {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                 -message "Skipped $SkippedCount records due to missing required fields" -Sev 'Warning'
         }
 
         if ($Entities.Count -eq 0) {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                 -message "No valid CVE records to cache" -Sev 'Warning'
             return
         }
@@ -120,7 +120,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         # 5. BATCH WRITE TO TABLE
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
             -message "Writing $($Entities.Count) entities to CveCache table" -Sev 'Info'
         
         $SuccessCount = 0
@@ -141,7 +141,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
             catch {
                 $FailCount += $Batch.Count
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                     -message "Failed to write batch: $ErrorMessage" -Sev 'Error'
             }
         }
@@ -151,12 +151,12 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         $UniqueCves = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
         
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
             -message "CVE Cache Refresh completed. Success: $SuccessCount, Failed: $FailCount, Unique CVEs: $UniqueCves" -Sev 'Info'
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $Tenant `
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
             -message "CVE Cache Refresh failed: $ErrorMessage" -Sev 'Error'
         throw $ErrorMessage
     }
