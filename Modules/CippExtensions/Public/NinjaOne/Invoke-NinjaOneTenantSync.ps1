@@ -301,7 +301,6 @@ function Invoke-NinjaOneTenantSync {
         $MailboxStatsFull = $ExtensionCache.MailboxUsage
         $Permissions = $ExtensionCache.MailboxPermissions
         $SecureScore = $ExtensionCache.SecureScore
-        $Subscriptions = if ($ExtensionCache.Licenses) { $ExtensionCache.Licenses.TermInfo | Where-Object { $null -ne $_ } } else { @() }
         $SecureScoreProfiles = $ExtensionCache.SecureScoreControlProfiles
         $TenantDetails = $ExtensionCache.Organization
         $RawDomains = $ExtensionCache.Domains
@@ -1384,7 +1383,7 @@ function Invoke-NinjaOneTenantSync {
         if ($Configuration.LicenseDocumentsEnabled -eq $True) {
 
             $LicenseDetails = foreach ($License in $Licenses) {
-                $MatchedSubscriptions = $Subscriptions | Where-Object -Property skuid -EQ $License.skuId
+                $MatchedSubscriptions = $License.TermInfo
                 Write-Information "License info: $($License | ConvertTo-Json -Depth 100)"
                 $FriendlyLicenseName = $License.skuPartNumber
 
