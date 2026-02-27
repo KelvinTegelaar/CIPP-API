@@ -1,25 +1,9 @@
 function Invoke-CIPPScheduledCveCacheRefresh {
     <#
-    .FUNCTIONALITY
-        Entrypoint
-    .COMPONENT
-        (APIName) CveCacheRefresh
     .SYNOPSIS
-        (Label) Refresh CVE Cache from Defender TVM
+        Refresh CVE Cache from Defender TVM
     .DESCRIPTION
-        (Helptext) Pulls Defender TVM vulnerabilities for each tenant and stores them in the CveCache Azure Table.
-        (DocsDescription) This scheduled task queries Microsoft Defender Threat & Vulnerability Management (TVM) for all software vulnerabilities affecting devices in the tenant. Results are stored in the CveCache Azure Table for use by the Vulnerability Management page.
-    .NOTES
-        CAT
-            Scheduled Tasks
-        TAG
-            Security
-        IMPACT
-            Low Impact
-        ADDEDDATE
-            2026-01-08
-        RECOMMENDEDBY
-            ["CIPP"]
+        Pulls Defender TVM vulnerabilities for each tenant and stores them in the CveCache Azure Table.
     #>
     param(
         $Tenant
