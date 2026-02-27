@@ -9,6 +9,19 @@ function Start-LogRetentionCleanup {
     param()
 
     try {
+        # Check rerun protection - only run once every 24 hours (86400 seconds)
+        $RerunParams = @{
+            TenantFilter = 'AllTenants'
+            Type         = 'LogCleanup'
+            API          = 'LogRetentionCleanup'
+            Interval     = 86400
+        }
+        $Rerun = Test-CIPPRerun @RerunParams
+        if ($Rerun) {
+            Write-Host 'Log cleanup was recently executed. Skipping to prevent duplicate execution (runs once every 24 hours)'
+            return $true
+        }
+
         # Get retention settings
         $ConfigTable = Get-CippTable -tablename Config
         $Filter = "PartitionKey eq 'LogRetention' and RowKey eq 'Settings'"
@@ -36,27 +49,50 @@ function Start-LogRetentionCleanup {
         # Calculate cutoff date
         $CutoffDate = (Get-Date).AddDays(-$RetentionDays).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-        $DeletedCount = 0
+        $TotalDeletedCount = 0
+        $BatchSize = 5000
 
         # Clean up CIPP Logs
         if ($PSCmdlet.ShouldProcess('CippLogs', 'Cleaning up old logs')) {
             $CippLogsTable = Get-CippTable -tablename 'CippLogs'
             $CutoffFilter = "Timestamp lt datetime'$CutoffDate'"
 
-            # Fetch all old log entries
-            $OldLogs = Get-AzDataTableEntity @CippLogsTable -Filter $CutoffFilter -Property @('PartitionKey', 'RowKey', 'ETag')
+            # Process deletions in batches of 10k to avoid timeout
+            $HasMoreRecords = $true
+            $BatchNumber = 0
 
-            if ($OldLogs) {
-                Remove-AzDataTableEntity @CippLogsTable -Entity $OldLogs -Force
-                $DeletedCount = ($OldLogs | Measure-Object).Count
-                Write-LogMessage -API 'LogRetentionCleanup' -message "Deleted $DeletedCount old log entries (retention: $RetentionDays days)" -Sev 'Info'
-                Write-Host "Deleted $DeletedCount old log entries"
+            while ($HasMoreRecords) {
+                $BatchNumber++
+                Write-Host "Processing batch $BatchNumber..."
+
+                # Fetch up to 10k old log entries
+                $OldLogs = Get-AzDataTableEntity @CippLogsTable -Filter $CutoffFilter -Property @('PartitionKey', 'RowKey') -First $BatchSize
+
+                if ($OldLogs -and ($OldLogs | Measure-Object).Count -gt 0) {
+                    $BatchCount = ($OldLogs | Measure-Object).Count
+                    Remove-AzDataTableEntity @CippLogsTable -Entity $OldLogs -Force
+                    $TotalDeletedCount += $BatchCount
+                    Write-Host "Batch $BatchNumber`: Deleted $BatchCount log entries"
+
+                    # If we got less than the batch size, we're done
+                    if ($BatchCount -lt $BatchSize) {
+                        $HasMoreRecords = $false
+                    }
+                } else {
+                    Write-Host 'No more old logs found'
+                    $HasMoreRecords = $false
+                }
+            }
+
+            if ($TotalDeletedCount -gt 0) {
+                Write-LogMessage -API 'LogRetentionCleanup' -message "Deleted $TotalDeletedCount old log entries in $BatchNumber batch(es) (retention: $RetentionDays days)" -Sev 'Info'
+                Write-Host "Total deleted: $TotalDeletedCount old log entries"
             } else {
                 Write-Host 'No old logs found'
             }
         }
 
-        Write-LogMessage -API 'LogRetentionCleanup' -message "Log cleanup completed. Total logs deleted: $DeletedCount (retention: $RetentionDays days)" -Sev 'Info'
+        Write-LogMessage -API 'LogRetentionCleanup' -message "Log cleanup completed. Total logs deleted: $TotalDeletedCount (retention: $RetentionDays days)" -Sev 'Info'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
