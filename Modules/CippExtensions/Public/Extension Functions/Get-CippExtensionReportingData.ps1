@@ -67,7 +67,8 @@ function Get-CippExtensionReportingData {
             @{N = 'skuPartNumber'; E = { $_.skuPartNumber } },
             @{N = 'consumedUnits'; E = { $_.CountUsed } },
             @{N = 'prepaidUnits'; E = { @{enabled = $_.TotalLicenses } } },
-            @{N = 'TermInfo'; E = { @($_.TermInfo) } }
+            @{N = 'TermInfo'; E = { @($_.TermInfo) } },
+            @{N = 'servicePlans'; E = { $_.ServicePlans } }
         } else {
             $Return.Licenses = @()
         }

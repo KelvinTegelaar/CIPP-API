@@ -153,8 +153,10 @@ function Get-CIPPLicenseOverview {
                 TermInfo       = $TermInfo
                 AssignedUsers  = ($UsersBySku.ContainsKey($SkuKey) ? @(($UsersBySku[$SkuKey])) : $null)
                 AssignedGroups = ($GroupsBySku.ContainsKey($SkuKey) ? @(($GroupsBySku[$SkuKey])) : $null)
+                ServicePlans   = $sku.servicePlans
             }
         }
     }
     return ($GraphRequest | Sort-Object -Property License)
 }
+
