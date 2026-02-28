@@ -17,8 +17,8 @@ function Set-CIPPUserLicense {
         $LicenseRequests.Add([PSCustomObject]@{
                 UserId            = $UserId
                 UserPrincipalName = $UserPrincipalName
-                AddLicenses       = $AddLicenses
-                RemoveLicenses    = $RemoveLicenses
+                AddLicenses       = @($AddLicenses)
+                RemoveLicenses    = @($RemoveLicenses)
                 IsReplace         = $false
             })
     }
@@ -31,6 +31,23 @@ function Set-CIPPUserLicense {
     if ($UserSettings) { $DefaultUsageLocation = (ConvertFrom-Json $UserSettings.JSON -Depth 5 -ErrorAction SilentlyContinue).usageLocation.value }
     $DefaultUsageLocation ??= 'US'
 
+    # Normalize license arrays to avoid sending null skuIds to Graph
+    foreach ($Request in $LicenseRequests) {
+        $Request.AddLicenses = @(
+            @($Request.AddLicenses) |
+            ForEach-Object { [string]$_ } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+        $Request.RemoveLicenses = @(
+            @($Request.RemoveLicenses) |
+            ForEach-Object { [string]$_ } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+        if ([string]::IsNullOrWhiteSpace($Request.UserPrincipalName)) {
+            $Request.UserPrincipalName = $Request.UserId
+        }
+    }
+
     # Process Replace operations first (remove all licenses)
     $ReplaceRequests = $LicenseRequests | Where-Object { $_.IsReplace -and $_.RemoveLicenses.Count -gt 0 }
     if ($ReplaceRequests.Count -gt 0) {
@@ -41,7 +58,7 @@ function Set-CIPPUserLicense {
                 url     = "/users/$($Request.UserId)/assignLicense"
                 body    = @{
                     'addLicenses'    = @()
-                    'removeLicenses' = @($Request.RemoveLicenses)
+                    'removeLicenses' = $Request.RemoveLicenses
                 }
                 headers = @{ 'Content-Type' = 'application/json' }
             }
@@ -72,7 +89,7 @@ function Set-CIPPUserLicense {
             url     = "/users/$($Request.UserId)/assignLicense"
             body    = @{
                 'addLicenses'    = @($AddLicensesArray)
-                'removeLicenses' = $Request.IsReplace ? @() : @($Request.RemoveLicenses)
+                'removeLicenses' = $Request.IsReplace ? @() : $Request.RemoveLicenses
             }
             headers = @{ 'Content-Type' = 'application/json' }
         }
@@ -133,7 +150,7 @@ function Set-CIPPUserLicense {
                 url     = "/users/$($Request.UserId)/assignLicense"
                 body    = @{
                     'addLicenses'    = @($AddLicensesArray)
-                    'removeLicenses' = $Request.IsReplace ? @() : @($Request.RemoveLicenses)
+                    'removeLicenses' = $Request.IsReplace ? @() : $Request.RemoveLicenses
                 }
                 headers = @{ 'Content-Type' = 'application/json' }
             }
