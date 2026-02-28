@@ -149,11 +149,12 @@ function Test-CIPPAuditLogRules {
             # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
             if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
                 [pscustomobject]@{
-                    Tenants    = $Tenants
-                    Excluded   = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                    Conditions = $ConfigEntry.Conditions
-                    Actions    = $ConfigEntry.Actions
-                    LogType    = $ConfigEntry.Type
+                    Tenants      = $Tenants
+                    Excluded     = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                    Conditions   = $ConfigEntry.Conditions
+                    Actions      = $ConfigEntry.Actions
+                    LogType      = $ConfigEntry.Type
+                    AlertComment = $ConfigEntry.AlertComment
                 }
             }
         }
@@ -553,6 +554,7 @@ function Test-CIPPAuditLogRules {
                         clause         = $finalCondition
                         expectedAction = $actions
                         CIPPClause     = $CIPPClause
+                        AlertComment   = $Config.AlertComment
                     }
                 }
             } catch {
@@ -574,6 +576,7 @@ function Test-CIPPAuditLogRules {
                         $ReturnedData = foreach ($item in $ReturnedData) {
                             $item.CIPPAction = $clause.expectedAction
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
+                            $item.CIPPAlertComment = $clause.AlertComment
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
@@ -601,6 +604,7 @@ function Test-CIPPAuditLogRules {
                     Data         = $AuditLog
                     CIPPURL      = [string]$CIPPURL
                     TenantFilter = $TenantFilter
+                    AlertComment = $AuditLog.CIPPAlertComment
                 }
                 try {
                     Invoke-CippWebhookProcessing @Webhook

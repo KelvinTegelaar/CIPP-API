@@ -75,7 +75,7 @@
     "Id": "9b0c8e50-f798-49db-9a8b-dbcc0fcadeea",
     "Command": "Start-StandardsOrchestrator",
     "Description": "Orchestrator to process standards",
-    "Cron": "0 0 */4 * * *",
+    "Cron": "0 0 */12 * * *",
     "Priority": 4,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"

@@ -155,7 +155,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { ![string]::IsNullOrEmpty($Options.OnedriveAccess) }
+                Condition  = { $Options.OnedriveAccess.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPSharePointPerms'
                 Parameters = @{
                     tenantFilter       = $TenantFilter
@@ -166,7 +166,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { ![string]::IsNullOrEmpty($Options.AccessNoAutomap) }
+                Condition  = { $Options.AccessNoAutomap.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPMailboxAccess'
                 Parameters = @{
                     tenantFilter = $TenantFilter
@@ -179,7 +179,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { ![string]::IsNullOrEmpty($Options.AccessAutomap) }
+                Condition  = { $Options.AccessAutomap.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPMailboxAccess'
                 Parameters = @{
                     tenantFilter = $TenantFilter
