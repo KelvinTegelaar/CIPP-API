@@ -59,6 +59,7 @@ function Push-CIPPDBCacheData {
             'AppRoleAssignments'
             'LicenseOverview'
             'MFAState'
+            'BitlockerKeys'
         )
 
         foreach ($CacheFunction in $BasicCacheFunctions) {
