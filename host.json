@@ -10,7 +10,7 @@
   "functionTimeout": "00:10:00",
   "extensions": {
     "durableTask": {
-      "maxConcurrentActivityFunctions": 1,
+      "maxConcurrentActivityFunctions": 4,
       "maxConcurrentOrchestratorFunctions": 5,
       "tracing": {
         "distributedTracingEnabled": false,
