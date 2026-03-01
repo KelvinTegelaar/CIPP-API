@@ -51,10 +51,7 @@ function Push-CIPPDBCacheData {
             'PIMSettings'
             'Domains'
             'B2BManagementPolicy'
-            'AuthenticationFlowsPolicy'
             'DeviceRegistrationPolicy'
-            'CredentialUserRegistrationDetails'
-            'UserRegistrationDetails'
             'OAuth2PermissionGrants'
             'AppRoleAssignments'
             'LicenseOverview'
@@ -117,12 +114,20 @@ function Push-CIPPDBCacheData {
 
         #region Conditional Access Licensed - Azure AD Premium features
         if ($ConditionalAccessCapable) {
-            $Batch.Add(@{
-                    FunctionName = 'ExecCIPPDBCache'
-                    Name         = 'ConditionalAccessPolicies'
-                    TenantFilter = $TenantFilter
-                    QueueId      = $QueueId
-                })
+            $ConditionalAccessCacheFunctions = @(
+                'ConditionalAccessPolicies'
+                'AuthenticationFlowsPolicy'
+                'CredentialUserRegistrationDetails'
+                'UserRegistrationDetails'
+            )
+            foreach ($CacheFunction in $ConditionalAccessCacheFunctions) {
+                $Batch.Add(@{
+                        FunctionName = 'ExecCIPPDBCache'
+                        Name         = $CacheFunction
+                        TenantFilter = $TenantFilter
+                        QueueId      = $QueueId
+                    })
+            }
         } else {
             Write-Host 'Skipping Conditional Access data collection - tenant does not have required license'
         }
