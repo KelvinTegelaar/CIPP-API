@@ -198,6 +198,10 @@ function Get-CIPPReusableSettingsFromPolicy {
                 }
             }
 
+            if ($templateGuid) {
+                $result.Map[$settingId] = $templateGuid
+            }
+
             $result.ReusableSettings.Add([pscustomobject]@{
                     displayName = $settingDisplayName
                     templateId  = $templateGuid
