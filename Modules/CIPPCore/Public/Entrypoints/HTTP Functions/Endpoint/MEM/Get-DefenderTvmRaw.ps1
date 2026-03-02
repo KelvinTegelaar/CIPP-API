@@ -24,7 +24,7 @@ function Get-DefenderTvmRaw {
             Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1) from: $uri" -Sev 'Debug'
             
             # Use -NoPagination to get raw response with nextLink
-            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope -NoPagination
+            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope -NoPagination $true
             
             # Handle response structure
             if ($resp -is [System.Collections.IDictionary]) {
