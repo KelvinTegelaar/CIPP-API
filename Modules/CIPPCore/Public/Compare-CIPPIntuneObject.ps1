@@ -34,7 +34,8 @@ function Compare-CIPPIntuneObject {
             'agents',
             'isSynced'
             'locationInfo',
-            'templateId'
+            'templateId',
+            'source'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
@@ -47,6 +48,38 @@ function Compare-CIPPIntuneObject {
             return ($PropertyName -like '*@OData*' -or
                 $PropertyName -like '#microsoft.graph*' -or
                 $excludeProps -contains $PropertyName)
+        }
+
+        function ShouldCompareAsUnorderedSet {
+            param (
+                [string]$PropertyPath
+            )
+            # Properties that should be compared as sets (order doesn't matter)
+            $unorderedSetPatterns = @(
+                'includeGroups',
+                'excludeGroups',
+                'includeUsers',
+                'excludeUsers',
+                'includeApplications',
+                'excludeApplications',
+                'includeRoles',
+                'excludeRoles',
+                'includePlatforms',
+                'excludePlatforms',
+                'includeLocations',
+                'excludeLocations',
+                'includeDevices',
+                'excludeDevices',
+                'includeGuestOrExternalUserTypes',
+                'excludeGuestOrExternalUserTypes'
+            )
+
+            foreach ($pattern in $unorderedSetPatterns) {
+                if ($PropertyPath -match "\.$pattern(\.\d+)?$" -or $PropertyPath -eq $pattern) {
+                    return $true
+                }
+            }
+            return $false
         }
 
         function Compare-ObjectsRecursively {
@@ -136,25 +169,65 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
-                $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
-
-                for ($i = 0; $i -lt $maxLength; $i++) {
-                    $newPath = "$PropertyPath.$i"
-
-                    if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
-                        Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
-                    } elseif ($i -lt $Object1.Count) {
+                # Check if this array should be compared as an unordered set
+                if (ShouldCompareAsUnorderedSet -PropertyPath $PropertyPath) {
+                    # For unordered sets, compare contents regardless of order
+                    if ($Object1.Count -ne $Object2.Count) {
+                        # Different lengths - report the difference
                         $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = $Object1[$i]
-                                ReceivedValue = ''
+                                Property      = $PropertyPath
+                                ExpectedValue = "Array with $($Object1.Count) items"
+                                ReceivedValue = "Array with $($Object2.Count) items"
                             })
                     } else {
-                        $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = ''
-                                ReceivedValue = $Object2[$i]
-                            })
+                        # Same length - check if all items exist in both arrays
+                        $array1Sorted = @($Object1 | Sort-Object)
+                        $array2Sorted = @($Object2 | Sort-Object)
+
+                        for ($i = 0; $i -lt $array1Sorted.Count; $i++) {
+                            $item1 = $array1Sorted[$i]
+                            $item2 = $array2Sorted[$i]
+
+                            # For primitive types, direct comparison
+                            if ($item1 -is [string] -or $item1 -is [int] -or $item1 -is [long] -or $item1 -is [bool] -or $item1 -is [double] -or $item1 -is [decimal]) {
+                                if ($item1 -ne $item2) {
+                                    # Items don't match even after sorting - arrays have different contents
+                                    $result.Add([PSCustomObject]@{
+                                            Property      = $PropertyPath
+                                            ExpectedValue = ($Object1 -join ', ')
+                                            ReceivedValue = ($Object2 -join ', ')
+                                        })
+                                    break
+                                }
+                            } else {
+                                # For complex objects, recursively compare with a generic path
+                                $newPath = "$PropertyPath[$i]"
+                                Compare-ObjectsRecursively -Object1 $item1 -Object2 $item2 -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                            }
+                        }
+                    }
+                } else {
+                    # Ordered array comparison (original behavior)
+                    $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
+
+                    for ($i = 0; $i -lt $maxLength; $i++) {
+                        $newPath = "$PropertyPath.$i"
+
+                        if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
+                            Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                        } elseif ($i -lt $Object1.Count) {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = $Object1[$i]
+                                    ReceivedValue = ''
+                                })
+                        } else {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = ''
+                                    ReceivedValue = $Object2[$i]
+                                })
+                        }
                     }
                 }
             } elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {

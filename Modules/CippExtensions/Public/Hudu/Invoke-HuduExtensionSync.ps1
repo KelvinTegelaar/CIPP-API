@@ -246,7 +246,7 @@ function Invoke-HuduExtensionSync {
 
             $post = '</div>'
 
-            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { Convert-SKUname -skuName $_.SkuPartNumber -ConvertTable $LicTable } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
+            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { $_.SkuPartNumber } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
             $licenseHTML = $licenseOut | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | Out-String
         }
 
@@ -519,11 +519,10 @@ function Invoke-HuduExtensionSync {
                     $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
                             $UserLic = $_
                             $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            $DisplayName = Convert-SKUname -skuName $SkuPartNumber -ConvertTable $LicTable
-                            if (!$DisplayName) {
-                                $DisplayName = $SkuPartNumber
+                            if (!$SkuPartNumber) {
+                                $SkuPartNumber = 'Unknown License'
                             }
-                            $DisplayName
+                            $SkuPartNumber
                         }) -join ', '
 
                     $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.userPrincipalName }
