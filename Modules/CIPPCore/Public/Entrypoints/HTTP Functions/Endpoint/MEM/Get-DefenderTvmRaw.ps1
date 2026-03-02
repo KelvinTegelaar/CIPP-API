@@ -14,7 +14,7 @@ function Get-DefenderTvmRaw {
     )
 
     $scope = 'https://api.securitycenter.microsoft.com/.default'
-    $uri   = 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?$top=999'
+    $uri   = 'https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine'
     $all   = New-Object System.Collections.Generic.List[object]
     $page  = 0
 
@@ -23,8 +23,8 @@ function Get-DefenderTvmRaw {
         do {
             Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1) from: $uri" -Sev 'Debug'
             
-            # Use -NoPagination to get raw response with nextLink
-            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope -NoPagination $true
+            # Try without NoPagination first
+            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope
             
             # Handle response structure
             if ($resp -is [System.Collections.IDictionary]) {
