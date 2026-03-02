@@ -33,7 +33,7 @@ function New-PwPushLink {
 
         # Proceed with creating the PwPush link
         try {
-            Set-PwPushConfig -Configuration $Configuration
+            Set-PwPushConfig -Configuration $Configuration -FullConfiguration $ParsedConfig
             $PushParams = @{
                 Payload = $Payload
             }

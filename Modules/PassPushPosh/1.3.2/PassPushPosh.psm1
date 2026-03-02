@@ -250,6 +250,10 @@ function Invoke-PasswordPusherAPI {
             $iwrSplat['Headers'] = $Script:PPPHeaders
             Write-Debug "Authenticated with Bearer token $(Format-PasswordPusherSecret -Secret $Script:PPPHeaders.'Authorization' -ShowSample)"
         }
+        if ($Script:PPPHeaders.'CF-Access-Client-Id' -and -not $iwrSplat.ContainsKey('Headers')) {
+            $iwrSplat['Headers'] = $Script:PPPHeaders
+            Write-Debug 'CloudFlare ZTNA headers included in request'
+        }
         $callInfo = "$Method $_uri"
         Write-Verbose "Sending HTTP request: $callInfo"
 
