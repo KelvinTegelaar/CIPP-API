@@ -102,7 +102,14 @@ function Send-CIPPAlert {
         Write-Information 'Trying to send webhook'
 
         $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
-        $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json)
+        $ExtensionConfig = Get-CIPPAzDataTableEntity @ExtensionTable
+
+        # Check if config exists and is not null before parsing
+        if ($ExtensionConfig.config -and -not [string]::IsNullOrWhiteSpace($ExtensionConfig.config)) {
+            $Configuration = $ExtensionConfig.config | ConvertFrom-Json
+        } else {
+            $Configuration = $null
+        }
 
         if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
             $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'

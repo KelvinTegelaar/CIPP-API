@@ -65,7 +65,7 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange($AllTenantCommands)
+                    $Batch.AddRange(@($AllTenantCommands))
                 } elseif ($task.TenantGroup) {
                     # Handle tenant groups - expand group to individual tenants
                     try {
@@ -99,7 +99,7 @@ function Start-UserTasksOrchestrator {
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
-                        $Batch.AddRange($GroupTenantCommands)
+                        $Batch.AddRange(@($GroupTenantCommands))
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
