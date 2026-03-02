@@ -40,7 +40,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # 3. DELETE OLD ENTRIES FOR THIS TENANT
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Removing old cache entries for this tenant" -Sev 'Debug'
-        
+
         try {
             $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$TenantFilter'"
             
@@ -48,10 +48,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                 $DeleteCount = 0
                 foreach ($OldEntry in $ExistingEntries) {
                     try {
-                        Remove-AzDataTableEntity -Context $CveCacheTable.Context `
-                            -PartitionKey $OldEntry.PartitionKey `
-                            -RowKey $OldEntry.RowKey `
-                            -ErrorAction Stop
+                        Remove-AzDataTableEntity -Table $CveCacheTable.Context -Entity $OldEntry -ErrorAction Stop
                         $DeleteCount++
                     } catch {
                         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
