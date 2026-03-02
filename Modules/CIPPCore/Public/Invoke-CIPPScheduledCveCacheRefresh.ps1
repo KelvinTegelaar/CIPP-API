@@ -40,22 +40,25 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # 3. DELETE OLD ENTRIES FOR THIS TENANT
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Removing old cache entries for this tenant" -Sev 'Debug'
-
+        
         try {
             $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$TenantFilter'"
-    
+            
             if ($ExistingEntries) {
                 $DeleteCount = 0
                 foreach ($OldEntry in $ExistingEntries) {
                     try {
-                        Remove-AzDataTableEntity @CveCacheTable -Entity $OldEntry -Force
+                        Remove-AzDataTableEntity -Context $CveCacheTable.Context `
+                            -PartitionKey $OldEntry.PartitionKey `
+                            -RowKey $OldEntry.RowKey `
+                            -ErrorAction Stop
                         $DeleteCount++
                     } catch {
                         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                             -message "Failed to delete old entry: $($_.Exception.Message)" -Sev 'Warning'
                     }
                 }
-               Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
                     -message "Deleted $DeleteCount old cache entries" -Sev 'Debug'
             }
         } catch {
@@ -64,31 +67,28 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         }
 
         # ============================
-        # 4. GET DEFENDER EXCEPTION STATUS
+        # 4. GET DEFENDER EXCEPTION STATUS (TEMPORARILY DISABLED - CAUSES OOM)
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Checking Defender exception status" -Sev 'Debug'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Skipping Defender exception check (disabled temporarily)" -Sev 'Debug'
         
         $DefenderExceptions = @{}
-        try {
-            # Query Defender API for CVEs with exception status
-            $uri = 'https://api.securitycenter.microsoft.com/api/Vulnerabilities'
-            $scope = 'https://api.securitycenter.microsoft.com/.default'
-            
-            $VulnResponse = New-GraphGetRequest -tenantid $TenantFilter -uri $uri -scope $scope
-            
-            if ($VulnResponse) {
-                foreach ($vuln in $VulnResponse) {
-                    if ($vuln.status -eq 'UnderException' -or $vuln.status -eq 'PartialException') {
-                        $DefenderExceptions[$vuln.id] = $vuln.status
-                    }
-                }
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
-                    -message "Found $($DefenderExceptions.Count) CVEs with Defender exceptions" -Sev 'Debug'
-            }
-        } catch {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
-                -message "Warning: Could not retrieve Defender exception status: $($_.Exception.Message)" -Sev 'Warning'
-        }
+        # DISABLED: This query causes Out of Memory exceptions for large tenants
+        # Will re-enable with pagination later
+        # try {
+        #     $uri = 'https://api.securitycenter.microsoft.com/api/Vulnerabilities'
+        #     $scope = 'https://api.securitycenter.microsoft.com/.default'
+        #     $VulnResponse = New-GraphGetRequest -tenantid $TenantFilter -uri $uri -scope $scope
+        #     if ($VulnResponse) {
+        #         foreach ($vuln in $VulnResponse) {
+        #             if ($vuln.status -eq 'UnderException' -or $vuln.status -eq 'PartialException') {
+        #                 $DefenderExceptions[$vuln.id] = $vuln.status
+        #             }
+        #         }
+        #     }
+        # } catch {
+        #     Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+        #         -message "Warning: Could not retrieve Defender exception status: $($_.Exception.Message)" -Sev 'Warning'
+        # }
 
         # ============================
         # 5. GET CIPP EXCEPTIONS FOR THIS TENANT
