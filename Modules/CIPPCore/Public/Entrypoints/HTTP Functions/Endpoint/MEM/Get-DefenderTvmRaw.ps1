@@ -21,35 +21,44 @@ function Get-DefenderTvmRaw {
     Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message 'Fetching SoftwareVulnerabilitiesByMachine…' -Sev 'Debug'
     try {
         do {
-            Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1)..." -Sev 'Debug'
+            Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1) from: $uri" -Sev 'Debug'
             
-            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope
+            # Use -NoPagination to get raw response with nextLink
+            $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope -NoPagination
             
-            if ($resp -is [System.Collections.IDictionary] -and $resp.ContainsKey('value')) {
-                $rows = $resp.value
-                $uri  = $resp.'@odata.nextLink'
-                
-                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Retrieved $($rows.Count) records. NextLink present: $($null -ne $uri)" -Sev 'Info'
-                
-                if ($uri) {
-                    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "NextLink: $uri" -Sev 'Debug'
+            # Handle response structure
+            if ($resp -is [System.Collections.IDictionary]) {
+                if ($resp.ContainsKey('value')) {
+                    $rows = $resp.value
+                    $nextLink = $resp.'@odata.nextLink'
+                    
+                    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Retrieved $($rows.Count) records. NextLink present: $($null -ne $nextLink)" -Sev 'Info'
+                    
+                    if ($rows) { $all.AddRange($rows) }
+                    $uri = $nextLink
+                } else {
+                    # Dictionary but no 'value' key - treat as single result
+                    $all.Add($resp)
+                    $uri = $null
+                    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Single record (dictionary)" -Sev 'Debug'
                 }
+            } elseif ($resp -is [System.Collections.IEnumerable] -and $resp -isnot [string]) {
+                # It's an array - add all items
+                $all.AddRange($resp)
+                $uri = $null
+                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Retrieved $($resp.Count) records (array, no nextLink)" -Sev 'Info'
             } else {
-                $rows = $resp
-                $uri  = $null
-                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Retrieved $($rows.Count) records (no pagination wrapper)" -Sev 'Info'
-            }
-            
-            if ($rows) { 
-                $all.AddRange($rows) 
-                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Total records so far: $($all.Count)" -Sev 'Debug'
+                # Single object
+                $all.Add($resp)
+                $uri = $null
+                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): Single record" -Sev 'Debug'
             }
             
             $page++
             
-            # Safety check to prevent infinite loops
+            # Safety check
             if ($page -gt 100) {
-                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "WARNING: Reached 100 pages, stopping to prevent infinite loop" -Sev 'Warning'
+                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "WARNING: Reached 100 pages, stopping" -Sev 'Warning'
                 break
             }
             
