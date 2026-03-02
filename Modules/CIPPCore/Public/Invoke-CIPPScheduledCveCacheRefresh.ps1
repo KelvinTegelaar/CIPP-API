@@ -48,10 +48,7 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                 $DeleteCount = 0
                 foreach ($OldEntry in $ExistingEntries) {
                     try {
-                        Remove-AzDataTableEntity -Context $CveCacheTable.Context `
-                            -PartitionKey $OldEntry.PartitionKey `
-                            -RowKey $OldEntry.RowKey `
-                            -ErrorAction Stop
+                        Remove-AzDataTableEntity @CveCacheTable -Entity $OldEntry -Force
                         $DeleteCount++
                     } catch {
                         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
@@ -187,7 +184,10 @@ function Invoke-CIPPScheduledCveCacheRefresh {
 
         if ($SkippedCount -gt 0) {
             Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
-                -message "Skipped $SkippedCount records due to missing required fields" -Sev 'Warning'
+                -message "Skipped $SkippedCount records due to missing required fields (cveId or deviceName)" -Sev 'Warning'
+        } else {
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+                -message "No records skipped - all $($Entities.Count) records are valid" -Sev 'Info'
         }
 
         if ($Entities.Count -eq 0) {
@@ -200,14 +200,22 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # 7. BATCH WRITE TO TABLE
         # ============================
         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
-            -message "Writing $($Entities.Count) entities to CveCache table" -Sev 'Info'
+            -message "Starting batch write of $($Entities.Count) entities to CveCache table" -Sev 'Info'
         
         $SuccessCount = 0
         $FailCount = 0
-        $BatchSize = 100
+        $BatchSize = 50  # Reduced from 100 for better reliability
+        $TotalBatches = [Math]::Ceiling($Entities.Count / $BatchSize)
+        
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+            -message "Writing in $TotalBatches batches of up to $BatchSize records each" -Sev 'Info'
         
         for ($i = 0; $i -lt $Entities.Count; $i += $BatchSize) {
+            $BatchNumber = [Math]::Floor($i / $BatchSize) + 1
             $Batch = $Entities[$i..[Math]::Min($i + $BatchSize - 1, $Entities.Count - 1)]
+            
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+                -message "Writing batch $BatchNumber/$TotalBatches (records $($i + 1) to $($i + $Batch.Count))" -Sev 'Info'
             
             try {
                 Add-CIPPAzDataTableEntity @CveCacheTable `
@@ -216,14 +224,19 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                     -OperationType 'UpsertReplace'
                 
                 $SuccessCount += $Batch.Count
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+                    -message "Batch $BatchNumber/$TotalBatches completed successfully ($($Batch.Count) records)" -Sev 'Debug'
             }
             catch {
                 $FailCount += $Batch.Count
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
-                    -message "Failed to write batch: $ErrorMessage" -Sev 'Error'
+                    -message "Batch $BatchNumber/$TotalBatches FAILED: $ErrorMessage" -Sev 'Error'
             }
         }
+        
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter `
+            -message "Batch write complete. Total written: $SuccessCount, Total failed: $FailCount" -Sev 'Info'
 
         # ============================
         # 8. LOG COMPLETION
