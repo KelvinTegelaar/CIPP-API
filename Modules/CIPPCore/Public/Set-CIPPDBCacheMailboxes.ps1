@@ -18,7 +18,7 @@ function Set-CIPPDBCacheMailboxes {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$QueueId,
-        [ValidateSet('All', 'Permissions', 'CalendarPermissions', 'Rules')]
+        [ValidateSet('All', 'None', 'Permissions', 'CalendarPermissions', 'Rules')]
         [string[]]$Types = @('All')
     )
 
@@ -61,6 +61,8 @@ function Set-CIPPDBCacheMailboxes {
         # Expand 'All' to all available types
         if ($Types -contains 'All') {
             $Types = @('Permissions', 'CalendarPermissions', 'Rules')
+        } elseif ($Types -contains 'None') {
+            $Types = @()
         }
 
         # Process additional types if specified
