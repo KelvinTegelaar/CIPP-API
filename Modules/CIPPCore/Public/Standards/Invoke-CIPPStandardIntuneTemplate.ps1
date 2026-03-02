@@ -47,10 +47,11 @@ function Invoke-CIPPStandardIntuneTemplate {
         return $true
     }
 
+    $rawJsonFromTemplate = $Template.RAWJson
     try {
         $reusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $Template -Tenant $Tenant -ErrorAction Stop
         if ($null -ne $reusableSync -and $reusableSync.PSObject.Properties.Name -contains 'RawJSON' -and $reusableSync.RawJSON) {
-            $Template.RawJSON = $reusableSync.RawJSON
+            $rawJsonFromTemplate = $reusableSync.RawJSON
         }
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to sync reusable policy settings for template $($Settings.TemplateList.value): $($_.Exception.Message)" -sev 'Error'
@@ -60,7 +61,7 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     $displayname = $Template.Displayname
     $description = $Template.Description
-    $RawJSON = $Template.RawJSON
+    $RawJSON = $rawJsonFromTemplate
     $TemplateType = $Template.Type
 
     try {
