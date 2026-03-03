@@ -12,7 +12,7 @@ function Get-CIPPAlertNewMFADevice {
     )
 
     try {
-        $OneHourAgo = (Get-Date).AddHours(-48).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $OneHourAgo = (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
 
         $AuditLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?`$filter=activityDateTime ge $OneHourAgo and (activityDisplayName eq 'User registered security info' or activityDisplayName eq 'User deleted security info')" -tenantid $TenantFilter
         $AlertData = foreach ($Log in $AuditLogs) {
