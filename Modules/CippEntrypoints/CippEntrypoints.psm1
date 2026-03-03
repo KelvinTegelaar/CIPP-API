@@ -262,8 +262,12 @@ function Receive-CippOrchestrationTrigger {
             Write-Information "Running post execution function $($OrchestratorInput.PostExecution.FunctionName)"
             $PostExecParams = @{
                 FunctionName = $OrchestratorInput.PostExecution.FunctionName
-                Results      = @($Results)
             }
+
+            if ($Results) {
+                $PostExecParams['Results'] = @($Results)
+            }
+
             if ($OrchestratorInput.PostExecution.Parameters) {
                 $PostExecParams['Parameters'] = $OrchestratorInput.PostExecution.Parameters
             }
