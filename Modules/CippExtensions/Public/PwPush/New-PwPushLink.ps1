@@ -41,6 +41,7 @@ function New-PwPushLink {
             if ($Configuration.ExpireAfterViews) { $PushParams.ExpireAfterViews = $Configuration.ExpireAfterViews }
             if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
             if ($Configuration.AccountId) { $PushParams.AccountId = $Configuration.AccountId.value }
+            if (![string]::IsNullOrEmpty($Configuration.DefaultPassphrase)) { $PushParams.Passphrase = $Configuration.DefaultPassphrase }
 
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
                 $Link = New-Push @PushParams
