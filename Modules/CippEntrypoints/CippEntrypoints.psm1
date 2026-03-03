@@ -265,8 +265,11 @@ function Receive-CippOrchestrationTrigger {
             }
 
             if ($Results) {
-                Write-Information "Results type: $($Results.GetType().Name)"
-                $PostExecParams['Results'] = @($Results)
+                $ResultsList = [System.Collections.Generic.List[object]]::new()
+                foreach ($Result in $Results) {
+                    $ResultsList.Add($Result)
+                }
+                $PostExecParams['Results'] = $ResultsList
             }
 
             if ($OrchestratorInput.PostExecution.Parameters) {
