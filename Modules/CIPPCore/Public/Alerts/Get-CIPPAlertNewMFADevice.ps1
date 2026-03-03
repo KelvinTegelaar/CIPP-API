@@ -12,7 +12,7 @@ function Get-CIPPAlertNewMFADevice {
     )
 
     try {
-        $OneHourAgo = (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $OneHourAgo = (Get-Date).AddHours(-48).ToString('yyyy-MM-ddTHH:mm:ssZ')
 
         $AuditLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?`$filter=activityDateTime ge $OneHourAgo and (activityDisplayName eq 'User registered security info' or activityDisplayName eq 'User deleted security info')" -tenantid $TenantFilter
         $AlertData = foreach ($Log in $AuditLogs) {
@@ -20,13 +20,30 @@ function Get-CIPPAlertNewMFADevice {
                 $User = $Log.targetResources[0].userPrincipalName
                 if (-not $User) { $User = $Log.initiatedBy.user.userPrincipalName }
 
+                $IPAddress = $Log.initiatedBy.user.ipAddress
+                $LocationData = $null
+                if (-not [string]::IsNullOrEmpty($IPAddress) -and $IPAddress -notmatch '[X]+') {
+                    try {
+                        $LocationData = Get-CIPPGeoIPLocation -IP $IPAddress
+                    } catch {
+                        Write-Information "Could not enrich MFA audit IP ${$IPAddress}: $($_.Exception.Message)"
+                    }
+                }
+
                 [PSCustomObject]@{
-                    Message      = "New MFA method registered: $User"
-                    User         = $User
-                    DisplayName  = $Log.targetResources[0].displayName
-                    Activity     = $Log.activityDisplayName
-                    ActivityTime = $Log.activityDateTime
-                    Tenant       = $TenantFilter
+                    Message           = "New MFA method registered: $User"
+                    User              = $User
+                    DisplayName       = $Log.targetResources[0].displayName
+                    Activity          = $Log.activityDisplayName
+                    ActivityTime      = $Log.activityDateTime
+                    Tenant            = $TenantFilter
+                    IpAddress         = $IPAddress
+                    CountryOrRegion   = if ($LocationData) { $LocationData.countryCode } else { $null }
+                    City              = if ($LocationData) { $LocationData.city } else { $null }
+                    Proxy             = if ($LocationData) { $LocationData.proxy } else { $null }
+                    Hosting           = if ($LocationData) { $LocationData.hosting } else { $null }
+                    ASN               = if ($LocationData) { $LocationData.asname } else { $null }
+                    GeoLocationInfo   = if ($LocationData) { ($LocationData | ConvertTo-Json -Depth 10 -Compress) } else { $null }
                 }
             }
         }
