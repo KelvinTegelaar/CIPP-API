@@ -5,7 +5,7 @@ function Push-DomainAnalyserTenant {
         #>
     param($Item)
 
-    $Tenant = Get-Tenants -TenantFilter $Item.customerId
+    $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeAll
     $DomainTable = Get-CippTable -tablename 'Domains'
 
     if ($Tenant.Excluded -eq $true) {
