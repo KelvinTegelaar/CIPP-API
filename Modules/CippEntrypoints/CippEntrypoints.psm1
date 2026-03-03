@@ -265,6 +265,7 @@ function Receive-CippOrchestrationTrigger {
             }
 
             if ($Results) {
+                Write-Information "Results type: $($Results.GetType().Name)"
                 $PostExecParams['Results'] = @($Results)
             }
 
