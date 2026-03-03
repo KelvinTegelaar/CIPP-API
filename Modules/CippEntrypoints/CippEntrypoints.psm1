@@ -259,7 +259,7 @@ function Receive-CippOrchestrationTrigger {
             $PostExecParams = @{
                 FunctionName = $OrchestratorInput.PostExecution.FunctionName
                 Parameters   = $OrchestratorInput.PostExecution.Parameters
-                Results      = @($Results)
+                Results      = $Results
             }
             if ($null -ne $PostExecParams.FunctionName) {
                 $null = Invoke-ActivityFunction -FunctionName CIPPActivityFunction -Input $PostExecParams
