@@ -8,12 +8,23 @@ function Start-DomainOrchestrator {
         Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param($TenantFilter)
     try {
-        $TenantList = Get-Tenants -IncludeAll
-        if (($TenantList | Measure-Object).Count -eq 0) {
-            Write-Information 'No tenants found'
-            return 0
+
+        if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
+            $TenantList = @($TenantFilter)
+            $TenantParams = @{
+                TenantFilter = $TenantFilter
+            }
+        } else {
+            $TenantList = Get-Tenants -IncludeAll
+            if (($TenantList | Measure-Object).Count -eq 0) {
+                Write-Information 'No tenants found'
+                return 0
+            }
+            $TenantParams = @{
+                IncludeAll = $true
+            }
         }
 
         $Queue = New-CippQueueEntry -Name 'Domain Analyser' -TotalTasks ($TenantList | Measure-Object).Count
@@ -22,9 +33,7 @@ function Start-DomainOrchestrator {
                 FunctionName = 'GetTenants'
                 DurableName  = 'DomainAnalyserTenant'
                 QueueId      = $Queue.RowKey
-                TenantParams = @{
-                    IncludeAll = $true
-                }
+                TenantParams = $TenantParams
             }
             OrchestratorName = 'DomainAnalyser_Tenants'
             SkipLog          = $true
