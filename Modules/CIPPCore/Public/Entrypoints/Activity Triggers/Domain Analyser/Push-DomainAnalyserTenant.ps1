@@ -5,11 +5,8 @@ function Push-DomainAnalyserTenant {
         #>
     param($Item)
 
-    Write-Information "Starting domain analysis for tenant: $($Item.customerId)"
     $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeAll
     $DomainTable = Get-CippTable -tablename 'Domains'
-
-    Write-Information "Tenant $($Tenant.defaultDomainName) has GraphErrorCount = $($Tenant.GraphErrorCount) and Excluded = $($Tenant.Excluded)"
 
     if ($Tenant.Excluded -eq $true) {
         $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Tenant.defaultDomainName
