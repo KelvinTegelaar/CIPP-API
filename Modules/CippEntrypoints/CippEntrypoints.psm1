@@ -277,6 +277,7 @@ function Receive-CippOrchestrationTrigger {
         }
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
+        Write-Information $_.InvocationInfo.PositionMessage
     }
     return $true
 }
