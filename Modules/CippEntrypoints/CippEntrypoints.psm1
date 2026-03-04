@@ -262,8 +262,18 @@ function Receive-CippOrchestrationTrigger {
             Write-Information "Running post execution function $($OrchestratorInput.PostExecution.FunctionName)"
             $PostExecParams = @{
                 FunctionName = $OrchestratorInput.PostExecution.FunctionName
-                Parameters   = $OrchestratorInput.PostExecution.Parameters
-                Results      = @($Results)
+            }
+
+            if ($Results) {
+                $ResultsList = [System.Collections.Generic.List[object]]::new()
+                foreach ($Result in $Results) {
+                    $ResultsList.Add($Result)
+                }
+                $PostExecParams['Results'] = $ResultsList
+            }
+
+            if ($OrchestratorInput.PostExecution.Parameters) {
+                $PostExecParams['Parameters'] = $OrchestratorInput.PostExecution.Parameters
             }
             if ($null -ne $PostExecParams.FunctionName) {
                 $null = Invoke-ActivityFunction -FunctionName CIPPActivityFunction -Input $PostExecParams
@@ -275,6 +285,7 @@ function Receive-CippOrchestrationTrigger {
         }
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
+        Write-Information $_.InvocationInfo.PositionMessage
     }
     return $true
 }

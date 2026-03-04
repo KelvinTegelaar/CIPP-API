@@ -150,7 +150,7 @@ function Get-CIPPLicenseOverview {
                 skuId          = [string]$sku.skuId
                 skuPartNumber  = [string]$PrettyName
                 availableUnits = [string]$sku.prepaidUnits.enabled - $sku.consumedUnits
-                TermInfo       = $TermInfo
+                TermInfo       = @($TermInfo)
                 AssignedUsers  = ($UsersBySku.ContainsKey($SkuKey) ? @(($UsersBySku[$SkuKey])) : $null)
                 AssignedGroups = ($GroupsBySku.ContainsKey($SkuKey) ? @(($GroupsBySku[$SkuKey])) : $null)
                 ServicePlans   = $sku.servicePlans
