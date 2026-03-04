@@ -33,7 +33,7 @@ function Invoke-ExecCaCheck {
         if ($Request.body.ClientAppType) { $whatIfConditions.clientAppType = $Request.body.ClientAppType.value }
         if ($Request.body.DevicePlatform) { $whatIfConditions.devicePlatform = $Request.body.DevicePlatform.value }
         if ($Request.body.Country) { $whatIfConditions.country = $Request.body.Country.value }
-        if ($Request.body.IpAddress) { $whatIfConditions.ipAddress = $Request.body.IpAddress.value }
+        if ($Request.body.IpAddress) { $whatIfConditions.ipAddress = $Request.body.IpAddress }
 
         $JSONBody = $ConditionalAccessWhatIfDefinition | ConvertTo-Json -Depth 10
         Write-Host $JSONBody
