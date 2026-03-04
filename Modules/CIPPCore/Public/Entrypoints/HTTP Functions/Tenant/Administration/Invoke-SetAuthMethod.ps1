@@ -15,10 +15,20 @@ function Invoke-SetAuthMethod {
     $State = if ($Request.Body.state -eq 'enabled') { $true } else { $false }
     $TenantFilter = $Request.Body.tenantFilter
     $AuthenticationMethodId = $Request.Body.Id
-
+    $GroupIds = $Request.Body.GroupIds
 
     try {
-        $Result = Set-CIPPAuthenticationPolicy -Tenant $TenantFilter -APIName $APIName -AuthenticationMethodId $AuthenticationMethodId -Enabled $State -Headers $Headers
+        $Params = @{
+            Tenant                 = $TenantFilter
+            APIName                = $APIName
+            AuthenticationMethodId = $AuthenticationMethodId
+            Enabled                = $State
+            Headers                = $Headers
+        }
+        if ($GroupIds) {
+            $Params.GroupIds = @($GroupIds)
+        }
+        $Result = Set-CIPPAuthenticationPolicy @Params
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message

@@ -178,10 +178,10 @@ function Invoke-ExecCommunityRepo {
                         (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
                     }
                 }
-                Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData
+                $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName
 
                 $Results = @{
-                    resultText = 'Template imported'
+                    resultText = $ImportResult ?? 'Template imported'
                     state      = 'success'
                 }
             } catch {

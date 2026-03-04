@@ -13,7 +13,7 @@ function Invoke-RemoveJITAdminTemplate {
 
     try {
         $ID = $Request.Query.ID ?? $Request.Body.ID
-        
+
         if ([string]::IsNullOrWhiteSpace($ID)) {
             throw 'ID is required'
         }
@@ -29,7 +29,7 @@ function Invoke-RemoveJITAdminTemplate {
             $StatusCode = [HttpStatusCode]::OK
         } else {
             $Result = "JIT Admin Template with ID $ID not found"
-            Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message $Result -sev 'Warn'
             $StatusCode = [HttpStatusCode]::NotFound
         }
 

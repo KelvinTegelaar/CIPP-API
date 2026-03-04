@@ -103,7 +103,7 @@ function New-CIPPRestoreTask {
                         }
                     } catch {
                         $restorationStats['CustomVariables'].failed++
-                        Write-LogMessage -message "Failed to restore custom variable $($variable.RowKey): $($_.Exception.Message)" -Sev 'Warning'
+                        Write-LogMessage -message "Failed to restore custom variable $($variable.RowKey): $($_.Exception.Message)" -sev 'Warn'
                         $RestoreData.Add("Failed to restore custom variable $($variable.RowKey)")
                     }
                 }
@@ -200,8 +200,10 @@ function New-CIPPRestoreTask {
             $backupGroups = if ($BackupData.groups -is [string]) { $BackupData.groups | ConvertFrom-Json } else { $BackupData.groups }
             $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter
             $BackupGroups | ForEach-Object {
+
                 try {
-                    $JSON = $_ | ConvertTo-Json -Depth 100 -Compress
+                    $CleanObj = Clean-GraphObject $_
+                    $JSON = $CleanObj | ConvertTo-Json -Depth 100 -Compress
                     $DisplayName = $_.displayName
                     if ($overwrite) {
                         if ($_.id -in $Groups.id) {

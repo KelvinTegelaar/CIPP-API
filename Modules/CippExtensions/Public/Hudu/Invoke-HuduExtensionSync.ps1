@@ -66,18 +66,19 @@ function Invoke-HuduExtensionSync {
                 $CreateUsers = $Configuration.CreateMissingUsers
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
                 if ($PeopleLayout.id) {
-                    $People = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+                    $PeopleArray = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+                    $People = [System.Collections.Generic.List[object]]::new($PeopleArray)
                 } else {
                     $CreateUsers = $false
-                    $People = @()
+                    $People = [System.Collections.Generic.List[object]]::new()
                 }
             } else {
                 $CreateUsers = $false
-                $People = @()
+                $People = [System.Collections.Generic.List[object]]::new()
             }
         } catch {
             $CreateUsers = $false
-            $People = @()
+            $People = [System.Collections.Generic.List[object]]::new()
             $CompanyResult.Errors.add("Company: Unable to fetch People $_")
             Write-Host "Hudu People - Error: $_"
         }
@@ -91,18 +92,18 @@ function Invoke-HuduExtensionSync {
                 $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
                 if ($DesktopsLayout.id) {
                     $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
-                    $HuduDevices = $HuduDesktopDevices
+                    $HuduDevices = [System.Collections.Generic.List[object]]::new($HuduDesktopDevices)
                 } else {
                     $CreateDevices = $false
-                    $HuduDevices = @()
+                    $HuduDevices = [System.Collections.Generic.List[object]]::new()
                 }
             } else {
                 $CreateDevices = $false
-                $HuduDevices = @()
+                $HuduDevices = [System.Collections.Generic.List[object]]::new()
             }
         } catch {
             $CreateDevices = $false
-            $HuduDevices = @()
+            $HuduDevices = [System.Collections.Generic.List[object]]::new()
             $CompanyResult.Errors.add("Company: Unable to fetch Devices $_")
             Write-Host "Hudu Devices - Error: $_"
         }
@@ -245,7 +246,7 @@ function Invoke-HuduExtensionSync {
 
             $post = '</div>'
 
-            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { Convert-SKUname -skuName $_.SkuPartNumber -ConvertTable $LicTable } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
+            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { $_.SkuPartNumber } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
             $licenseHTML = $licenseOut | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | Out-String
         }
 
@@ -518,11 +519,10 @@ function Invoke-HuduExtensionSync {
                     $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
                             $UserLic = $_
                             $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            $DisplayName = Convert-SKUname -skuName $SkuPartNumber -ConvertTable $LicTable
-                            if (!$DisplayName) {
-                                $DisplayName = $SkuPartNumber
+                            if (!$SkuPartNumber) {
+                                $SkuPartNumber = 'Unknown License'
                             }
-                            $DisplayName
+                            $SkuPartNumber
                         }) -join ', '
 
                     $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.userPrincipalName }
@@ -753,6 +753,8 @@ function Invoke-HuduExtensionSync {
                                         Hash         = [string]$NewHash
                                     }
                                     Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                    # Add newly created user to the People collection to prevent duplicates
+                                    $People.Add($CreateHuduUser)
                                 }
                             }
                         } else {
@@ -997,6 +999,8 @@ function Invoke-HuduExtensionSync {
                                         Hash         = [string]$NewHash
                                     }
                                     Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                    # Add newly created device to the HuduDevices collection to prevent duplicates
+                                    $HuduDevices.Add($CreateHuduDevice)
 
                                     $RelHuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
                                     if ($RelHuduUser) {

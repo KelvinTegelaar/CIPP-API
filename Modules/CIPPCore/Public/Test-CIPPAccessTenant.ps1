@@ -17,7 +17,10 @@ function Test-CIPPAccessTenant {
         @{ Name = 'SharePoint Administrator'; Id = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
         @{ Name = 'Authentication Policy Administrator'; Id = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
         @{ Name = 'Privileged Role Administrator'; Id = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
-        @{ Name = 'Privileged Authentication Administrator'; Id = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' }
+        @{ Name = 'Privileged Authentication Administrator'; Id = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' },
+        @{ Name = 'Billing Administrator'; Id = 'b0f54661-2d74-4c50-afa3-1ec803f12efe'; Optional = $true },
+        @{ Name = 'Global Reader'; Id = 'f2ef992c-3afb-46b9-b7cf-a126ee74c451'; Optional = $true },
+        @{ Name = 'Domain Name Administrator'; Id = '8329153b-31d0-4727-b945-745eb3bc5f31'; Optional = $true }
     )
 
     $TenantParams = @{
@@ -82,17 +85,24 @@ function Test-CIPPAccessTenant {
                 if (!$Role) {
                     $MissingRoles.Add(
                         [PSCustomObject]@{
-                            Name = $RoleId.Name
-                            Type = 'Tenant'
+                            Name     = $RoleId.Name
+                            Type     = 'Tenant'
+                            Optional = $RoleId.Optional
                         }
                     )
-                    $AddedText = 'but missing GDAP roles'
                 } else {
                     $GDAPRoles.Add([PSCustomObject]@{
                             Role  = $RoleId.Name
                             Group = $Role.displayName
                         })
                 }
+            }
+
+            $RequiredMissingRoles = $MissingRoles | Where-Object { $_.Optional -ne $true }
+            if (($RequiredMissingRoles | Measure-Object).Count -gt 0) {
+                $AddedText = 'but missing required GDAP roles'
+            } elseif (($MissingRoles | Measure-Object).Count -gt 0) {
+                $AddedText = 'but missing optional GDAP roles'
             }
 
             $GraphTest = "Successfully connected to Graph $($AddedText)"
@@ -120,12 +130,12 @@ function Test-CIPPAccessTenant {
             $AvailableRoles = $RoleDefinitions | Where-Object -Property displayName -In $AllOrgManagementRoles | Select-Object -Property displayName, id, description
             Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
             $MissingOrgMgmtRoles = $AvailableRoles | Where-Object { $OrgManagementRoles.Role -notcontains $_.displayName }
-            if (($MissingOrgMgmtRoles | Measure-Object).Count -gt 0) {
+            if (($MissingOrgMgmtRoles | Measure-Object).Count -ge 5) {
                 $Results.OrgManagementRolesMissing = $MissingOrgMgmtRoles
                 Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
                 $ExchangeStatus = $false
                 $ExchangeTest = 'Connected to Exchange but missing permissions in Organization Management. This may impact the ability to manage Exchange features'
-                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -Sev 'Warning' -LogData $MissingOrgMgmtRoles
+                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warn' -LogData $MissingOrgMgmtRoles
             } else {
                 Write-Warning 'All available Organization Management roles are present in Exchange'
                 $ExchangeStatus = $true

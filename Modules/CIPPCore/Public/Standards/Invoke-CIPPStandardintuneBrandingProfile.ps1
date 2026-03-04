@@ -43,7 +43,6 @@ function Invoke-CIPPStandardintuneBrandingProfile {
     $TestResult = Test-CIPPStandardLicense -StandardName 'intuneBrandingProfile' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -115,13 +114,13 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             displayName               = $CurrentState.displayName
             showLogo                  = $CurrentState.showLogo
             showDisplayNameNextToLogo = $CurrentState.showDisplayNameNextToLogo
-            contactITName             = $CurrentState.contactITName
-            contactITPhoneNumber      = $CurrentState.contactITPhoneNumber
-            contactITEmailAddress     = $CurrentState.contactITEmailAddress
-            contactITNotes            = $CurrentState.contactITNotes
-            onlineSupportSiteName     = $CurrentState.onlineSupportSiteName
-            onlineSupportSiteUrl      = $CurrentState.onlineSupportSiteUrl
-            privacyUrl                = $CurrentState.privacyUrl
+            contactITName             = $CurrentState.contactITName ?? ''
+            contactITPhoneNumber      = $CurrentState.contactITPhoneNumber ?? ''
+            contactITEmailAddress     = $CurrentState.contactITEmailAddress ?? ''
+            contactITNotes            = $CurrentState.contactITNotes ?? ''
+            onlineSupportSiteName     = $CurrentState.onlineSupportSiteName ?? ''
+            onlineSupportSiteUrl      = $CurrentState.onlineSupportSiteUrl ?? ''
+            privacyUrl                = $CurrentState.privacyUrl ?? ''
         }
         $ExpectedValue = @{
             displayName               = $Settings.displayName

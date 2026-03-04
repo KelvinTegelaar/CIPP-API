@@ -5,30 +5,23 @@ function Set-CIPPDBCacheCASMailboxes {
 
     .PARAMETER TenantFilter
         The tenant to cache CAS mailboxes for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Debug
 
-        # Use Generic List for better memory efficiency with large datasets
-        $CASMailboxList = [System.Collections.Generic.List[PSObject]]::new()
-        $CASMailboxesResponse = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox'
-        foreach ($Mailbox in $CASMailboxesResponse) {
-            $CASMailboxList.Add($Mailbox)
-        }
-
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data $CASMailboxList.ToArray()
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -Data @{ Count = $CASMailboxList.Count } -Count
-
-        $CASMailboxesResponse = $null
-        $CASMailboxList.Clear()
-        $CASMailboxList = $null
-        [System.GC]::Collect()
+        # Stream CAS mailboxes directly to batch processor
+        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox' |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Debug
 

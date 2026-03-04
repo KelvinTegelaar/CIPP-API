@@ -11,8 +11,9 @@ function Invoke-ExecCIPPDBCache {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.TenantFilter
     $Name = $Request.Query.Name
+    $Types = $Request.Query.Types
 
-    Write-Information "ExecCIPPDBCache called with Name: '$Name', TenantFilter: '$TenantFilter'"
+    Write-Information "ExecCIPPDBCache called with Name: '$Name', TenantFilter: '$TenantFilter', Types: '$Types'"
 
     try {
         if ([string]::IsNullOrEmpty($Name)) {
@@ -30,49 +31,79 @@ function Invoke-ExecCIPPDBCache {
             throw "Cache function '$FunctionName' not found"
         }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name" -sev Info
+        # Create queue entry for tracking
+        $QueueName = if ($TenantFilter -eq 'AllTenants') {
+            "$Name Cache Sync (All Tenants)"
+        } else {
+            "$Name Cache Sync ($TenantFilter)"
+        }
 
         # Handle AllTenants - create a batch for each tenant
         if ($TenantFilter -eq 'AllTenants') {
             $TenantList = Get-Tenants -IncludeErrors
+            $Queue = New-CippQueueEntry -Name $QueueName -TotalTasks ($TenantList | Measure-Object).Count
+
             $Batch = $TenantList | ForEach-Object {
-                [PSCustomObject]@{
+                $BatchItem = [PSCustomObject]@{
                     FunctionName = 'ExecCIPPDBCache'
                     Name         = $Name
+                    QueueName    = "$Name Cache - $($_.defaultDomainName)"
                     TenantFilter = $_.defaultDomainName
+                    QueueId      = $Queue.RowKey
                 }
+                # Add Types parameter if provided
+                if ($Types) {
+                    $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue @($Types -split ',') -Force
+                }
+                $BatchItem
             }
-            
+
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batch)
                 OrchestratorName = "CIPPDBCache_${Name}_AllTenants"
                 SkipLog          = $false
             }
-            
-            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name across $($TenantList.Count) tenants" -sev Info
+
+            Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name across $($TenantList.Count) tenants" -sev Info
         } else {
             # Single tenant
+            $Queue = New-CippQueueEntry -Name $QueueName -TotalTasks 1
+
+            $BatchItem = [PSCustomObject]@{
+                FunctionName = 'ExecCIPPDBCache'
+                Name         = $Name
+                QueueName    = "$Name Cache - $TenantFilter"
+                TenantFilter = $TenantFilter
+                QueueId      = $Queue.RowKey
+            }
+            # Add Types parameter if provided
+            if ($Types) {
+                $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue @($Types -split ',') -Force
+            }
+
             $InputObject = [PSCustomObject]@{
-                Batch            = @([PSCustomObject]@{
-                        FunctionName = 'ExecCIPPDBCache'
-                        Name         = $Name
-                        TenantFilter = $TenantFilter
-                    })
+                Batch            = @($BatchItem)
                 OrchestratorName = "CIPPDBCache_${Name}_$TenantFilter"
                 SkipLog          = $false
             }
+            Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name on tenant $TenantFilter" -sev Info
         }
 
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Started CIPP DB cache orchestrator for $Name with instance ID: $InstanceId" -sev Info
+        $ResultsMessage = if ($TenantFilter -eq 'AllTenants') {
+            "Successfully started cache operation for $Name for all tenants"
+        } else {
+            "Successfully started cache operation for $Name on tenant $TenantFilter"
+        }
 
         $Body = [PSCustomObject]@{
-            Results  = "Successfully started cache operation for $Name$(if ($TenantFilter -eq 'AllTenants') { ' for all tenants' } else { " on tenant $TenantFilter" })"
+            Results  = $ResultsMessage
             Metadata = @{
                 Name       = $Name
                 Tenant     = $TenantFilter
                 InstanceId = $InstanceId
+                QueueId    = $Queue.RowKey
             }
         }
         $StatusCode = [HttpStatusCode]::OK

@@ -18,6 +18,7 @@ function Invoke-ExecCreateAppTemplate {
         $AppId = $Request.Body.AppId
         $DisplayName = $Request.Body.DisplayName
         $Type = $Request.Body.Type # 'servicePrincipal' or 'application'
+        $Overwrite = $Request.Body.Overwrite -eq $true
 
         if ([string]::IsNullOrWhiteSpace($AppId)) {
             throw 'AppId is required'
@@ -88,14 +89,21 @@ function Invoke-ExecCreateAppTemplate {
                 $AppRoleAssignments = ($GrantsResults | Where-Object { $_.id -eq 'assignments' }).body.value
 
                 $DelegateResourceAccess = $DelegatePermissionGrants | Group-Object -Property resourceId | ForEach-Object {
+                    $resourceAccessList = [System.Collections.Generic.List[object]]::new()
+                    foreach ($Grant in $_.Group) {
+                        if (-not [string]::IsNullOrWhiteSpace($Grant.scope)) {
+                            $scopeNames = $Grant.scope -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                            foreach ($scopeName in $scopeNames) {
+                                $resourceAccessList.Add([pscustomobject]@{
+                                        id   = $scopeName
+                                        type = 'Scope'
+                                    })
+                            }
+                        }
+                    }
                     [pscustomobject]@{
                         resourceAppId  = ($TenantInfo | Where-Object -Property id -EQ $_.Name).appId
-                        resourceAccess = @($_.Group | ForEach-Object {
-                                [pscustomobject]@{
-                                    id   = $_.scope
-                                    type = 'Scope'
-                                }
-                            })
+                        resourceAccess = @($resourceAccessList)
                     }
                 }
 
@@ -115,7 +123,7 @@ function Invoke-ExecCreateAppTemplate {
                 $Permissions = @($DelegateResourceAccess) + @($ApplicationResourceAccess) | Where-Object { $_ -ne $null }
 
                 if ($Permissions.Count -eq 0) {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId via any method" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "No permissions found for $AppId via any method" -sev 'Warn'
                 } else {
                     Write-LogMessage -headers $Request.headers -API $APINAME -message "Extracted $($Permissions.Count) resource permission(s) from service principal grants" -Sev 'Info'
                 }
@@ -229,15 +237,15 @@ function Invoke-ExecCreateAppTemplate {
                     $RequestId = "sp-$RequestIndex"
                     $AppIdToRequestId[$ResourceAppId] = $RequestId
 
-                    # Use object ID to fetch full details with appRoles and oauth2PermissionScopes
+                    # Use object ID to fetch full details with appRoles
                     $BulkRequests.Add([PSCustomObject]@{
                             id     = $RequestId
                             method = 'GET'
-                            url    = "/servicePrincipals/$($ResourceSPInfo.id)?`$select=id,appId,displayName,appRoles,oauth2PermissionScopes"
+                            url    = "/servicePrincipals/$($ResourceSPInfo.id)?`$select=id,appId,displayName,appRoles,publishedPermissionScopes"
                         })
                     $RequestIndex++
                 } else {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found in tenant for appId: $ResourceAppId" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found in tenant for appId: $ResourceAppId" -sev 'Warn'
                 }
             }
 
@@ -266,9 +274,11 @@ function Invoke-ExecCreateAppTemplate {
                 $ResourceSP = $SPLookup[$ResourceAppId]
 
                 if (!$ResourceSP) {
-                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found for appId: $ResourceAppId - skipping permission translation" -Sev 'Warning'
+                    Write-LogMessage -headers $Request.headers -API $APINAME -message "Service principal not found for appId: $ResourceAppId - skipping permission translation" -sev 'Warn'
                     continue
                 }
+
+                #Write-Information ($ResourceSP | ConvertTo-Json -Depth 10)
 
                 foreach ($Access in $Resource.resourceAccess) {
                     if ($Access.type -eq 'Role') {
@@ -281,19 +291,30 @@ function Invoke-ExecCreateAppTemplate {
                             }
                             [void]$AppPerms.Add($PermObj)
                         } else {
-                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Application permission $($Access.id) not found in $ResourceAppId appRoles" -Sev 'Warning'
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Application permission $($Access.id) not found in $ResourceAppId appRoles" -sev 'Warn'
                         }
                     } elseif ($Access.type -eq 'Scope') {
-                        # Look up delegated permission name from oauth2PermissionScopes
-                        $PermissionScope = $ResourceSP.oauth2PermissionScopes | Where-Object { $_.id -eq $Access.id } | Select-Object -First 1
-                        if ($PermissionScope) {
+                        Write-Information "Processing delegated permission with id $($Access.id) for resource appId $ResourceAppId"
+                        # Try to look up the permission by ID in publishedPermissionScopes
+                        $OAuth2Permission = $ResourceSP.publishedPermissionScopes | Where-Object { $_.id -eq $Access.id } | Select-Object -First 1
+                        $OAuth2PermissionValue = $ResourceSP.publishedPermissionScopes | Where-Object { $_.value -eq $Access.id } | Select-Object -First 1
+                        if ($OAuth2Permission) {
+                            Write-Information "Found delegated permission in publishedPermissionScopes with value: $($OAuth2Permission.value)"
+                            # Found the permission - use the value from the lookup
                             $PermObj = [PSCustomObject]@{
                                 id    = $Access.id
-                                value = $PermissionScope.value  # Use the claim value name, not the GUID
+                                value = $OAuth2Permission.value
                             }
                             [void]$DelegatedPerms.Add($PermObj)
                         } else {
-                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Delegated permission $($Access.id) not found in $ResourceAppId oauth2PermissionScopes" -Sev 'Warning'
+                            # Not found by ID - assume Access.id is already the permission name
+                            Write-Information "Could not find delegated permission by ID - using provided ID as value: $($Access.id)"
+                            Write-Information "OAuth2PermissionValueLookup: $($OAuth2PermissionValue | ConvertTo-Json -Depth 10)"
+                            $PermObj = [PSCustomObject]@{
+                                id    = $OAuth2PermissionValue.id ?? $Access.id
+                                value = $Access.id
+                            }
+                            [void]$DelegatedPerms.Add($PermObj)
                         }
                     }
                 }
@@ -304,10 +325,75 @@ function Invoke-ExecCreateAppTemplate {
                 }
             }
 
-            # Create the permission set in AppPermissions table
-            $PermissionSetId = (New-Guid).Guid
-            $PermissionsTable = Get-CIPPTable -TableName 'AppPermissions'
+            # Permission set ID will be determined after template lookup
+            $PermissionSetId = $null
+        }
 
+        # Get permissions table reference (needed later)
+        $PermissionsTable = Get-CIPPTable -TableName 'AppPermissions'
+
+        # Create the template
+        $Table = Get-CIPPTable -TableName 'templates'
+
+        # Check if template already exists
+        # For servicePrincipal: match by AppId (immutable)
+        # For application: match by DisplayName (since AppId changes when copied)
+        $ExistingTemplate = $null
+        if ($Overwrite) {
+            try {
+                $Filter = "PartitionKey eq 'AppApprovalTemplate'"
+                $AllTemplates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+                $TemplateNameToMatch = "$DisplayName (Auto-created)"
+
+                foreach ($Template in $AllTemplates) {
+                    $TemplateData = $Template.JSON | ConvertFrom-Json
+                    $IsMatch = $false
+
+                    if ($Type -eq 'servicePrincipal') {
+                        # Match by AppId for service principals
+                        $IsMatch = $TemplateData.AppId -eq $AppId
+                    } else {
+                        # Match by TemplateName for app registrations
+                        $IsMatch = $TemplateData.TemplateName -eq $TemplateNameToMatch
+                    }
+
+                    if ($IsMatch) {
+                        $ExistingTemplate = $Template
+                        # Reuse the existing permission set ID if it exists
+                        if ($TemplateData.PermissionSetId) {
+                            $PermissionSetId = $TemplateData.PermissionSetId
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message "Found existing permission set ID: $PermissionSetId in template" -Sev 'Info'
+                        } else {
+                            Write-LogMessage -headers $Request.headers -API $APINAME -message 'Existing template found but has no PermissionSetId' -sev 'Warn'
+                        }
+                        break
+                    }
+                }
+            } catch {
+                # Ignore lookup errors
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Error during template lookup: $($_.Exception.Message)" -sev 'Warn'
+            }
+        }
+
+        if ($ExistingTemplate) {
+            $TemplateId = $ExistingTemplate.RowKey
+            $MatchCriteria = if ($Type -eq 'servicePrincipal') { "AppId: $AppId" } else { "DisplayName: $DisplayName" }
+            Write-LogMessage -headers $Request.headers -API $APINAME -message "Overwriting existing template matched by $MatchCriteria (Template ID: $TemplateId)" -Sev 'Info'
+            if ($PermissionSetId) {
+                Write-LogMessage -headers $Request.headers -API $APINAME -message "Reusing permission set ID: $PermissionSetId" -Sev 'Info'
+            }
+        } else {
+            $TemplateId = (New-Guid).Guid
+        }
+
+        # Create new permission set ID if we don't have one yet
+        if (-not $PermissionSetId) {
+            $PermissionSetId = (New-Guid).Guid
+            Write-LogMessage -headers $Request.headers -API $APINAME -message "Creating new permission set ID: $PermissionSetId" -Sev 'Info'
+        }
+
+        # Now create/update the permission set entity with the determined ID
+        if ($Permissions -and $Permissions.Count -gt 0) {
             $PermissionEntity = @{
                 'PartitionKey' = 'Templates'
                 'RowKey'       = [string]$PermissionSetId
@@ -317,12 +403,8 @@ function Invoke-ExecCreateAppTemplate {
             }
 
             Add-CIPPAzDataTableEntity @PermissionsTable -Entity $PermissionEntity -Force
-            Write-LogMessage -headers $Request.headers -API $APINAME -message "Permission set created with ID: $PermissionSetId for $($Permissions.Count) resource(s)" -Sev 'Info'
+            Write-LogMessage -headers $Request.headers -API $APINAME -message "Permission set saved with ID: $PermissionSetId for $($Permissions.Count) resource(s)" -Sev 'Info'
         }
-
-        # Create the template
-        $Table = Get-CIPPTable -TableName 'templates'
-        $TemplateId = (New-Guid).Guid
 
         $TemplateJson = @{
             TemplateName      = "$DisplayName (Auto-created)"
@@ -343,7 +425,7 @@ function Invoke-ExecCreateAppTemplate {
             PartitionKey = 'AppApprovalTemplate'
         }
 
-        Add-CIPPAzDataTableEntity @Table -Entity $Entity
+        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
         $PermissionCount = 0
         if ($CIPPPermissions -and $CIPPPermissions.Count -gt 0) {
@@ -358,7 +440,8 @@ function Invoke-ExecCreateAppTemplate {
             }
         }
 
-        $Message = "Template created: $DisplayName with $PermissionCount permission(s)"
+        $Action = if ($ExistingTemplate) { 'updated' } else { 'created' }
+        $Message = "Template $($Action) - $DisplayName with $PermissionCount permission(s)"
         Write-LogMessage -headers $Request.headers -API $APINAME -message $Message -Sev 'Info'
 
         $Body = @{

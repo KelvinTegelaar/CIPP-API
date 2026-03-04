@@ -53,41 +53,45 @@ function Test-CIPPGDAPRelationships {
             'M365 GDAP SharePoint Administrator',
             'M365 GDAP Authentication Policy Administrator',
             'M365 GDAP Privileged Role Administrator',
-            'M365 GDAP Privileged Authentication Administrator'
+            'M365 GDAP Privileged Authentication Administrator',
+            'M365 GDAP Billing Administrator',
+            'M365 GDAP Global Reader',
+            'M365 GDAP Domain Name Administrator'
         )
         $RoleAssignableGroups = $SAMUserMemberships | Where-Object { $_.isAssignableToRole }
-        $NestedGroups = foreach ($Group in $RoleAssignableGroups) {
-            Write-Information "Getting nested group memberships for $($Group.displayName)"
-            New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($Group.id)/memberOf?`$select=id,displayName" -NoAuthCheck $true
+        $NestedGroups = [System.Collections.Generic.List[object]]::new()
+        foreach ($RoleGroup in $RoleAssignableGroups) {
+            Write-Information "Getting nested group memberships for $($RoleGroup.displayName)"
+            $NestedGroups.AddRange(@(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($RoleGroup.id)/memberOf?`$select=id,displayName" -NoAuthCheck $true))
         }
-        foreach ($Group in $ExpectedGroups) {
+        foreach ($ExpectedGroup in $ExpectedGroups) {
             $GroupFound = $false
             foreach ($Membership in ($SAMUserMemberships + $NestedGroups)) {
-                if ($Membership.displayName -match $Group) {
-                    Write-Information "Found $Group in group memberships"
+                if ($Membership.displayName -match $ExpectedGroup) {
+                    Write-Information "Found $ExpectedGroup in group memberships"
                     $GroupFound = $true
                 }
             }
             if (-not $GroupFound) {
-                if ($Group -eq 'AdminAgents') { $Type = 'Error' } else { $Type = 'Warning' }
+                if ($ExpectedGroup -eq 'AdminAgents') { $Type = 'Error' } else { $Type = 'Warning' }
                 $GDAPissues.add([PSCustomObject]@{
                         Type         = $Type
-                        Issue        = "$($Group) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                        Issue        = "$($ExpectedGroup) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = '*Partner Tenant'
                         Relationship = 'None'
                         Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
 
                     }) | Out-Null
                 $MissingGroups.Add([PSCustomObject]@{
-                        Name = $Group
+                        Name = $ExpectedGroup
                         Type = 'SAM User Membership'
                     }) | Out-Null
             }
         }
-        if ($CIPPGroupCount -lt 12) {
+        if ($CIPPGroupCount -lt 15) {
             $GDAPissues.add([PSCustomObject]@{
                     Type         = 'Warning'
-                    Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                    Issue        = "We only found $($CIPPGroupCount) of the 15 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                     Tenant       = '*Partner Tenant'
                     Relationship = 'None'
                     Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
@@ -103,7 +107,7 @@ function Test-CIPPGDAPRelationships {
     $GDAPRelationships = [PSCustomObject]@{
         GDAPIssues     = @($GDAPissues)
         MissingGroups  = @($MissingGroups)
-        Memberships    = @($SAMUserMemberships)
+        Memberships    = @($SAMUserMemberships + $NestedGroups)
         CIPPGroupCount = $CIPPGroupCount
     }
 

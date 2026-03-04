@@ -24,7 +24,7 @@ function Push-CIPPStandard {
     $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
-        exit 0
+        return
     } else {
         Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
@@ -95,9 +95,7 @@ function Push-CIPPStandard {
             $metadata['CATemplateId'] = $Item.Settings.TemplateList.value
         }
 
-        Measure-CippTask -TaskName $Standard -EventName 'CIPP.StandardCompleted' -Metadata $metadata -Script {
-            & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
-        }
+        & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
 
         $result = 'Success'
         Write-Information "Standard $($Standard) completed for tenant $($Tenant)"

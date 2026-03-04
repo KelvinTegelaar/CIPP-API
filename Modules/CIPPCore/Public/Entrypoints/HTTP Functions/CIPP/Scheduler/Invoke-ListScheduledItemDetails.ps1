@@ -119,7 +119,7 @@ function Invoke-ListScheduledItemDetails {
                     }
                 } catch {
                     # If JSON parsing fails, use raw value
-                    Write-LogMessage -API $APIName -message "Error parsing Task.Results as JSON: $_" -Sev 'Warning'
+                    Write-LogMessage -API $APIName -message "Error parsing Task.Results as JSON: $_" -sev 'Warn'
                     $ResultData = $Task.Results
                 }
             } else {
@@ -155,7 +155,7 @@ function Invoke-ListScheduledItemDetails {
                         try {
                             $ParsedResults = $Result.Results | ConvertFrom-Json -ErrorAction Stop
                         } catch {
-                            Write-LogMessage -API $APIName -message "Failed to parse result as JSON: $_" -Sev 'Warning'
+                            Write-LogMessage -API $APIName -message "Failed to parse result as JSON: $_" -sev 'Warn'
                             # On failure, keep as string
                             $ParsedResults = $Result.Results
                         }

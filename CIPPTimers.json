@@ -75,7 +75,7 @@
     "Id": "9b0c8e50-f798-49db-9a8b-dbcc0fcadeea",
     "Command": "Start-StandardsOrchestrator",
     "Description": "Orchestrator to process standards",
-    "Cron": "0 0 */4 * * *",
+    "Cron": "0 0 */12 * * *",
     "Priority": 4,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"
@@ -135,8 +135,8 @@
     "Id": "c2ebde3f-fa35-45aa-8a6b-91c835050b79",
     "Command": "Start-DomainOrchestrator",
     "Description": "Orchestrator to process domains",
-    "Cron": "0 0 0 * * *",
-    "Priority": 10,
+    "Cron": "0 30 3 * * *",
+    "Priority": 22,
     "RunOnProcessor": true
   },
   {
@@ -224,11 +224,20 @@
     "IsSystem": true
   },
   {
+    "Id": "a9e8d7c6-b5a4-3f2e-1d0c-9b8a7f6e5d4c",
+    "Command": "Start-LogRetentionCleanup",
+    "Description": "Timer to cleanup old logs based on retention policy",
+    "Cron": "0 30 2 * * *",
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
     "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
     "Command": "Start-CIPPDBCacheOrchestrator",
     "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
     "Cron": "0 0 3 * * *",
-    "Priority": 22,
+    "Priority": 23,
     "RunOnProcessor": true,
     "IsSystem": true
   },
@@ -237,7 +246,7 @@
     "Command": "Start-TestsOrchestrator",
     "Description": "Timer to run security and compliance tests against cached data",
     "Cron": "0 0 4 * * *",
-    "Priority": 23,
+    "Priority": 24,
     "RunOnProcessor": true,
     "IsSystem": true
   }

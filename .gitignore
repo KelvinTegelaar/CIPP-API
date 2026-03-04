@@ -15,3 +15,8 @@ yarn.lock
 
 # Cursor IDE
 .cursor/rules
+.claude
+
+# Ignore all root PowerShell files except profile.ps1
+/*.ps1
+!/profile.ps1

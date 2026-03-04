@@ -30,7 +30,7 @@ function Set-CIPPResetPassword {
             }
         }
         catch {
-            Write-LogMessage -headers $Headers -API $APIName -message "Failed to create PwPush link, using plain password. Error: $($_.Exception.Message)" -Sev 'Warning' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to create PwPush link, using plain password. Error: $($_.Exception.Message)" -sev 'Warn' -tenant $TenantFilter
         }
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully reset the password for $DisplayName, $($UserID). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 

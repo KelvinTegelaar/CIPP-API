@@ -43,7 +43,6 @@ function Invoke-CIPPStandardAutopilotStatusPage {
     # Get current Autopilot enrollment status page configuration
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     try {
@@ -68,7 +67,18 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         $StateIsCorrect = $false
     }
 
-    $CurrentValue = $CurrentConfig | Select-Object -Property id, displayName, priority, showInstallationProgress, blockDeviceSetupRetryByUser, allowDeviceResetOnInstallFailure, allowLogCollectionOnInstallFailure, customErrorMessage, installProgressTimeoutInMinutes, allowDeviceUseOnInstallFailure, trackInstallProgressForAutopilotOnly, installQualityUpdates
+    $CurrentValue = [PSCustomObject]@{
+        installProgressTimeoutInMinutes      = $CurrentConfig.installProgressTimeoutInMinutes
+        customErrorMessage                   = $CurrentConfig.customErrorMessage
+        showInstallationProgress             = $CurrentConfig.showInstallationProgress
+        allowLogCollectionOnInstallFailure   = $CurrentConfig.allowLogCollectionOnInstallFailure
+        trackInstallProgressForAutopilotOnly = $CurrentConfig.trackInstallProgressForAutopilotOnly
+        blockDeviceSetupRetryByUser          = $CurrentConfig.blockDeviceSetupRetryByUser
+        installQualityUpdates                = $CurrentConfig.installQualityUpdates
+        allowDeviceResetOnInstallFailure     = $CurrentConfig.allowDeviceResetOnInstallFailure
+        allowDeviceUseOnInstallFailure       = $CurrentConfig.allowDeviceUseOnInstallFailure
+    }
+
     $ExpectedValue = [PSCustomObject]@{
         installProgressTimeoutInMinutes      = $Settings.TimeOutInMinutes
         customErrorMessage                   = $Settings.ErrorMessage

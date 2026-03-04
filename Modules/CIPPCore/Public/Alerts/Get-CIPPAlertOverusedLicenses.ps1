@@ -39,6 +39,6 @@ function Get-CIPPAlertOverusedLicenses {
         }
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Overused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Overused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
     }
 }

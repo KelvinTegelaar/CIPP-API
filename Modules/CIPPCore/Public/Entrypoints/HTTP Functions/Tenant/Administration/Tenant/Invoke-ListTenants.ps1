@@ -89,12 +89,15 @@ function Invoke-ListTenants {
 
             # Add offboarding defaults to each tenant
             foreach ($Tenant in $Tenants) {
-                $TenantDefaults = $AllOffboardingDefaults | Where-Object { $_.PartitionKey -eq $Tenant.customerId }
+                $TenantDefaults = $AllOffboardingDefaults | Where-Object { $_.PartitionKey -eq $Tenant.customerId } | Select-Object -First 1
+                if (-not $TenantDefaults) {
+                    $TenantDefaults = $AllOffboardingDefaults | Where-Object { $_.PartitionKey -eq $Tenant.initialDomainName } | Select-Object -First 1
+                }
                 if ($TenantDefaults) {
                     try {
                         $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value ($TenantDefaults.Value | ConvertFrom-Json) -Force
                     } catch {
-                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse offboarding defaults for tenant $($Tenant.customerId): $($_.Exception.Message)" -Sev 'Warning'
+                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse offboarding defaults for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -sev 'Warn'
                         $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $null -Force
                     }
                 } else {

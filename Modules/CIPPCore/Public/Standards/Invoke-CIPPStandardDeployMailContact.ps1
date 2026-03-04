@@ -38,7 +38,6 @@ function Invoke-CIPPStandardDeployMailContact {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DeployMailContact' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
@@ -106,15 +105,15 @@ function Invoke-CIPPStandardDeployMailContact {
         $ContactData = @{
             DisplayName          = $Settings.DisplayName
             ExternalEmailAddress = $Settings.ExternalEmailAddress
-            FirstName            = $Settings.FirstName
-            LastName             = $Settings.LastName
+            FirstName            = $Settings.FirstName ?? ''
+            LastName             = $Settings.LastName ?? ''
         }
         $CurrentValue = $ExistingContact | Select-Object DisplayName, ExternalEmailAddress, FirstName, LastName
         $currentValue = @{
             DisplayName          = $ExistingContact.displayName
             ExternalEmailAddress = ($ExistingContact.ExternalEmailAddress -replace 'SMTP:', '')
-            FirstName            = $ExistingContact.firstName
-            LastName             = $ExistingContact.lastName
+            FirstName            = $ExistingContact.firstName ?? ''
+            LastName             = $ExistingContact.lastName ?? ''
         }
         Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ReportData -Tenant $Tenant
