@@ -40,7 +40,7 @@ function Start-DomainOrchestrator {
         }
         if ($PSCmdlet.ShouldProcess('Domain Analyser', 'Starting Orchestrator')) {
             Write-LogMessage -API 'DomainAnalyser' -message 'Starting Domain Analyser' -sev Info
-            return Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+            return Start-CIPPOrchestrator -InputObject $InputObject
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
