@@ -127,6 +127,8 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
 
+Set-CIPPOffloadFunctionTriggers
+
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds
 
