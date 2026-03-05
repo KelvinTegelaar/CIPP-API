@@ -1,6 +1,6 @@
 function Get-PwPushAccount {
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $ParsedConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
+    $ParsedConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction SilentlyContinue
     $Configuration = $ParsedConfig.PWPush
     if ($Configuration.Enabled -eq $true -and $Configuration.UseBearerAuth -eq $true) {
         Set-PwPushConfig -Configuration $Configuration -FullConfiguration $ParsedConfig
