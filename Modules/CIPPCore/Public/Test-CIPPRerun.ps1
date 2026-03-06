@@ -37,7 +37,7 @@ function Test-CIPPRerun {
         if ($TenantFilter -ne 'AllTenants') {
             $Filters.Add("PartitionKey eq '$TenantFilter'")
         }
-        $Filters.Add("RowKey ge '$($Type)_$($API)' and RowKey le '$($Type)_$($API)~'") # ~ is the highest ascii character, this ensures we only get entries for this API.
+        $Filters.Add("RowKey ge '$($Type)_$($API)' and RowKey le '$($Type)_$($API)~'") # ~ is the highest ASCII character, this ensures we only get entries for this API.
         $FilterString = [string]::Join(' and ', $Filters)
 
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter $FilterString
@@ -69,7 +69,7 @@ function Test-CIPPRerun {
                 }
             }
             if ($RerunData.EstimatedNextRun -gt $CurrentUnixTime) {
-                Write-LogMessage -API $API -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -headers $Headers -Sev 'Info'
+                Write-LogMessage -API $API -message "$Type rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -headers $Headers -Sev 'Info'
                 return $true
             } else {
                 $RerunData.EstimatedNextRun = $EstimatedNextRun
@@ -91,7 +91,7 @@ function Test-CIPPRerun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Host "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $API -message "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Headers -API $API -message "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return $false
     }
 }
