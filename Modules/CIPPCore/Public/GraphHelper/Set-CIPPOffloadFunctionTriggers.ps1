@@ -69,12 +69,8 @@ function Set-CIPPOffloadFunctionTriggers {
             # Update app settings only if there are changes to make
             if ($AppSettings.Count -gt 0) {
                 if ($PSCmdlet.ShouldProcess($FunctionAppName, 'Disable non-HTTP triggers')) {
-                    Add-CippQueueMessage -Cmdlet 'Update-CIPPAzFunctionAppSetting' -Parameters @{
-                        Name              = $FunctionAppName
-                        ResourceGroupName = $ResourceGroupName
-                        AppSetting        = $AppSettings
-                    }
-                    Write-Information "Queued disable operation for $($AppSettings.Count) non-HTTP trigger(s) on $FunctionAppName"
+                    Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $ResourceGroupName -AppSetting $AppSettings | Out-Null
+                    Write-Information "Successfully disabled $($AppSettings.Count) non-HTTP trigger(s) on $FunctionAppName"
                 }
             }
         } else {
@@ -98,13 +94,8 @@ function Set-CIPPOffloadFunctionTriggers {
             # Update app settings with removal of keys only if there are changes to make
             if ($RemoveKeys.Count -gt 0) {
                 if ($PSCmdlet.ShouldProcess($FunctionAppName, 'Re-enable non-HTTP triggers')) {
-                    Add-CippQueueMessage -Cmdlet 'Update-CIPPAzFunctionAppSetting' -Parameters @{
-                        Name              = $FunctionAppName
-                        ResourceGroupName = $ResourceGroupName
-                        AppSetting        = @{}
-                        RemoveKeys        = $RemoveKeys
-                    }
-                    Write-Information "Queued re-enable operation for $($RemoveKeys.Count) non-HTTP trigger(s) on $FunctionAppName"
+                    Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $ResourceGroupName -AppSetting @{} -RemoveKeys $RemoveKeys | Out-Null
+                    Write-Information "Successfully re-enabled $($RemoveKeys.Count) non-HTTP trigger(s) on $FunctionAppName"
                 }
             }
         }
