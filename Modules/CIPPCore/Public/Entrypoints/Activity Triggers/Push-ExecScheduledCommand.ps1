@@ -345,7 +345,7 @@ function Push-ExecScheduledCommand {
     }
 
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
-    if ($Results -and $Item.Command -notin $OrchestratorBasedCommands) {
+    if ($Results -and $Item.Command -notin $OrchestratorBasedCommands -and -not [string]::IsNullOrWhiteSpace($Task.PostExecution)) {
         Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
         Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
     }
