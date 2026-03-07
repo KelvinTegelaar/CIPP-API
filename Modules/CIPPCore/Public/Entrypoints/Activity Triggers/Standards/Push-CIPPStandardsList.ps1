@@ -126,8 +126,22 @@ function Push-CIPPStandardsList {
 
                     # Filter unchanged templates
                     $TemplateTable = Get-CippTable -tablename 'templates'
-                    $StandardTemplateTable = Get-CippTable -tablename 'templates'
                     $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+
+                    # Build compliance lookup - keyed by "standards.IntuneTemplate.<templateValue>"
+                    $IntuneComplianceLookup = @{}
+                    try {
+                        $AlignmentResults = Get-CIPPTenantAlignment -TenantFilter $TenantFilter
+                        foreach ($AlignmentResult in $AlignmentResults) {
+                            foreach ($Detail in $AlignmentResult.ComparisonDetails) {
+                                if ($Detail.StandardName -like 'standards.IntuneTemplate.*') {
+                                    $IntuneComplianceLookup[$Detail.StandardName] = $Detail.Compliant
+                                }
+                            }
+                        }
+                    } catch {
+                        Write-Warning "Failed to get tenant alignment data for $TenantFilter : $($_.Exception.Message)"
+                    }
 
                     foreach ($Key in $IntuneKeys) {
                         $Template = $ComputedStandards[$Key]
@@ -168,10 +182,26 @@ function Push-CIPPStandardsList {
                             } -Force | Out-Null
                         }
 
-                        # Remove if both unchanged
+                        # Remove or downgrade based on change state and compliance
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
-                            Write-Host "NO INTUNE CHANGE: Filtering out $key for $($TenantFilter)"
-                            [void]$ComputedStandards.Remove($Key)
+                            $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
+                            $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
+                            $IsCompliant = $IsDeployed -and ($IntuneComplianceLookup[$AlignmentKey] -eq $true)
+
+                            if ($IsCompliant) {
+                                # Policy unchanged and compliant - no action needed
+                                Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
+                                [void]$ComputedStandards.Remove($Key)
+                            } elseif ($IsDeployed) {
+                                # Policy deployed but drifted, and nothing changed - report only, don't force remediate
+                                Write-Host "COMPLIANCE DRIFT: Downgrading $Key to Report mode for $TenantFilter (deployed, not compliant, no changes)"
+                                $ComputedStandards[$Key].Settings | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $false -Force
+                                $ComputedStandards[$Key].Settings | Add-Member -NotePropertyName 'report' -NotePropertyValue $true -Force
+                            } else {
+                                # No alignment data yet - policy not yet deployed, skip (will run on next cycle with changes)
+                                Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (not yet deployed, no changes)"
+                                [void]$ComputedStandards.Remove($Key)
+                            }
                         }
                     }
                 } catch {
