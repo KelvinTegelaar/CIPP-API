@@ -26,7 +26,7 @@ function Set-CIPPDBCacheMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Debug
 
         # Get mailboxes with select properties
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo'
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -51,7 +51,8 @@ function Set-CIPPDBCacheMailboxes {
                     HiddenFromAddressListsEnabled,
                     ExternalDirectoryObjectId,
                     MessageCopyForSendOnBehalfEnabled,
-                    MessageCopyForSentAsEnabled))
+                    MessageCopyForSentAsEnabled,
+                    GrantSendOnBehalfTo))
         }
 
         $Mailboxes | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -AddCount
@@ -79,6 +80,7 @@ function Set-CIPPDBCacheMailboxes {
                 # Separate batches for permissions and rules
                 $PermissionBatches = [System.Collections.Generic.List[object]]::new()
                 $RuleBatches = [System.Collections.Generic.List[object]]::new()
+                $AllMailboxData = @($Mailboxes | Select-Object id, UPN, GrantSendOnBehalfTo)
 
                 for ($i = 0; $i -lt $Mailboxes.Count; $i += $BatchSize) {
                     $BatchMailboxes = $Mailboxes[$i..[Math]::Min($i + $BatchSize - 1, $Mailboxes.Count - 1)]
@@ -92,6 +94,7 @@ function Set-CIPPDBCacheMailboxes {
                                 QueueName    = "Mailbox Permissions Batch $BatchNumber/$TotalBatches - $TenantFilter"
                                 TenantFilter = $TenantFilter
                                 Mailboxes    = $BatchMailboxUPNs
+                                MailboxData  = $AllMailboxData
                                 BatchNumber  = $BatchNumber
                                 TotalBatches = $TotalBatches
                             })
