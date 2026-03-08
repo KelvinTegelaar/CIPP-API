@@ -10,12 +10,10 @@ function Invoke-ExecSetCIPPAutoBackup {
     $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($Request.Body.Enabled -eq $true) {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-        $AutomatedCIPPBackupTask = Get-AzDataTableEntity @table -Filter "Name eq 'Automated CIPP Backup'"
-        $task = @{
-            RowKey       = $AutomatedCIPPBackupTask.RowKey
-            PartitionKey = 'ScheduledTask'
+        $AutomatedCIPPBackupTask = Get-AzDataTableEntity @table -Filter "Name eq 'Automated CIPP Backup'" -Property RowKey, PartitionKey, ETag
+        if ($AutomatedCIPPBackupTask) {
+            Remove-AzDataTableEntity -Force @Table -Entity $AutomatedCIPPBackupTask | Out-Null
         }
-        Remove-AzDataTableEntity -Force @Table -Entity $task | Out-Null
 
         $TaskBody = [pscustomobject]@{
             TenantFilter  = 'PartnerTenant'
