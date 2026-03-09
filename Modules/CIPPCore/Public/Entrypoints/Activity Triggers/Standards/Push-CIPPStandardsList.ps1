@@ -203,7 +203,6 @@ function Push-CIPPStandardsList {
                             } -Force | Out-Null
                         }
 
-                        # Remove cosed onmpliance
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
                             $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
                             $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
