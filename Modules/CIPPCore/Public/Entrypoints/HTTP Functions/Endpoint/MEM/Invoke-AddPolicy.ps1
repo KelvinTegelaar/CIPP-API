@@ -55,6 +55,7 @@ function Invoke-AddPolicy {
                 # Discover referenced reusable settings from the policy JSON when none were supplied
                 $reusableResult = Get-CIPPReusableSettingsFromPolicy -PolicyJson $RawJSON -Tenant $Tenant -Headers $Headers -APIName $APIName
                 if ($reusableResult.ReusableSettings) { $reusableSettings = $reusableResult.ReusableSettings }
+                if ($reusableResult.RawJSON) { $RawJSON = $reusableResult.RawJSON }
             } catch {}
         }
 

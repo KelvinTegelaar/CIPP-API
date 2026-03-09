@@ -11,7 +11,8 @@ function Set-CIPPCalendarPermission {
         $LoggingName,
         $Permissions,
         [bool]$CanViewPrivateItems,
-        [bool]$SendNotificationToUser = $false
+        [bool]$SendNotificationToUser = $false,
+        [switch]$AutoResolveFolderName
     )
 
     try {
@@ -22,8 +23,21 @@ function Set-CIPPCalendarPermission {
             $LoggingName = $UserToGetPermissions
         }
 
+        # When -AutoResolveFolderName is set, look up the locale-independent FolderId.
+        # FolderType -eq 'Calendar' is an internal Exchange enum, always English regardless of mailbox language.
+        # Callers that already supply the correct localized FolderName should NOT pass this switch.
+        if ($AutoResolveFolderName) {
+            $CalFolderStats = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{
+                Identity    = $UserID
+                FolderScope = 'Calendar'
+            } -Anchor $UserID | Where-Object { $_.FolderType -eq 'Calendar' }
+            $FolderIdentity = if ($CalFolderStats) { "$($UserID):$($CalFolderStats.FolderId)" } else { "$($UserID):\$FolderName" }
+        } else {
+            $FolderIdentity = "$($UserID):\$FolderName"
+        }
+
         $CalParam = [PSCustomObject]@{
-            Identity               = "$($UserID):\$FolderName"
+            Identity               = $FolderIdentity
             AccessRights           = @($Permissions)
             User                   = $UserToGetPermissions
             SendNotificationToUser = $SendNotificationToUser
@@ -35,10 +49,10 @@ function Set-CIPPCalendarPermission {
 
         if ($RemoveAccess) {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Remove permissions for $LoggingName")) {
-                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$FolderName"; User = $RemoveAccess }
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = $FolderIdentity; User = $RemoveAccess }
                 $Result = "Successfully removed access for $LoggingName from calendar $($CalParam.Identity)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-                
+
                 # Sync cache
                 Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $RemoveAccess -Action 'Remove'
             }
@@ -57,7 +71,7 @@ function Set-CIPPCalendarPermission {
                     $Result += ' A notification has been sent to the user.'
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
-                
+
                 # Sync cache
                 Sync-CIPPCalendarPermissionCache -TenantFilter $TenantFilter -MailboxIdentity $UserID -FolderName $FolderName -User $UserToGetPermissions -Permissions $Permissions -Action 'Add'
             }

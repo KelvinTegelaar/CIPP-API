@@ -28,6 +28,7 @@ function Push-StoreMailboxPermissions {
         # Aggregate results by command type from all batches
         $AllMailboxPermissions = [System.Collections.Generic.List[object]]::new()
         $AllRecipientPermissions = [System.Collections.Generic.List[object]]::new()
+        $AllSendOnBehalfPermissions = [System.Collections.Generic.List[object]]::new()
         $AllCalendarPermissions = [System.Collections.Generic.List[object]]::new()
 
         foreach ($BatchResult in $Results) {
@@ -50,6 +51,11 @@ function Push-StoreMailboxPermissions {
                     Write-Information "Adding $($ActualResult['Get-RecipientPermission'].Count) recipient permissions"
                     $AllRecipientPermissions.AddRange($ActualResult['Get-RecipientPermission'])
                 }
+                if ($ActualResult['Get-Mailbox']) {
+                    $SendOnBehalfRows = @($ActualResult['Get-Mailbox'])
+                    Write-Information "Adding $($SendOnBehalfRows.Count) send-on-behalf permissions"
+                    $AllSendOnBehalfPermissions.AddRange($SendOnBehalfRows)
+                }
                 if ($ActualResult['Get-MailboxFolderPermission']) {
                     Write-Information "Adding $($ActualResult['Get-MailboxFolderPermission'].Count) calendar permissions"
                     $AllCalendarPermissions.AddRange($ActualResult['Get-MailboxFolderPermission'])
@@ -63,8 +69,9 @@ function Push-StoreMailboxPermissions {
         $AllPermissions = [System.Collections.Generic.List[object]]::new()
         $AllPermissions.AddRange($AllMailboxPermissions)
         $AllPermissions.AddRange($AllRecipientPermissions)
+        $AllPermissions.AddRange($AllSendOnBehalfPermissions)
 
-        Write-Information "Aggregated $($AllPermissions.Count) total permissions ($($AllMailboxPermissions.Count) mailbox + $($AllRecipientPermissions.Count) recipient)"
+        Write-Information "Aggregated $($AllPermissions.Count) total permissions ($($AllMailboxPermissions.Count) mailbox + $($AllRecipientPermissions.Count) recipient + $($AllSendOnBehalfPermissions.Count) send-on-behalf)"
         Write-Information "Aggregated $($AllCalendarPermissions.Count) calendar permissions"
 
         # Store all permissions together as MailboxPermissions

@@ -279,7 +279,7 @@ function Get-GraphRequestList {
                                 Batch            = @($Batch)
                             }
                             #Write-Information  ($InputObject | ConvertTo-Json -Depth 5)
-                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                            $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
                         } catch {
                             Write-Information "QUEUE ERROR: $($_.Exception.Message)"
                         }
@@ -321,7 +321,7 @@ function Get-GraphRequestList {
                                     OrchestratorName = 'GraphRequestOrchestrator'
                                     Batch            = @($QueueTenant)
                                 }
-                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                                $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)

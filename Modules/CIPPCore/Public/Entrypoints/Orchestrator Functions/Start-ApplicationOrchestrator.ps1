@@ -17,6 +17,6 @@ function Start-ApplicationOrchestrator {
     }
 
     if ($PSCmdlet.ShouldProcess('Upload Applications')) {
-        return Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        return Start-CIPPOrchestrator -InputObject $InputObject
     }
 }

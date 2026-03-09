@@ -40,7 +40,7 @@ Function Invoke-ExecBECCheck {
             SkipLog          = $true
         }
         #Write-Host ($InputObject | ConvertTo-Json)
-        $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ( ConvertTo-Json -InputObject $InputObject -Depth 5 -Compress )
+        $null = Start-CIPPOrchestrator -InputObject $InputObject
 
         @{ GUID = $Request.Query.userid }
     } else {

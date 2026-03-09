@@ -38,46 +38,66 @@ function Invoke-CIPPStandardIntuneTemplate {
     param($Tenant, $Settings)
 
     Write-Host 'INTUNETEMPLATERUN'
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $lap = $sw.Elapsed
+
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
 
     $Template = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Settings.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+    Write-Information "[IntuneTemplate][$Tenant] TableLoad: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
+
     if ($null -eq $Template) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Settings.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
         return $true
     }
 
+    $rawJsonFromTemplate = $Template.RAWJson
     try {
         $reusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $Template -Tenant $Tenant -ErrorAction Stop
         if ($null -ne $reusableSync -and $reusableSync.PSObject.Properties.Name -contains 'RawJSON' -and $reusableSync.RawJSON) {
-            $Template.RawJSON = $reusableSync.RawJSON
+            $rawJsonFromTemplate = $reusableSync.RawJSON
         }
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to sync reusable policy settings for template $($Settings.TemplateList.value): $($_.Exception.Message)" -sev 'Error'
         Write-Host "IntuneTemplate: $($Settings.TemplateList.value) - Failed to sync reusable policy settings. Skipping this template."
         return $true
     }
+    Write-Information "[IntuneTemplate][$Tenant] ReusableSync: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
 
     $displayname = $Template.Displayname
     $description = $Template.Description
-    $RawJSON = $Template.RawJSON
+    $RawJSON = $rawJsonFromTemplate
     $TemplateType = $Template.Type
 
+    $AssignmentsMatch = $null
     try {
         $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $TemplateType
+        if ($ExistingPolicy -and $Settings.verifyAssignments -eq $true) {
+            Write-Information "Verifying assignments for tenant $Tenant"
+            $ExistingAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $ExistingPolicy.id -TemplateType $TemplateType -TenantFilter $Tenant -ExistingPolicy $ExistingPolicy
+            $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -TenantFilter $Tenant
+
+            Write-Information "AssignmentsMatch for tenant $($Tenant): $AssignmentsMatch"
+        }
     } catch {
         $ExistingPolicy = $null
     }
+    Write-Information "[IntuneTemplate][$Tenant] GetPolicy '$displayname' ($TemplateType): $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
 
     if ($ExistingPolicy) {
         try {
             $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
             $JSONTemplate = $RawJSON | ConvertFrom-Json
-            #This might be a slow one.
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
         } catch {
         }
+        Write-Information "[IntuneTemplate][$Tenant] Compare '$displayname': $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+        $lap = $sw.Elapsed
     } else {
         $compare = [pscustomobject]@{
             MatchFailed = $true
@@ -101,6 +121,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         customGroup          = $Settings.customGroup
         assignmentFilter     = $Settings.assignmentFilter
         assignmentFilterType = $Settings.assignmentFilterType
+        AssignmentsMatch     = $AssignmentsMatch
     }
 
     if ($Settings.remediate) {
@@ -127,16 +148,28 @@ function Invoke-CIPPStandardIntuneTemplate {
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($CompareResult.displayname), Error: $ErrorMessage" -sev 'Error'
+            Write-Information "IntuneTemplate: $($CompareResult.displayname) - Failed to remediate. Error: $ErrorMessage"
         }
+        Write-Information "[IntuneTemplate][$Tenant] Remediate '$displayname': $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+        $lap = $sw.Elapsed
     }
 
     if ($Settings.alert) {
-        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
-        if ($CompareResult.compare) {
-            Write-StandardsAlert -message "Template $($CompareResult.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) does not match the expected configuration. We've generated an alert" -sev info
+        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId, AssignmentsMatch
+        $AssignmentsDiffer = $Settings.verifyAssignments -and ($null -ne $CompareResult.AssignmentsMatch -and -not $CompareResult.AssignmentsMatch)
+        $HasDifference = $CompareResult.compare -or $AssignmentsDiffer
+        if ($HasDifference) {
+            $Message = if ($CompareResult.compare) {
+                "Template $($CompareResult.displayname) does not match the expected configuration."
+            } elseif ($AssignmentsDiffer) {
+                "Template $($CompareResult.displayname) has incorrect assignments."
+            } else {
+                "Template $($CompareResult.displayname) does not match the expected configuration."
+            }
+            Write-StandardsAlert -message $Message -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$Message We've generated an alert" -sev info
         } else {
-            if ($CompareResult.ExistingPolicyId) {
+            if ($CompareResult.existingPolicyId) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) has the correct configuration." -sev Info
             } else {
                 Write-StandardsAlert -message "Template $($CompareResult.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
@@ -158,7 +191,15 @@ function Invoke-CIPPStandardIntuneTemplate {
             description = $CompareResult.description
             isCompliant = $true
         }
+
+        if ($Settings.verifyAssignments) {
+            $CurrentValue['isAssigned'] = if ($null -ne $CompareResult.AssignmentsMatch) { $CompareResult.AssignmentsMatch } else { $false }
+            $ExpectedValue['isAssigned'] = $true
+        }
         Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
+
+    $sw.Stop()
+    Write-Information "[IntuneTemplate][$Tenant] TOTAL '$displayname': $([int]$sw.Elapsed.TotalMilliseconds)ms"
 }

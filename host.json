@@ -10,13 +10,13 @@
   "functionTimeout": "00:10:00",
   "extensions": {
     "durableTask": {
-      "maxConcurrentActivityFunctions": 1,
-      "maxConcurrentOrchestratorFunctions": 5,
+      "maxConcurrentActivityFunctions": 5,
+      "maxConcurrentOrchestratorFunctions": 1,
       "tracing": {
         "distributedTracingEnabled": false,
         "version": "None"
       },
-      "defaultVersion": "10.1.2",
+      "defaultVersion": "10.2.0",
       "versionMatchStrategy": "Strict",
       "versionFailureStrategy": "Fail"
     }

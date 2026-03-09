@@ -33,7 +33,7 @@ function Invoke-ListTenants {
             OrchestratorName = 'UpdateTenants'
             SkipLog          = $true
         }
-        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        Start-CIPPOrchestrator -InputObject $InputObject
 
         $GraphRequest = [pscustomobject]@{'Results' = 'Cache has been cleared and a tenant refresh is queued.' }
         return ([HttpResponseContext]@{
@@ -61,7 +61,7 @@ function Invoke-ListTenants {
                 OrchestratorName = 'UpdateTenants'
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+            Start-CIPPOrchestrator -InputObject $InputObject
         }
     }
     try {

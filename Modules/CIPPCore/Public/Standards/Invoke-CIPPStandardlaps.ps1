@@ -33,7 +33,7 @@ function Invoke-CIPPStandardlaps {
     param($Tenant, $Settings)
 
     try {
-        $PreviousSetting = New-CippDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
+        $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DeviceRegistrationPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error

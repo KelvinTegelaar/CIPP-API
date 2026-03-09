@@ -1,13 +1,13 @@
 using namespace System.Net
 
-Function invoke-ListEmptyResults {
+function invoke-ListEmptyResults {
     <#
     .SYNOPSIS
      - Purposely lists an empty result
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

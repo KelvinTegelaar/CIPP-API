@@ -18,13 +18,8 @@ Function Invoke-ExecExtensionSync {
                     switch ($ConfigItem) {
                         'Gradient' {
                             If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
-                                $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
-                                $ProcessorFunction = [PSCustomObject]@{
-                                    PartitionKey = 'Function'
-                                    RowKey       = 'New-GradientServiceSyncRun'
-                                    FunctionName = 'New-GradientServiceSyncRun'
-                                }
-                                Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
+                                # Queue the sync function for immediate execution
+                                Add-CippQueueMessage -Cmdlet 'New-GradientServiceSyncRun' -Parameters @{}
                                 $Results = [pscustomobject]@{'Results' = 'Successfully queued Gradient Sync' }
                             }
                         }
@@ -58,7 +53,7 @@ Function Invoke-ExecExtensionSync {
                             Batch            = @($Batch)
                         }
                         #Write-Host ($InputObject | ConvertTo-Json)
-                        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
                         $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.IntegrationName)" }
                     } else {
@@ -75,7 +70,7 @@ Function Invoke-ExecExtensionSync {
                         Batch            = @($Batch)
                     }
                     #Write-Host ($InputObject | ConvertTo-Json)
-                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                    $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
                     Write-Host "Started permissions orchestration with ID = '$InstanceId'"
                     $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
 

@@ -47,7 +47,7 @@ function Invoke-ListMailQuarantine {
                     }
                     SkipLog          = $true
                 }
-                $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                $null = Start-CIPPOrchestrator -InputObject $InputObject
             } else {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null
