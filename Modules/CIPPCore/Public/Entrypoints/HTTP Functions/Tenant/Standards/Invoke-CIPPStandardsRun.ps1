@@ -41,7 +41,7 @@ function Invoke-CIPPStandardsRun {
             SkipLog          = $true
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started orchestration with ID = '$InstanceId' for drift standards run"
         #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
         return
@@ -89,7 +89,7 @@ function Invoke-CIPPStandardsRun {
         }
 
         Write-Information "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started standards list orchestration with ID = '$InstanceId'"
     }
 }

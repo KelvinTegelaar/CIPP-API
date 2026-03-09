@@ -63,7 +63,7 @@ function Invoke-ListScheduledItems {
     Write-Information "Found $($Tasks.Count) scheduled tasks after filtering and access check."
 
     $ScheduledTasks = foreach ($Task in $Tasks) {
-        if (!$Task.Tenant -or !$Task.Command) {
+        if (!$Task.Command) {
             Write-Information "Skipping invalid scheduled task entry: $($Task.RowKey)"
             continue
         }
@@ -105,10 +105,14 @@ function Invoke-ListScheduledItems {
                 # Fall back to keeping original tenant value
             }
         } else {
-            $Task.Tenant = [PSCustomObject]@{
-                label = $Task.Tenant
-                value = $Task.Tenant
-                type  = 'Tenant'
+            if (!$Task.Tenant) {
+                $Task | Add-Member -NotePropertyName Tenant -NotePropertyValue 'None' -Force
+            } else {
+                $Task.Tenant = [PSCustomObject]@{
+                    label = $Task.Tenant
+                    value = $Task.Tenant
+                    type  = 'Tenant'
+                }
             }
         }
         if ($Task.Trigger) {

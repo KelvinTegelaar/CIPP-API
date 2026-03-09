@@ -52,7 +52,7 @@ function Invoke-ListTenantAllowBlockList {
                     }
                     SkipLog          = $true
                 }
-                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
+                Start-CIPPOrchestrator -InputObject $InputObject | Out-Null
                 $Results = @()
             } else {
                 $TenantList = Get-Tenants -IncludeErrors
