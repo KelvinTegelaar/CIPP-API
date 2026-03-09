@@ -249,28 +249,28 @@ function Push-CIPPStandardsList {
                     Write-Information "Updating CIPPDB cache for Conditional Access policies for $TenantFilter"
                     Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter
                 } catch {
-                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)'
+                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)"
                 }
             }
         }
 
-        Write-Host 'Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
-                    # Return filtered standards
-                    $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
-                        [PSCustomObject]@{
-                            Tenant       = $_.Tenant
-                            Standard     = $_.Standard
-                            Settings     = $_.Settings
-                            TemplateId   = $_.TemplateId
-                            FunctionName = 'CIPPStandard'
-                        }
-                    }
-                    Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
-                    return @($FilteredStandards)
+        Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
+        # Return filtered standards
+        $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
+            [PSCustomObject]@{
+                Tenant       = $_.Tenant
+                Standard     = $_.Standard
+                Settings     = $_.Settings
+                TemplateId   = $_.TemplateId
+                FunctionName = 'CIPPStandard'
+            }
+        }
+        Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
+        return @($FilteredStandards)
 
-                } catch {
-                    Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)'
+    } catch {
+        Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"
         return @()
     }
 }
-'
+
