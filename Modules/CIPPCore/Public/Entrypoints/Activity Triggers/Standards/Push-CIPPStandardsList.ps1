@@ -143,11 +143,13 @@ function Push-CIPPStandardsList {
                         }
 
                         $PolicyTimestamps[$Result.id] = $Changed
+                        Write-Host "POLICY TYPE CHANGE CHECK: $($Result.id) -> Changed=$Changed (GraphCount=$GraphCount, CachedCount=$($Cached.PolicyCount), IdChanged=$IdChanged)"
                     }
 
                     # Filter unchanged templates
                     $TemplateTable = Get-CippTable -tablename 'templates'
                     $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+                    Write-Host "INTUNE FILTER: Processing $($IntuneKeys.Count) IntuneTemplate standards for $TenantFilter"
 
                     # Build compliance lookup - keyed by "standards.IntuneTemplate.<templateValue>"
                     $IntuneComplianceLookup = @{}
@@ -163,15 +165,22 @@ function Push-CIPPStandardsList {
                     } catch {
                         Write-Warning "Failed to get tenant alignment data for $TenantFilter : $($_.Exception.Message)"
                     }
+                    Write-Host "COMPLIANCE LOOKUP: Found $($IntuneComplianceLookup.Count) IntuneTemplate entries in alignment data"
 
                     foreach ($Key in $IntuneKeys) {
                         $Template = $ComputedStandards[$Key]
                         $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Template.Settings.TemplateList.value)'"
 
-                        if (-not $TemplateEntity) { continue }
+                        if (-not $TemplateEntity) {
+                            Write-Host "SKIP: $Key - no IntuneTemplate entity found for RowKey '$($Template.Settings.TemplateList.value)'"
+                            continue
+                        }
 
                         $ParsedTemplate = $TemplateEntity.JSON | ConvertFrom-Json
-                        if (-not $ParsedTemplate.Type) { continue }
+                        if (-not $ParsedTemplate.Type) {
+                            Write-Host "SKIP: $Key - template has no Type property"
+                            continue
+                        }
 
                         $PolicyType = $ParsedTemplate.Type
                         $PolicyChanged = if ($PolicyType -eq 'AppProtection') {
@@ -179,6 +188,7 @@ function Push-CIPPStandardsList {
                         } else {
                             [bool]$PolicyTimestamps[$PolicyType]
                         }
+                        Write-Host "TEMPLATE CHECK: $Key | PolicyType=$PolicyType | PolicyChanged=$PolicyChanged"
 
                         # Check StandardTemplate changes
                         $StandardTemplate = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
@@ -192,8 +202,10 @@ function Push-CIPPStandardsList {
                                 $CachedStandardTimeUtc = ([DateTimeOffset]$CachedStandardTemplate.CachedTimestamp).UtcDateTime
                                 $TimeDiff = [Math]::Abs(($StandardTimeUtc - $CachedStandardTimeUtc).TotalSeconds)
                                 $StandardTemplateChanged = ($TimeDiff -gt 60)
+                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | TimeDiff=${TimeDiff}s | Changed=$StandardTemplateChanged"
                             } else {
                                 $StandardTemplateChanged = $true
+                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | No cached timestamp - treating as changed"
                             }
 
                             Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
@@ -207,12 +219,17 @@ function Push-CIPPStandardsList {
                             $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
                             $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
                             $IsCompliant = $IsDeployed -and ($IntuneComplianceLookup[$AlignmentKey] -eq $true)
+                            Write-Host "COMPLIANCE CHECK: $AlignmentKey | InLookup=$IsDeployed | Compliant=$IsCompliant | LookupValue=$($IntuneComplianceLookup[$AlignmentKey])"
 
                             if ($IsCompliant) {
                                 # Policy unchanged and compliant - no action needed
                                 Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
                                 [void]$ComputedStandards.Remove($Key)
+                            } else {
+                                Write-Host "KEEPING: $Key - not compliant or not in lookup (InLookup=$IsDeployed, Compliant=$IsCompliant)"
                             }
+                        } else {
+                            Write-Host "KEEPING: $Key - changed (PolicyChanged=$PolicyChanged, StdTemplateChanged=$StandardTemplateChanged)"
                         }
                     }
                 } catch {
@@ -266,10 +283,8 @@ function Push-CIPPStandardsList {
         }
         Write-Host "Sending back $($FilteredStandards.Count) standards"
         return @($FilteredStandards)
-
     } catch {
         Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"
         return @()
     }
 }
-
