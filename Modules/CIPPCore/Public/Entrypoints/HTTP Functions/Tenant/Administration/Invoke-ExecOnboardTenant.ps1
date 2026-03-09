@@ -84,7 +84,7 @@ function Invoke-ExecOnboardTenant {
                         OrchestratorName = 'OnboardingOrchestrator'
                         Batch            = @($Item)
                     }
-                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                    $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
                     Write-LogMessage -headers $Headers -API $APIName -message "Onboarding job $Id started" -Sev 'Info' -LogData @{ 'InstanceId' = $InstanceId }
                 }
 

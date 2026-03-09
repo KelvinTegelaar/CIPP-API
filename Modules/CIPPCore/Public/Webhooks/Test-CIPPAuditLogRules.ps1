@@ -576,7 +576,7 @@ function Test-CIPPAuditLogRules {
                         $ReturnedData = foreach ($item in $ReturnedData) {
                             $item.CIPPAction = $clause.expectedAction
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
-                            $item.CIPPAlertComment = $clause.AlertComment
+                            $item | Add-Member -NotePropertyName 'CIPPAlertComment' -NotePropertyValue $clause.AlertComment -Force -ErrorAction SilentlyContinue
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
