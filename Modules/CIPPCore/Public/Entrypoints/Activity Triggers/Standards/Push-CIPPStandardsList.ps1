@@ -264,7 +264,7 @@ function Push-CIPPStandardsList {
                 FunctionName = 'CIPPStandard'
             }
         }
-        Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
+        Write-Host "Sending back $($FilteredStandards.Count) standards"
         return @($FilteredStandards)
 
     } catch {

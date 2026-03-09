@@ -72,8 +72,16 @@ function Invoke-CIPPStandardIntuneTemplate {
     $RawJSON = $rawJsonFromTemplate
     $TemplateType = $Template.Type
 
+    $AssignmentsMatch = $null
     try {
         $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $TemplateType
+        if ($ExistingPolicy -and $Settings.verifyAssignments -eq $true) {
+            Write-Information "Verifying assignments for tenant $Tenant"
+            $ExistingAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $ExistingPolicy.id -TemplateType $TemplateType -TenantFilter $Tenant -ExistingPolicy $ExistingPolicy
+            $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $Settings.AssignTo -ExpectedCustomGroup $Settings.customGroup -ExpectedExcludeGroup $Settings.excludeGroup -ExpectedAssignmentFilter $Settings.assignmentFilter -ExpectedAssignmentFilterType $Settings.assignmentFilterType -TenantFilter $Tenant
+
+            Write-Information "AssignmentsMatch for tenant $($Tenant): $AssignmentsMatch"
+        }
     } catch {
         $ExistingPolicy = $null
     }
@@ -113,6 +121,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         customGroup          = $Settings.customGroup
         assignmentFilter     = $Settings.assignmentFilter
         assignmentFilterType = $Settings.assignmentFilterType
+        AssignmentsMatch     = $AssignmentsMatch
     }
 
     if ($Settings.remediate) {
@@ -146,12 +155,21 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($Settings.alert) {
-        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
-        if ($CompareResult.compare) {
-            Write-StandardsAlert -message "Template $($CompareResult.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) does not match the expected configuration. We've generated an alert" -sev info
+        $AlertObj = $CompareResult | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId, AssignmentsMatch
+        $AssignmentsDiffer = $Settings.verifyAssignments -and ($null -ne $CompareResult.AssignmentsMatch -and -not $CompareResult.AssignmentsMatch)
+        $HasDifference = $CompareResult.compare -or $AssignmentsDiffer
+        if ($HasDifference) {
+            $Message = if ($CompareResult.compare) {
+                "Template $($CompareResult.displayname) does not match the expected configuration."
+            } elseif ($AssignmentsDiffer) {
+                "Template $($CompareResult.displayname) has incorrect assignments."
+            } else {
+                "Template $($CompareResult.displayname) does not match the expected configuration."
+            }
+            Write-StandardsAlert -message $Message -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$Message We've generated an alert" -sev info
         } else {
-            if ($CompareResult.ExistingPolicyId) {
+            if ($CompareResult.existingPolicyId) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) has the correct configuration." -sev Info
             } else {
                 Write-StandardsAlert -message "Template $($CompareResult.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
@@ -172,6 +190,11 @@ function Invoke-CIPPStandardIntuneTemplate {
             displayName = $CompareResult.displayname
             description = $CompareResult.description
             isCompliant = $true
+        }
+
+        if ($Settings.verifyAssignments) {
+            $CurrentValue['isAssigned'] = if ($null -ne $CompareResult.AssignmentsMatch) { $CompareResult.AssignmentsMatch } else { $false }
+            $ExpectedValue['isAssigned'] = $true
         }
         Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
