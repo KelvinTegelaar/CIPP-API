@@ -38,10 +38,16 @@ function Invoke-CIPPStandardIntuneTemplate {
     param($Tenant, $Settings)
 
     Write-Host 'INTUNETEMPLATERUN'
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $lap = $sw.Elapsed
+
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
 
     $Template = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Settings.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+    Write-Information "[IntuneTemplate][$Tenant] TableLoad: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
+
     if ($null -eq $Template) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Settings.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
         return $true
@@ -58,6 +64,8 @@ function Invoke-CIPPStandardIntuneTemplate {
         Write-Host "IntuneTemplate: $($Settings.TemplateList.value) - Failed to sync reusable policy settings. Skipping this template."
         return $true
     }
+    Write-Information "[IntuneTemplate][$Tenant] ReusableSync: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
 
     $displayname = $Template.Displayname
     $description = $Template.Description
@@ -69,16 +77,19 @@ function Invoke-CIPPStandardIntuneTemplate {
     } catch {
         $ExistingPolicy = $null
     }
+    Write-Information "[IntuneTemplate][$Tenant] GetPolicy '$displayname' ($TemplateType): $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+    $lap = $sw.Elapsed
 
     if ($ExistingPolicy) {
         try {
             $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
             $JSONTemplate = $RawJSON | ConvertFrom-Json
-            #This might be a slow one.
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $TemplateType -ErrorAction SilentlyContinue
         } catch {
         }
+        Write-Information "[IntuneTemplate][$Tenant] Compare '$displayname': $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+        $lap = $sw.Elapsed
     } else {
         $compare = [pscustomobject]@{
             MatchFailed = $true
@@ -128,7 +139,10 @@ function Invoke-CIPPStandardIntuneTemplate {
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($CompareResult.displayname), Error: $ErrorMessage" -sev 'Error'
+            Write-Information "IntuneTemplate: $($CompareResult.displayname) - Failed to remediate. Error: $ErrorMessage"
         }
+        Write-Information "[IntuneTemplate][$Tenant] Remediate '$displayname': $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"
+        $lap = $sw.Elapsed
     }
 
     if ($Settings.alert) {
@@ -162,4 +176,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
+
+    $sw.Stop()
+    Write-Information "[IntuneTemplate][$Tenant] TOTAL '$displayname': $([int]$sw.Elapsed.TotalMilliseconds)ms"
 }

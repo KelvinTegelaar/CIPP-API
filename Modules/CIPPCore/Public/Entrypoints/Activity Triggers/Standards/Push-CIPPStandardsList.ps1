@@ -64,12 +64,16 @@ function Push-CIPPStandardsList {
             } else {
                 # License valid - check policy timestamps to filter unchanged templates
                 $TypeMap = @{
-                    Device                   = 'deviceManagement/deviceConfigurations'
-                    Catalog                  = 'deviceManagement/configurationPolicies'
-                    Admin                    = 'deviceManagement/groupPolicyConfigurations'
-                    deviceCompliancePolicies = 'deviceManagement/deviceCompliancePolicies'
-                    AppProtection_Android    = 'deviceAppManagement/androidManagedAppProtections'
-                    AppProtection_iOS        = 'deviceAppManagement/iosManagedAppProtections'
+                    Device                       = 'deviceManagement/deviceConfigurations'
+                    Catalog                      = 'deviceManagement/configurationPolicies'
+                    Admin                        = 'deviceManagement/groupPolicyConfigurations'
+                    deviceCompliancePolicies     = 'deviceManagement/deviceCompliancePolicies'
+                    AppProtection_Android        = 'deviceAppManagement/androidManagedAppProtections'
+                    AppProtection_iOS            = 'deviceAppManagement/iosManagedAppProtections'
+                    windowsDriverUpdateProfiles  = 'deviceManagement/windowsDriverUpdateProfiles'
+                    windowsFeatureUpdateProfiles = 'deviceManagement/windowsFeatureUpdateProfiles'
+                    windowsQualityUpdatePolicies = 'deviceManagement/windowsQualityUpdatePolicies'
+                    windowsQualityUpdateProfiles = 'deviceManagement/windowsQualityUpdateProfiles'
                 }
 
                 $BulkRequests = $TypeMap.GetEnumerator() | ForEach-Object {
@@ -86,8 +90,9 @@ function Push-CIPPStandardsList {
                     $PolicyTimestamps = @{}
 
                     foreach ($Result in $BulkResults) {
-                        $GraphTime = $Result.body.value[0].lastModifiedDateTime
-                        $GraphId = $Result.body.value[0].id
+                        $FirstPolicy = if ($Result.body.value) { $Result.body.value[0] } else { $null }
+                        $GraphTime = $FirstPolicy.lastModifiedDateTime
+                        $GraphId = $FirstPolicy.id
                         $GraphCount = ($Result.body.value | Measure-Object).Count
                         $Cached = Get-CIPPAzDataTableEntity @TrackingTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Result.id)'"
 
@@ -117,8 +122,24 @@ function Push-CIPPStandardsList {
                                 LatestPolicyId       = $GraphId
                                 PolicyCount          = $GraphCount
                             } -Force | Out-Null
+                        } elseif ($Cached -and $Cached.PolicyCount -ne $null) {
+                            # No timestamp available - fall back to count-based detection
+                            $Changed = $CountChanged -or $IdChanged
+                            Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
+                                PartitionKey   = $TenantFilter
+                                RowKey         = $Result.id
+                                LatestPolicyId = $GraphId
+                                PolicyCount    = $GraphCount
+                            } -Force | Out-Null
                         } else {
+                            # No timestamp and no prior cache entry - treat as changed and seed the cache
                             $Changed = $true
+                            Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
+                                PartitionKey   = $TenantFilter
+                                RowKey         = $Result.id
+                                LatestPolicyId = $GraphId
+                                PolicyCount    = $GraphCount
+                            } -Force | Out-Null
                         }
 
                         $PolicyTimestamps[$Result.id] = $Changed
@@ -160,7 +181,7 @@ function Push-CIPPStandardsList {
                         }
 
                         # Check StandardTemplate changes
-                        $StandardTemplate = Get-CIPPAzDataTableEntity @StandardTemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
+                        $StandardTemplate = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
                         $StandardTemplateChanged = $false
 
                         if ($StandardTemplate) {
@@ -182,7 +203,7 @@ function Push-CIPPStandardsList {
                             } -Force | Out-Null
                         }
 
-                        # Remove or downgrade based on change state and compliance
+                        # Remove cosed onmpliance
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
                             $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
                             $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
@@ -191,15 +212,6 @@ function Push-CIPPStandardsList {
                             if ($IsCompliant) {
                                 # Policy unchanged and compliant - no action needed
                                 Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
-                                [void]$ComputedStandards.Remove($Key)
-                            } elseif ($IsDeployed) {
-                                # Policy deployed but drifted, and nothing changed - report only, don't force remediate
-                                Write-Host "COMPLIANCE DRIFT: Downgrading $Key to Report mode for $TenantFilter (deployed, not compliant, no changes)"
-                                $ComputedStandards[$Key].Settings | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $false -Force
-                                $ComputedStandards[$Key].Settings | Add-Member -NotePropertyName 'report' -NotePropertyValue $true -Force
-                            } else {
-                                # No alignment data yet - policy not yet deployed, skip (will run on next cycle with changes)
-                                Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (not yet deployed, no changes)"
                                 [void]$ComputedStandards.Remove($Key)
                             }
                         }
@@ -237,27 +249,28 @@ function Push-CIPPStandardsList {
                     Write-Information "Updating CIPPDB cache for Conditional Access policies for $TenantFilter"
                     Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter
                 } catch {
-                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)"
+                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)'
                 }
             }
         }
 
-        Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
-        # Return filtered standards
-        $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
-            [PSCustomObject]@{
-                Tenant       = $_.Tenant
-                Standard     = $_.Standard
-                Settings     = $_.Settings
-                TemplateId   = $_.TemplateId
-                FunctionName = 'CIPPStandard'
-            }
-        }
-        Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
-        return $FilteredStandards
+        Write-Host 'Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
+                    # Return filtered standards
+                    $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
+                        [PSCustomObject]@{
+                            Tenant       = $_.Tenant
+                            Standard     = $_.Standard
+                            Settings     = $_.Settings
+                            TemplateId   = $_.TemplateId
+                            FunctionName = 'CIPPStandard'
+                        }
+                    }
+                    Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
+                    return @($FilteredStandards)
 
-    } catch {
-        Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"
+                } catch {
+                    Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)'
         return @()
     }
 }
+'
