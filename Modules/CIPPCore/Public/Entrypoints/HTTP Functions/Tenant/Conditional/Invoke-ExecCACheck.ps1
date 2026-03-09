@@ -14,7 +14,7 @@ function Invoke-ExecCaCheck {
     } else {
         $IncludeApplications = '67ad5377-2d78-4ac2-a867-6300cda00e85'
     }
-    $results = try {
+    $Results = try {
         $CAContext = @{
             '@odata.type'         = '#microsoft.graph.applicationContext'
             'includeApplications' = @($IncludeApplications)
@@ -22,7 +22,7 @@ function Invoke-ExecCaCheck {
         $ConditionalAccessWhatIfDefinition = @{
             'signInIdentity'   = @{
                 '@odata.type' = '#microsoft.graph.userSignIn'
-                'userId'      = "$userId"
+                'userId'      = "$UserID"
             }
             'signInContext'    = $CAContext
             'signInConditions' = @{}
@@ -33,21 +33,22 @@ function Invoke-ExecCaCheck {
         if ($Request.body.ClientAppType) { $whatIfConditions.clientAppType = $Request.body.ClientAppType.value }
         if ($Request.body.DevicePlatform) { $whatIfConditions.devicePlatform = $Request.body.DevicePlatform.value }
         if ($Request.body.Country) { $whatIfConditions.country = $Request.body.Country.value }
-        if ($Request.body.IpAddress) { $whatIfConditions.ipAddress = $Request.body.IpAddress.value }
+        if ($Request.body.IpAddress) { $whatIfConditions.ipAddress = $Request.body.IpAddress }
+        if ($Request.body.authenticationFlow) { $whatIfConditions.authenticationFlow = @{ transferMethod = $Request.body.authenticationFlow.value } }
 
         $JSONBody = $ConditionalAccessWhatIfDefinition | ConvertTo-Json -Depth 10
         Write-Host $JSONBody
         $Request = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $tenant -type POST -body $JsonBody -AsApp $true
         $Request
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         "Failed to execute check: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $body = [pscustomobject]@{'Results' = $results }
-
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Results }
         })
 
 }
