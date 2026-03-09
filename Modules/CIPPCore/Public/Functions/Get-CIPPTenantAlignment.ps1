@@ -34,6 +34,7 @@ function Get-CIPPTenantAlignment {
             $JSON = $_.JSON
             try {
                 $RowKey = $_.RowKey
+                if ([string]::IsNullOrWhiteSpace($JSON)) { return }
                 $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             } catch {
                 Write-Warning "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
