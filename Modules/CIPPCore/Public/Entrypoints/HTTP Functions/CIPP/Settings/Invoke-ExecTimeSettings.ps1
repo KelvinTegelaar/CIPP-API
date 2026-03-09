@@ -10,12 +10,16 @@ function Invoke-ExecTimeSettings {
 
     try {
         $Subscription = Get-CIPPAzFunctionAppSubId
-        $Owner = $env:WEBSITE_OWNER_NAME
-
-        if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-            $RGName = $Matches.RGName
-        } else {
+        if ($env:WEBSITE_RESOURCE_GROUP) {
             $RGName = $env:WEBSITE_RESOURCE_GROUP
+        } else {
+            $Owner = $env:WEBSITE_OWNER_NAME
+            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+                $RGName = $Matches.RGName
+            } else {
+                Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
+                $RGName = $null
+            }
         }
 
         $FunctionName = $env:WEBSITE_SITE_NAME

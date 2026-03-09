@@ -8,6 +8,8 @@ function Get-CIPPReusableSettingsFromPolicy {
 
     $result = [pscustomobject]@{
         ReusableSettings = [System.Collections.Generic.List[psobject]]::new()
+        RawJSON          = $PolicyJson
+        Map              = @{}
     }
 
     if (-not $PolicyJson) { return $result }
@@ -196,6 +198,10 @@ function Get-CIPPReusableSettingsFromPolicy {
                 }
             }
 
+            if ($templateGuid) {
+                $result.Map[$settingId] = $templateGuid
+            }
+
             $result.ReusableSettings.Add([pscustomobject]@{
                     displayName = $settingDisplayName
                     templateId  = $templateGuid
@@ -204,6 +210,14 @@ function Get-CIPPReusableSettingsFromPolicy {
         } catch {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to link reusable setting $settingId for template creation: $($_.Exception.Message)" -Sev 'Warn'
         }
+    }
+
+    if ($result.Map.Count -gt 0) {
+        $updatedJson = $PolicyJson
+        foreach ($pair in $result.Map.GetEnumerator()) {
+            $updatedJson = $updatedJson -replace [regex]::Escape($pair.Key), $pair.Value
+        }
+        $result.RawJSON = $updatedJson
     }
 
     Write-LogMessage -headers $Headers -API $APIName -message "Reusable settings mapped: $($result.ReusableSettings.Count) -> $($result.ReusableSettings.displayName -join ', ')" -Sev 'Info'
