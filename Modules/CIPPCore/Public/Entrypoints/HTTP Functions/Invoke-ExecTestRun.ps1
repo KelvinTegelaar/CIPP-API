@@ -28,7 +28,7 @@ function Invoke-ExecTestRun {
             SkipLog          = $false
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = [PSCustomObject]@{ Results = "Successfully started data collection and test run for $TenantFilter" }

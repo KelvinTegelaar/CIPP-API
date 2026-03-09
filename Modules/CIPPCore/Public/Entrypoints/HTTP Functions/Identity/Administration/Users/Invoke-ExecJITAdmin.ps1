@@ -25,15 +25,15 @@ function Invoke-ExecJITAdmin {
         $ConfigTable = Get-CIPPTable -TableName Config
         $Filter = "PartitionKey eq 'JITAdminSettings' and RowKey eq 'JITAdminSettings'"
         $JITAdminConfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
-        
+
         if ($JITAdminConfig -and ![string]::IsNullOrWhiteSpace($JITAdminConfig.MaxDuration)) {
             # Calculate the duration between start and expiration
             $RequestedDuration = $Expiration - $Start
-            
+
             # Parse the max duration from ISO 8601 format
             try {
                 $MaxDurationTimeSpan = [System.Xml.XmlConvert]::ToTimeSpan($JITAdminConfig.MaxDuration)
-                
+
                 if ($RequestedDuration -gt $MaxDurationTimeSpan) {
                     $RequestedDays = $RequestedDuration.TotalDays.ToString('0.00')
                     $MaxDays = $MaxDurationTimeSpan.TotalDays.ToString('0.00')
@@ -194,6 +194,7 @@ function Invoke-ExecJITAdmin {
         $TaskBody = @{
             TenantFilter  = $TenantFilter
             Name          = "JIT Admin (enable): $Username"
+            AlertComment  = if (![string]::IsNullOrWhiteSpace($Request.Body.Reason)) { "JIT Reason: $($Request.Body.Reason)" } else { $null }
             Command       = @{
                 value = 'Set-CIPPUserJITAdmin'
                 label = 'Set-CIPPUserJITAdmin'
@@ -226,6 +227,7 @@ function Invoke-ExecJITAdmin {
     $DisableTaskBody = [pscustomobject]@{
         TenantFilter  = $TenantFilter
         Name          = "JIT Admin ($($Request.Body.ExpireAction.value)): $Username"
+        AlertComment  = if (![string]::IsNullOrWhiteSpace($Request.Body.Reason)) { "JIT Reason: $($Request.Body.Reason)" } else { $null }
         Command       = @{
             value = 'Set-CIPPUserJITAdmin'
             label = 'Set-CIPPUserJITAdmin'
