@@ -16,7 +16,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $AutoKeyboard,
         $Headers,
         $Language = 'os-default',
-        $APIName = 'Add Default Enrollment Status Page'
+        $APIName = 'Add Default Autopilot Deployment Profile'
     )
 
     $User = $Request.Headers

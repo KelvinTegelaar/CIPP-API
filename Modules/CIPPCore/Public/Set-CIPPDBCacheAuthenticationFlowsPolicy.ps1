@@ -27,9 +27,6 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
         }
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `
-            -message "Failed to cache authentication flows policy: $($_.Exception.Message)" `
-            -sev Warning `
-            -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter   -message "Failed to cache authentication flows policy: $($_.Exception.Message)"  -sev Warning   -LogData (Get-CippException -Exception $_)
     }
 }

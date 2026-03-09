@@ -59,8 +59,7 @@ function Invoke-CIPPStandardMailContacts {
                 $Body = [pscustomobject]@{}
                 switch ($Contacts) {
                     { $Contacts.MarketingContact } { $body | Add-Member -NotePropertyName marketingNotificationEmails -NotePropertyValue @($Contacts.MarketingContact) }
-                    { $Contacts.SecurityContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.SecurityContact) }
-                    { $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.TechContact) -ErrorAction SilentlyContinue }
+                    { $Contacts.SecurityContact -or $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ } | Select-Object -Unique) }
                     { $Contacts.GeneralContact } { $body | Add-Member -NotePropertyName privacyProfile -NotePropertyValue @{contactEmail = $Contacts.GeneralContact } }
                 }
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/v1.0/organization/$($TenantID.id)" -asApp $true -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'
@@ -112,7 +111,7 @@ function Invoke-CIPPStandardMailContacts {
         }
         $ExpectedValue = @{
             marketingNotificationEmails = @($Contacts.MarketingContact)
-            technicalNotificationMails  = @($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null }
+            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique)
             contactEmail                = $Contacts.GeneralContact
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant

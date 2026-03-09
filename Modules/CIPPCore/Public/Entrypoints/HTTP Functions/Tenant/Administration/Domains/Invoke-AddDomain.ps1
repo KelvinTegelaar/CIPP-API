@@ -9,6 +9,7 @@ function Invoke-AddDomain {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $Request.Body.tenantFilter
     $DomainName = $Request.Body.domain
 
@@ -29,15 +30,15 @@ function Invoke-AddDomain {
             id = $DomainName
         } | ConvertTo-Json -Compress
 
-        $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter -type POST -body $Body -AsApp $true
+        $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter -type POST -body $Body -AsApp $true
 
         $Result = "Successfully added domain $DomainName to tenant $TenantFilter. Please verify the domain to complete setup."
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Added domain $DomainName" -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Added domain $DomainName" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to add domain $DomainName`: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to add domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 

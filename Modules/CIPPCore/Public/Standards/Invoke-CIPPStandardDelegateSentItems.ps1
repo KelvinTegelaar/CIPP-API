@@ -53,7 +53,7 @@ function Invoke-CIPPStandardDelegateSentItems {
     $CurrentValue = if (!$Mailboxes) {
         [PSCustomObject]@{ state = 'Configured correctly' }
     } else {
-        [PSCustomObject]@{ NonCompliantMailboxes = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled }
+        [PSCustomObject]@{ NonCompliantMailboxes = $Mailboxes | Select-Object -Property UPN, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled }
     }
     $ExpectedValue = [PSCustomObject]@{
         state = 'Configured correctly'
@@ -66,7 +66,7 @@ function Invoke-CIPPStandardDelegateSentItems {
                     @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
-                            Parameters = @{Identity = $Mailbox.UserPrincipalName ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
+                            Parameters = @{Identity = $Mailbox.UPN ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
                         }
                     }
                 }
@@ -97,7 +97,7 @@ function Invoke-CIPPStandardDelegateSentItems {
     }
 
     if ($Settings.report -eq $true) {
-        $Filtered = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
+        $Filtered = $Mailboxes | Select-Object -Property UPN, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
         Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }

@@ -8,10 +8,14 @@ function Set-PwPushConfig {
 
     .PARAMETER Configuration
     Configuration object
+
+    .PARAMETER FullConfiguration
+    Full parsed configuration object including CFZTNA settings
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        $Configuration
+        $Configuration,
+        $FullConfiguration
     )
     $InitParams = @{}
     if ($Configuration.BaseUrl) {
@@ -34,6 +38,19 @@ function Set-PwPushConfig {
     if ($PSCmdlet.ShouldProcess('Initialize-PassPushPosh')) {
         Write-Information ($InitParams | ConvertTo-Json)
         Initialize-PassPushPosh @InitParams
+    }
+
+    if ($Configuration.CFEnabled -eq $true -and $FullConfiguration.CFZTNA.Enabled -eq $true) {
+        $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
+        $PPPModule = Get-Module PassPushPosh
+        & $PPPModule {
+            if (-not $Script:PPPHeaders) {
+                $Script:PPPHeaders = @{}
+            }
+            $Script:PPPHeaders['CF-Access-Client-Id'] = $args[0]
+            $Script:PPPHeaders['CF-Access-Client-Secret'] = $args[1]
+        } $FullConfiguration.CFZTNA.ClientId "$CFAPIKey"
+        Write-Information 'CF-Access-Client-Id and CF-Access-Client-Secret headers added to PWPush API request'
     }
 }
 

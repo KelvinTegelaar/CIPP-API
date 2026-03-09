@@ -48,11 +48,13 @@ function Invoke-AddIntuneTemplate {
 
             $reusableResult = Get-CIPPReusableSettingsFromPolicy -PolicyJson $Template.TemplateJson -Tenant $TenantFilter -Headers $Headers -APIName $APIName
             $reusableTemplateRefs = $reusableResult.ReusableSettings
+            # Intune templates store payload in RAWJson; only the content is rewritten to use reusable template GUID placeholders.
+            $templateJson = if ($reusableResult.RawJSON) { $reusableResult.RawJSON } else { $Template.TemplateJson }
 
             $object = [PSCustomObject]@{
                 Displayname      = $Template.DisplayName
                 Description      = $Template.Description
-                RAWJson          = $Template.TemplateJson
+                RAWJson          = $templateJson
                 Type             = $Template.Type
                 GUID             = $GUID
                 ReusableSettings = $reusableTemplateRefs

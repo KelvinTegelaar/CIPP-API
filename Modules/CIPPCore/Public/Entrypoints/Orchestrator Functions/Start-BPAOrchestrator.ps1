@@ -95,7 +95,7 @@ function Start-BPAOrchestrator {
                 OrchestratorName = 'BPAOrchestrator'
                 SkipLog          = $true
             }
-            return Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+            return Start-CIPPOrchestrator -InputObject $InputObject
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

@@ -55,7 +55,7 @@ function Invoke-ListTransportRules {
                         }
                         SkipLog          = $true
                     }
-                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
+                    Start-CIPPOrchestrator -InputObject $InputObject | Out-Null
                 } else {
                     # Return cached data
                     $Metadata = [PSCustomObject]@{

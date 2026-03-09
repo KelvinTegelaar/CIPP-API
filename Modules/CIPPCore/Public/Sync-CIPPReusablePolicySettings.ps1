@@ -18,7 +18,7 @@ function Sync-CIPPReusablePolicySettings {
 
     foreach ($ref in $reusableRefs) {
         $templateId = $ref.templateId ?? $ref.templateID ?? $ref.GUID ?? $ref.RowKey
-        $sourceId = $ref.sourceId ?? $ref.sourceReusableSettingId ?? $ref.sourceGuid ?? $ref.id
+        $sourceId = $ref.sourceId ?? $ref.sourceGuid ?? $ref.id
         $displayName = $ref.displayName ?? $ref.DisplayName
 
         if (-not $templateId -or -not $displayName) { continue }
@@ -65,7 +65,14 @@ function Sync-CIPPReusablePolicySettings {
             }
         }
 
-        if ($sourceId -and $targetId) { $result.Map[$sourceId] = $targetId }
+        if ($targetId) {
+            $replacementKey = $sourceId
+            if ($TemplateInfo.RawJSON -and $templateId -and $TemplateInfo.RawJSON -match [regex]::Escape($templateId)) {
+                $replacementKey = $templateId
+            }
+
+            if ($replacementKey) { $result.Map[$replacementKey] = $targetId }
+        }
     }
 
     $updatedJson = $result.RawJSON

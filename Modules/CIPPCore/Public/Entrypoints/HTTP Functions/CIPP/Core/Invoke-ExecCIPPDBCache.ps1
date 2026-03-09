@@ -89,7 +89,7 @@ function Invoke-ExecCIPPDBCache {
             Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name on tenant $TenantFilter" -sev Info
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
         $ResultsMessage = if ($TenantFilter -eq 'AllTenants') {
             "Successfully started cache operation for $Name for all tenants"

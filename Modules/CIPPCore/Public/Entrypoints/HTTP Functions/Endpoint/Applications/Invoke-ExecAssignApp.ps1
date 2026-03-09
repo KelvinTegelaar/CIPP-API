@@ -21,6 +21,8 @@ function Invoke-ExecAssignApp {
     $GroupNamesRaw = $Request.Query.GroupNames ?? $Request.Body.GroupNames
     $GroupIdsRaw = $Request.Query.GroupIds ?? $Request.Body.GroupIds
     $AssignmentMode = $Request.Body.assignmentMode
+    $AssignmentFilterName = $Request.Body.AssignmentFilterName
+    $AssignmentFilterType = $Request.Body.AssignmentFilterType
 
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
 
@@ -94,6 +96,13 @@ function Invoke-ExecAssignApp {
 
     if ($GroupIds.Count -gt 0) {
         $setParams.GroupIds = $GroupIds
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterName)) {
+        $setParams.AssignmentFilterName = $AssignmentFilterName
+    }
+    if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterType)) {
+        $setParams.AssignmentFilterType = $AssignmentFilterType
     }
 
     try {

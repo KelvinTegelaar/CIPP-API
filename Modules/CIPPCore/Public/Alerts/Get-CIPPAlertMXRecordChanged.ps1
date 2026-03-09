@@ -16,6 +16,10 @@ function Get-CIPPAlertMXRecordChanged {
         $CacheTable = Get-CippTable -tablename 'CacheMxRecords'
         $PreviousResults = Get-CIPPAzDataTableEntity @CacheTable -Filter "PartitionKey eq '$TenantFilter'"
 
+        if (!$DomainData) {
+            return
+        }
+
         $ChangedDomains = foreach ($Domain in $DomainData) {
             try {
                 $PreviousDomain = $PreviousResults | Where-Object { $_.Domain -eq $Domain.Domain }
@@ -60,8 +64,6 @@ function Get-CIPPAlertMXRecordChanged {
         if ($ChangedDomains) {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $ChangedDomains
         }
-        return $true
-
     } catch {
         Write-LogMessage -message "Failed to check MX record changes: $($_.Exception.Message)" -API 'MX Record Alert' -tenant $TenantFilter -sev Error
     }

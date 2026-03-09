@@ -17,6 +17,9 @@ function Invoke-ListIntuneReusableSettingTemplates {
     }
 
     $RawTemplates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    if ($Request.query.ID) {
+        $RawTemplates = @($RawTemplates) | Where-Object -Property RowKey -EQ $Request.query.ID
+    }
 
     $Templates = foreach ($Item in $RawTemplates) {
         $Parsed = $null

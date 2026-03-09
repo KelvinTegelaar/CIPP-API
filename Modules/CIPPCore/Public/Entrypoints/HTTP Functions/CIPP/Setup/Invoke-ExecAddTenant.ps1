@@ -103,7 +103,7 @@ function Invoke-ExecAddTenant {
                     OrchestratorName = 'UpdatePermissionsOrchestrator'
                     Batch            = @($TenantBatch)
                 }
-                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                Start-CIPPOrchestrator -InputObject $InputObject
                 Write-Information "Started permissions update orchestrator for $displayName"
             } catch {
                 Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"

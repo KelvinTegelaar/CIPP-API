@@ -58,7 +58,7 @@ function Search-CIPPDbData {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$TenantFilter,
+        [string[]]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
         [string[]]$SearchTerms,
@@ -68,7 +68,8 @@ function Search-CIPPDbData {
             'Users', 'Domains', 'ConditionalAccessPolicies', 'ManagedDevices', 'Organization',
             'Groups', 'Roles', 'LicenseOverview', 'IntuneDeviceCompliancePolicies', 'SecureScore',
             'SecureScoreControlProfiles', 'Mailboxes', 'CASMailbox', 'MailboxPermissions',
-            'OneDriveUsage', 'MailboxUsage', 'Devices', 'AllRoles', 'Licenses', 'DeviceCompliancePolicies'
+            'OneDriveUsage', 'MailboxUsage', 'Devices', 'AllRoles', 'Licenses', 'DeviceCompliancePolicies',
+            'BitlockerKeys'
         )]
         [string[]]$Types,
 
