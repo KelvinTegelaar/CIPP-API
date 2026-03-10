@@ -4,30 +4,20 @@ function Get-CIPPMailboxForwardingReport {
         Generates a mailbox forwarding report from the CIPP Reporting database
 
     .DESCRIPTION
-        Retrieves mailbox forwarding settings for a tenant from the cached mailbox data.
-        Shows mailboxes that have external forwarding, internal forwarding, or both configured.
+        Retrieves mailboxes that have forwarding configured (external, internal, or both)
+        from the cached mailbox data.
 
     .PARAMETER TenantFilter
         The tenant to generate the report for
 
-    .PARAMETER ForwardingOnly
-        If specified, only returns mailboxes that have forwarding configured
-
     .EXAMPLE
         Get-CIPPMailboxForwardingReport -TenantFilter 'contoso.onmicrosoft.com'
-        Gets all mailboxes with their forwarding settings
-
-    .EXAMPLE
-        Get-CIPPMailboxForwardingReport -TenantFilter 'contoso.onmicrosoft.com' -ForwardingOnly
-        Gets only mailboxes that have forwarding configured
+        Gets all mailboxes with forwarding configured
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$ForwardingOnly
+        [string]$TenantFilter
     )
 
     try {
@@ -45,9 +35,8 @@ function Get-CIPPMailboxForwardingReport {
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($Tenant in $Tenants) {
                 try {
-                    $TenantResults = Get-CIPPMailboxForwardingReport -TenantFilter $Tenant -ForwardingOnly:$ForwardingOnly
+                    $TenantResults = Get-CIPPMailboxForwardingReport -TenantFilter $Tenant
                     foreach ($Result in $TenantResults) {
-                        # Add Tenant property to each result
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
                     }
@@ -77,8 +66,8 @@ function Get-CIPPMailboxForwardingReport {
             $HasInternalForwarding = -not [string]::IsNullOrWhiteSpace($Mailbox.InternalForwardingAddress)
             $HasAnyForwarding = $HasExternalForwarding -or $HasInternalForwarding
 
-            # Skip mailboxes without forwarding if ForwardingOnly is specified
-            if ($ForwardingOnly -and -not $HasAnyForwarding) {
+            # Only include mailboxes with forwarding configured
+            if (-not $HasAnyForwarding) {
                 continue
             }
 
@@ -87,19 +76,15 @@ function Get-CIPPMailboxForwardingReport {
                 'Both'
             } elseif ($HasExternalForwarding) {
                 'External'
-            } elseif ($HasInternalForwarding) {
-                'Internal'
             } else {
-                'None'
+                'Internal'
             }
 
             # Build the forward-to address display
             $ForwardTo = if ($HasExternalForwarding) {
                 $Mailbox.ForwardingSmtpAddress
-            } elseif ($HasInternalForwarding) {
-                $Mailbox.InternalForwardingAddress
             } else {
-                $null
+                $Mailbox.InternalForwardingAddress
             }
 
             $Report.Add([PSCustomObject]@{
@@ -112,7 +97,6 @@ function Get-CIPPMailboxForwardingReport {
                     ForwardingSmtpAddress      = $Mailbox.ForwardingSmtpAddress
                     InternalForwardingAddress  = $Mailbox.InternalForwardingAddress
                     DeliverToMailboxAndForward = $Mailbox.DeliverToMailboxAndForward
-                    HasForwarding              = $HasAnyForwarding
                     Tenant                     = $TenantFilter
                     CacheTimestamp             = $CacheTimestamp
                 })

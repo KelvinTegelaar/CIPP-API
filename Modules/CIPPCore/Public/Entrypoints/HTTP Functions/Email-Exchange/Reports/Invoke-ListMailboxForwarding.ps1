@@ -11,20 +11,12 @@ function Invoke-ListMailboxForwarding {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
     $UseReportDB = $Request.Query.UseReportDB
-    $ForwardingOnly = $Request.Query.ForwardingOnly
 
     try {
         # If UseReportDB is specified, retrieve from report database
         if ($UseReportDB -eq 'true') {
-            $ReportParams = @{
-                TenantFilter = $TenantFilter
-            }
-            if ($ForwardingOnly -eq 'true') {
-                $ReportParams.ForwardingOnly = $true
-            }
-
             try {
-                $GraphRequest = Get-CIPPMailboxForwardingReport @ReportParams
+                $GraphRequest = Get-CIPPMailboxForwardingReport -TenantFilter $TenantFilter
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
                 $StatusCode = [HttpStatusCode]::InternalServerError
@@ -53,22 +45,23 @@ function Invoke-ListMailboxForwarding {
             $HasInternalForwarding = -not [string]::IsNullOrWhiteSpace($Mailbox.ForwardingAddress)
             $HasAnyForwarding = $HasExternalForwarding -or $HasInternalForwarding
 
+            # Only include mailboxes with forwarding configured
+            if (-not $HasAnyForwarding) {
+                continue
+            }
+
             $ForwardingType = if ($HasExternalForwarding -and $HasInternalForwarding) {
                 'Both'
             } elseif ($HasExternalForwarding) {
                 'External'
-            } elseif ($HasInternalForwarding) {
-                'Internal'
             } else {
-                'None'
+                'Internal'
             }
 
             $ForwardTo = if ($HasExternalForwarding) {
                 $Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''
-            } elseif ($HasInternalForwarding) {
-                $Mailbox.ForwardingAddress
             } else {
-                $null
+                $Mailbox.ForwardingAddress
             }
 
             [PSCustomObject]@{
@@ -81,7 +74,6 @@ function Invoke-ListMailboxForwarding {
                 ForwardingSmtpAddress      = $Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''
                 InternalForwardingAddress  = $Mailbox.ForwardingAddress
                 DeliverToMailboxAndForward = $Mailbox.DeliverToMailboxAndForward
-                HasForwarding              = $HasAnyForwarding
             }
         }
 
