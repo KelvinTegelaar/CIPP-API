@@ -32,6 +32,17 @@ function Invoke-EditUser {
     try {
         Write-Host "$([boolean]$UserObj.MustChangePass)"
         $UserPrincipalName = "$($UserObj.username)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
+        $normalizedOtherMails = @(
+            @($UserObj.otherMails) | ForEach-Object {
+                if ($null -ne $_) {
+                    [string]$_ -split ','
+                }
+            } | ForEach-Object {
+                $_.Trim()
+            } | Where-Object {
+                -not [string]::IsNullOrWhiteSpace($_)
+            }
+        )
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
@@ -49,7 +60,7 @@ function Invoke-EditUser {
             'country'           = $UserObj.country
             'companyName'       = $UserObj.companyName
             'businessPhones'    = $UserObj.businessPhones ? @($UserObj.businessPhones) : @()
-            'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
+            'otherMails'        = $normalizedOtherMails
             'passwordProfile'   = @{
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass
             }
