@@ -10,31 +10,83 @@ function Invoke-ListMailboxForwarding {
 
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
+    $UseReportDB = $Request.Query.UseReportDB
     $ForwardingOnly = $Request.Query.ForwardingOnly
 
     try {
-        # Call the report function with proper parameters
-        $ReportParams = @{
-            TenantFilter = $TenantFilter
-        }
-        if ($ForwardingOnly -eq 'true') {
-            $ReportParams.ForwardingOnly = $true
+        # If UseReportDB is specified, retrieve from report database
+        if ($UseReportDB -eq 'true') {
+            $ReportParams = @{
+                TenantFilter = $TenantFilter
+            }
+            if ($ForwardingOnly -eq 'true') {
+                $ReportParams.ForwardingOnly = $true
+            }
+
+            try {
+                $GraphRequest = Get-CIPPMailboxForwardingReport @ReportParams
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
         }
 
-        try {
-            $GraphRequest = Get-CIPPMailboxForwardingReport @ReportParams
-            $StatusCode = [HttpStatusCode]::OK
-        } catch {
-            $StatusCode = [HttpStatusCode]::InternalServerError
-            $GraphRequest = $_.Exception.Message
+        # Live query from Exchange Online
+        $Select = 'UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientTypeDetails,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress'
+        $ExoRequest = @{
+            tenantid  = $TenantFilter
+            cmdlet    = 'Get-Mailbox'
+            cmdParams = @{}
+            Select    = $Select
         }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Mailbox forwarding report listed for $($TenantFilter)" -sev Debug
+        $Mailboxes = New-ExoRequest @ExoRequest
 
-        return ([HttpResponseContext]@{
-                StatusCode = $StatusCode
-                Body       = @($GraphRequest)
-            })
+        $GraphRequest = foreach ($Mailbox in $Mailboxes) {
+            $HasExternalForwarding = -not [string]::IsNullOrWhiteSpace($Mailbox.ForwardingSmtpAddress)
+            $HasInternalForwarding = -not [string]::IsNullOrWhiteSpace($Mailbox.ForwardingAddress)
+            $HasAnyForwarding = $HasExternalForwarding -or $HasInternalForwarding
+
+            $ForwardingType = if ($HasExternalForwarding -and $HasInternalForwarding) {
+                'Both'
+            } elseif ($HasExternalForwarding) {
+                'External'
+            } elseif ($HasInternalForwarding) {
+                'Internal'
+            } else {
+                'None'
+            }
+
+            $ForwardTo = if ($HasExternalForwarding) {
+                $Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''
+            } elseif ($HasInternalForwarding) {
+                $Mailbox.ForwardingAddress
+            } else {
+                $null
+            }
+
+            [PSCustomObject]@{
+                UPN                        = $Mailbox.UserPrincipalName
+                DisplayName                = $Mailbox.DisplayName
+                PrimarySmtpAddress         = $Mailbox.PrimarySMTPAddress
+                RecipientTypeDetails       = $Mailbox.RecipientTypeDetails
+                ForwardingType             = $ForwardingType
+                ForwardTo                  = $ForwardTo
+                ForwardingSmtpAddress      = $Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''
+                InternalForwardingAddress  = $Mailbox.ForwardingAddress
+                DeliverToMailboxAndForward = $Mailbox.DeliverToMailboxAndForward
+                HasForwarding              = $HasAnyForwarding
+            }
+        }
+
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Mailbox forwarding listed for $($TenantFilter)" -sev Debug
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
