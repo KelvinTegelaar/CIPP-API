@@ -127,6 +127,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
 
+Set-CIPPEnvVarBackup
 if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:NonLocalHostAzurite -ne 'true') {
     Set-CIPPOffloadFunctionTriggers
 }

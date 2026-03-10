@@ -62,6 +62,19 @@ function Update-CIPPAzFunctionAppSetting {
                 $currentProps[$prop.Name] = [string]$prop.Value
             }
         }
+    } else {
+        # Could not retrieve current settings - backfill from EnvVarBackup to avoid overwriting required properties with empty values
+        Write-Warning "Could not retrieve current Function App settings for $Name - attempting to backfill from environment variable backup."
+        $EnvBackupTable = Get-CIPPTable -tablename 'EnvVarBackups'
+        $BackupEntity = Get-CIPPAzDataTableEntity @EnvBackupTable -Filter "PartitionKey eq 'EnvVarBackup' and RowKey eq '$Name'"
+        if ($BackupEntity -and $BackupEntity.Values) {
+            ($BackupEntity.Values | ConvertFrom-Json).PSObject.Properties | ForEach-Object {
+                if ($_.Value) { $currentProps[$_.Name] = [string]$_.Value }
+            }
+            Write-Information "Backfilled $($currentProps.Count) properties from environment variable backup for $Name"
+        } else {
+            throw "Failed to retrieve current settings for Function App $Name and no backup found - aborting update to avoid potential misconfiguration."
+        }
     }
 
     # Merge requested settings
