@@ -28,6 +28,15 @@ function Set-CIPPOffloadFunctionTriggers {
     $OffloadEnabled = $false
     [bool]::TryParse($OffloadConfig.state, [ref]$OffloadEnabled) | Out-Null
 
+    # Trigger Last change table
+    $TriggerChangeTable = Get-CippTable -tablename 'OffloadTriggerChange'
+    $LastChange = Get-CIPPAzDataTableEntity @TriggerChangeTable
+
+    if ($LastChange -and $LastChange.Timestamp -gt (Get-Date).AddMinutes(-30).ToUniversalTime() -and $LastChange.Offloading -eq $OffloadEnabled) {
+        Write-Information "Last trigger change was at $LastChange, skipping update to avoid rapid changes."
+        return $true
+    }
+
     # Determine resource group
     if ($env:WEBSITE_RESOURCE_GROUP) {
         $ResourceGroupName = $env:WEBSITE_RESOURCE_GROUP
@@ -70,6 +79,12 @@ function Set-CIPPOffloadFunctionTriggers {
             # Update app settings only if there are changes to make
             if ($AppSettings.Count -gt 0) {
                 if ($PSCmdlet.ShouldProcess($FunctionAppName, 'Disable non-HTTP triggers')) {
+                    $LastChange = @{
+                        PartitionKey = 'TriggerChange'
+                        RowKey       = 'LastChange'
+                        Offloading   = $OffloadEnabled
+                    }
+                    Add-CIPPAzDataTableEntity @TriggerChangeTable -Entity $LastChange -Force | Out-Null
                     Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $ResourceGroupName -AppSetting $AppSettings | Out-Null
                     Write-Information "Successfully disabled $($AppSettings.Count) non-HTTP trigger(s) on $FunctionAppName"
                 }
@@ -95,6 +110,12 @@ function Set-CIPPOffloadFunctionTriggers {
             # Update app settings with removal of keys only if there are changes to make
             if ($RemoveKeys.Count -gt 0) {
                 if ($PSCmdlet.ShouldProcess($FunctionAppName, 'Re-enable non-HTTP triggers')) {
+                    $LastChange = @{
+                        PartitionKey = 'TriggerChange'
+                        RowKey       = 'LastChange'
+                        Offloading   = $OffloadEnabled
+                    }
+                    Add-CIPPAzDataTableEntity @TriggerChangeTable -Entity $LastChange -Force | Out-Null
                     Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $ResourceGroupName -AppSetting @{} -RemoveKeys $RemoveKeys | Out-Null
                     Write-Information "Successfully re-enabled $($RemoveKeys.Count) non-HTTP trigger(s) on $FunctionAppName"
                 }
