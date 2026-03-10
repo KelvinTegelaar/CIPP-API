@@ -80,10 +80,8 @@ function Get-CIPPMailboxForwardingReport {
                 'Internal'
             }
 
-            # Build the forward-to address display
-            $ForwardTo = if ($HasExternalForwarding -and $HasInternalForwarding) {
-                "$($Mailbox.ForwardingSmtpAddress), $($Mailbox.InternalForwardingAddress)"
-            } elseif ($HasExternalForwarding) {
+            # Build the forward-to address display (external takes precedence)
+            $ForwardTo = if ($HasExternalForwarding) {
                 $Mailbox.ForwardingSmtpAddress
             } else {
                 $Mailbox.InternalForwardingAddress

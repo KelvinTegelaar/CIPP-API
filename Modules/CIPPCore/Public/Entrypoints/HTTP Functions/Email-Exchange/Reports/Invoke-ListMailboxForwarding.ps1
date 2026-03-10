@@ -58,9 +58,8 @@ function Invoke-ListMailboxForwarding {
                 'Internal'
             }
 
-            $ForwardTo = if ($HasExternalForwarding -and $HasInternalForwarding) {
-                "$($Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''), $($Mailbox.ForwardingAddress)"
-            } elseif ($HasExternalForwarding) {
+            # External takes precedence when both are configured
+            $ForwardTo = if ($HasExternalForwarding) {
                 $Mailbox.ForwardingSmtpAddress -replace 'smtp:', ''
             } else {
                 $Mailbox.ForwardingAddress
