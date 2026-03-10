@@ -25,7 +25,8 @@ function Set-CIPPOffloadFunctionTriggers {
     # Get offloading state from Config table
     $Table = Get-CippTable -tablename 'Config'
     $OffloadConfig = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
-    $OffloadEnabled = [bool]$OffloadConfig.state
+    $OffloadEnabled = $false
+    [bool]::TryParse($OffloadConfig.state, [ref]$OffloadEnabled) | Out-Null
 
     # Determine resource group
     if ($env:WEBSITE_RESOURCE_GROUP) {
