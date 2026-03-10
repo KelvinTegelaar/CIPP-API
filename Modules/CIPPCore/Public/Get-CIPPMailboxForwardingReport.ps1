@@ -71,10 +71,8 @@ function Get-CIPPMailboxForwardingReport {
                 continue
             }
 
-            # Determine forwarding type for display
-            $ForwardingType = if ($HasExternalForwarding -and $HasInternalForwarding) {
-                'Both'
-            } elseif ($HasExternalForwarding) {
+            # Determine forwarding type for display (external takes precedence)
+            $ForwardingType = if ($HasExternalForwarding) {
                 'External'
             } else {
                 'Internal'

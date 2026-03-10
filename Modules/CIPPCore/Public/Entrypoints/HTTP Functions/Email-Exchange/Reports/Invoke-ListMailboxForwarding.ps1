@@ -50,9 +50,8 @@ function Invoke-ListMailboxForwarding {
                 continue
             }
 
-            $ForwardingType = if ($HasExternalForwarding -and $HasInternalForwarding) {
-                'Both'
-            } elseif ($HasExternalForwarding) {
+            # External takes precedence when both are configured
+            $ForwardingType = if ($HasExternalForwarding) {
                 'External'
             } else {
                 'Internal'
