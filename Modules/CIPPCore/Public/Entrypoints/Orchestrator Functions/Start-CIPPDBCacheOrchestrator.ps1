@@ -42,8 +42,7 @@ function Start-CIPPDBCacheOrchestrator {
             SkipLog          = $false
         }
 
-        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
-
+        Start-CIPPOrchestrator -InputObject $InputObject
         Write-LogMessage -API 'CIPPDBCache' -message "Queued database cache collection for $($TenantList.Count) tenants" -sev Info
 
     } catch {
