@@ -26,8 +26,8 @@ function Get-CIPPAlertMFAAdmins {
                 $MFAReport | Where-Object { $_.IsAdmin -eq $true -and $_.MFARegistration -eq $false -and ($IncludeDisabled -or $_.AccountEnabled -eq $true) }
             } else {
                 New-GraphGETRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$top=999&filter=IsAdmin eq true and isMfaRegistered eq false and userType eq 'member'&`$select=id,userDisplayName,userPrincipalName,lastUpdatedDateTime,isMfaRegistered,IsAdmin" -tenantid $($TenantFilter) -AsApp $true |
-                    Where-Object { $_.userDisplayName -ne 'On-Premises Directory Synchronization Service Account' } |
-                    Select-Object @{n = 'ID'; e = { $_.id } }, @{n = 'UPN'; e = { $_.userPrincipalName } }, @{n = 'DisplayName'; e = { $_.userDisplayName } }
+                Where-Object { $_.userDisplayName -ne 'On-Premises Directory Synchronization Service Account' } |
+                Select-Object @{n = 'ID'; e = { $_.id } }, @{n = 'UPN'; e = { $_.userPrincipalName } }, @{n = 'DisplayName'; e = { $_.userDisplayName } }
             }
 
             # Check 2: Admins with MFA registered but no enforcement.
@@ -39,7 +39,8 @@ function Get-CIPPAlertMFAAdmins {
                 $_.PerUser -notin @('Enforced', 'Enabled') -and
                 $null -ne $_.CoveredBySD -and
                 $_.CoveredBySD -ne $true -and
-                $_.CoveredByCA -notlike 'Enforced*'
+                $_.CoveredByCA -notlike 'Enforced*' -and
+                $_.UserPrincipalName -ne 'On-Premises Directory Synchronization Service Account'
             }
 
             # Filter out JIT admins
@@ -50,6 +51,7 @@ function Get-CIPPAlertMFAAdmins {
                 $Users = $Users | Where-Object { $_.ID -notin $JITAdminIds }
                 $UnenforcedAdmins = $UnenforcedAdmins | Where-Object { $_.ID -notin $JITAdminIds }
             }
+
 
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
 
