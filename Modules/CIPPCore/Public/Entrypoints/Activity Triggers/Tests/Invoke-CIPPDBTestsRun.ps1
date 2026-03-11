@@ -64,7 +64,7 @@ function Invoke-CIPPDBTestsRun {
         }
 
         Write-Information "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started tests list orchestration with ID = '$InstanceId'"
 
         return @{
