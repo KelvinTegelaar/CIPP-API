@@ -152,6 +152,7 @@ function Invoke-ExecCreateAppTemplate {
                         'id'
                         'createdDateTime'
                         'deletedDateTime'
+                        'createdByAppId'
                         'publisherDomain'
                         'servicePrincipalLockConfiguration'
                         'identifierUris'

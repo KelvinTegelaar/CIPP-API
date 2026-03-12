@@ -96,8 +96,7 @@ $SwVersion = [System.Diagnostics.Stopwatch]::StartNew()
 $CurrentVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'version_latest.txt') -Raw).Trim()
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
-$global:CippVersion = $CurrentVersion
-$ENV:CurrentVersion = $CurrentVersion
+$env:CippVersion = $CurrentVersion
 
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {

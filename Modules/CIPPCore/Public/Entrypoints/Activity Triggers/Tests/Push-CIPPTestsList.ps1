@@ -1,7 +1,15 @@
 function Push-CIPPTestsList {
     <#
+    .SYNOPSIS
+        Build the list of test activities for a single tenant (Phase 1)
+
+    .DESCRIPTION
+        Checks whether the tenant has cached data and discovers all Invoke-CippTest* functions.
+        Returns the task array so the PostExecution aggregator can flatten all tenants into one
+        flat Phase 2 orchestrator.
+
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
     #>
     param($Item)
 
@@ -27,8 +35,8 @@ function Push-CIPPTestsList {
             return @()
         }
 
-        # Build test batch for this tenant
-        $TestBatch = foreach ($Test in $AllTests) {
+        # Build test task list for this tenant — returned for PostExecution aggregation
+        $Tasks = foreach ($Test in $AllTests) {
             [PSCustomObject]@{
                 FunctionName = 'CIPPTest'
                 TenantFilter = $TenantFilter
@@ -36,32 +44,12 @@ function Push-CIPPTestsList {
             }
         }
 
-        Write-Information "Built $($TestBatch.Count) test activities for tenant $TenantFilter"
-
-        # Start orchestrator for this tenant's tests
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = "TestsRun_$TenantFilter"
-            Batch            = @($TestBatch)
-            SkipLog          = $true
-        }
-
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-        Write-Information "Started tests orchestrator for tenant $TenantFilter with ID = '$InstanceId'"
-
-        return @{
-            Success    = $true
-            Tenant     = $TenantFilter
-            InstanceId = $InstanceId
-            TestCount  = $TestBatch.Count
-        }
+        Write-Information "Built $($Tasks.Count) test tasks for tenant $TenantFilter"
+        return @($Tasks)
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Failed to start tests for tenant: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        return @{
-            Success = $false
-            Tenant  = $TenantFilter
-            Error   = $ErrorMessage.NormalizedError
-        }
+        Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Failed to build test list: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        return @()
     }
 }

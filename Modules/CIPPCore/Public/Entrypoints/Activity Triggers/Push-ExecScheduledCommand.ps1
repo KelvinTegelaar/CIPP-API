@@ -355,12 +355,22 @@ function Push-ExecScheduledCommand {
         if ($Item.Command -in $OrchestratorBasedCommands) {
             Write-Information "Command $($Item.Command) is orchestrator-based. Skipping task state update - will be handled by post-execution."
             if (!$IsMultiTenantExecution) {
-                # Update task state to 'Running' to indicate orchestration is in progress
-                Update-AzDataTableEntity -Force @Table -Entity @{
-                    PartitionKey = $task.PartitionKey
-                    RowKey       = $task.RowKey
-                    Results      = 'Orchestration in progress'
-                    TaskState    = 'Processing'
+                if ($State -eq 'Failed') {
+                    # The orchestrator command itself failed to dispatch - record the failure so the task isn't lost
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "$results"
+                        TaskState    = 'Failed'
+                    }
+                } else {
+                    # Update task state to 'Processing' to indicate orchestration is in progress
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = 'Orchestration in progress'
+                        TaskState    = 'Processing'
+                    }
                 }
             }
         } elseif ($IsMultiTenantExecution) {

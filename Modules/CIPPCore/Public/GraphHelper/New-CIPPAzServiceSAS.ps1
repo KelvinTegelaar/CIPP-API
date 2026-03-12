@@ -38,7 +38,7 @@ function New-CIPPAzServiceSAS {
             'blob' { return "/blob/$AccountName/$decodedPath" }
             'queue' { return "/queue/$AccountName/$decodedPath" }
             'file' { return "/file/$AccountName/$decodedPath" }
-            'table' { return "/table/$AccountName/$decodedPath" }
+            'table' { return "/table/$AccountName/$($decodedPath.ToLowerInvariant())" }
         }
     }
 
@@ -171,9 +171,9 @@ function New-CIPPAzServiceSAS {
         $q['sr'] = $SignedResource
         if ($SnapshotTime) { $q['sst'] = $SnapshotTime }
     } elseif ($Service -eq 'table') {
+        # Table SAS requires tn (table name) in the query string
+        $q['tn'] = $ResourcePath.TrimStart('/')
         # Table SAS may include ranges (spk/srk/epk/erk), omitted here unless future parameters are added
-        # Table also uses tn (table name) in query, but canonicalizedResource already includes table name
-        # We rely on canonicalizedResource and omit tn unless specified by callers via ResourcePath
     } elseif ($Service -eq 'queue') {
         # No sr for queue
     }
@@ -262,7 +262,7 @@ function New-CIPPAzServiceSAS {
     $q['sig'] = $SignatureBase64
 
     # Compose ordered query for readability (common fields first)
-    $orderedKeys = @('sp', 'st', 'se', 'sip', 'spr', 'sv', 'sr', 'si', 'snapshot', 'ses', 'sdd', 'rscc', 'rscd', 'rsce', 'rscl', 'rsct', 'sig')
+    $orderedKeys = @('sp', 'st', 'se', 'sip', 'spr', 'sv', 'sr', 'tn', 'si', 'snapshot', 'ses', 'sdd', 'rscc', 'rscd', 'rsce', 'rscl', 'rsct', 'sig')
     $parts = [System.Collections.Generic.List[string]]::new()
     foreach ($k in $orderedKeys) {
         if ($q.ContainsKey($k) -and -not [string]::IsNullOrEmpty($q[$k])) {

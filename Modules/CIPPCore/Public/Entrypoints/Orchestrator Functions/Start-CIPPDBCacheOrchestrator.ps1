@@ -4,7 +4,9 @@ function Start-CIPPDBCacheOrchestrator {
         Orchestrates database cache collection across all tenants
 
     .DESCRIPTION
-        Creates per-tenant jobs to collect and cache Microsoft Graph data
+        Uses a two-phase fan-out/fan-in pattern (matching Standards):
+        Phase 1: Fan out CIPPDBCacheData activities per tenant to check licenses and build task lists
+        Phase 2: PostExecution aggregates all tasks and starts a single flat orchestrator to execute them
 
     .FUNCTIONALITY
         Entrypoint
@@ -22,28 +24,31 @@ function Start-CIPPDBCacheOrchestrator {
             return
         }
 
-        $TaskCount = $TenantList.Count
+        $Queue = New-CippQueueEntry -Name 'Database Cache Collection' -TotalTasks $TenantList.Count
 
-        $Queue = New-CippQueueEntry -Name 'Database Cache Collection' -TotalTasks $TaskCount
-        $Batch = [system.collections.generic.list[object]]::new()
-        foreach ($Tenant in $TenantList) {
-            $Batch.Add([PSCustomObject]@{
-                    FunctionName = 'CIPPDBCacheData'
-                    TenantFilter = $Tenant.defaultDomainName
-                    QueueId      = $Queue.RowKey
-                    QueueName    = "DB Cache - $($Tenant.defaultDomainName)"
-                })
+        # Phase 1: Build per-tenant list activities (license check + task list generation)
+        $Batch = foreach ($Tenant in $TenantList) {
+            [PSCustomObject]@{
+                FunctionName = 'CIPPDBCacheData'
+                TenantFilter = $Tenant.defaultDomainName
+                QueueId      = $Queue.RowKey
+                QueueName    = "DB Cache - $($Tenant.defaultDomainName)"
+            }
         }
+
         Write-Host "Created queue $($Queue.RowKey) for database cache collection of $($TenantList.Count) tenants"
-        Write-Host "Starting batch of $($Batch.Count) cache collection activities"
+
+        # Phase 2 via PostExecution: Aggregate all task lists and start flat execution orchestrator
         $InputObject = [PSCustomObject]@{
             Batch            = @($Batch)
             OrchestratorName = 'CIPPDBCacheOrchestrator'
             SkipLog          = $false
+            PostExecution    = @{
+                FunctionName = 'CIPPDBCacheApplyBatch'
+            }
         }
 
-        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
-
+        Start-CIPPOrchestrator -InputObject $InputObject
         Write-LogMessage -API 'CIPPDBCache' -message "Queued database cache collection for $($TenantList.Count) tenants" -sev Info
 
     } catch {

@@ -35,7 +35,7 @@ function New-GraphPOSTRequest {
         }
 
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
+            $headers['User-Agent'] = "CIPP/$($env:CippVersion ?? '1.0')"
         }
 
         if (!$contentType) {

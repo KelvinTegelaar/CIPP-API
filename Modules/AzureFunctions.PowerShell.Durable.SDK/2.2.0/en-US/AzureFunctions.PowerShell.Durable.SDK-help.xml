@@ -1,0 +1,1117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-DurableStatus</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>DurableStatus</command:noun>
+      <maml:description>
+        <maml:para>Get the status of a durable orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Get the status of a durable orchestration instance with the given instance ID. Optionally includes execution history, history output, and input data.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-DurableStatus</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance to get the status for.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>DurableClient</maml:name>
+          <maml:description>
+            <maml:para>The durable client object. If not provided, it will be retrieved from module private data.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ShowHistory</maml:name>
+          <maml:description>
+            <maml:para>When present, includes the execution history in the response.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ShowHistoryOutput</maml:name>
+          <maml:description>
+            <maml:para>When present, includes the output of each step in the execution history.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ShowInput</maml:name>
+          <maml:description>
+            <maml:para>When present, includes the input data that was provided to the orchestration instance.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance to get the status for.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>DurableClient</maml:name>
+        <maml:description>
+          <maml:para>The durable client object. If not provided, it will be retrieved from module private data.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ShowHistory</maml:name>
+        <maml:description>
+          <maml:para>When present, includes the execution history in the response.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ShowHistoryOutput</maml:name>
+        <maml:description>
+          <maml:para>When present, includes the output of each step in the execution history.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ShowInput</maml:name>
+        <maml:description>
+          <maml:para>When present, includes the input data that was provided to the orchestration instance.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to this cmdlet to get the status of multiple orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a status object containing information about the durable orchestration instance, including:</maml:para>
+          <maml:para>- InstanceId: The unique identifier of the orchestration instance</maml:para>
+          <maml:para>- RuntimeStatus: The current runtime status (Running, Completed, Failed, etc.)</maml:para>
+          <maml:para>- Input: The input data provided to the orchestration (if -ShowInput is specified)</maml:para>
+          <maml:para>- Output: The output of the orchestration (if completed)</maml:para>
+          <maml:para>- CreatedTime: When the orchestration was created</maml:para>
+          <maml:para>- LastUpdatedTime: When the orchestration was last updated</maml:para>
+          <maml:para>- History: Execution history (if -ShowHistory is specified)</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is typically used in HTTP trigger functions or other client functions to check orchestration progress.</maml:para>
+        <maml:para>- The InstanceId must be from an existing orchestration; invalid IDs will result in a null response.</maml:para>
+        <maml:para>- Use -ShowHistory to get detailed execution steps, which is useful for debugging orchestration behavior.</maml:para>
+        <maml:para>- The -ShowHistoryOutput parameter can produce large responses; use carefully in production environments.</maml:para>
+        <maml:para>- Status information includes runtime state, input/output data, creation time, and last update time.</maml:para>
+        <maml:para>- Orchestration status is eventually consistent and may take a moment to reflect the latest state after operations.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Get-DurableStatus -InstanceId "example-instance-id"</dev:code>
+        <dev:remarks>
+          <maml:para>Returns the basic status of the orchestration instance.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-DurableStatus -InstanceId "example-instance-id" -ShowHistory -ShowHistoryOutput</dev:code>
+        <dev:remarks>
+          <maml:para>Returns the status with detailed execution history and output.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-DurableOrchestrationCheckStatusResponse</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>DurableOrchestrationCheckStatusResponse</command:noun>
+      <maml:description>
+        <maml:para>Create a check status response for a durable orchestration.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Creates an HTTP response with status check URLs for a durable orchestration instance. This response includes URLs for checking status, terminating, suspending, resuming, and raising events.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-DurableOrchestrationCheckStatusResponse</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>Request</maml:name>
+          <maml:description>
+            <maml:para>The HTTP request object that triggered the orchestration.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance for which to create the check status response.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="3" aliases="none">
+          <maml:name>DurableClient</maml:name>
+          <maml:description>
+            <maml:para>The durable client context object used to generate management URLs for the orchestration instance.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>Request</maml:name>
+        <maml:description>
+          <maml:para>The HTTP request object that triggered the orchestration.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance for which to create the check status response.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="3" aliases="none">
+        <maml:name>DurableClient</maml:name>
+        <maml:description>
+          <maml:para>The durable client context object used to generate management URLs for the orchestration instance.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Object (Request)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe HTTP request objects to create status check responses for multiple orchestrations.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to generate status check responses for specific orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>HttpResponseContext</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns an HTTP response context with status code 202 (Accepted) and management URLs for checking orchestration status, sending external events, and terminating the orchestration.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is typically used in HTTP trigger functions after starting an orchestration to provide management URLs.</maml:para>
+        <maml:para>- The response includes a 202 (Accepted) status code following the standard async HTTP pattern.</maml:para>
+        <maml:para>- The generated URLs allow clients to check status, send events, and manage the orchestration without additional authentication.</maml:para>
+        <maml:para>- Store the instanceId securely if the orchestration contains sensitive data, as anyone with the URLs can manage the orchestration.</maml:para>
+        <maml:para>- The response follows the Durable Functions HTTP API conventions for orchestration management.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>New-DurableOrchestrationCheckStatusResponse -Request $Request -InstanceId "example-instance-id"</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a standard orchestration check status response with management URLs.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Resume-DurableOrchestration</command:name>
+      <command:verb>Resume</command:verb>
+      <command:noun>DurableOrchestration</command:noun>
+      <maml:description>
+        <maml:para>Resume a suspended durable orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Resumes a previously suspended durable orchestration instance with the specified instance ID and reason. This will continue execution from where the orchestration was suspended.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Resume-DurableOrchestration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance to resume.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>Reason</maml:name>
+          <maml:description>
+            <maml:para>The reason for resuming the orchestration instance. This will be recorded in the instance history.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance to resume.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>Reason</maml:name>
+        <maml:description>
+          <maml:para>The reason for resuming the orchestration instance. This will be recorded in the instance history.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to resume multiple orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (Reason)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe reason strings to specify the resumption reason for orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It resumes the specified suspended orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used in client functions, not within orchestrator or activity functions.</maml:para>
+        <maml:para>- Only orchestrations in a "Suspended" state can be resumed.</maml:para>
+        <maml:para>- The resume operation is asynchronous; the orchestration will continue from where it was suspended.</maml:para>
+        <maml:para>- Use Get-DurableStatus to verify the orchestration is in a "Suspended" state before attempting to resume.</maml:para>
+        <maml:para>- The resumption reason is helpful for tracking why an orchestration was resumed.</maml:para>
+        <maml:para>- Resumed orchestrations will continue with their original input and context.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Resume-DurableOrchestration -InstanceId "example-instance-id" -Reason "Maintenance complete"</dev:code>
+        <dev:remarks>
+          <maml:para>Resumes the orchestration instance with the provided reason.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Send-DurableExternalEvent</command:name>
+      <command:verb>Send</command:verb>
+      <command:noun>DurableExternalEvent</command:noun>
+      <maml:description>
+        <maml:para>Send an external event to an orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Send an external event with the given event name and event data to an orchestration instance with the given instance ID. The orchestration must be waiting for this event using Start-DurableExternalEventListener.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Send-DurableExternalEvent</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance that will handle the external event.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>EventName</maml:name>
+          <maml:description>
+            <maml:para>The name of the external event. This must match the event name the orchestration is waiting for.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="3" aliases="none">
+          <maml:name>EventData</maml:name>
+          <maml:description>
+            <maml:para>The JSON-serializable data associated with the external event.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>TaskHubName</maml:name>
+          <maml:description>
+            <maml:para>The TaskHubName of the orchestration instance that will handle the external event.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The name of the connection string associated with TaskHubName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance that will handle the external event.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>EventName</maml:name>
+        <maml:description>
+          <maml:para>The name of the external event. This must match the event name the orchestration is waiting for.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="3" aliases="none">
+        <maml:name>EventData</maml:name>
+        <maml:description>
+          <maml:para>The JSON-serializable data associated with the external event.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>TaskHubName</maml:name>
+        <maml:description>
+          <maml:para>The TaskHubName of the orchestration instance that will handle the external event.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>ConnectionName</maml:name>
+        <maml:description>
+          <maml:para>The name of the connection string associated with TaskHubName.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to specify which orchestration instance should receive the external event.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (EventName)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe event name strings to specify the name of the external event to send.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Object (EventData)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe objects containing event data to be sent with the external event.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It sends the specified external event to the target orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is typically used in HTTP trigger functions or other client functions to send events to running orchestrations.</maml:para>
+        <maml:para>- The target orchestration must be actively listening for the event using Start-DurableExternalEventListener.</maml:para>
+        <maml:para>- Event names are case-sensitive and must match exactly between sender and listener.</maml:para>
+        <maml:para>- Events sent to orchestrations that are not listening will be queued and delivered when a listener is started.</maml:para>
+        <maml:para>- Large event data should be stored in external storage and referenced by URL to avoid serialization limits.</maml:para>
+        <maml:para>- External events provide a way to implement human-in-the-loop patterns and real-time orchestration control.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Send-DurableExternalEvent -InstanceId "example-instance-id" -EventName "ApprovalReceived" -EventData "approved"</dev:code>
+        <dev:remarks>
+          <maml:para>Sends an external event to the orchestration instance.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Start-DurableOrchestration</command:name>
+      <command:verb>Start</command:verb>
+      <command:noun>DurableOrchestration</command:noun>
+      <maml:description>
+        <maml:para>Start a durable orchestration.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Start a durable orchestration with the given function name and input value. Returns the instance ID of the newly started orchestration.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Start-DurableOrchestration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>FunctionName</maml:name>
+          <maml:description>
+            <maml:para>The name of the orchestration function you want to start.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>InputObject</maml:name>
+          <maml:description>
+            <maml:para>The input value that will be passed to the orchestration function.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>DurableClient</maml:name>
+          <maml:description>
+            <maml:para>The durable client object. If not provided, it will be retrieved from module private data.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>Optional custom instance ID for the orchestration. If not provided, a new GUID will be generated.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+          <maml:name>Version</maml:name>
+          <maml:description>
+            <maml:para>Optional orchestration version. The provided value will be available as `$Context.Version` within the orchestrator function context. If not specified, the default version specified by the `defaultVersion` property in the Function app's host.json will be used.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>FunctionName</maml:name>
+        <maml:description>
+          <maml:para>The name of the orchestration function you want to start.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>InputObject</maml:name>
+        <maml:description>
+          <maml:para>The input value that will be passed to the orchestration function.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>DurableClient</maml:name>
+        <maml:description>
+          <maml:para>The durable client object. If not provided, it will be retrieved from module private data.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>Optional custom instance ID for the orchestration. If not provided, a new GUID will be generated.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="named" aliases="none">
+        <maml:name>Version</maml:name>
+        <maml:description>
+          <maml:para>Optional orchestration version. The provided value will be available as `$Context.Version` within the orchestrator function context. If not specified, the default version specified by the `defaultVersion` property in the Function app's host.json will be used.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (FunctionName)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe strings to the -FunctionName parameter to specify the orchestrator function to start.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Object (InputObject)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe objects to the -InputObject parameter to provide input data for the orchestration function.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe strings to the -InstanceId parameter to specify a custom instance ID for the orchestration.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (Version)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe strings to the -Version parameter to specify a version for the orchestration function.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns the instance ID of the started orchestration as a string. This ID can be used to check the status, send external events, or manage the orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is typically used in HTTP trigger functions or other client functions to start new orchestrations.</maml:para>
+        <maml:para>- The returned instance ID can be used with other cmdlets like Get-DurableStatus, Send-DurableExternalEvent, or Stop-DurableOrchestration.</maml:para>
+        <maml:para>- If you don't specify an InstanceId, a new GUID will be automatically generated.</maml:para>
+        <maml:para>- Custom instance IDs should be unique to avoid conflicts with existing orchestrations.</maml:para>
+        <maml:para>- Large input data should be stored in external storage and referenced by URL to avoid serialization limits.</maml:para>
+        <maml:para>- The orchestration function name must match a function defined in your Azure Functions app with an orchestration trigger.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Start-DurableOrchestration -FunctionName "OrchestratorFunction" -InputObject "input value for the orchestration function"
+Returns the instance ID of the new orchestration.</dev:code>
+        <dev:remarks>
+          <maml:para></maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Stop-DurableOrchestration</command:name>
+      <command:verb>Stop</command:verb>
+      <command:noun>DurableOrchestration</command:noun>
+      <maml:description>
+        <maml:para>Stop (terminate) a running durable orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Terminates a running durable orchestration instance with the specified instance ID and reason. This is a permanent action that cannot be undone.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Stop-DurableOrchestration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance to terminate.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>Reason</maml:name>
+          <maml:description>
+            <maml:para>The reason for terminating the orchestration instance. This will be recorded in the instance history.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance to terminate.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>Reason</maml:name>
+        <maml:description>
+          <maml:para>The reason for terminating the orchestration instance. This will be recorded in the instance history.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to terminate multiple orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (Reason)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe reason strings to specify the termination reason for orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It terminates the specified orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used in client functions, not within orchestrator or activity functions.</maml:para>
+        <maml:para>- Termination is permanent and cannot be undone; the orchestration cannot be resumed after termination.</maml:para>
+        <maml:para>- The termination is asynchronous; the orchestration may take some time to actually stop.</maml:para>
+        <maml:para>- Terminated orchestrations will have a final status of "Terminated" when checked with Get-DurableStatus.</maml:para>
+        <maml:para>- Use descriptive termination reasons to help with debugging and monitoring.</maml:para>
+        <maml:para>- Consider using Suspend-DurableOrchestration if you need to temporarily halt an orchestration that can be resumed later.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Stop-DurableOrchestration -InstanceId "example-instance-id" -Reason "User requested termination"</dev:code>
+        <dev:remarks>
+          <maml:para>Terminates the orchestration instance with the provided reason.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Suspend-DurableOrchestration</command:name>
+      <command:verb>Suspend</command:verb>
+      <command:noun>DurableOrchestration</command:noun>
+      <maml:description>
+        <maml:para>Suspend a running durable orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Suspends a running durable orchestration instance with the specified instance ID and reason. A suspended instance can be resumed later using Resume-DurableOrchestration.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Suspend-DurableOrchestration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>The ID of the orchestration instance to suspend.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+          <maml:name>Reason</maml:name>
+          <maml:description>
+            <maml:para>The reason for suspending the orchestration instance. This will be recorded in the instance history.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="1" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>The ID of the orchestration instance to suspend.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName)" position="2" aliases="none">
+        <maml:name>Reason</maml:name>
+        <maml:description>
+          <maml:para>The reason for suspending the orchestration instance. This will be recorded in the instance history.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (InstanceId)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe instance ID strings to suspend multiple orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.String (Reason)</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe reason strings to specify the suspension reason for orchestration instances.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It suspends the specified orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used in client functions, not within orchestrator or activity functions.</maml:para>
+        <maml:para>- Suspended orchestrations can be resumed later using Resume-DurableOrchestration with the same instance ID.</maml:para>
+        <maml:para>- The suspension is asynchronous; the orchestration may take some time to actually suspend.</maml:para>
+        <maml:para>- Suspended orchestrations will have a status of "Suspended" when checked with Get-DurableStatus.</maml:para>
+        <maml:para>- Use descriptive suspension reasons to help with monitoring and maintenance.</maml:para>
+        <maml:para>- Suspension is useful for implementing manual approval workflows or maintenance windows.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Suspend-DurableOrchestration -InstanceId "example-instance-id" -Reason "Maintenance window"</dev:code>
+        <dev:remarks>
+          <maml:para>Suspends the orchestration instance with the provided reason.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+</helpItems>
