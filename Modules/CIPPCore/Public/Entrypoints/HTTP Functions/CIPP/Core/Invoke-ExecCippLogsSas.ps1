@@ -42,7 +42,7 @@ function Invoke-ExecCippLogsSas {
             Permissions  = 'r'
             ExpiryTime   = $Sas.ExpiryTime
         }
-        Add-CIPPAzDataTableEntity @SASTable -Entity $Entity
+        Add-CIPPAzDataTableEntity @SASTable -Entity $Entity -Force
 
         $Body = @{
             SASUrl    = $Sas.ResourceUri + $Sas.Token
