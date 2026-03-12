@@ -22,7 +22,7 @@ function Invoke-ExecCippLogsSas {
             if ($p -match '^(.+?)=(.+)$') { $conn[$matches[1]] = $matches[2] }
         }
 
-        $Days = [int]($Request.Query.Days ?? $Request.Body.Days ?? 365)
+        $Days = [int]($Request.Body.Days ?? $Request.Query.Days ?? 365)
         if ($Days -lt 1 -or $Days -gt 3650) {
             throw 'Days must be between 1 and 3650'
         }
@@ -45,8 +45,10 @@ function Invoke-ExecCippLogsSas {
         Add-CIPPAzDataTableEntity @SASTable -Entity $Entity -Force
 
         $Body = @{
-            SASUrl    = $Sas.ResourceUri + $Sas.Token
-            ExpiresOn = $Sas.Query['se']
+            Results = @{
+                SASUrl    = $Sas.ResourceUri + $Sas.Token + '&$format=application/json;odata=nometadata'
+                ExpiresOn = $Sas.Query['se']
+            }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
