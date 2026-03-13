@@ -18,7 +18,7 @@ function Get-CIPPAlertMFAAdmins {
             }
         }
         if (!$DuoActive) {
-            $MFAReport = try { Get-CIPPMFAStateReport -TenantFilter $TenantFilter } catch { $null }
+            $MFAReport = try { Get-CIPPMFAStateReport -TenantFilter $TenantFilter | Where-Object { $_.DisplayName -ne 'On-Premises Directory Synchronization Service Account' } } catch { $null }
             $IncludeDisabled = [System.Convert]::ToBoolean($InputValue)
 
             # Check 1: Admins with no MFA registered — prefer cache, fall back to live Graph
@@ -50,6 +50,7 @@ function Get-CIPPAlertMFAAdmins {
                 $Users = $Users | Where-Object { $_.ID -notin $JITAdminIds }
                 $UnenforcedAdmins = $UnenforcedAdmins | Where-Object { $_.ID -notin $JITAdminIds }
             }
+
 
             $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
 

@@ -837,6 +837,24 @@ function New-CIPPAzStorageRequest {
                             [PSCustomObject]@{ Name = $nameNode.InnerText; Metadata = $meta }
                         }
                         if ($queues.Count -gt 0) { return $queues }
+
+                        # Queue messages (peek or dequeue response)
+                        $messages = foreach ($node in $xmlDoc.SelectNodes('//QueueMessage')) {
+                            $msgText = $node.SelectSingleNode('MessageText')?.InnerText
+                            $msgObject = $null
+                            if ($msgText -and (Test-Json -Json $msgText -ErrorAction SilentlyContinue)) {
+                                try { $msgObject = $msgText | ConvertFrom-Json -Depth 20 } catch { $msgObject = $null }
+                            }
+                            $dcNode = $node.SelectSingleNode('DequeueCount')
+                            [PSCustomObject]@{
+                                MessageId      = $node.SelectSingleNode('MessageId')?.InnerText
+                                InsertionTime  = $node.SelectSingleNode('InsertionTime')?.InnerText
+                                ExpirationTime = $node.SelectSingleNode('ExpirationTime')?.InnerText
+                                DequeueCount   = if ($dcNode) { try { [int]$dcNode.InnerText } catch { $null } } else { $null }
+                                Message        = if ($null -ne $msgObject) { $msgObject } else { $msgText }
+                            }
+                        }
+                        if ($messages.Count -gt 0) { return $messages }
                     }
                 }
             } catch { }
