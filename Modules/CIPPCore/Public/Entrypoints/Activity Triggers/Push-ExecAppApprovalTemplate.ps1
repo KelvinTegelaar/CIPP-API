@@ -106,7 +106,7 @@ function Push-ExecAppApprovalTemplate {
                 return $true
             }
 
-            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
+            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
 
             # Strip tenant-specific data that might cause conflicts
             $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json

@@ -34,14 +34,13 @@ function Invoke-CIPPStandardlaps {
 
     try {
         $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DeviceRegistrationPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             $PreviousSetting.localAdminPassword.isEnabled = $true
             $NewBody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10

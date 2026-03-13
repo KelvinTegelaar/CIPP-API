@@ -36,7 +36,7 @@ function Invoke-ExecPartnerMode {
                 OrchestratorName = 'UpdateTenants'
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+            Start-CIPPOrchestrator -InputObject $InputObject
         }
 
         return ([HttpResponseContext]@{

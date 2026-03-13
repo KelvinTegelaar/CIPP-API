@@ -43,7 +43,13 @@ function Start-UpdatePermissionsOrchestrator {
 
         $Tenants = $Tenants | ForEach-Object {
             $CPVRow = $CPVRows | Where-Object -Property Tenant -EQ $_.customerId
-            if (!$CPVRow -or $env:ApplicationID -notin $CPVRow.applicationId -or $SAMPermissions.Timestamp -gt $CPVRow.Timestamp.DateTime -or $CPVRow.Timestamp.DateTime -le (Get-Date).AddDays(-7).ToUniversalTime() -or !$_.defaultDomainName -or ($SAMroles.Timestamp.DateTime -gt $CPVRow.Timestamp.DateTime -and ($SAMRoles.Tenants -contains $_.defaultDomainName -or $SAMRoles.Tenants.value -contains $_.defaultDomainName -or $SAMRoles.Tenants -contains 'AllTenants' -or $SAMRoles.Tenants.value -contains 'AllTenants'))) {
+
+            # Determine retry interval based on last status
+            # No status or Failed status: retry after 1 day, Success: retry after 7 days
+            $RetryDays = if (!$CPVRow.LastStatus -or $CPVRow.LastStatus -eq 'Failed') { -1 } else { -7 }
+            $NeedsRetry = $CPVRow.Timestamp.DateTime -le (Get-Date).AddDays($RetryDays).ToUniversalTime()
+
+            if (!$CPVRow -or $env:ApplicationID -notin $CPVRow.applicationId -or $SAMPermissions.Timestamp -gt $CPVRow.Timestamp.DateTime -or $NeedsRetry -or !$_.defaultDomainName -or ($SAMroles.Timestamp.DateTime -gt $CPVRow.Timestamp.DateTime -and ($SAMRoles.Tenants -contains $_.defaultDomainName -or $SAMRoles.Tenants.value -contains $_.defaultDomainName -or $SAMRoles.Tenants -contains 'AllTenants' -or $SAMRoles.Tenants.value -contains 'AllTenants'))) {
                 $_
             }
         }

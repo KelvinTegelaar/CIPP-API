@@ -39,7 +39,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
     try {
         $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' |
-            Where-Object { $_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
+            Where-Object { $_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'BPOS_S_ArchiveAddOn' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableLitigationHold state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -59,11 +59,13 @@ function Invoke-CIPPStandardEnableLitigationHold {
                         }
                     }
                     if ($null -ne $Settings.days) {
-                        $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                        $Days = [int]::TryParse($Settings.days, [ref]$null) ? $Settings.days : $null
+                        if ($Days -gt 0 -or $Settings.days -eq 'Unlimited') {
+                            $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                        }
                     }
                     $params
                 }
-
 
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request)
                 foreach ($Result in $BatchResults) {

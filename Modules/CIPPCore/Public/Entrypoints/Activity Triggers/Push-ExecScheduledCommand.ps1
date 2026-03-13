@@ -7,6 +7,9 @@ function Push-ExecScheduledCommand {
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
+    # Define orchestrator-based commands that handle their own post-execution and state updates
+    $OrchestratorBasedCommands = @('Invoke-CIPPOffboardingJob')
+
     # Initialize AsyncLocal storage for thread-safe per-invocation context
     if (-not $script:CippScheduledTaskIdStorage) {
         $script:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
@@ -22,6 +25,10 @@ function Push-ExecScheduledCommand {
 
     # Detect if this is a multi-tenant task that should store results per-tenant
     $IsMultiTenantTask = ($task.Tenant -eq 'AllTenants' -or $task.TenantGroup)
+
+    # Detect if this is an individual tenant execution within a multi-tenant task
+    # In this case, skip parent task state updates - the PostExecution function will handle it
+    $IsMultiTenantExecution = $IsMultiTenantTask -and ($Tenant -ne $task.Tenant)
 
     # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
     # We don't need to expand groups here as that's handled in the orchestrator
@@ -42,7 +49,8 @@ function Push-ExecScheduledCommand {
     # We accept both to handle edge cases
 
     # Check for rerun protection - prevent duplicate executions within the recurrence interval
-    if ($task.Recurrence -and $task.Recurrence -ne '0') {
+    # Do this BEFORE updating state to 'Running' to avoid getting stuck
+    if ($task.Recurrence -and $task.Recurrence -ne '0' -and !$IsMultiTenantExecution) {
         # Calculate interval in seconds from recurrence string
         $IntervalSeconds = switch -Regex ($task.Recurrence) {
             '^(\d+)$' { [int64]$matches[1] * 86400 }  # Plain number = days
@@ -78,6 +86,19 @@ function Push-ExecScheduledCommand {
                 Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
                 return
             }
+        }
+    }
+
+    # Also check for one-time task rerun protection based on ExecutedTime
+    if ((!$task.Recurrence -or $task.Recurrence -eq '0') -and $task.ExecutedTime -and !$IsMultiTenantExecution) {
+        $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+        $timeSinceExecution = $currentUnixTime - [int64]$task.ExecutedTime
+
+        # If executed within last 15 minutes, skip (likely a duplicate pickup)
+        if ($timeSinceExecution -lt 900) {
+            Write-Information "One-time task $($task.Name) for tenant $Tenant was recently executed ($timeSinceExecution seconds ago). Skipping to prevent duplicate execution."
+            Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+            return
         }
     }
 
@@ -130,21 +151,27 @@ function Push-ExecScheduledCommand {
         $IsTriggerTask = $false
     }
 
-    $null = Update-AzDataTableEntity -Force @Table -Entity @{
-        PartitionKey = $task.PartitionKey
-        RowKey       = $task.RowKey
-        TaskState    = 'Running'
+    # Only update parent task state if this is NOT a multi-tenant execution
+    # Multi-tenant executions have their parent state managed by PostExecution
+    if (!$IsMultiTenantExecution) {
+        $null = Update-AzDataTableEntity -Force @Table -Entity @{
+            PartitionKey = $task.PartitionKey
+            RowKey       = $task.RowKey
+            TaskState    = 'Running'
+        }
     }
 
     $Function = Get-Command -Name $Item.Command
     if ($null -eq $Function) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
         $State = 'Failed'
-        Update-AzDataTableEntity -Force @Table -Entity @{
-            PartitionKey = $task.PartitionKey
-            RowKey       = $task.RowKey
-            Results      = "$Results"
-            TaskState    = $State
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey = $task.PartitionKey
+                RowKey       = $task.RowKey
+                Results      = "$Results"
+                TaskState    = $State
+            }
         }
 
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): The command $($Item.Command) does not exist." -sev Error
@@ -225,6 +252,12 @@ function Push-ExecScheduledCommand {
     try {
         if (-not $Trigger.ExecutePerResource) {
             try {
+                # For orchestrator-based commands, add TaskInfo to enable post-execution updates
+                if ($Item.Command -eq 'Invoke-CIPPOffboardingJob') {
+                    Write-Information 'Adding TaskInfo to command parameters for orchestrator-based offboarding'
+                    $commandParameters['TaskInfo'] = $task
+                }
+
                 Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json)"
                 $results = & $Item.Command @commandParameters
             } catch {
@@ -299,54 +332,52 @@ function Push-ExecScheduledCommand {
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Write-Information "The job is recurring, but failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
-        Update-AzDataTableEntity -Force @Table -Entity @{
-            PartitionKey  = $task.PartitionKey
-            RowKey        = $task.RowKey
-            Results       = "$errorMessage"
-            ScheduledTime = "$nextRunUnixTime"
-            TaskState     = $State
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey  = $task.PartitionKey
+                RowKey        = $task.RowKey
+                Results       = "$errorMessage"
+                ScheduledTime = "$nextRunUnixTime"
+                TaskState     = $State
+            }
         }
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
-    Write-Information 'Sending task results to target. Updating the task state.'
 
-    if ($Results) {
-        $TableDesign = '<style>table.adaptiveTable{border:1px solid currentColor;background-color:transparent;width:100%;text-align:left;border-collapse:collapse;opacity:0.9}table.adaptiveTable td,table.adaptiveTable th{border:1px solid currentColor;padding:8px 6px;opacity:0.8}table.adaptiveTable tbody td{font-size:13px}table.adaptiveTable tr:nth-child(even){background-color:rgba(128,128,128,0.1)}table.adaptiveTable thead{background-color:rgba(128,128,128,0.2);border-bottom:2px solid currentColor}table.adaptiveTable thead th{font-size:15px;font-weight:700;border-left:1px solid currentColor}table.adaptiveTable thead th:first-child{border-left:none}table.adaptiveTable tfoot{font-size:14px;font-weight:700;background-color:rgba(128,128,128,0.1);border-top:2px solid currentColor}table.adaptiveTable tfoot td{font-size:14px}@media (prefers-color-scheme: dark){table.adaptiveTable{opacity:0.95}table.adaptiveTable tr:nth-child(even){background-color:rgba(255,255,255,0.05)}table.adaptiveTable thead{background-color:rgba(255,255,255,0.1)}table.adaptiveTable tfoot{background-color:rgba(255,255,255,0.05)}}</style>'
-        $FinalResults = if ($results -is [array] -and $results[0] -is [string]) { $Results | ConvertTo-Html -Fragment -Property @{ l = 'Text'; e = { $_ } } } else { $Results | ConvertTo-Html -Fragment }
-        $HTML = $FinalResults -replace '<table>', "This alert is for tenant $Tenant. <br /><br /> $TableDesign<table class=adaptiveTable>" | Out-String
-
-        # Add alert comment if available
-        if ($task.AlertComment) {
-            if ($task.AlertComment -match '%resultcount%') {
-                $resultCount = if ($Results -is [array]) { $Results.Count } else { 1 }
-                $task.AlertComment = $task.AlertComment -replace '%resultcount%', "$resultCount"
-            }
-            $task.AlertComment = Get-CIPPTextReplacement -Text $task.AlertComment -TenantFilter $Tenant
-            $HTML += "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$($task.AlertComment)</p></div>"
-        }
-
-        $title = "$TaskType - $Tenant - $($task.Name)$(if ($task.Reference) { " - Reference: $($task.Reference)" })"
-        Write-Information 'Scheduler: Sending the results to the target.'
-        Write-Information "The content of results is: $Results"
-        switch -wildcard ($task.PostExecution) {
-            '*psa*' { Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $Tenant }
-            '*email*' { Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML -TenantFilter $Tenant }
-            '*webhook*' {
-                $Webhook = [PSCustomObject]@{
-                    'tenantId'     = $TenantInfo.customerId
-                    'Tenant'       = $Tenant
-                    'TaskInfo'     = $Item.TaskInfo
-                    'Results'      = $Results
-                    'AlertComment' = $task.AlertComment
-                }
-                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $Tenant -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
-            }
-        }
+    # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
+    if ($Results -and $Item.Command -notin $OrchestratorBasedCommands -and -not [string]::IsNullOrWhiteSpace($Task.PostExecution)) {
+        Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
+        Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
     }
-    Write-Information 'Sent the results to the target. Updating the task state.'
 
     try {
-        if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once' -or $Trigger.ExecutionMode -eq 'once') {
+        # For orchestrator-based commands, skip task state update as it will be handled by post-execution
+        if ($Item.Command -in $OrchestratorBasedCommands) {
+            Write-Information "Command $($Item.Command) is orchestrator-based. Skipping task state update - will be handled by post-execution."
+            if (!$IsMultiTenantExecution) {
+                if ($State -eq 'Failed') {
+                    # The orchestrator command itself failed to dispatch - record the failure so the task isn't lost
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "$results"
+                        TaskState    = 'Failed'
+                    }
+                } else {
+                    # Update task state to 'Processing' to indicate orchestration is in progress
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = 'Orchestration in progress'
+                        TaskState    = 'Processing'
+                    }
+                }
+            }
+        } elseif ($IsMultiTenantExecution) {
+            # For multi-tenant executions, skip parent task state updates
+            # The PostExecution function will aggregate all results and update the parent task
+            Write-Information "Multi-tenant execution for tenant $Tenant - parent task state will be updated by PostExecution"
+        } elseif ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once' -or $Trigger.ExecutionMode -eq 'once') {
             Write-Information 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey = $task.PartitionKey

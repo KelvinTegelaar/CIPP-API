@@ -45,50 +45,65 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         throw $Message
     }
 
+    if ($settings.exclusions -like '*;*') {
+        $exclusions = $settings.Exclusions -split (';')
+    } else {
+        $exclusions = $settings.Exclusions -split (',')
+    }
+
+    $CurrentValues = $selfServiceItems | Select-Object -Property productName, productId, policyValue
+
+    $ExpectedValues = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    foreach ($Item in $selfServiceItems) {
+
+        if ($Item.productId -in $exclusions) {
+            $desiredPolicyValue = "Enabled"
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exclusion present for self-service license '$($Item.productName) - $($Item.productId)'"
+        }
+        else {
+            $desiredPolicyValue = "Disabled"
+        }
+
+        $ExpectedValues.Add([PSCustomObject]@{
+            productName = $Item.productName
+            productId   = $Item.productId
+            policyValue = $desiredPolicyValue
+        })
+    }
+
     if ($settings.remediate) {
-        if ($settings.exclusions -like '*;*') {
-            $exclusions = $settings.Exclusions -split (';')
-        } else {
-            $exclusions = $settings.Exclusions -split (',')
+
+        $Compare = Compare-Object -ReferenceObject $ExpectedValues -DifferenceObject $CurrentValues -Property productName, productId, policyValue
+
+        if (!$Compare) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'self service licenses are already set correctly.' -sev Info
         }
+        else {
 
-        foreach ($Item in $selfServiceItems) {
-            $body = $null
+            $NeedsUpdate = $Compare | Where-Object { $_.SideIndicator -eq "<=" }
 
-            if ($Item.policyValue -eq 'Enabled' -AND ($Item.productId -in $exclusions)) {
-                # Self service is enabled on product and productId is in exclusions, skip
-            }
-            if ($Item.policyValue -eq 'Disabled' -AND ($Item.productId -in $exclusions)) {
-                # Self service is disabled on product and productId is in exclusions, enable
-                $body = '{ "policyValue": "Enabled" }'
-            }
-            if ($Item.policyValue -eq 'Enabled' -AND ($Item.productId -notin $exclusions)) {
-                # Self service is enabled on product and productId is NOT in exclusions, disable
-                $body = '{ "policyValue": "Disabled" }'
-            }
-            if ($Item.policyValue -eq 'Disabled' -AND ($Item.productId -notin $exclusions)) {
-                # Self service is disabled on product and productId is NOT in exclusions, skip
-            }
+            foreach ($Item in $NeedsUpdate) {
+                try {
 
-            try {
-                if ($body) {
+                    $currentItem = $CurrentValues | Where-Object { $_.productId -eq $Item.productId } | Select-Object -First 1
+                    $currentValue = if ($currentItem) { $currentItem.policyValue } else { "<unknown>" }
+
+                    $body = @{ policyValue = $Item.policyValue } | ConvertTo-Json -Compress
                     New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
+
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Changed Self Service status for product '$($Item.productName) - $($Item.productId)' from '$currentValue' to '$($Item.policyValue)'" -sev Info
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set product status for '$($Item.productName) - $($Item.productId)' with body $($body) for reason: $($_.Exception.Message)" -sev Error
                 }
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set product status for $($Item.productId) with body $($body) for reason: $($_.Exception.Message)" -sev Error
-                #Write-Error "Failed to disable product $($Item.productName):$($_.Exception.Message)"
             }
         }
 
-        if (!$exclusions) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No exclusions set for self-service licenses, disabled all not excluded licenses for self-service.' -sev Info
-        } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Exclusions present for self-service licenses, disabled all not excluded licenses for self-service.' -sev Info
-        }
+        $CurrentValues = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items | Select-Object -Property productName, productId, policyValue
     }
 
     if ($Settings.alert) {
-        $selfServiceItemsToAlert = $selfServiceItems | Where-Object { $_.policyValue -eq 'Enabled' }
+        $selfServiceItemsToAlert = $CurrentValues | Where-Object { $_.policyValue -eq 'Enabled' }
         if (!$selfServiceItemsToAlert) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All self-service licenses are disabled' -sev Info
         } else {
@@ -98,6 +113,28 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     }
 
     if ($Settings.report -eq $true) {
-        #Add-CIPPBPAField -FieldName '????' -FieldValue "????" -StoreAs bool -Tenant $tenant
+
+        $StateIsCorrect = !(Compare-Object -ReferenceObject $ExpectedValues -DifferenceObject $CurrentValues -Property productName, productId, policyValue)
+
+        $ExpectedValuesHash = @{}
+        foreach ($Item in $ExpectedValues) {
+            $ExpectedValuesHash[$Item.productName] = [PSCustomObject]@{
+                Id    = $Item.productId
+                Value = $Item.policyValue
+            }
+        }
+        $ExpectedValue = [PSCustomObject]$ExpectedValuesHash
+
+        $CurrentValuesHash = @{}
+        foreach ($Item in $CurrentValues) {
+            $CurrentValuesHash[$Item.productName] = [PSCustomObject]@{
+                Id    = $Item.productId
+                Value = $Item.policyValue
+            }
+        }
+        $CurrentValue = [PSCustomObject]$CurrentValuesHash
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSelfServiceLicenses' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'DisableSelfServiceLicenses' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

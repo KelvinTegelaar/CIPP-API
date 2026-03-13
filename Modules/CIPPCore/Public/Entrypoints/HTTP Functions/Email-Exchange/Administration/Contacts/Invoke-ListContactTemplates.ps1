@@ -1,9 +1,9 @@
-Function Invoke-ListContactTemplates {
+function Invoke-ListContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Exchange.Read
+        Exchange.Contact.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -37,11 +37,11 @@ Function Invoke-ListContactTemplates {
         }
 
         if (-not $Templates) {
-            Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -sev 'Warn'
             return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::NotFound
-                Body       = @{ Error = "Template with ID $RequestedID not found" }
-            })
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = @{ Error = "Template with ID $RequestedID not found" }
+                })
             return
         }
     } else {

@@ -113,10 +113,10 @@ function Invoke-CIPPStandardAddDKIM {
 
     $MissingDKIM = [System.Collections.Generic.List[string]]::new()
     if ($null -ne $NewDomains) {
-        $MissingDKIM.AddRange($NewDomains)
+        $MissingDKIM.AddRange(@($NewDomains))
     }
     if ($null -ne $SetDomains) {
-        $MissingDKIM.AddRange($SetDomains.Domain)
+        $MissingDKIM.AddRange(@($SetDomains.Domain))
     }
 
     $CurrentValue = if ($MissingDKIM.Count -eq 0) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingDKIM' = $MissingDKIM } }

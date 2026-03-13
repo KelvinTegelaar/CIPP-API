@@ -25,9 +25,24 @@ function Push-UpdatePermissionsQueue {
             $DomainRefreshRequired = $true
         }
         Write-Information 'Updating permissions'
-        Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Item.customerId
-        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Item.customerId
-        Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Updated permissions for $($Item.displayName)" -Sev 'Info' -API 'UpdatePermissionsQueue'
+        $AppResults = Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Item.customerId
+        $DelegatedResults = Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Item.customerId
+
+        # Check for permission failures (excluding service principal creation failures)
+        $AllResults = @($AppResults) + @($DelegatedResults)
+        $PermissionFailures = $AllResults | Where-Object { 
+            $_ -like '*Failed*' -and 
+            $_ -notlike '*Failed to create service principal*'
+        }
+
+        if ($PermissionFailures) {
+            $Status = 'Failed'
+            $FailureMessage = ($PermissionFailures -join '; ')
+            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Permission update completed with failures for $($Item.displayName): $FailureMessage" -Sev 'Warn' -API 'UpdatePermissionsQueue'
+        } else {
+            $Status = 'Success'
+            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Updated permissions for $($Item.displayName)" -Sev 'Info' -API 'UpdatePermissionsQueue'
+        }
 
         if ($Item.defaultDomainName -ne 'PartnerTenant') {
             Write-Information 'Pushing CIPP-SAM admin roles'
@@ -38,10 +53,14 @@ function Push-UpdatePermissionsQueue {
         $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         $GraphRequest = @{
             LastApply     = "$unixtime"
+            LastStatus    = "$Status"
             applicationId = "$($env:ApplicationID)"
             Tenant        = "$($Item.customerId)"
             PartitionKey  = 'Tenant'
             RowKey        = "$($Item.customerId)"
+        }
+        if ($PermissionFailures) {
+            $GraphRequest.LastError = $FailureMessage
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
 
@@ -53,5 +72,6 @@ function Push-UpdatePermissionsQueue {
         }
     } catch {
         Write-Information "Error updating permissions for $($Item.displayName)"
+        Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Error updating permissions for $($Item.displayName) - $($_.Exception.Message)" -Sev 'Error' -API 'UpdatePermissionsQueue'
     }
 }

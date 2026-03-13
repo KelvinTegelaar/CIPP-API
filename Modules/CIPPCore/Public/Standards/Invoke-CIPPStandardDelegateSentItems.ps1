@@ -43,19 +43,17 @@ function Invoke-CIPPStandardDelegateSentItems {
     if ([string]::IsNullOrWhiteSpace($Settings.IncludeUserMailboxes)) {
         $Settings.IncludeUserMailboxes = $true
     }
-
+    $Mailboxes = New-CippDbRequest -TenantFilter $Tenant -Type 'Mailboxes'
     if ($Settings.IncludeUserMailboxes -eq $true) {
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -ne 'DiscoveryMailbox' -and  ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     } else {
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -eq 'SharedMailbox' -and ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     }
 
     $CurrentValue = if (!$Mailboxes) {
         [PSCustomObject]@{ state = 'Configured correctly' }
     } else {
-        [PSCustomObject]@{ NonCompliantMailboxes = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled }
+        [PSCustomObject]@{ NonCompliantMailboxes = $Mailboxes | Select-Object -Property UPN, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled }
     }
     $ExpectedValue = [PSCustomObject]@{
         state = 'Configured correctly'
@@ -68,7 +66,7 @@ function Invoke-CIPPStandardDelegateSentItems {
                     @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
-                            Parameters = @{Identity = $Mailbox.UserPrincipalName ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
+                            Parameters = @{Identity = $Mailbox.UPN ; MessageCopyForSendOnBehalfEnabled = $true; MessageCopyForSentAsEnabled = $true }
                         }
                     }
                 }
@@ -99,7 +97,7 @@ function Invoke-CIPPStandardDelegateSentItems {
     }
 
     if ($Settings.report -eq $true) {
-        $Filtered = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
+        $Filtered = $Mailboxes | Select-Object -Property UPN, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
         Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }

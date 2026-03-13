@@ -83,13 +83,13 @@ function Invoke-ExecListAppId {
                         Invoke-GraphRequest -Method PATCH -Url "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
                         Write-LogMessage -message "Updated redirect URIs for application $($env:ApplicationID) to include $NewRedirectUri" -Sev 'Info'
                     } catch {
-                        Write-LogMessage -message "Failed to update redirect URIs for application $($env:ApplicationID)" -LogData (Get-CippException -Exception $_) -Sev 'Warning'
+                        Write-LogMessage -message "Failed to update redirect URIs for application $($env:ApplicationID)" -LogData (Get-CippException -Exception $_) -sev 'Warn'
                     }
                 }
             }
         }
     } catch {
-        Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -Sev 'Warning'
+        Write-LogMessage -message 'Failed to retrieve organization info and authenticated user' -LogData (Get-CippException -Exception $_) -sev 'Warn'
     }
 
     $Results = @{

@@ -242,7 +242,7 @@ function Invoke-ListCustomVariables {
                     }
                 }
             } catch {
-                Write-LogMessage -API $APIName -message "Could not retrieve tenant-specific variables for $TenantFilter : $($_.Exception.Message)" -Sev 'Warning'
+                Write-LogMessage -API $APIName -message "Could not retrieve tenant-specific variables for $TenantFilter : $($_.Exception.Message)" -sev 'Warn'
             }
         }
 

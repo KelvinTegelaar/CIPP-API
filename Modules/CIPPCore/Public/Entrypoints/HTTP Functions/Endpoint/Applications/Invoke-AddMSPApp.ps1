@@ -1,7 +1,7 @@
 function Invoke-AddMSPApp {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.ReadWrite
     #>
@@ -17,7 +17,8 @@ function Invoke-AddMSPApp {
     $intuneBody = Get-Content "AddMSPApp\$($RMMApp.RMMName.value).app.json" | ConvertFrom-Json
     $intuneBody.displayName = $RMMApp.DisplayName
 
-    $Tenants = $Request.Body.selectedTenants
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    $Tenants = $Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }
     $Results = foreach ($Tenant in $Tenants) {
         $InstallParams = [PSCustomObject]$RMMApp.params
         switch ($RMMApp.RMMName.value) {

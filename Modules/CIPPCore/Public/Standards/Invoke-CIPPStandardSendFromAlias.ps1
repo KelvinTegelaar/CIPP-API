@@ -5,9 +5,9 @@ function Invoke-CIPPStandardSendFromAlias {
     .COMPONENT
         (APIName) SendFromAlias
     .SYNOPSIS
-        (Label) Allow users to send from their alias addresses
+        (Label) Set Send from alias state
     .DESCRIPTION
-        (Helptext) Enables the ability for users to send from their alias addresses.
+        (Helptext) Enables or disables the ability for users to send from their alias addresses.
         (DocsDescription) Allows users to change the 'from' address to any set in their Azure AD Profile.
     .NOTES
         CAT
@@ -16,6 +16,7 @@ function Invoke-CIPPStandardSendFromAlias {
         EXECUTIVETEXT
             Allows employees to send emails from their alternative email addresses (aliases) rather than just their primary address. This is useful for employees who manage multiple roles or departments, enabling them to send emails from the most appropriate address for the context.
         ADDEDCOMPONENT
+    {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.SendFromAlias.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -40,43 +41,43 @@ function Invoke-CIPPStandardSendFromAlias {
     try {
         $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendFromAlias state for $Tenant. Error: $ErrorMessage" -Sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SendFromAlias state for $Tenant. Error:  $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
 
+    # Backwards compat: existing configs have no state (null) → default to 'true' (original behavior). For pre v10.1
+    $state = $Settings.state.value ?? $Settings.state ?? 'true'
+    $WantedState = [System.Convert]::ToBoolean($state)
+
     if ($Settings.remediate -eq $true) {
-        if ($CurrentInfo -ne $true) {
+        if ($CurrentInfo -ne $WantedState) {
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ SendFromAliasEnabled = $true }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias enabled.' -sev Info
-                $CurrentInfo = $true
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ SendFromAliasEnabled = $WantedState }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Send from alias set to $state." -sev Info
+                $CurrentInfo = $WantedState
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set send from alias to $state. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is already enabled.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Send from alias is already set to $state." -sev Info
         }
     }
 
     if ($Settings.alert -eq $true) {
-        if ($CurrentInfo -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is enabled.' -sev Info
+        if ($CurrentInfo -eq $WantedState) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Send from alias is set to $state." -sev Info
         } else {
-            Write-StandardsAlert -message 'Send from alias is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'SendFromAlias' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Info
+            Write-StandardsAlert -message "Send from alias is not set to $state" -object $CurrentInfo -tenant $Tenant -standardName 'SendFromAlias' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Send from alias is not set to $state." -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $tenant
-        $CurrentValue = @{
-            SendFromAliasEnabled = $CurrentInfo
-        }
-        $ExpectedValue = @{
-            SendFromAliasEnabled = $true
-        }
-        Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $Tenant
+        $CurrentValue = @{ SendFromAliasEnabled = $CurrentInfo }
+        $ExpectedValue = @{ SendFromAliasEnabled = $WantedState }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

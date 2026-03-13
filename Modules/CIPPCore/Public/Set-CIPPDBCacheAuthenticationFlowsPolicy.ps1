@@ -5,11 +5,15 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
 
     .PARAMETER TenantFilter
         The tenant to cache authentication flows policy for
+
+    .PARAMETER QueueId
+        The queue ID to update with total tasks (optional)
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [string]$QueueId
     )
 
     try {
@@ -23,9 +27,6 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
         }
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `
-            -message "Failed to cache authentication flows policy: $($_.Exception.Message)" `
-            -sev Warning `
-            -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter   -message "Failed to cache authentication flows policy: $($_.Exception.Message)"  -sev Warning   -LogData (Get-CippException -Exception $_)
     }
 }

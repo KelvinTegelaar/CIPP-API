@@ -1,7 +1,7 @@
-Function Invoke-AddChocoApp {
+function Invoke-AddChocoApp {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.ReadWrite
     #>
@@ -30,7 +30,9 @@ Function Invoke-AddChocoApp {
     $intuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
     $intuneBody.detectionRules[0].fileOrFolderName = "$($ChocoApp.PackageName)"
 
-    $Tenants = $Request.Body.selectedTenants.defaultDomainName
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
+
     $Results = foreach ($Tenant in $Tenants) {
         try {
             # Apply CIPP text replacement for tenant-specific variables

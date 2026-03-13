@@ -33,7 +33,7 @@ function New-PwPushLink {
 
         # Proceed with creating the PwPush link
         try {
-            Set-PwPushConfig -Configuration $Configuration
+            Set-PwPushConfig -Configuration $Configuration -FullConfiguration $ParsedConfig
             $PushParams = @{
                 Payload = $Payload
             }
@@ -41,6 +41,7 @@ function New-PwPushLink {
             if ($Configuration.ExpireAfterViews) { $PushParams.ExpireAfterViews = $Configuration.ExpireAfterViews }
             if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
             if ($Configuration.AccountId) { $PushParams.AccountId = $Configuration.AccountId.value }
+            if (![string]::IsNullOrEmpty($Configuration.DefaultPassphrase)) { $PushParams.Passphrase = $Configuration.DefaultPassphrase }
 
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
                 $Link = New-Push @PushParams
@@ -55,7 +56,7 @@ function New-PwPushLink {
                 'Exception' = Get-CippException -Exception $_
             }
             Write-LogMessage -API PwPush -Message "Failed to create a new PwPush link: $($_.Exception.Message)" -Sev 'Error' -LogData $LogData
-            Write-LogMessage -API PwPush -Message "Continuing without PwPush link due to error" -Sev 'Warning'
+            Write-LogMessage -API PwPush -Message "Continuing without PwPush link due to error" -sev 'Warn'
             return $false
         }
     } catch {

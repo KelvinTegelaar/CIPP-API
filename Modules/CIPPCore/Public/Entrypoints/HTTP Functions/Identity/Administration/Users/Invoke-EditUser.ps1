@@ -32,6 +32,17 @@ function Invoke-EditUser {
     try {
         Write-Host "$([boolean]$UserObj.MustChangePass)"
         $UserPrincipalName = "$($UserObj.username)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
+        $normalizedOtherMails = @(
+            @($UserObj.otherMails) | ForEach-Object {
+                if ($null -ne $_) {
+                    [string]$_ -split ','
+                }
+            } | ForEach-Object {
+                $_.Trim()
+            } | Where-Object {
+                -not [string]::IsNullOrWhiteSpace($_)
+            }
+        )
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
@@ -49,7 +60,7 @@ function Invoke-EditUser {
             'country'           = $UserObj.country
             'companyName'       = $UserObj.companyName
             'businessPhones'    = $UserObj.businessPhones ? @($UserObj.businessPhones) : @()
-            'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
+            'otherMails'        = $normalizedOtherMails
             'passwordProfile'   = @{
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass
             }
@@ -104,9 +115,10 @@ function Invoke-EditUser {
                         value = 'Set-CIPPUserLicense'
                     }
                     Parameters    = [pscustomobject]@{
-                        UserId      = $UserObj.id
-                        APIName     = 'Sherweb License Assignment'
-                        AddLicenses = $licenses
+                        UserId            = $UserObj.id
+                        APIName           = 'Sherweb License Assignment'
+                        AddLicenses       = $licenses
+                        UserPrincipalName = $UserPrincipalName
                     }
                     ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.
                     PostExecution = @{
@@ -124,12 +136,12 @@ function Invoke-EditUser {
                     $Results.Add( 'Success. User license is already correct.' )
                 } else {
                     if ($UserObj.removeLicenses) {
-                        $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Headers -APIName $APIName
+                        $licResults = Set-CIPPUserLicense -UserPrincipalName $UserPrincipalName -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Headers -APIName $APIName
                         $Results.Add($licResults)
                     } else {
                         #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
                         $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
-                        $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $Headers -APIName $APIName
+                        $licResults = Set-CIPPUserLicense -UserPrincipalName $UserPrincipalName -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $Headers -APIName $APIName
                         $Results.Add($licResults)
                     }
 

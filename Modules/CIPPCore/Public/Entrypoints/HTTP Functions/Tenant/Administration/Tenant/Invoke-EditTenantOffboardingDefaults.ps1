@@ -14,6 +14,7 @@ function Invoke-EditTenantOffboardingDefaults {
 
     # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
+    $defaultDomainName = $Request.Body.defaultDomainName
     $offboardingDefaults = $Request.Body.offboardingDefaults
 
     if (!$customerId) {
@@ -47,10 +48,14 @@ function Invoke-EditTenantOffboardingDefaults {
             $resultText = 'Tenant offboarding defaults updated successfully'
         } else {
             # Remove offboarding defaults if empty or null
-            $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$customerId' and RowKey eq 'OffboardingDefaults'"
-            if ($Existing) {
-                Remove-AzDataTableEntity @PropertiesTable -Entity $Existing
-                Write-LogMessage -headers $Headers -tenant $customerId -API $APIName -message "Removed tenant offboarding defaults" -Sev 'Info'
+            $partitionKeys = @($customerId, $defaultDomainName) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+            $existingDefaults = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "RowKey eq 'OffboardingDefaults'"
+            $toRemove = $existingDefaults | Where-Object { $_.PartitionKey -in $partitionKeys }
+            if ($toRemove) {
+                foreach ($Entity in $toRemove) {
+                    Remove-AzDataTableEntity @PropertiesTable -Entity $Entity
+                }
+                Write-LogMessage -headers $Headers -tenant $customerId -API $APIName -message "Removed tenant offboarding defaults for partition keys: $($partitionKeys -join ', ')" -Sev 'Info'
             }
 
             $resultText = 'Tenant offboarding defaults cleared successfully'

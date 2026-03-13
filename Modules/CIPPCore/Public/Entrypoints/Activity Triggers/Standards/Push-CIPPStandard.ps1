@@ -95,9 +95,7 @@ function Push-CIPPStandard {
             $metadata['CATemplateId'] = $Item.Settings.TemplateList.value
         }
 
-        Measure-CippTask -TaskName $Standard -EventName 'CIPP.StandardCompleted' -Metadata $metadata -Script {
-            & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
-        }
+        & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
 
         $result = 'Success'
         Write-Information "Standard $($Standard) completed for tenant $($Tenant)"

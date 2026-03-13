@@ -90,7 +90,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
                 }
             }
         } catch {
-            Write-AlertMessage -tenant $TenantFilter -message "Failed to query Intune policy states: $(Get-NormalizedError -message $_.Exception.Message)"
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to query Intune policy states: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
         }
     }
 
@@ -117,7 +117,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
                 }
             }
         } catch {
-            Write-AlertMessage -tenant $TenantFilter -message "Failed to query Intune application states: $(Get-NormalizedError -message $_.Exception.Message)"
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to query Intune application states: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
         }
     }
 

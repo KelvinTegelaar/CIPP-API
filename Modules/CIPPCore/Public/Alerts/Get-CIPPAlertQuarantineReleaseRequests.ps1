@@ -14,7 +14,7 @@
     #Add rerun protection: This Monitor can only run once every hour.
     $Rerun = Test-CIPPRerun -TenantFilter $TenantFilter -Type 'ExchangeMonitor' -API 'Get-CIPPAlertQuarantineReleaseRequests'
     if ($Rerun) {
-        return $true
+        return
     }
     $HasLicense = Test-CIPPStandardLicense -StandardName 'QuarantineReleaseRequests' -TenantFilter $TenantFilter -RequiredCapabilities @(
         'EXCHANGE_S_STANDARD',
@@ -25,11 +25,17 @@
     )
 
     if (-not $HasLicense) {
-        return $true
+        return
     }
 
     try {
-        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = 1000; ReleaseStatus = 'Requested'; StartReceivedDate = (Get-Date).AddHours(-6) } -ErrorAction Stop | Select-Object -ExcludeProperty *data.type*
+        $cmdParams = @{
+            PageSize          = 1000
+            ReleaseStatus     = 'Requested'
+            StartReceivedDate = (Get-Date).AddHours(-6)
+            EndReceivedDate   = (Get-Date).AddHours(0)
+        }
+        $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams $cmdParams -ErrorAction Stop | Select-Object -ExcludeProperty *data.type* | Sort-Object -Property ReceivedTime
 
         if ($RequestedReleases) {
             # Get the CIPP URL for the Quarantine link
@@ -56,6 +62,6 @@
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-AlertMessage -tenant $TenantFilter -message "QuarantineReleaseRequests: $(Get-NormalizedError -message $_.Exception.Message)"
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
     }
 }

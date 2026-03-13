@@ -3,12 +3,13 @@ function Invoke-ExecDnsConfig {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.AppSettings.ReadWrite
+        Tenant.Domains.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     # List of supported resolvers
     $ValidResolvers = @(
         'Google'
@@ -16,8 +17,11 @@ function Invoke-ExecDnsConfig {
     )
 
 
-
     $StatusCode = [HttpStatusCode]::OK
+    $Action = $Request.Query.Action ?? $Request.Body.Action
+    $Domain = $Request.Query.Domain ?? $Request.Body.Domain
+    $Resolver = $Request.Query.Resolver ?? $Request.Body.Resolver
+    $Selector = $Request.Query.Selector ?? $Request.Body.Selector
     try {
         $ConfigTable = Get-CippTable -tablename Config
         $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
@@ -36,10 +40,9 @@ function Invoke-ExecDnsConfig {
 
         $updated = $false
 
-        switch ($Request.Query.Action) {
+        switch ($Action) {
             'SetConfig' {
-                if ($Request.Body.Resolver) {
-                    $Resolver = $Request.Body.Resolver
+                if ($Resolver) {
                     if ($ValidResolvers -contains $Resolver) {
                         try {
                             $Config.Resolver = $Resolver
@@ -53,7 +56,7 @@ function Invoke-ExecDnsConfig {
                 }
                 if ($updated) {
                     Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
-                    Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message 'DNS configuration updated' -Sev 'Info'
+                    Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'DNS configuration updated' -Sev 'Info'
                     $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
                 } else {
                     $StatusCode = [HttpStatusCode]::BadRequest
@@ -61,8 +64,8 @@ function Invoke-ExecDnsConfig {
                 }
             }
             'SetDkimConfig' {
-                $Domain = $Request.Query.Domain
-                $Selector = ($Request.Query.Selector).trim() -split '\s*,\s*'
+                $Domain = $Domain
+                $Selector = ($Selector).trim() -split '\s*,\s*'
                 $DomainTable = Get-CIPPTable -Table 'Domains'
                 $Filter = "RowKey eq '{0}'" -f $Domain
                 $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
@@ -71,7 +74,7 @@ function Invoke-ExecDnsConfig {
                     $DomainInfo.DkimSelectors = $DkimSelectors
                 } else {
                     $DomainInfo = @{
-                        'RowKey'         = $Request.Query.Domain
+                        'RowKey'         = $Domain
                         'PartitionKey'   = 'ManualEntry'
                         'TenantId'       = 'NoTenant'
                         'MailProviders'  = ''
@@ -81,22 +84,25 @@ function Invoke-ExecDnsConfig {
                     }
                 }
                 Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "Updated DKIM selectors for domain: $Domain - Selectors: $($Selector -join ', ')" -Sev 'Info'
+                $body = [pscustomobject]@{ 'Results' = "Success: DKIM selectors updated for $Domain. Selectors: $($Selector -join ', ')" }
             }
             'GetConfig' {
                 $body = [pscustomobject]$Config
-                Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message 'Retrieved DNS configuration' -Sev 'Debug'
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'Retrieved DNS configuration' -Sev 'Debug'
             }
             'RemoveDomain' {
-                $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
+                $Filter = "RowKey eq '{0}'" -f $Domain
                 $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter -Property PartitionKey, RowKey
                 Remove-AzDataTableEntity -Force @DomainTable -Entity $DomainRow
-                Write-LogMessage -API $APINAME -tenant 'Global' -headers $Request.Headers -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
-                $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }
+                Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message "Removed Domain - $Domain " -Sev 'Info'
+                $body = [pscustomobject]@{ 'Results' = "Domain removed - $Domain" }
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API $APIName -tenant $($name) -headers $Headers -message "DNS Config API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $body = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 

@@ -13,6 +13,7 @@ function Push-GetMailboxPermissionsBatch {
 
     $TenantFilter = $Item.TenantFilter
     $Mailboxes = $Item.Mailboxes
+    $MailboxData = @($Item.MailboxData)
     $BatchNumber = $Item.BatchNumber
     $TotalBatches = $Item.TotalBatches
 
@@ -85,10 +86,31 @@ function Push-GetMailboxPermissionsBatch {
             $MailboxPermissions['Get-RecipientPermission'] = $NormalizedRecipientPerms
         }
 
+        $MailboxIdentityLookup = @{}
+        foreach ($MappedMailbox in ($MailboxData | Where-Object { $_.Id -and $_.UPN })) {
+            $MailboxIdentityLookup[[string]$MappedMailbox.Id] = [string]$MappedMailbox.UPN
+        }
+
+        # Normalize SendOnBehalf permissions from passed mailbox metadata
+        $NormalizedSendOnBehalfPerms = foreach ($Mailbox in ($MailboxData | Where-Object { $_.GrantSendOnBehalfTo -and ($Mailboxes -contains $_.UPN) })) {
+            foreach ($Delegate in (@($Mailbox.GrantSendOnBehalfTo) | Where-Object { $_ -and $MailboxIdentityLookup.ContainsKey([string]$_) })) {
+                [PSCustomObject]@{
+                    id           = [guid]::NewGuid().ToString()
+                    Identity     = $Mailbox.UPN
+                    User         = $MailboxIdentityLookup[[string]$Delegate]
+                    AccessRights = @('SendOnBehalf')
+                    IsInherited  = $false
+                    Deny         = $false
+                }
+            }
+        }
+        $MailboxPermissions['Get-Mailbox'] = @($NormalizedSendOnBehalfPerms)
+
         $MailboxPermCount = if ($MailboxPermissions['Get-MailboxPermission']) { $MailboxPermissions['Get-MailboxPermission'].Count } else { 0 }
         $RecipientPermCount = if ($MailboxPermissions['Get-RecipientPermission']) { $MailboxPermissions['Get-RecipientPermission'].Count } else { 0 }
+        $SendOnBehalfPermCount = if ($MailboxPermissions['Get-Mailbox']) { $MailboxPermissions['Get-Mailbox'].Count } else { 0 }
 
-        Write-Information "Completed batch $BatchNumber of $TotalBatches - processed $($Mailboxes.Count) mailboxes: $MailboxPermCount mailbox permissions, $RecipientPermCount recipient permissions"
+        Write-Information "Completed batch $BatchNumber of $TotalBatches - processed $($Mailboxes.Count) mailboxes: $MailboxPermCount mailbox permissions, $RecipientPermCount recipient permissions, $SendOnBehalfPermCount send-on-behalf permissions"
 
         # Return results to be aggregated by post-execution function
         return $MailboxPermissions

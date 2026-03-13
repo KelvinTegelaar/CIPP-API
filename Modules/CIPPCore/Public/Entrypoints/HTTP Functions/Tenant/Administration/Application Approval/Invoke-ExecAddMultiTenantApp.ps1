@@ -43,7 +43,7 @@ function Invoke-ExecAddMultiTenantApp {
                     Batch            = @($Batch)
                     SkipLog          = $true
                 }
-                $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                $null = Start-CIPPOrchestrator -InputObject $InputObject
                 $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.AppId, ($Request.Body.tenantFilter.label -join ', ')
             } catch {
                 $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
@@ -81,7 +81,7 @@ function Invoke-ExecAddMultiTenantApp {
                 Batch            = @($Batch)
                 SkipLog          = $true
             }
-            $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            $null = Start-CIPPOrchestrator -InputObject $InputObject
             $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.selectedTemplate.label, ($Request.Body.tenantFilter.label -join ', ')
         } catch {
             $Results = "Error queuing application - $($_.Exception.Message)"

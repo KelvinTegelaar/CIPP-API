@@ -64,12 +64,16 @@ function Push-CIPPStandardsList {
             } else {
                 # License valid - check policy timestamps to filter unchanged templates
                 $TypeMap = @{
-                    Device                   = 'deviceManagement/deviceConfigurations'
-                    Catalog                  = 'deviceManagement/configurationPolicies'
-                    Admin                    = 'deviceManagement/groupPolicyConfigurations'
-                    deviceCompliancePolicies = 'deviceManagement/deviceCompliancePolicies'
-                    AppProtection_Android    = 'deviceAppManagement/androidManagedAppProtections'
-                    AppProtection_iOS        = 'deviceAppManagement/iosManagedAppProtections'
+                    Device                       = 'deviceManagement/deviceConfigurations'
+                    Catalog                      = 'deviceManagement/configurationPolicies'
+                    Admin                        = 'deviceManagement/groupPolicyConfigurations'
+                    deviceCompliancePolicies     = 'deviceManagement/deviceCompliancePolicies'
+                    AppProtection_Android        = 'deviceAppManagement/androidManagedAppProtections'
+                    AppProtection_iOS            = 'deviceAppManagement/iosManagedAppProtections'
+                    windowsDriverUpdateProfiles  = 'deviceManagement/windowsDriverUpdateProfiles'
+                    windowsFeatureUpdateProfiles = 'deviceManagement/windowsFeatureUpdateProfiles'
+                    windowsQualityUpdatePolicies = 'deviceManagement/windowsQualityUpdatePolicies'
+                    windowsQualityUpdateProfiles = 'deviceManagement/windowsQualityUpdateProfiles'
                 }
 
                 $BulkRequests = $TypeMap.GetEnumerator() | ForEach-Object {
@@ -86,8 +90,9 @@ function Push-CIPPStandardsList {
                     $PolicyTimestamps = @{}
 
                     foreach ($Result in $BulkResults) {
-                        $GraphTime = $Result.body.value[0].lastModifiedDateTime
-                        $GraphId = $Result.body.value[0].id
+                        $FirstPolicy = if ($Result.body.value) { $Result.body.value[0] } else { $null }
+                        $GraphTime = $FirstPolicy.lastModifiedDateTime
+                        $GraphId = $FirstPolicy.id
                         $GraphCount = ($Result.body.value | Measure-Object).Count
                         $Cached = Get-CIPPAzDataTableEntity @TrackingTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Result.id)'"
 
@@ -117,26 +122,65 @@ function Push-CIPPStandardsList {
                                 LatestPolicyId       = $GraphId
                                 PolicyCount          = $GraphCount
                             } -Force | Out-Null
+                        } elseif ($Cached -and $Cached.PolicyCount -ne $null) {
+                            # No timestamp available - fall back to count-based detection
+                            $Changed = $CountChanged -or $IdChanged
+                            Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
+                                PartitionKey   = $TenantFilter
+                                RowKey         = $Result.id
+                                LatestPolicyId = $GraphId
+                                PolicyCount    = $GraphCount
+                            } -Force | Out-Null
                         } else {
+                            # No timestamp and no prior cache entry - treat as changed and seed the cache
                             $Changed = $true
+                            Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
+                                PartitionKey   = $TenantFilter
+                                RowKey         = $Result.id
+                                LatestPolicyId = $GraphId
+                                PolicyCount    = $GraphCount
+                            } -Force | Out-Null
                         }
 
                         $PolicyTimestamps[$Result.id] = $Changed
+                        Write-Host "POLICY TYPE CHANGE CHECK: $($Result.id) -> Changed=$Changed (GraphCount=$GraphCount, CachedCount=$($Cached.PolicyCount), IdChanged=$IdChanged)"
                     }
 
                     # Filter unchanged templates
                     $TemplateTable = Get-CippTable -tablename 'templates'
-                    $StandardTemplateTable = Get-CippTable -tablename 'templates'
                     $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
+                    Write-Host "INTUNE FILTER: Processing $($IntuneKeys.Count) IntuneTemplate standards for $TenantFilter"
+
+                    # Build compliance lookup - keyed by "standards.IntuneTemplate.<templateValue>"
+                    $IntuneComplianceLookup = @{}
+                    try {
+                        $AlignmentResults = Get-CIPPTenantAlignment -TenantFilter $TenantFilter
+                        foreach ($AlignmentResult in $AlignmentResults) {
+                            foreach ($Detail in $AlignmentResult.ComparisonDetails) {
+                                if ($Detail.StandardName -like 'standards.IntuneTemplate.*') {
+                                    $IntuneComplianceLookup[$Detail.StandardName] = $Detail.Compliant
+                                }
+                            }
+                        }
+                    } catch {
+                        Write-Warning "Failed to get tenant alignment data for $TenantFilter : $($_.Exception.Message)"
+                    }
+                    Write-Host "COMPLIANCE LOOKUP: Found $($IntuneComplianceLookup.Count) IntuneTemplate entries in alignment data"
 
                     foreach ($Key in $IntuneKeys) {
                         $Template = $ComputedStandards[$Key]
                         $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Template.Settings.TemplateList.value)'"
 
-                        if (-not $TemplateEntity) { continue }
+                        if (-not $TemplateEntity) {
+                            Write-Host "SKIP: $Key - no IntuneTemplate entity found for RowKey '$($Template.Settings.TemplateList.value)'"
+                            continue
+                        }
 
                         $ParsedTemplate = $TemplateEntity.JSON | ConvertFrom-Json
-                        if (-not $ParsedTemplate.Type) { continue }
+                        if (-not $ParsedTemplate.Type) {
+                            Write-Host "SKIP: $Key - template has no Type property"
+                            continue
+                        }
 
                         $PolicyType = $ParsedTemplate.Type
                         $PolicyChanged = if ($PolicyType -eq 'AppProtection') {
@@ -144,9 +188,10 @@ function Push-CIPPStandardsList {
                         } else {
                             [bool]$PolicyTimestamps[$PolicyType]
                         }
+                        Write-Host "TEMPLATE CHECK: $Key | PolicyType=$PolicyType | PolicyChanged=$PolicyChanged"
 
                         # Check StandardTemplate changes
-                        $StandardTemplate = Get-CIPPAzDataTableEntity @StandardTemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
+                        $StandardTemplate = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
                         $StandardTemplateChanged = $false
 
                         if ($StandardTemplate) {
@@ -157,8 +202,10 @@ function Push-CIPPStandardsList {
                                 $CachedStandardTimeUtc = ([DateTimeOffset]$CachedStandardTemplate.CachedTimestamp).UtcDateTime
                                 $TimeDiff = [Math]::Abs(($StandardTimeUtc - $CachedStandardTimeUtc).TotalSeconds)
                                 $StandardTemplateChanged = ($TimeDiff -gt 60)
+                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | TimeDiff=${TimeDiff}s | Changed=$StandardTemplateChanged"
                             } else {
                                 $StandardTemplateChanged = $true
+                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | No cached timestamp - treating as changed"
                             }
 
                             Add-CIPPAzDataTableEntity @TrackingTable -Entity @{
@@ -168,14 +215,57 @@ function Push-CIPPStandardsList {
                             } -Force | Out-Null
                         }
 
-                        # Remove if both unchanged
                         if (-not $PolicyChanged -and -not $StandardTemplateChanged) {
-                            Write-Host "NO INTUNE CHANGE: Filtering out $key for $($TenantFilter)"
-                            [void]$ComputedStandards.Remove($Key)
+                            $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
+                            $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
+                            $IsCompliant = $IsDeployed -and ($IntuneComplianceLookup[$AlignmentKey] -eq $true)
+                            Write-Host "COMPLIANCE CHECK: $AlignmentKey | InLookup=$IsDeployed | Compliant=$IsCompliant | LookupValue=$($IntuneComplianceLookup[$AlignmentKey])"
+
+                            if ($IsCompliant) {
+                                # Policy unchanged and compliant - no action needed
+                                Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
+                                [void]$ComputedStandards.Remove($Key)
+                            } else {
+                                Write-Host "KEEPING: $Key - not compliant or not in lookup (InLookup=$IsDeployed, Compliant=$IsCompliant)"
+                            }
+                        } else {
+                            Write-Host "KEEPING: $Key - changed (PolicyChanged=$PolicyChanged, StdTemplateChanged=$StandardTemplateChanged)"
                         }
                     }
                 } catch {
                     Write-Warning "Timestamp check failed for $TenantFilter : $($_.Exception.Message)"
+                }
+            }
+        }
+
+        $CAStandardFound = ($ComputedStandards.Keys.Where({ $_ -like '*ConditionalAccessTemplate*' }, 'First').Count -gt 0)
+        if ($CAStandardFound) {
+            $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+            if (-not $TestResult) {
+                $CAKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*ConditionalAccessTemplate*' })
+                $BulkFields = [System.Collections.Generic.List[object]]::new()
+                foreach ($Key in $CAKeys) {
+                    $TemplateKey = ($Key -split '\|', 2)[1]
+                    if ($TemplateKey) {
+                        $BulkFields.Add([PSCustomObject]@{
+                                FieldName  = "standards.ConditionalAccessTemplate.$TemplateKey"
+                                FieldValue = 'This tenant does not have the required license for this standard.'
+                            })
+                    }
+                    [void]$ComputedStandards.Remove($Key)
+                }
+                if ($BulkFields.Count -gt 0) {
+                    Set-CIPPStandardsCompareField -TenantFilter $TenantFilter -BulkFields $BulkFields
+                }
+
+                Write-Information "Removed ConditionalAccessTemplate standards for $TenantFilter - missing required license"
+            } else {
+                # License valid - update CIPPDB cache with latest CA information before we run so that standards have the most up to date info
+                try {
+                    Write-Information "Updating CIPPDB cache for Conditional Access policies for $TenantFilter"
+                    Set-CIPPDBCacheConditionalAccessPolicies -TenantFilter $TenantFilter
+                } catch {
+                    Write-Warning "Failed to update CA cache for $TenantFilter : $($_.Exception.Message)"
                 }
             }
         }
@@ -191,9 +281,8 @@ function Push-CIPPStandardsList {
                 FunctionName = 'CIPPStandard'
             }
         }
-        Write-Host "Sending back $($FilteredStandards.Count) standards: $($FilteredStandards | ConvertTo-Json -Depth 5 -Compress)"
-        return $FilteredStandards
-
+        Write-Host "Sending back $($FilteredStandards.Count) standards"
+        return @($FilteredStandards)
     } catch {
         Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"
         return @()

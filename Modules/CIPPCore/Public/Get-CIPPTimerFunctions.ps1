@@ -42,10 +42,17 @@ function Get-CIPPTimerFunctions {
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
     $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
 
+    # Get all feature flags to filter disabled features
+    $FeatureFlags = Get-CIPPFeatureFlag
+    $DisabledTimers = $FeatureFlags | Where-Object { $_.Enabled -eq $false } | ForEach-Object { $_.Timers } | Where-Object { $_ }
+
     if ($ListAllTasks) {
         $Orchestrators = $CippTimers | ConvertFrom-Json | Sort-Object -Property Priority
     } else {
-        $Orchestrators = $CippTimers | ConvertFrom-Json | Where-Object { $_.RunOnProcessor -eq $RunOnProcessor } | Sort-Object -Property Priority
+        # Filter out timers associated with disabled feature flags
+        $Orchestrators = $CippTimers | ConvertFrom-Json | Where-Object {
+            $_.RunOnProcessor -eq $RunOnProcessor -and $_.Id -notin $DisabledTimers
+        } | Sort-Object -Property Priority
     }
     $Table = Get-CIPPTable -TableName 'CIPPTimers'
     $RunOnProcessorTxt = if ($RunOnProcessor) { 'true' } else { 'false' }

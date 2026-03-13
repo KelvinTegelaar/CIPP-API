@@ -34,6 +34,7 @@ function Get-CIPPTenantAlignment {
             $JSON = $_.JSON
             try {
                 $RowKey = $_.RowKey
+                if ([string]::IsNullOrWhiteSpace($JSON)) { return }
                 $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             } catch {
                 Write-Warning "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
@@ -128,8 +129,8 @@ function Get-CIPPTenantAlignment {
                         $TenantValues.Add($filterItem.value)
                     }
                 }
-`
-                    if ($TenantValues -contains 'AllTenants') {
+
+                if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
                 } elseif ($TenantValues.Count -gt 0) {
                     $TemplateAssignedTenants = @($TenantValues)
