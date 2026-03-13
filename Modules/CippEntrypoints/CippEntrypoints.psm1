@@ -176,7 +176,7 @@ function Receive-CippQueueTrigger {
     param($QueueItem, $TriggerMetadata)
 
     Write-Information '####### Starting CIPP Queue Trigger'
-    Write-Information "QueueItem: $($QueueItem | ConvertTo-Json -Depth 10 -Compress)"
+    $QueueItem = $QueueItem | ConvertTo-Json -Depth 10 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
     if (Get-Command -Name $QueueItem.Cmdlet -Module CIPPCore -ErrorAction SilentlyContinue) {
@@ -264,6 +264,8 @@ function Receive-CippOrchestrationTrigger {
             $Batch = @()
         }
 
+        $Batch = @($Batch | Where-Object { $null -ne $_.FunctionName })
+
         if (($Batch | Measure-Object).Count -gt 0) {
             Write-Information "Batch Count: $($Batch.Count)"
             $Output = foreach ($Item in $Batch) {
@@ -301,6 +303,9 @@ function Receive-CippOrchestrationTrigger {
             } else {
                 $Results = $Output
             }
+        } else {
+            Write-Information 'No activities to execute in batch'
+            $Results = @()
         }
 
         if ($Results -and $OrchestratorInput.PostExecution) {
