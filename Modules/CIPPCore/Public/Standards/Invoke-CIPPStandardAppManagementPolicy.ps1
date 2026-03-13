@@ -45,20 +45,20 @@ function Invoke-CIPPStandardAppManagementPolicy {
     }
 
     # Unwrap autoComplete values - frontend sends {label, value} objects, extract the string
-    $passwordAdditionState = [string]($Settings.passwordCredentialsPasswordAddition.value ?? $Settings.passwordCredentialsPasswordAddition)
-    $customPasswordState = [string]($Settings.passwordCredentialsCustomPasswordAddition.value ?? $Settings.passwordCredentialsCustomPasswordAddition)
-    $passwordMaxLifetimeDays = $Settings.passwordCredentialsMaxLifetime.value ?? $Settings.passwordCredentialsMaxLifetime
-    $keyMaxLifetimeDays = $Settings.keyCredentialsMaxLifetime.value ?? $Settings.keyCredentialsMaxLifetime
+    $passwordAdditionState = [string]$Settings.passwordCredentialsPasswordAddition.value
+    $customPasswordState = [string]$Settings.passwordCredentialsCustomPasswordAddition.value
+    $passwordMaxLifetimeDays = $Settings.passwordCredentialsMaxLifetime
+    $keyMaxLifetimeDays = $Settings.keyCredentialsMaxLifetime
 
     # Convert user-entered days to ISO 8601 duration format (P<n>D)
-    $passwordMaxLifetimeISO = if (-not [string]::IsNullOrWhiteSpace($passwordMaxLifetimeDays) -and $passwordMaxLifetimeDays -ne 'Select a value') { "P${passwordMaxLifetimeDays}D" } else { $null }
-    $keyMaxLifetimeISO = if (-not [string]::IsNullOrWhiteSpace($keyMaxLifetimeDays) -and $keyMaxLifetimeDays -ne 'Select a value') { "P${keyMaxLifetimeDays}D" } else { $null }
+    $passwordMaxLifetimeISO = if (-not [string]::IsNullOrWhiteSpace($passwordMaxLifetimeDays)) { "P${passwordMaxLifetimeDays}D" } else { $null }
+    $keyMaxLifetimeISO = if (-not [string]::IsNullOrWhiteSpace($keyMaxLifetimeDays)) { "P${keyMaxLifetimeDays}D" } else { $null }
 
     # Build desired password credential restrictions
     $desiredPasswordCredentials = [System.Collections.Generic.List[object]]::new()
 
     # Password addition + symmetric key addition (mirrors password addition)
-    if (-not [string]::IsNullOrWhiteSpace($passwordAdditionState) -and $passwordAdditionState -ne 'Select a value') {
+    if (-not [string]::IsNullOrWhiteSpace($passwordAdditionState)) {
         $desiredPasswordCredentials.Add([ordered]@{
             restrictionType                     = 'passwordAddition'
             state                               = $passwordAdditionState
@@ -74,7 +74,7 @@ function Invoke-CIPPStandardAppManagementPolicy {
     }
 
     # Custom password
-    if (-not [string]::IsNullOrWhiteSpace($customPasswordState) -and $customPasswordState -ne 'Select a value') {
+    if (-not [string]::IsNullOrWhiteSpace($customPasswordState)) {
         $desiredPasswordCredentials.Add([ordered]@{
             restrictionType                     = 'customPasswordAddition'
             state                               = $customPasswordState
