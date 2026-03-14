@@ -1,9 +1,16 @@
-using namespace System.Net
+function Invoke-ExecRemoveCippCveException {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Security.Alert.ReadWrite
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
 
-param($Request, $TriggerMetadata)
-
-$APIName = $Request.Query.APIName
-Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    $TenantFilter = $Request.Query.tenantFilter
 
 try {
     # Parse request
@@ -84,7 +91,7 @@ try {
         }
     }
     
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed $RemovedCount CVE exception(s) for $cveId" -Sev 'Info'
+    Write-LogMessage -headers $Headers -API $APIName -message "Removed $RemovedCount CVE exception(s) for $cveId" -Sev Info
     
     $StatusCode = [HttpStatusCode]::OK
     $Body = [PSCustomObject]@{
@@ -92,14 +99,16 @@ try {
     }
     
 } catch {
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to remove CVE exception: $($_.Exception.Message)" -Sev 'Error'
+    $ErrorMessage = Get-CippException -Exception $_
+    Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove CVE exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
     $StatusCode = [HttpStatusCode]::BadRequest
     $Body = [PSCustomObject]@{
-        Results = "Failed to remove exception: $($_.Exception.Message)"
+        Results = "Failed to remove exception: $($ErrorMessage.NormalizedError)"
     }
 }
 
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $Body
     })
+}

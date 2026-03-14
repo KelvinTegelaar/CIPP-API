@@ -1,9 +1,16 @@
-using namespace System.Net
+function Invoke-ExecAddCippCveException {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Security.Alert.ReadWrite
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
 
-param($Request, $TriggerMetadata)
-
-$APIName = $Request.Query.APIName
-Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    $TenantFilter = $Request.Query.tenantFilter
 
 try {
     # Parse request body
@@ -48,8 +55,8 @@ try {
     
     Write-Host "Applying exception to tenants: $($TenantsToUpdate -join ', ')"
     
-    # Get current user
-    $Username = $request.headers.'x-ms-client-principal'
+    # Get current user from headers
+    $Username = $Headers.'x-ms-client-principal'
     $CurrentDate = (Get-Date).ToUniversalTime().ToString('o')
     
     # Create exception entries
@@ -103,7 +110,7 @@ try {
         }
     }
     
-    Write-LogMessage -user $Username -API $APINAME -message "Added/updated CVE exception for $cveId across $($TenantsToUpdate.Count) tenant(s)" -Sev 'Info'
+    Write-LogMessage -headers $Headers -API $APIName -message "Added/updated CVE exception for $cveId across $($TenantsToUpdate.Count) tenant(s)" -Sev Info
     
     $StatusCode = [HttpStatusCode]::OK
     $Body = [PSCustomObject]@{
@@ -115,14 +122,16 @@ try {
     }
     
 } catch {
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to add CVE exception: $($_.Exception.Message)" -Sev 'Error'
+    $ErrorMessage = Get-CippException -Exception $_
+    Write-LogMessage -headers $Headers -API $APIName -message "Failed to add CVE exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
     $StatusCode = [HttpStatusCode]::BadRequest
     $Body = [PSCustomObject]@{
-        Results = "Failed to add exception: $($_.Exception.Message)"
+        Results = "Failed to add exception: $($ErrorMessage.NormalizedError)"
     }
 }
 
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+return ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = $Body
     })
+}
