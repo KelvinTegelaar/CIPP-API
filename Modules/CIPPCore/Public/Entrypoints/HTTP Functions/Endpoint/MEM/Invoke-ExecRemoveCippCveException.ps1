@@ -86,7 +86,7 @@ try {
                     $CacheEntry.exceptionSource = $sources
                 }
                 
-                Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -CreateTableIfNotExists -OperationType 'UpsertReplace' -Force
+                Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -Force
             }
         }
     }

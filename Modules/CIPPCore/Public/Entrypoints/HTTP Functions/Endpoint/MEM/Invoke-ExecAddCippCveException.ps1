@@ -81,7 +81,7 @@ try {
         }
         
         # Add or update exception
-        Add-CIPPAzDataTableEntity @CveExceptionsTable -Entity $ExceptionEntity -CreateTableIfNotExists -OperationType 'UpsertReplace' -Force
+        Add-CIPPAzDataTableEntity @CveExceptionsTable -Entity $ExceptionEntity -Force
         
         if ($ExistingException) {
             $ExceptionsUpdated += $TenantId
@@ -106,7 +106,7 @@ try {
             $CacheEntry.hasException = $true
             $CacheEntry.exceptionSource = "CIPP"
             
-            Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -CreateTableIfNotExists -OperationType 'UpsertReplace' -Force
+            Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -Force
         }
     }
     
