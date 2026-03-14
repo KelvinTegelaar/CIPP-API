@@ -84,7 +84,6 @@ try {
     }
     
     # Now update the CveCache entries to reflect the exception
-    # Get all cache entries for this CVE that match the affected tenants
     foreach ($TenantId in $TenantsToUpdate) {
         if ($TenantId -eq "ALL") {
             # Global exception - update all entries for this CVE
