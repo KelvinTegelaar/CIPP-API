@@ -16,11 +16,12 @@ try {
     # Parse request body
     $Body = $Request.Body
     
-    $cveId = $Body.cveId
-    $exceptionType = $Body.exceptionType
-    $applyTo = $Body.applyTo
-    $justification = $Body.justification
-    $expiryDate = $Body.expiryDate
+    # Convert to strings explicitly to avoid type issues
+    $cveId = [string]$Body.cveId
+    $exceptionType = [string]$Body.exceptionType
+    $applyTo = [string]$Body.applyTo
+    $justification = [string]$Body.justification
+    $expiryDate = if ($Body.expiryDate) { [string]$Body.expiryDate } else { $null }
     $TenantFilter = $Request.Query.TenantFilter
     
     # Validate required fields
@@ -68,15 +69,15 @@ try {
         $ExistingException = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$cveId' and RowKey eq '$TenantId'"
         
         $ExceptionEntity = @{
-            PartitionKey            = $cveId
-            RowKey                  = $TenantId
-            cveId                   = $cveId
-            customerId              = $TenantId
-            exceptionType           = $exceptionType
-            exceptionComment        = $justification
-            exceptionCreatedBy      = $Username
-            exceptionCreatedDate    = $CurrentDate
-            exceptionExpiry         = $expiryDate
+            PartitionKey            = [string]$cveId
+            RowKey                  = [string]$TenantId
+            cveId                   = [string]$cveId
+            customerId              = [string]$TenantId
+            exceptionType           = [string]$exceptionType
+            exceptionComment        = [string]$justification
+            exceptionCreatedBy      = [string]$Username
+            exceptionCreatedDate    = [string]$CurrentDate
+            exceptionExpiry         = if ($expiryDate) { [string]$expiryDate } else { "" }
             source                  = "CIPP"
         }
         
