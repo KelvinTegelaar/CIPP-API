@@ -13,14 +13,6 @@ function Invoke-ExecPasswordConfig {
     $Table = Get-CIPPTable -TableName Settings
     $PasswordSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings' and RowKey eq 'settings'"
 
-    # Helper functions for consistent data conversion
-    function ConvertTo-Bool ($raw) {
-        if ($null -eq $raw) { return $false }
-        $stringValue = "$raw"
-        return ($stringValue -eq 'true' -or $stringValue -eq '1' -or $stringValue -eq 'yes')
-    }
-
-
     $results = try {
         if ($Request.Query.List) {
             if (-not $PasswordSettings) {
@@ -50,16 +42,16 @@ function Invoke-ExecPasswordConfig {
                 $resolvedConfig = @{
                     passwordType        = $storedType
                     charCount           = if ($PasswordSettings.charCount -and [int]::TryParse("$($PasswordSettings.charCount)", [ref]$null)) { [int]$PasswordSettings.charCount } else { 14 }
-                    includeUppercase    = if ($null -ne $PasswordSettings.includeUppercase) { ConvertTo-Bool $PasswordSettings.includeUppercase } else { $true }
-                    includeLowercase    = if ($null -ne $PasswordSettings.includeLowercase) { ConvertTo-Bool $PasswordSettings.includeLowercase } else { $true }
-                    includeDigits       = if ($null -ne $PasswordSettings.includeDigits) { ConvertTo-Bool $PasswordSettings.includeDigits } else { $true }
-                    includeSpecialChars = if ($null -ne $PasswordSettings.includeSpecialChars) { ConvertTo-Bool $PasswordSettings.includeSpecialChars } else { $true }
+                    includeUppercase    = if ($null -ne $PasswordSettings.includeUppercase) { [bool]$PasswordSettings.includeUppercase } else { $true }
+                    includeLowercase    = if ($null -ne $PasswordSettings.includeLowercase) { [bool]$PasswordSettings.includeLowercase } else { $true }
+                    includeDigits       = if ($null -ne $PasswordSettings.includeDigits) { [bool]$PasswordSettings.includeDigits } else { $true }
+                    includeSpecialChars = if ($null -ne $PasswordSettings.includeSpecialChars) { [bool]$PasswordSettings.includeSpecialChars } else { $true }
                     specialCharSet      = if ($PasswordSettings.specialCharSet) { $PasswordSettings.specialCharSet } else { '$%&*#' }
                     wordCount           = if ($PasswordSettings.wordCount -and [int]::TryParse("$($PasswordSettings.wordCount)", [ref]$null)) { [int]$PasswordSettings.wordCount } else { 4 }
                     separator           = if ($null -ne $PasswordSettings.separator) { $PasswordSettings.separator } else { '-' }
-                    capitalizeWords     = if ($null -ne $PasswordSettings.capitalizeWords) { ConvertTo-Bool $PasswordSettings.capitalizeWords } else { $false }
-                    appendNumber        = if ($null -ne $PasswordSettings.appendNumber) { ConvertTo-Bool $PasswordSettings.appendNumber } else { $false }
-                    appendSpecialChar   = if ($null -ne $PasswordSettings.appendSpecialChar) { ConvertTo-Bool $PasswordSettings.appendSpecialChar } else { $false }
+                    capitalizeWords     = if ($null -ne $PasswordSettings.capitalizeWords) { [bool]$PasswordSettings.capitalizeWords } else { $false }
+                    appendNumber        = if ($null -ne $PasswordSettings.appendNumber) { [bool]$PasswordSettings.appendNumber } else { $false }
+                    appendSpecialChar   = if ($null -ne $PasswordSettings.appendSpecialChar) { [bool]$PasswordSettings.appendSpecialChar } else { $false }
                 }
 
                 # Persist migrated config so legacy type is upgraded in storage
@@ -100,13 +92,13 @@ function Invoke-ExecPasswordConfig {
                 throw 'Please select a valid password type (Classic or Passphrase)'
             }
 
-            $includeUppercase = ConvertTo-Bool $Request.Body.includeUppercase
-            $includeLowercase = ConvertTo-Bool $Request.Body.includeLowercase
-            $includeDigits = ConvertTo-Bool $Request.Body.includeDigits
-            $includeSpecialChars = ConvertTo-Bool $Request.Body.includeSpecialChars
-            $capitalizeWords = ConvertTo-Bool $Request.Body.capitalizeWords
-            $appendNumber = ConvertTo-Bool $Request.Body.appendNumber
-            $appendSpecialChar = ConvertTo-Bool $Request.Body.appendSpecialChar
+            $includeUppercase = [bool]$Request.Body.includeUppercase
+            $includeLowercase = [bool]$Request.Body.includeLowercase
+            $includeDigits = [bool]$Request.Body.includeDigits
+            $includeSpecialChars = [bool]$Request.Body.includeSpecialChars
+            $capitalizeWords = [bool]$Request.Body.capitalizeWords
+            $appendNumber = [bool]$Request.Body.appendNumber
+            $appendSpecialChar = [bool]$Request.Body.appendSpecialChar
 
             # Char count validation (classic only)
             $charCount = 0
@@ -129,9 +121,9 @@ function Invoke-ExecPasswordConfig {
                 if (-not [int]::TryParse("$($Request.Body.wordCount)", [ref]$wordCount)) {
                     $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Word count must be a valid number'
-                } elseif ($wordCount -lt 2 -or $wordCount -gt 10) {
+                } elseif ($wordCount -lt 3 -or $wordCount -gt 10) {
                     $StatusCode = [HttpStatusCode]::BadRequest
-                    throw 'Word count must be between 2 and 10 words'
+                    throw 'Word count must be between 3 and 10 words'
                 }
             } else {
                 if ([int]::TryParse("$($Request.Body.wordCount)", [ref]$wordCount)) { } else { $wordCount = 4 }
