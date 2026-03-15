@@ -47,24 +47,21 @@ function Invoke-CIPPStandardStaleEntraDevices {
     }
 
     $Date = (Get-Date).AddDays( - [int]$Settings.deviceAgeThreshold)
-    $DeleteDate = (Get-Date).AddDays( - [int]$Settings.deviceDeleteThreshold)
+    $DeleteThreshold = if ($null -eq $Settings.deviceDeleteThreshold) { 0 } else { [int]$Settings.deviceDeleteThreshold }
+    $DeleteEnabled = $DeleteThreshold -gt 0
+    $DeleteDate = (Get-Date).AddDays( - $DeleteThreshold)
     $StaleDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $Date }
     $DeleteDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $DeleteDate }
 
-    $RefreshRemediationEvaluation = {
-        $RemediationSkippedStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -eq $true -or $_.isManaged -eq $true -or $_.isCompliant -eq $true })
-        $RemediationEligibleStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
-        $DeleteEligibleDevices = @($DeleteDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
-
-        $DevicesToDisable = @($RemediationEligibleStaleDevices | Where-Object { $_.accountEnabled -eq $true })
-        if ([int]$Settings.deviceDeleteThreshold -eq 0) {
-            $DevicesToDelete = @()
-        } else {
-            $DevicesToDelete = @($DeleteEligibleDevices | Where-Object { $_.accountEnabled -ne $true })
-        }
+    $RemediationSkippedStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -eq $true -or $_.isManaged -eq $true -or $_.isCompliant -eq $true })
+    $RemediationEligibleStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
+    $DeleteEligibleDevices = @($DeleteDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
+    if (-not $DeleteEnabled) {
+        $DevicesToDelete = @()
+    } else {
+        $DevicesToDelete = @($DeleteEligibleDevices | Where-Object { $_.accountEnabled -ne $true })
     }
-
-    & $RefreshRemediationEvaluation
+    $DevicesToDisable = @($RemediationEligibleStaleDevices | Where-Object { $_.accountEnabled -eq $true })
 
     if ($Settings.remediate -eq $true) {
         $DeletedDeviceIds = [System.Collections.Generic.List[string]]::new()
@@ -103,6 +100,10 @@ function Invoke-CIPPStandardStaleEntraDevices {
                     if ($Result.status -eq 200 -or $Result.status -eq 204) {
                         $DisabledCount++
                         $Device.accountEnabled = $false
+                        $DeleteDevice = $DeleteDevices | Where-Object { $_.id -eq $Device.id } | Select-Object -First 1
+                        if ($DeleteDevice) {
+                            $DeleteDevice.accountEnabled = $false
+                        }
                     } else {
                         $FailedCount++
                         $ErrorMessage = if ($Result.body.error.message) { $Result.body.error.message } else { "Unknown error (Status: $($Result.status))" }
@@ -114,6 +115,13 @@ function Invoke-CIPPStandardStaleEntraDevices {
                 $FailedCount += $DevicesToDisable.Count
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to process bulk disable stale devices request. Error: $ErrorMessage" -Sev Error
             }
+        }
+
+        $DeleteEligibleDevices = @($DeleteDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
+        if (-not $DeleteEnabled) {
+            $DevicesToDelete = @()
+        } else {
+            $DevicesToDelete = @($DeleteEligibleDevices | Where-Object { $_.accountEnabled -ne $true })
         }
 
         if ($DevicesToDelete.Count -gt 0) {
@@ -145,7 +153,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
                     } else {
                         $FailedCount++
                         $ErrorMessage = if ($Result.body.error.message) { $Result.body.error.message } else { "Unknown error (Status: $($Result.status))" }
-                        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not delete stale disabled device $($Device.displayName) ($($Device.id)). Error: $ErrorMessage" -Sev Error
+                        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not delete stale eligible device $($Device.displayName) ($($Device.id)). Error: $ErrorMessage" -Sev Error
                     }
                 }
             } catch {
@@ -158,8 +166,17 @@ function Invoke-CIPPStandardStaleEntraDevices {
         if ($DeletedDeviceIds.Count -gt 0) {
             $StaleDevices = @($StaleDevices | Where-Object { $_.id -notin $DeletedDeviceIds })
             $DeleteDevices = @($DeleteDevices | Where-Object { $_.id -notin $DeletedDeviceIds })
-            & $RefreshRemediationEvaluation
         }
+
+        $RemediationSkippedStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -eq $true -or $_.isManaged -eq $true -or $_.isCompliant -eq $true })
+        $RemediationEligibleStaleDevices = @($StaleDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
+        $DeleteEligibleDevices = @($DeleteDevices | Where-Object { $_.onPremisesSyncEnabled -ne $true -and $_.isManaged -ne $true -and $_.isCompliant -ne $true })
+        if (-not $DeleteEnabled) {
+            $DevicesToDelete = @()
+        } else {
+            $DevicesToDelete = @($DeleteEligibleDevices | Where-Object { $_.accountEnabled -ne $true })
+        }
+        $DevicesToDisable = @($RemediationEligibleStaleDevices | Where-Object { $_.accountEnabled -eq $true })
 
         if ($DisabledCount -gt 0 -or $DeletedCount -gt 0 -or $FailedCount -gt 0 -or $SkippedCount -gt 0) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "StaleEntraDevices remediation completed. Disabled: $DisabledCount. Deleted: $DeletedCount. Failed: $FailedCount. Skipped: $SkippedCount (onPremisesSyncEnabled/isManaged/isCompliant)." -Sev Info
@@ -189,17 +206,20 @@ function Invoke-CIPPStandardStaleEntraDevices {
             Add-CIPPBPAField -FieldName 'StaleEntraDevices' -FieldValue $true -StoreAs bool -Tenant $Tenant
         }
 
-        if ($StaleDevices.Count -gt 0) {
-            $FieldValue = $StaleDevices | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType
+        if ($DevicesToDisable.Count -gt 0) {
+            $EligibleToDisableFieldValue = $DevicesToDisable | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType
+        }
+        if ($DeleteEnabled -and $DevicesToDelete.Count -gt 0) {
+            $EligibleToDeleteFieldValue = $DevicesToDelete | Select-Object -Property displayName, id, approximateLastSignInDateTime, accountEnabled, enrollmentProfileName, operatingSystem, managementType, profileType
         }
 
         $CurrentValue = @{
-            StaleDevicesCount  = $StaleDevices.Count
-            StaleDevices       = ($FieldValue ? @($FieldValue) :@())
+            EligibleDevicesToDisable      = ($EligibleToDisableFieldValue ? @($EligibleToDisableFieldValue) :@())
+            EligibleDevicesToDelete       = if ($DeleteEnabled) { ($EligibleToDeleteFieldValue ? @($EligibleToDeleteFieldValue) :@()) } else { 'Deletion disabled' }
         }
         $ExpectedValue = @{
-            StaleDevicesCount  = 0
-            StaleDevices       = @()
+            EligibleDevicesToDisable      = @()
+            EligibleDevicesToDelete       = if ($DeleteEnabled) { @() } else { 'Deletion disabled' }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.StaleEntraDevices' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
