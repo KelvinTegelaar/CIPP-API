@@ -33,26 +33,51 @@ function New-CIPPCAPolicy {
                         $GroupIds.Add($gid) # add the ID to the list
                     }
                 } elseif ($CreateGroups) {
-                    Write-Warning "Creating group $_ as it does not exist in the tenant"
-                    if ($GroupTemplates.displayName -eq $_) {
-                        Write-Information "Creating group from template for $_"
-                        $GroupTemplate = $GroupTemplates | Where-Object -Property displayName -EQ $_
-                        $NewGroup = New-CIPPGroup -GroupObject $GroupTemplate -TenantFilter $TenantFilter -APIName $APIName
-                        $GroupIds.Add($NewGroup.GroupId)
-                    } else {
-                        Write-Information "No template found, creating security group for $_"
-                        $username = $_ -replace '[^a-zA-Z0-9]', ''
-                        if ($username.Length -gt 64) {
-                            $username = $username.Substring(0, 64)
+                    $displayNameToCheck = $_
+                    # Random delay to stagger parallel processes - prevents all from creating simultaneously
+                    $randomDelay = Get-Random -Minimum 500 -Maximum 5000
+                    Write-Information "Waiting ${randomDelay}ms before creating group $displayNameToCheck"
+                    Start-Sleep -Milliseconds $randomDelay
+                    # Re-check if the group was created by another process during the delay
+                    $liveGroup = $null
+                    try {
+                        $liveGroup = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=displayName eq '$([System.Web.HttpUtility]::UrlEncode($displayNameToCheck))'&`$select=id,displayName&`$count=true" -ComplexFilter -tenantid $TenantFilter -asApp $true
+                    } catch {
+                        $liveGroup = $null
+                    }
+                    if ($liveGroup) {
+                        $existingId = if ($liveGroup -is [Array]) { $liveGroup[0].id } else { $liveGroup.id }
+                        if ($existingId) {
+                            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Group $displayNameToCheck already exists with ID $existingId (created by parallel process)" -Sev 'Info'
+                            $GroupIds.Add($existingId)
+                            $groups.Add([PSCustomObject]@{ id = $existingId; displayName = $displayNameToCheck })
                         }
-                        $GroupObject = @{
-                            groupType       = 'generic'
-                            displayName     = $_
-                            username        = $username
-                            securityEnabled = $true
+                    }
+                    if (-not $liveGroup -or -not $existingId) {
+                        Write-Warning "Creating group $displayNameToCheck as it does not exist in the tenant"
+                        if ($GroupTemplates.displayName -eq $displayNameToCheck) {
+                            Write-Information "Creating group from template for $displayNameToCheck"
+                            $GroupTemplate = $GroupTemplates | Where-Object -Property displayName -EQ $displayNameToCheck
+                            $NewGroup = New-CIPPGroup -GroupObject $GroupTemplate -TenantFilter $TenantFilter -APIName $APIName
+                            $GroupIds.Add($NewGroup.GroupId)
+                        } else {
+                            Write-Information "No template found, creating security group for $displayNameToCheck"
+                            $username = $displayNameToCheck -replace '[^a-zA-Z0-9]', ''
+                            if ($username.Length -gt 64) {
+                                $username = $username.Substring(0, 64)
+                            }
+                            $GroupObject = @{
+                                groupType       = 'generic'
+                                displayName     = $displayNameToCheck
+                                username        = $username
+                                securityEnabled = $true
+                            }
+                            $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName $APIName
+                            $GroupIds.Add($NewGroup.GroupId)
                         }
-                        $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName $APIName
-                        $GroupIds.Add($NewGroup.GroupId)
+                        if ($NewGroup.GroupId) {
+                            $groups.Add([PSCustomObject]@{ id = $NewGroup.GroupId; displayName = $displayNameToCheck })
+                        }
                     }
                 } else {
                     Write-Warning "Group $_ not found in the tenant"
@@ -344,7 +369,8 @@ function New-CIPPCAPolicy {
                 $BulkResults = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true
 
                 $users = ($BulkResults | Where-Object { $_.id -eq 'users' }).body.value
-                $groups = ($BulkResults | Where-Object { $_.id -eq 'groups' }).body.value
+                $groups = [System.Collections.Generic.List[object]]::new()
+                ($BulkResults | Where-Object { $_.id -eq 'groups' }).body.value | ForEach-Object { $groups.Add($_) }
 
                 foreach ($userType in 'includeUsers', 'excludeUsers') {
                     if ($JSONobj.conditions.users.PSObject.Properties.Name -contains $userType -and $JSONobj.conditions.users.$userType -notin 'All', 'None', 'GuestOrExternalUsers') {
