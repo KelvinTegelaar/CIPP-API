@@ -1,4 +1,4 @@
-Function Invoke-ExecPasswordConfig {
+function Invoke-ExecPasswordConfig {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,22 +14,10 @@ Function Invoke-ExecPasswordConfig {
     $PasswordSettings = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings' and RowKey eq 'settings'"
 
     # Helper functions for consistent data conversion
-    function ConvertTo-BoolString ($raw) {
-        if ($null -eq $raw) { return $false }
-        $stringValue = "$raw"
-        return ($stringValue -eq 'true' -or $stringValue -eq '1' -or $stringValue -eq 'yes')
-    }
-
     function ConvertTo-Bool ($raw) {
         if ($null -eq $raw) { return $false }
         $stringValue = "$raw"
         return ($stringValue -eq 'true' -or $stringValue -eq '1' -or $stringValue -eq 'yes')
-    }
-
-    function Test-RequestBody ($body) {
-        if (-not $body) { return $false }
-        if ($body -is [string] -or $body -is [array]) { return $false }
-        return $true
     }
 
 
@@ -38,18 +26,18 @@ Function Invoke-ExecPasswordConfig {
             if (-not $PasswordSettings) {
                 # Return default values if not set
                 @{
-                    passwordType       = 'Classic'
-                    charCount          = 14
-                    includeUppercase   = $true
-                    includeLowercase   = $true
-                    includeDigits      = $true
+                    passwordType        = 'Classic'
+                    charCount           = 14
+                    includeUppercase    = $true
+                    includeLowercase    = $true
+                    includeDigits       = $true
                     includeSpecialChars = $true
-                    specialCharSet     = '$%&*#'
-                    wordCount          = 4
-                    separator          = '-'
-                    capitalizeWords    = $false
-                    appendNumber       = $false
-                    appendSpecialChar  = $false
+                    specialCharSet      = '$%&*#'
+                    wordCount           = 4
+                    separator           = '-'
+                    capitalizeWords     = $false
+                    appendNumber        = $false
+                    appendSpecialChar   = $false
                 }
             } else {
                 # Migrate legacy 'Correct-Battery-Horse' type to 'Passphrase'
@@ -60,37 +48,37 @@ Function Invoke-ExecPasswordConfig {
                 }
 
                 $resolvedConfig = @{
-                    passwordType       = $storedType
-                    charCount          = if ($PasswordSettings.charCount -and [int]::TryParse("$($PasswordSettings.charCount)", [ref]$null)) { [int]$PasswordSettings.charCount } else { 14 }
-                    includeUppercase   = if ($null -ne $PasswordSettings.includeUppercase) { ConvertTo-Bool $PasswordSettings.includeUppercase } else { $true }
-                    includeLowercase   = if ($null -ne $PasswordSettings.includeLowercase) { ConvertTo-Bool $PasswordSettings.includeLowercase } else { $true }
-                    includeDigits      = if ($null -ne $PasswordSettings.includeDigits) { ConvertTo-Bool $PasswordSettings.includeDigits } else { $true }
+                    passwordType        = $storedType
+                    charCount           = if ($PasswordSettings.charCount -and [int]::TryParse("$($PasswordSettings.charCount)", [ref]$null)) { [int]$PasswordSettings.charCount } else { 14 }
+                    includeUppercase    = if ($null -ne $PasswordSettings.includeUppercase) { ConvertTo-Bool $PasswordSettings.includeUppercase } else { $true }
+                    includeLowercase    = if ($null -ne $PasswordSettings.includeLowercase) { ConvertTo-Bool $PasswordSettings.includeLowercase } else { $true }
+                    includeDigits       = if ($null -ne $PasswordSettings.includeDigits) { ConvertTo-Bool $PasswordSettings.includeDigits } else { $true }
                     includeSpecialChars = if ($null -ne $PasswordSettings.includeSpecialChars) { ConvertTo-Bool $PasswordSettings.includeSpecialChars } else { $true }
-                    specialCharSet     = if ($PasswordSettings.specialCharSet) { $PasswordSettings.specialCharSet } else { '$%&*#' }
-                    wordCount          = if ($PasswordSettings.wordCount -and [int]::TryParse("$($PasswordSettings.wordCount)", [ref]$null)) { [int]$PasswordSettings.wordCount } else { 4 }
-                    separator          = if ($null -ne $PasswordSettings.separator) { $PasswordSettings.separator } else { '-' }
-                    capitalizeWords    = if ($null -ne $PasswordSettings.capitalizeWords) { ConvertTo-Bool $PasswordSettings.capitalizeWords } else { $false }
-                    appendNumber       = if ($null -ne $PasswordSettings.appendNumber) { ConvertTo-Bool $PasswordSettings.appendNumber } else { $false }
-                    appendSpecialChar  = if ($null -ne $PasswordSettings.appendSpecialChar) { ConvertTo-Bool $PasswordSettings.appendSpecialChar } else { $false }
+                    specialCharSet      = if ($PasswordSettings.specialCharSet) { $PasswordSettings.specialCharSet } else { '$%&*#' }
+                    wordCount           = if ($PasswordSettings.wordCount -and [int]::TryParse("$($PasswordSettings.wordCount)", [ref]$null)) { [int]$PasswordSettings.wordCount } else { 4 }
+                    separator           = if ($null -ne $PasswordSettings.separator) { $PasswordSettings.separator } else { '-' }
+                    capitalizeWords     = if ($null -ne $PasswordSettings.capitalizeWords) { ConvertTo-Bool $PasswordSettings.capitalizeWords } else { $false }
+                    appendNumber        = if ($null -ne $PasswordSettings.appendNumber) { ConvertTo-Bool $PasswordSettings.appendNumber } else { $false }
+                    appendSpecialChar   = if ($null -ne $PasswordSettings.appendSpecialChar) { ConvertTo-Bool $PasswordSettings.appendSpecialChar } else { $false }
                 }
 
                 # Persist migrated config so legacy type is upgraded in storage
                 if ($needsMigration) {
                     $MigratedEntity = @{
-                        'PartitionKey'       = 'settings'
-                        'RowKey'             = 'settings'
-                        'passwordType'       = $resolvedConfig.passwordType
-                        'charCount'          = "$($resolvedConfig.charCount)"
-                        'includeUppercase'   = $resolvedConfig.includeUppercase
-                        'includeLowercase'   = $resolvedConfig.includeLowercase
-                        'includeDigits'      = $resolvedConfig.includeDigits
+                        'PartitionKey'        = 'settings'
+                        'RowKey'              = 'settings'
+                        'passwordType'        = $resolvedConfig.passwordType
+                        'charCount'           = "$($resolvedConfig.charCount)"
+                        'includeUppercase'    = $resolvedConfig.includeUppercase
+                        'includeLowercase'    = $resolvedConfig.includeLowercase
+                        'includeDigits'       = $resolvedConfig.includeDigits
                         'includeSpecialChars' = $resolvedConfig.includeSpecialChars
-                        'specialCharSet'     = $resolvedConfig.specialCharSet
-                        'wordCount'          = "$($resolvedConfig.wordCount)"
-                        'separator'          = $resolvedConfig.separator
-                        'capitalizeWords'    = $resolvedConfig.capitalizeWords
-                        'appendNumber'       = $resolvedConfig.appendNumber
-                        'appendSpecialChar'  = $resolvedConfig.appendSpecialChar
+                        'specialCharSet'      = $resolvedConfig.specialCharSet
+                        'wordCount'           = "$($resolvedConfig.wordCount)"
+                        'separator'           = $resolvedConfig.separator
+                        'capitalizeWords'     = $resolvedConfig.capitalizeWords
+                        'appendNumber'        = $resolvedConfig.appendNumber
+                        'appendSpecialChar'   = $resolvedConfig.appendSpecialChar
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $MigratedEntity -Force | Out-Null
                     Write-LogMessage -headers $Request.Headers -API $APIName -message "Migrated legacy password type 'Correct-Battery-Horse' to 'Passphrase'" -Sev 'Info'
@@ -99,11 +87,7 @@ Function Invoke-ExecPasswordConfig {
                 $resolvedConfig
             }
         } else {
-            # ── Validate request body ────────────────────────────────────────
-            if (-not (Test-RequestBody $Request.Body)) {
-                $StatusCode = [HttpStatusCode]::BadRequest
-                throw 'Request body must be a valid JSON object'
-            }
+
 
             # Password type validation
             $pwType = if ($null -ne $Request.Body.passwordType) { "$($Request.Body.passwordType)" } else { '' }
@@ -116,13 +100,13 @@ Function Invoke-ExecPasswordConfig {
                 throw 'Please select a valid password type (Classic or Passphrase)'
             }
 
-            $includeUppercase   = ConvertTo-Bool $Request.Body.includeUppercase
-            $includeLowercase   = ConvertTo-Bool $Request.Body.includeLowercase
-            $includeDigits      = ConvertTo-Bool $Request.Body.includeDigits
+            $includeUppercase = ConvertTo-Bool $Request.Body.includeUppercase
+            $includeLowercase = ConvertTo-Bool $Request.Body.includeLowercase
+            $includeDigits = ConvertTo-Bool $Request.Body.includeDigits
             $includeSpecialChars = ConvertTo-Bool $Request.Body.includeSpecialChars
-            $capitalizeWords    = ConvertTo-Bool $Request.Body.capitalizeWords
-            $appendNumber       = ConvertTo-Bool $Request.Body.appendNumber
-            $appendSpecialChar  = ConvertTo-Bool $Request.Body.appendSpecialChar
+            $capitalizeWords = ConvertTo-Bool $Request.Body.capitalizeWords
+            $appendNumber = ConvertTo-Bool $Request.Body.appendNumber
+            $appendSpecialChar = ConvertTo-Bool $Request.Body.appendSpecialChar
 
             # Char count validation (classic only)
             $charCount = 0
@@ -235,25 +219,25 @@ Function Invoke-ExecPasswordConfig {
 
             # ── Persist validated config ──────────────────────────────────────
             $PasswordConfig = @{
-                'PartitionKey'       = 'settings'
-                'RowKey'             = 'settings'
-                'passwordType'       = $pwType
-                'charCount'          = "$charCount"
-                'includeUppercase'   = $includeUppercase
-                'includeLowercase'   = $includeLowercase
-                'includeDigits'      = $includeDigits
+                'PartitionKey'        = 'settings'
+                'RowKey'              = 'settings'
+                'passwordType'        = $pwType
+                'charCount'           = "$charCount"
+                'includeUppercase'    = $includeUppercase
+                'includeLowercase'    = $includeLowercase
+                'includeDigits'       = $includeDigits
                 'includeSpecialChars' = $includeSpecialChars
-                'specialCharSet'     = $specialCharSet
-                'wordCount'          = "$wordCount"
-                'separator'          = $separator
-                'capitalizeWords'    = $capitalizeWords
-                'appendNumber'       = $appendNumber
-                'appendSpecialChar'  = $appendSpecialChar
+                'specialCharSet'      = $specialCharSet
+                'wordCount'           = "$wordCount"
+                'separator'           = $separator
+                'capitalizeWords'     = $capitalizeWords
+                'appendNumber'        = $appendNumber
+                'appendSpecialChar'   = $appendSpecialChar
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $PasswordConfig -Force | Out-Null
-            Write-LogMessage -headers $Request.Headers -API $APIName -message "Successfully set password configuration" -Sev 'Info'
-            "Successfully set the configuration"
+            Write-LogMessage -headers $Request.Headers -API $APIName -message 'Successfully set password configuration' -Sev 'Info'
+            'Successfully set the configuration'
         }
     } catch {
         if ($StatusCode -eq [HttpStatusCode]::OK) {
@@ -264,7 +248,7 @@ Function Invoke-ExecPasswordConfig {
         "Failed to set configuration: $($ErrorMessage.NormalizedError)"
     }
 
-    $body = [pscustomobject]@{'Results' = if ($null -ne $results) { $results } else { "Operation completed" } }
+    $body = [pscustomobject]@{'Results' = if ($null -ne $results) { $results } else { 'Operation completed' } }
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
