@@ -495,7 +495,8 @@ function Receive-CIPPTimerTrigger {
             $OrchestratorTable = Get-CIPPTable -TableName 'CippOrchestratorInput'
             $OrphanedInputs = Get-CIPPAzDataTableEntity @OrchestratorTable -Filter "PartitionKey eq 'Input'"
             $CutoffTime = $UtcNow.AddMinutes(-5)
-            $StaleOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -lt $CutoffTime })
+            $MaxAge = $UtcNow.AddHours(-24)
+            $StaleOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -lt $CutoffTime -and $_.Timestamp.DateTime -gt $MaxAge })
             if ($StaleOrphans.Count -gt 0) {
                 Write-Information "Found $($StaleOrphans.Count) orphaned orchestration inputs, re-queuing..."
                 foreach ($Orphan in $StaleOrphans) {
@@ -507,6 +508,18 @@ function Receive-CIPPTimerTrigger {
                     }
                 }
                 Write-LogMessage -API 'TimerFunction' -message "Re-queued $($StaleOrphans.Count) orphaned orchestration inputs" -sev Info
+            }
+            # Clean up orphans older than 24h - too stale to run
+            $ExpiredOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -le $MaxAge })
+            if ($ExpiredOrphans.Count -gt 0) {
+                Write-Information "Removing $($ExpiredOrphans.Count) expired orphaned inputs (older than 24h)..."
+                foreach ($Expired in $ExpiredOrphans) {
+                    try {
+                        Remove-AzDataTableEntity @OrchestratorTable -Entity $Expired -Force
+                    } catch {
+                        Write-Warning "Failed to remove expired orphan $($Expired.RowKey): $($_.Exception.Message)"
+                    }
+                }
             }
             # Mark as completed so we don't scan again
             $null = Add-CIPPAzDataTableEntity @OrphanConfigTable -Entity @{
