@@ -31,7 +31,7 @@ function Invoke-ExecGraphExplorerPreset {
         }
     }
 
-    $params = $Request.Body.preset | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', NoPagination, '$top', IsShared
+    $params = $Request.Body.preset | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', '$orderby', '$format', '$top', NoPagination, ReverseTenantLookup, ReverseTenantLookupProperty, AsApp, version, IsShared
 
     if ($params.'$select'.value) {
         $params.'$select' = ($params.'$select').value -join ','
