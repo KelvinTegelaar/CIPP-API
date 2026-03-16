@@ -509,7 +509,55 @@
                         "passwordType": {
                           "type": "string",
                           "description": "The type of password generation",
-                          "enum": ["Classic", "Correct-Battery-Horse"]
+                          "enum": ["Classic", "Passphrase"]
+                        },
+                        "charCount": {
+                          "type": "integer",
+                          "description": "Number of characters for classic passwords (8-256)",
+                          "minimum": 8,
+                          "maximum": 256
+                        },
+                        "includeUppercase": {
+                          "type": "boolean",
+                          "description": "Include uppercase letters in classic passwords"
+                        },
+                        "includeLowercase": {
+                          "type": "boolean",
+                          "description": "Include lowercase letters in classic passwords"
+                        },
+                        "includeDigits": {
+                          "type": "boolean",
+                          "description": "Include digits in classic passwords"
+                        },
+                        "includeSpecialChars": {
+                          "type": "boolean",
+                          "description": "Include special characters in classic passwords"
+                        },
+                        "specialCharSet": {
+                          "type": "string",
+                          "description": "Custom special character set (max 32 chars, printable ASCII symbols only)"
+                        },
+                        "wordCount": {
+                          "type": "integer",
+                          "description": "Number of words for passphrase (2-10)",
+                          "minimum": 2,
+                          "maximum": 10
+                        },
+                        "separator": {
+                          "type": "string",
+                          "description": "Separator between words in passphrase (max 5 chars)"
+                        },
+                        "capitalizeWords": {
+                          "type": "boolean",
+                          "description": "Capitalize first letter of each word in passphrase"
+                        },
+                        "appendNumber": {
+                          "type": "boolean",
+                          "description": "Append a random number to passphrase"
+                        },
+                        "appendSpecialChar": {
+                          "type": "boolean",
+                          "description": "Append a random special character to passphrase"
                         }
                       }
                     }
@@ -548,7 +596,57 @@
                   "passwordType": {
                     "type": "string",
                     "description": "The type of password generation",
-                    "enum": ["Classic", "Correct-Battery-Horse"]
+                    "enum": ["Classic", "Passphrase"]
+                  },
+                  "charCount": {
+                    "type": "integer",
+                    "description": "Number of characters for classic passwords",
+                    "minimum": 8,
+                    "maximum": 256
+                  },
+                  "includeUppercase": {
+                    "type": "boolean",
+                    "description": "Include uppercase letters in classic passwords"
+                  },
+                  "includeLowercase": {
+                    "type": "boolean",
+                    "description": "Include lowercase letters in classic passwords"
+                  },
+                  "includeDigits": {
+                    "type": "boolean",
+                    "description": "Include digits in classic passwords"
+                  },
+                  "includeSpecialChars": {
+                    "type": "boolean",
+                    "description": "Include special characters in classic passwords"
+                  },
+                  "specialCharSet": {
+                    "type": "string",
+                    "description": "Custom special character set (max 32 chars, printable ASCII symbols only)",
+                    "maxLength": 32
+                  },
+                  "wordCount": {
+                    "type": "integer",
+                    "description": "Number of words for passphrase",
+                    "minimum": 2,
+                    "maximum": 10
+                  },
+                  "separator": {
+                    "type": "string",
+                    "description": "Separator between words in passphrase",
+                    "maxLength": 5
+                  },
+                  "capitalizeWords": {
+                    "type": "boolean",
+                    "description": "Capitalize first letter of each word in passphrase"
+                  },
+                  "appendNumber": {
+                    "type": "boolean",
+                    "description": "Append a random number to passphrase"
+                  },
+                  "appendSpecialChar": {
+                    "type": "boolean",
+                    "description": "Append a random special character to passphrase"
                   }
                 }
               }
