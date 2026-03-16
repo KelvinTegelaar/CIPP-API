@@ -258,7 +258,7 @@ function New-CIPPAlertTemplate {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                     $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
                 }
-                $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.ObjectId)&tenantFilter=$Tenant"
+                $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.Userkey)&tenantFilter=$Tenant"
                 $ButtonText = 'User Management'
                 $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
             }

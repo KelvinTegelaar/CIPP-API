@@ -43,6 +43,17 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserSpecificSettings JSON: $($_.Exception.Message)"
         }
 
+        # Get user bookmarks
+        try {
+            $UserBookmarks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserBookmarks' and RowKey eq '$Username'"
+            $UserBookmarks = $UserBookmarks.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            if ($UserBookmarks -and $UserBookmarks -isnot [System.Array]) {
+                $UserBookmarks = @($UserBookmarks)
+            }
+        } catch {
+            Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
+        }
+
         #Get branding settings
         if ($UserSettings) {
             $brandingTable = Get-CippTable -tablename 'Config'
@@ -54,6 +65,10 @@ function Invoke-ListUserSettings {
 
         if ($UserSpecificSettings) {
             $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null
+        }
+
+        if ($UserBookmarks) {
+            $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserBookmarks' -Value $UserBookmarks -Force | Out-Null
         }
 
         $StatusCode = [HttpStatusCode]::OK

@@ -116,7 +116,7 @@ function Push-CIPPDBCacheData {
         if ($ConditionalAccessCapable) {
             $ConditionalAccessCacheFunctions = @(
                 'ConditionalAccessPolicies'
-                'AuthenticationFlowsPolicy'
+                #'AuthenticationFlowsPolicy'
                 'CredentialUserRegistrationDetails'
                 'UserRegistrationDetails'
             )
