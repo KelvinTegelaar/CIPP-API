@@ -15,6 +15,9 @@ function Invoke-AddScheduledItem {
 
     $DisallowDuplicateName = $Request.Query.DisallowDuplicateName ?? $Request.Body.DisallowDuplicateName
 
+    $HeaderProperties = @('x-ms-client-principal', 'x-ms-client-principal-id', 'x-ms-client-principal-name', 'x-forwarded-for')
+    $Headers = $Request.Headers | Select-Object -Property $HeaderProperties -ErrorAction SilentlyContinue
+
     if ($Request.Body.RunNow -eq $true) {
         try {
             $Table = Get-CIPPTable -TableName 'ScheduledTasks'
@@ -29,7 +32,7 @@ function Invoke-AddScheduledItem {
                     Clear        = $true
                 }
                 $null = Test-CIPPRerun @RerunParams
-                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Request.Headers
+                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Headers
             } else {
                 $Result = "Task with id $($Request.Body.RowKey) does not exist"
             }
@@ -41,7 +44,7 @@ function Invoke-AddScheduledItem {
     } else {
         $ScheduledTask = @{
             Task                  = $Request.Body
-            Headers               = $Request.Headers
+            Headers               = $Headers
             Hidden                = $hidden
             DisallowDuplicateName = $DisallowDuplicateName
             DesiredStartTime      = $Request.Body.DesiredStartTime

@@ -26,6 +26,7 @@ function Invoke-ListRoles {
                 DisplayName    = $Role.displayName
                 Description    = $Role.description
                 Members        = @($Members)
+                SID            = (Convert-AzureAdObjectIdToSid -ObjectID $Role.id)
             }
         }
         $StatusCode = [HttpStatusCode]::OK

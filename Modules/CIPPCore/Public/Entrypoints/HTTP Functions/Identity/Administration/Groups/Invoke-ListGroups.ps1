@@ -107,6 +107,7 @@ function Invoke-ListGroups {
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
+                SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))
             }
         } else {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
@@ -126,7 +127,8 @@ function Invoke-ListGroups {
                     elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
                 }
             },
-            @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
+            @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } },
+            @{Name = 'SID'; Expression = { Convert-AzureAdObjectIdToSid -ObjectID $_.id } }
             $GraphRequest = @($GraphRequest | Sort-Object displayName)
         }
 

@@ -110,18 +110,18 @@ function Invoke-CIPPStandardAutopilotProfile {
         } else {
             try {
                 $Parameters = @{
-                    tenantFilter       = $Tenant
-                    displayName        = $Settings.DisplayName
-                    description        = $Settings.Description
-                    userType           = $userType
+                    TenantFilter       = $Tenant
+                    DisplayName        = $Settings.DisplayName
+                    Description        = $Settings.Description
+                    UserType           = $userType
                     DeploymentMode     = $DeploymentMode
                     AssignTo           = $Settings.AssignToAllDevices
-                    devicenameTemplate = $Settings.DeviceNameTemplate
-                    allowWhiteGlove    = $Settings.AllowWhiteGlove
+                    DeviceNameTemplate = $Settings.DeviceNameTemplate
+                    AllowWhiteGlove    = $Settings.AllowWhiteGlove
                     CollectHash        = $Settings.CollectHash
-                    hideChangeAccount  = $true
-                    hidePrivacy        = $Settings.HidePrivacy
-                    hideTerms          = $Settings.HideTerms
+                    HideChangeAccount  = $true
+                    HidePrivacy        = $Settings.HidePrivacy
+                    HideTerms          = $Settings.HideTerms
                     AutoKeyboard       = $Settings.AutoKeyboard
                     Language           = $Settings.Languages.value
                 }

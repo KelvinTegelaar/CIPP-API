@@ -1,4 +1,4 @@
-function Invoke-ExecAccessTest {
+function Invoke-ExecGDAPTrace {
     <#
     .SYNOPSIS
         Tests the complete GDAP (Granular Delegated Admin Privileges) access path for a user.
@@ -213,6 +213,104 @@ function Invoke-ExecAccessTest {
             }
         } catch {
             Write-LogMessage -Headers $Headers -API $APIName -message "Could not get user group memberships: $($_.Exception.Message)" -sev 'Warn'
+        }
+
+        # ============================================================================
+        # HELPER FUNCTION: Find complete transitive path from user to target group
+        # ============================================================================
+        # This recursive function finds the complete path through nested groups,
+        # handling any depth of nesting (User → Group A → Group B → ... → Target Group)
+        #
+        # Examples of paths it can trace:
+        # - User → Target Group (direct membership)
+        # - User → Group A → Target Group (2 levels)
+        # - User → Group A → Group B → Target Group (3 levels)
+        # - User → Group A → Group B → Group C → Target Group (4 levels)
+        # - And so on, up to MaxDepth (10 levels)
+        #
+        # The function recursively traverses the group membership hierarchy by:
+        # 1. Checking if user is directly in the target group
+        # 2. If not, checking each group that is a member of the target group
+        # 3. Recursively checking if the user is in those intermediate groups
+        # 4. Building the complete path from user to target group
+        # ============================================================================
+        function Find-TransitiveGroupPath {
+            param(
+                [string]$UserId,
+                [string]$TargetGroupId,
+                [string]$TargetGroupName,
+                [hashtable]$VisitedGroups = @{},
+                [int]$MaxDepth = 10
+            )
+
+            # Prevent infinite loops and excessive depth
+            if ($VisitedGroups.ContainsKey($TargetGroupId) -or $MaxDepth -le 0) {
+                return $null
+            }
+            $VisitedGroups[$TargetGroupId] = $true
+
+            try {
+                # Check if user is directly in target group
+                $DirectMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,userPrincipalName" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+                if ($DirectMembers.value | Where-Object { $_.id -eq $UserId }) {
+                    # User is directly in target group
+                    return @(
+                        @{
+                            sequence        = 0
+                            groupId         = $TargetGroupId
+                            groupName       = $TargetGroupName
+                            membershipType  = 'direct'
+                        }
+                    )
+                }
+
+                # User is not directly in target group, check nested groups
+                $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,@odata.type" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+
+                if ($GroupMembers.value) {
+                    foreach ($Member in $GroupMembers.value) {
+                        # Only check groups, not users
+                        if ($Member.'@odata.type' -eq '#microsoft.graph.group') {
+                            $IntermediateGroupId = $Member.id
+                            $IntermediateGroupName = $Member.displayName
+
+                            # Recursively check if user is in this intermediate group
+                            $SubPath = Find-TransitiveGroupPath -UserId $UserId -TargetGroupId $IntermediateGroupId -TargetGroupName $IntermediateGroupName -VisitedGroups $VisitedGroups -MaxDepth ($MaxDepth - 1)
+
+                            if ($SubPath) {
+                                # Found a path! Build the complete chain
+                                $Path = @()
+                                $Sequence = 0
+
+                                # Add intermediate groups from sub-path
+                                foreach ($PathItem in $SubPath) {
+                                    $Path += @{
+                                        sequence        = $Sequence++
+                                        groupId         = $PathItem.groupId
+                                        groupName       = $PathItem.groupName
+                                        membershipType  = $PathItem.membershipType  # Preserve membership type from sub-path
+                                    }
+                                }
+
+                                # Add target group at the end (intermediate group is nested in target)
+                                $Path += @{
+                                    sequence        = $Sequence
+                                    groupId         = $TargetGroupId
+                                    groupName       = $TargetGroupName
+                                    membershipType  = 'nested'
+                                }
+
+                                return $Path
+                            }
+                        }
+                    }
+                }
+            } catch {
+                # If we can't check (permissions, API error), return null
+                # Silently fail - errors are expected when checking group memberships
+            }
+
+            return $null
         }
 
         # ============================================================================
@@ -445,78 +543,48 @@ function Invoke-ExecAccessTest {
                         # nested, try to find the path through intermediate groups.
                         # ============================================================
                         $IsPathComplete = $true
-                        # Start with assumption of direct membership
-                        $MembershipPath = @(
-                            @{
-                                groupId        = $GroupId
-                                groupName      = $Group.displayName
-                                membershipType = 'direct'
-                            }
-                        )
+                        # Path will be determined by Find-TransitiveGroupPath function
+                        # Initialize empty - will be populated below
+                        $MembershipPath = @()
 
                         # ============================================================
-                        # Determine if membership is direct or nested
+                        # Determine if membership is direct or nested and find full path
                         # ============================================================
-                        # We check the direct members of the group to see if the user
-                        # is directly in it. If not, they must be nested (through
-                        # another group that's a member of this group).
+                        # We use a recursive function to find the complete transitive path
+                        # through nested groups, handling any depth of nesting.
+                        # This replaces the previous single-level detection with full
+                        # path tracing: User → Group A → Group B → ... → Target Group
                         # ============================================================
                         try {
-                            # Get direct members of the target group
-                            $DirectMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$GroupId/members?`$select=id,displayName,userPrincipalName" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
-                            $IsDirectMember = $DirectMembers.value | Where-Object { $_.id -eq $UserId }
+                            # Use recursive function to find the complete path
+                            $FullPath = Find-TransitiveGroupPath -UserId $UserId -TargetGroupId $GroupId -TargetGroupName $Group.displayName
 
-                            if (-not $IsDirectMember) {
-                                # ====================================================
-                                # User is nested - find the path through nested groups
-                                # ====================================================
-                                # The user is not directly in this group, so they must
-                                # be in a group that's a member of this group.
-                                # We try to find which of the user's direct groups
-                                # are members of this target group.
-                                # ====================================================
-                                $MembershipPath[0].membershipType = 'nested'
-
-                                # Get groups the user is directly in (not nested)
-                                $UserDirectGroups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/users/$UserId/memberOf?`$select=id,displayName" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
-                                if ($UserDirectGroups) {
-                                    $NestedGroups = @()
-                                    # Check each of the user's direct groups
-                                    foreach ($UserGroup in $UserDirectGroups) {
-                                        if ($UserGroup.'@odata.type' -eq '#microsoft.graph.group') {
-                                            try {
-                                                # Check if this user's direct group is a member of the target group
-                                                $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$GroupId/members?`$select=id" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
-                                                if ($GroupMembers.value | Where-Object { $_.id -eq $UserGroup.id }) {
-                                                    # Found it! This is the intermediate group
-                                                    $NestedGroups += @{
-                                                        groupId        = $UserGroup.id
-                                                        groupName      = $UserGroup.displayName
-                                                        membershipType = 'direct'  # User is direct member of this intermediate group
-                                                    }
-                                                }
-                                            } catch {
-                                                # Skip if we can't check (permissions issue, etc.)
-                                            }
-                                        }
+                            if ($FullPath) {
+                                # Found the complete path - use it
+                                $MembershipPath = $FullPath
+                            } else {
+                                # Fallback: Couldn't determine path (permissions, API error, etc.)
+                                # We know user is a member (from transitiveMemberOf), so mark as nested
+                                $MembershipPath = @(
+                                    @{
+                                        sequence        = 0
+                                        groupId         = $GroupId
+                                        groupName       = $Group.displayName
+                                        membershipType  = 'nested'
                                     }
-                                    if ($NestedGroups.Count -gt 0) {
-                                        # Build the complete path: User → Intermediate Group → Target Group
-                                        # Add the target group to complete the path
-                                        $NestedGroups += @{
-                                            groupId        = $GroupId
-                                            groupName      = $Group.displayName
-                                            membershipType = 'nested'  # Intermediate group is nested in target group
-                                        }
-                                        $MembershipPath = $NestedGroups
-                                    }
-                                }
+                                )
                             }
-                            # If IsDirectMember is true, membershipPath already shows 'direct' - we're done
                         } catch {
-                            # If we can't check direct members (permissions, API error), assume nested
+                            # If we can't check (permissions, API error), assume nested
                             # This is a safe assumption - we know they're a member somehow
-                            $MembershipPath[0].membershipType = 'nested'
+                            $MembershipPath = @(
+                                @{
+                                    sequence        = 0
+                                    groupId         = $GroupId
+                                    groupName       = $Group.displayName
+                                    membershipType  = 'nested'
+                                }
+                            )
                         }
                     } else {
                         # ============================================================
@@ -538,10 +606,11 @@ function Invoke-ExecAccessTest {
                         # Record the broken path
                         $MembershipPath = @(
                             @{
-                                groupId         = $GroupId
-                                groupName       = $Group.displayName
-                                membershipType  = 'not_member'
-                                groupHasMembers = $GroupHasMembers  # Helps diagnose if group is empty
+                                sequence         = 0
+                                groupId          = $GroupId
+                                groupName        = $Group.displayName
+                                membershipType   = 'not_member'
+                                groupHasMembers  = $GroupHasMembers  # Helps diagnose if group is empty
                             }
                         )
                     }
@@ -565,7 +634,7 @@ function Invoke-ExecAccessTest {
                     }
 
                     $RelationshipGroups.Add($GroupData)
-                    Write-LogMessage -Headers $Headers -API $APIName -message "Processed group $GroupDisplayName ($GroupId) with $($Roles.Count) roles for relationship ${RelationshipName}" -Sev 'Debug'
+                    Write-LogMessage -Headers $Headers -API $APIName -message "Processed group $($Group.displayName) ($GroupId) with $($Roles.Count) roles for relationship ${RelationshipName}" -Sev 'Debug'
 
                     # ================================================================
                     # Map each role to this relationship/group combination
@@ -638,6 +707,14 @@ function Invoke-ExecAccessTest {
         # - All relationships/groups that have it
         # - The complete path from role to user (if access exists)
         # ============================================================================
+
+        # Create a lookup map for relationship data (relationshipId -> relationship object)
+        # This allows us to quickly access customer tenant info when building accessPaths
+        $RelationshipLookup = @{}
+        foreach ($RelData in $AllRelationshipData) {
+            $RelationshipLookup[$RelData.relationshipId] = $RelData
+        }
+
         $RoleTraces = [System.Collections.Generic.List[object]]::new()
 
         # Check each of the 15 standard GDAP roles
@@ -683,14 +760,25 @@ function Invoke-ExecAccessTest {
                     # ================================================================
                     if ($GroupData.isMember) {
                         $UserHasAccess = $true
-                        # Record the access path for this role
-                        $AccessPaths.Add([PSCustomObject]@{
-                                relationshipId   = $RoleRelationship.relationshipId
-                                relationshipName = $RoleRelationship.relationshipName
-                                groupId          = $RoleRelationship.groupId
-                                groupName        = $RoleRelationship.groupName
-                                membershipPath   = $GroupData.membershipPath  # Shows: User → Group (or User → Intermediate → Group)
-                            })
+
+                        # Get full relationship context from lookup
+                        $FullRelationshipData = $null
+                        if ($RelationshipLookup.ContainsKey($RoleRelationship.relationshipId)) {
+                            $FullRelationshipData = $RelationshipLookup[$RoleRelationship.relationshipId]
+                        }
+
+                        # Record the access path for this role with full relationship context
+                        $AccessPath = [PSCustomObject]@{
+                            relationshipId      = $RoleRelationship.relationshipId
+                            relationshipName    = $RoleRelationship.relationshipName
+                            relationshipStatus  = $RoleRelationship.relationshipStatus
+                            customerTenantId     = if ($FullRelationshipData) { $FullRelationshipData.customerTenantId } else { $CustomerTenantId }
+                            customerTenantName  = if ($FullRelationshipData) { $FullRelationshipData.customerTenantName } else { $CustomerTenantName }
+                            groupId             = $RoleRelationship.groupId
+                            groupName            = $RoleRelationship.groupName
+                            membershipPath       = $GroupData.membershipPath  # Shows: User → Group(s) → Target Group (with sequence numbers)
+                        }
+                        $AccessPaths.Add($AccessPath)
                     }
                 }
             }

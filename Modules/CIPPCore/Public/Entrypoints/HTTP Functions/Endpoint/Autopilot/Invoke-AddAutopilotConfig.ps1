@@ -8,6 +8,8 @@ function Invoke-AddAutopilotConfig {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Input bindings are passed in via param block.
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $Tenants = $Request.Body.selectedTenants.value
     $Profbod = [pscustomobject]$Request.Body
     $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
@@ -30,6 +32,8 @@ function Invoke-AddAutopilotConfig {
         HideTerms          = $Profbod.HideTerms
         Autokeyboard       = $Profbod.Autokeyboard
         Language           = $ProfBod.languages.value
+        Headers            = $Headers
+        APIName            = $APIName
     }
     $Results = foreach ($tenant in $Tenants) {
         $profileParams['tenantFilter'] = $tenant
