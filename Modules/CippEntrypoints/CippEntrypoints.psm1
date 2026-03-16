@@ -486,6 +486,41 @@ function Receive-CIPPTimerTrigger {
     param($Timer)
 
     $UtcNow = (Get-Date).ToUniversalTime()
+
+    try {
+        #temporary orphan check - Remove at next release.
+        $OrphanConfigTable = Get-CIPPTable -tablename 'Config'
+        $OrphanFlag = Get-CIPPAzDataTableEntity @OrphanConfigTable -Filter "PartitionKey eq 'OrphanRequeue' and RowKey eq 'OrphanRequeue'" -ErrorAction SilentlyContinue
+        if (-not $OrphanFlag -or $OrphanFlag.state -ne $true) {
+            $OrchestratorTable = Get-CIPPTable -TableName 'CippOrchestratorInput'
+            $OrphanedInputs = Get-CIPPAzDataTableEntity @OrchestratorTable -Filter "PartitionKey eq 'Input'"
+            $CutoffTime = $UtcNow.AddMinutes(-5)
+            $StaleOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -lt $CutoffTime })
+            if ($StaleOrphans.Count -gt 0) {
+                Write-Information "Found $($StaleOrphans.Count) orphaned orchestration inputs, re-queuing..."
+                foreach ($Orphan in $StaleOrphans) {
+                    try {
+                        Add-CippQueueMessage -Cmdlet 'Start-CIPPOrchestrator' -Parameters @{ InputObjectGuid = $Orphan.RowKey }
+                        Write-Information "Re-queued orphaned orchestration: $($Orphan.RowKey)"
+                    } catch {
+                        Write-Warning "Failed to re-queue orphan $($Orphan.RowKey): $($_.Exception.Message)"
+                    }
+                }
+                Write-LogMessage -API 'TimerFunction' -message "Re-queued $($StaleOrphans.Count) orphaned orchestration inputs" -sev Info
+            }
+            # Mark as completed so we don't scan again
+            $null = Add-CIPPAzDataTableEntity @OrphanConfigTable -Entity @{
+                PartitionKey = 'OrphanRequeue'
+                RowKey       = 'OrphanRequeue'
+                state        = $true
+                Timestamp    = $UtcNow
+                Count        = $StaleOrphans.Count
+            } -Force
+        }
+    } catch {
+        Write-Warning "Orphan re-queue check failed: $($_.Exception.Message)"
+    }
+
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
