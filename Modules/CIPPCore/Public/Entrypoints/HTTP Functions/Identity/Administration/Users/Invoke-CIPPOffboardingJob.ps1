@@ -320,7 +320,7 @@ function Invoke-CIPPOffboardingJob {
             }
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject -CallerIsQueueTrigger
         Write-Information "Started offboarding job for $Username with ID = '$InstanceId'"
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Started offboarding job for $Username with $($Batch.Count) tasks. Instance ID: $InstanceId" -sev Info
 

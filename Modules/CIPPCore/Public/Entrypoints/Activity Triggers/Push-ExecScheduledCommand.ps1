@@ -26,6 +26,10 @@ function Push-ExecScheduledCommand {
     # Detect if this is a multi-tenant task that should store results per-tenant
     $IsMultiTenantTask = ($task.Tenant -eq 'AllTenants' -or $task.TenantGroup)
 
+    # Detect if this is an individual tenant execution within a multi-tenant task
+    # In this case, skip parent task state updates - the PostExecution function will handle it
+    $IsMultiTenantExecution = $IsMultiTenantTask -and ($Tenant -ne $task.Tenant)
+
     # For tenant group tasks, the tenant will be the expanded tenant from the orchestrator
     # We don't need to expand groups here as that's handled in the orchestrator
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
@@ -45,7 +49,8 @@ function Push-ExecScheduledCommand {
     # We accept both to handle edge cases
 
     # Check for rerun protection - prevent duplicate executions within the recurrence interval
-    if ($task.Recurrence -and $task.Recurrence -ne '0') {
+    # Do this BEFORE updating state to 'Running' to avoid getting stuck
+    if ($task.Recurrence -and $task.Recurrence -ne '0' -and !$IsMultiTenantExecution) {
         # Calculate interval in seconds from recurrence string
         $IntervalSeconds = switch -Regex ($task.Recurrence) {
             '^(\d+)$' { [int64]$matches[1] * 86400 }  # Plain number = days
@@ -81,6 +86,19 @@ function Push-ExecScheduledCommand {
                 Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
                 return
             }
+        }
+    }
+
+    # Also check for one-time task rerun protection based on ExecutedTime
+    if ((!$task.Recurrence -or $task.Recurrence -eq '0') -and $task.ExecutedTime -and !$IsMultiTenantExecution) {
+        $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+        $timeSinceExecution = $currentUnixTime - [int64]$task.ExecutedTime
+
+        # If executed within last 15 minutes, skip (likely a duplicate pickup)
+        if ($timeSinceExecution -lt 900) {
+            Write-Information "One-time task $($task.Name) for tenant $Tenant was recently executed ($timeSinceExecution seconds ago). Skipping to prevent duplicate execution."
+            Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+            return
         }
     }
 
@@ -133,21 +151,27 @@ function Push-ExecScheduledCommand {
         $IsTriggerTask = $false
     }
 
-    $null = Update-AzDataTableEntity -Force @Table -Entity @{
-        PartitionKey = $task.PartitionKey
-        RowKey       = $task.RowKey
-        TaskState    = 'Running'
+    # Only update parent task state if this is NOT a multi-tenant execution
+    # Multi-tenant executions have their parent state managed by PostExecution
+    if (!$IsMultiTenantExecution) {
+        $null = Update-AzDataTableEntity -Force @Table -Entity @{
+            PartitionKey = $task.PartitionKey
+            RowKey       = $task.RowKey
+            TaskState    = 'Running'
+        }
     }
 
     $Function = Get-Command -Name $Item.Command
     if ($null -eq $Function) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
         $State = 'Failed'
-        Update-AzDataTableEntity -Force @Table -Entity @{
-            PartitionKey = $task.PartitionKey
-            RowKey       = $task.RowKey
-            Results      = "$Results"
-            TaskState    = $State
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey = $task.PartitionKey
+                RowKey       = $task.RowKey
+                Results      = "$Results"
+                TaskState    = $State
+            }
         }
 
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): The command $($Item.Command) does not exist." -sev Error
@@ -308,18 +332,20 @@ function Push-ExecScheduledCommand {
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Write-Information "The job is recurring, but failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
-        Update-AzDataTableEntity -Force @Table -Entity @{
-            PartitionKey  = $task.PartitionKey
-            RowKey        = $task.RowKey
-            Results       = "$errorMessage"
-            ScheduledTime = "$nextRunUnixTime"
-            TaskState     = $State
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey  = $task.PartitionKey
+                RowKey        = $task.RowKey
+                Results       = "$errorMessage"
+                ScheduledTime = "$nextRunUnixTime"
+                TaskState     = $State
+            }
         }
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
 
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
-    if ($Results -and $Item.Command -notin $OrchestratorBasedCommands) {
+    if ($Results -and $Item.Command -notin $OrchestratorBasedCommands -and -not [string]::IsNullOrWhiteSpace($Task.PostExecution)) {
         Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
         Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
     }
@@ -328,13 +354,29 @@ function Push-ExecScheduledCommand {
         # For orchestrator-based commands, skip task state update as it will be handled by post-execution
         if ($Item.Command -in $OrchestratorBasedCommands) {
             Write-Information "Command $($Item.Command) is orchestrator-based. Skipping task state update - will be handled by post-execution."
-            # Update task state to 'Running' to indicate orchestration is in progress
-            Update-AzDataTableEntity -Force @Table -Entity @{
-                PartitionKey = $task.PartitionKey
-                RowKey       = $task.RowKey
-                Results      = 'Orchestration in progress'
-                TaskState    = 'Processing'
+            if (!$IsMultiTenantExecution) {
+                if ($State -eq 'Failed') {
+                    # The orchestrator command itself failed to dispatch - record the failure so the task isn't lost
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "$results"
+                        TaskState    = 'Failed'
+                    }
+                } else {
+                    # Update task state to 'Processing' to indicate orchestration is in progress
+                    Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = 'Orchestration in progress'
+                        TaskState    = 'Processing'
+                    }
+                }
             }
+        } elseif ($IsMultiTenantExecution) {
+            # For multi-tenant executions, skip parent task state updates
+            # The PostExecution function will aggregate all results and update the parent task
+            Write-Information "Multi-tenant execution for tenant $Tenant - parent task state will be updated by PostExecution"
         } elseif ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once' -or $Trigger.ExecutionMode -eq 'once') {
             Write-Information 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
             Update-AzDataTableEntity -Force @Table -Entity @{

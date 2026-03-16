@@ -19,16 +19,22 @@ function Invoke-ExecTestRun {
                 TenantFilter = $TenantFilter
                 QueueId      = $Queue.RowKey
                 QueueName    = "Cache - $TenantFilter"
-                TestRun      = $true
             }
         )
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'TestDataCollectionAndRun'
             Batch            = $Batch
             SkipLog          = $false
+            PostExecution    = @{
+                FunctionName = 'CIPPDBCacheApplyBatch'
+                Parameters   = @{
+                    TestRun      = $true
+                    TenantFilter = $TenantFilter
+                }
+            }
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = [PSCustomObject]@{ Results = "Successfully started data collection and test run for $TenantFilter" }
