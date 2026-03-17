@@ -208,14 +208,31 @@ function Invoke-CIPPStandardNinjaCveSync {
             
             Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Upload completed successfully" -Sev 'Info'
             
-            # Log response if present
+            # Log the full response received from upload helper
             if ($Response) {
-                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "NinjaOne response: $($Response | ConvertTo-Json -Compress)" -Sev 'Debug'
+                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Response from upload helper: $($Response | ConvertTo-Json -Compress)" -Sev 'Debug'
+            } else {
+                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "No response object returned from upload helper" -Sev 'Warning'
+            }
+            
+            # Check if polling timed out
+            if ($Response -and $Response.PollingTimedOut) {
+                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "WARNING: Status polling timed out. Upload may still succeed - check NinjaOne UI to confirm." -Sev 'Warning'
+            }
+            
+            # Log processing results if available
+            if ($Response -and $Response.recordsProcessed) {
+                $SentCount = $CsvRows.Count
+                $ProcessedCount = $Response.recordsProcessed
                 
-                # Check for common response patterns
-                if ($Response.status -and $Response.status -ne "success") {
-                    Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Upload may have issues. Response status: $($Response.status)" -Sev 'Warning'
+                if ($ProcessedCount -lt $SentCount) {
+                    $SkippedCount = $SentCount - $ProcessedCount
+                    Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "NinjaOne processed $ProcessedCount of $SentCount rows ($SkippedCount skipped/deduplicated)" -Sev 'Info'
+                } else {
+                    Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "NinjaOne processed all $ProcessedCount rows" -Sev 'Info'
                 }
+            } else {
+                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "No recordsProcessed count in response - cannot verify processing" -Sev 'Warning'
             }
         }
         catch {
