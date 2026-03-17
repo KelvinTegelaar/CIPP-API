@@ -7,15 +7,31 @@ function Start-UserTasksOrchestrator {
     Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param(
+        $TaskId = $null
+    )
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    # Pending = orchestrator queued, Running = actively executing
-    # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
-    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-    $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
+    if ($TaskId) {
+        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$TaskId'"
+        $task = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
+        if (-not $task.RowKey) {
+            Write-Warning "No scheduled task found with ID: $TaskId"
+            return
+        } else {
+            Write-Information "Starting orchestrator for scheduled task: $($task.Name) with ID: $TaskId"
+            $tasks = @($task)
+        }
+    } else {
+        $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        # Pending = orchestrator queued, Running = actively executing
+        # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
+        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
     $TenantList = Get-Tenants -IncludeErrors

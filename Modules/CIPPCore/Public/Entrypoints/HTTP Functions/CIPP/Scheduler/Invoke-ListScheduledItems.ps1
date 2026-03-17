@@ -11,6 +11,8 @@ function Invoke-ListScheduledItems {
     $ScheduledItemFilter.Add("PartitionKey eq 'ScheduledTask'")
 
     $Id = $Request.Query.Id ?? $Request.Body.Id
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+
     if ($Id) {
         # Interact with query parameters.
         $ScheduledItemFilter.Add("RowKey eq '$($Id)'")
@@ -46,6 +48,10 @@ function Invoke-ListScheduledItems {
     Write-Information "Retrieved $($Tasks.Count) scheduled tasks from storage."
     if ($Type) {
         $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
+    }
+
+    if ($TenantFilter) {
+        $Tasks = $Tasks | Where-Object { $_.tenant -eq $TenantFilter -or $TenantFilter -eq 'AllTenants' }
     }
 
     if ($SearchTitle) {

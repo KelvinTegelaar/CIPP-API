@@ -10,39 +10,41 @@ function Invoke-ExecOffboardUser {
     $AllUsers = $Request.Body.user.value
     $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
     $OffboardingOptions = $Request.Body | Select-Object * -ExcludeProperty user, tenantFilter, Scheduled
+
+    $StatusCode = [HttpStatusCode]::OK
     $Results = foreach ($username in $AllUsers) {
         try {
-            $APIName = 'ExecOffboardUser'
             $Headers = $Request.Headers
-
-
-            if ($Request.Body.Scheduled.enabled) {
-                $taskObject = [PSCustomObject]@{
-                    TenantFilter  = $TenantFilter
-                    Name          = "Offboarding: $Username"
-                    Command       = @{
-                        value = 'Invoke-CIPPOffboardingJob'
-                    }
-                    Parameters    = [pscustomobject]@{
-                        Username     = $Username
-                        APIName      = 'Scheduled Offboarding'
-                        options      = $OffboardingOptions
-                        RunScheduled = $true
-                    }
-                    ScheduledTime = $Request.Body.Scheduled.date
-                    PostExecution = @{
-                        Webhook = [bool]$Request.Body.PostExecution.webhook
-                        Email   = [bool]$Request.Body.PostExecution.email
-                        PSA     = [bool]$Request.Body.PostExecution.psa
-                    }
-                    Reference     = $Request.Body.reference
+            $taskObject = [PSCustomObject]@{
+                TenantFilter  = $TenantFilter
+                Name          = "Offboarding: $Username"
+                Command       = @{
+                    value = 'Invoke-CIPPOffboardingJob'
                 }
-                Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
-            } else {
-                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $TenantFilter -Options $OffboardingOptions -APIName $APIName -Headers $Headers
+                Parameters    = [pscustomobject]@{
+                    Username     = $Username
+                    APIName      = 'Scheduled Offboarding'
+                    options      = $OffboardingOptions
+                    RunScheduled = $true
+                }
+                PostExecution = @{
+                    Webhook = [bool]$Request.Body.PostExecution.webhook
+                    Email   = [bool]$Request.Body.PostExecution.email
+                    PSA     = [bool]$Request.Body.PostExecution.psa
+                }
+                Reference     = $Request.Body.reference
             }
-            $StatusCode = [HttpStatusCode]::OK
-
+            $Params = @{
+                Task    = $taskObject
+                hidden  = $false
+                Headers = $Headers
+            }
+            if ($Request.Body.Scheduled.enabled) {
+                $taskObject.ScheduledTime = $Request.Body.Scheduled.date
+            } else {
+                $Params.RunNow = $true
+            }
+            Add-CIPPScheduledTask @Params
         } catch {
             $StatusCode = [HttpStatusCode]::Forbidden
             $_.Exception.message

@@ -1,29 +1,28 @@
 function Add-CIPPScheduledTask {
-    [CmdletBinding(DefaultParameterSetName = 'Default')]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [pscustomobject]$Task,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [bool]$Hidden,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         $DisallowDuplicateName = $false,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [string]$SyncType = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'RunNow')]
+        [Parameter(Mandatory = $false)]
         [switch]$RunNow,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'RunNow')]
-        [string]$RowKey,
+        [Parameter(Mandatory = $false)]
+        [string]$RowKey = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [string]$DesiredStartTime = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'RunNow')]
+        [Parameter(Mandatory = $false)]
         $Headers
     )
 
@@ -39,6 +38,9 @@ function Add-CIPPScheduledTask {
                 $ExistingTask.TaskState = 'Planned'
                 Add-CIPPAzDataTableEntity @Table -Entity $ExistingTask -Force
                 Write-LogMessage -headers $Headers -API 'RunNow' -message "Task $($ExistingTask.Name) scheduled to run now" -Sev 'Info' -Tenant $ExistingTask.Tenant
+                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                    TaskId = $RowKey
+                }
                 return "Task $($ExistingTask.Name) scheduled to run now"
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -192,6 +194,7 @@ function Add-CIPPScheduledTask {
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'
                 AlertComment         = [string]$task.AlertComment
+                CustomSubject        = [string]$task.CustomSubject
             }
 
 
@@ -297,6 +300,13 @@ function Add-CIPPScheduledTask {
                 { $_ -ge 2 } { "about $([Math]::Round($_)) minutes"; break }
                 { $_ -ge 1 } { 'about 1 minute'; break }
                 default { 'less than a minute' }
+            }
+
+            if ($RunNow.IsPresent) {
+                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                    TaskId = $RowKey
+                }
+                return "Task $($entity.Name) scheduled to run now"
             }
 
             return "Successfully added task: $($entity.Name). It will run in $relativeTime."
