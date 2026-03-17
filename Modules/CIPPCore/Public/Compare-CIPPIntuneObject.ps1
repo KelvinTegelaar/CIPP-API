@@ -277,29 +277,45 @@ function Compare-CIPPIntuneObject {
                                 ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
                                 continue
                             }
-                            if ($Object1.$propName -and $Object2.$propName) {
-                                Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                            $val1 = $Object1.$propName
+                            $val2 = $Object2.$propName
+                            $val1IsEmpty = ($null -eq $val1 -or $val1 -eq '' -or ($val1 -is [Array] -and $val1.Count -eq 0))
+                            $val2IsEmpty = ($null -eq $val2 -or $val2 -eq '' -or ($val2 -is [Array] -and $val2.Count -eq 0))
+                            if ($val1IsEmpty -and $val2IsEmpty) {
+                                # Both empty (null, "", []) - no difference
+                                continue
+                            }
+                            if ($val1 -or $val2) {
+                                Compare-ObjectsRecursively -Object1 $val1 -Object2 $val2 -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
                             }
                         } catch {
                             throw
                         }
                     } elseif ($prop1Exists) {
                         try {
-                            $result.Add([PSCustomObject]@{
+                            $val = $Object1.$propName
+                            $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
+                            if (-not $valIsEmpty) {
+                                $result.Add([PSCustomObject]@{
                                     Property      = $newPath
-                                    ExpectedValue = $Object1.$propName
+                                    ExpectedValue = $val
                                     ReceivedValue = ''
                                 })
+                            }
                         } catch {
                             throw
                         }
                     } else {
                         try {
-                            $result.Add([PSCustomObject]@{
+                            $val = $Object2.$propName
+                            $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
+                            if (-not $valIsEmpty) {
+                                $result.Add([PSCustomObject]@{
                                     Property      = $newPath
                                     ExpectedValue = ''
-                                    ReceivedValue = $Object2.$propName
+                                    ReceivedValue = $val
                                 })
+                            }
                         } catch {
                             throw
                         }

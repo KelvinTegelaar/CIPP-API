@@ -44,12 +44,13 @@ function Invoke-CIPPStandardMailContacts {
         return
     }
     $contacts = $settings
-    $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
+    $TechAndSecurityContacts = @(@($contacts.SecurityContact, $contacts.TechContact) | Where-Object { $_ } | Select-Object -Unique)
 
-    $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
-    ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
-        $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
-        $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact
+    $marketingMatch = @($CurrentInfo.marketingNotificationEmails) -contains $contacts.MarketingContact
+    $techMatch = -not (Compare-Object @($CurrentInfo.technicalNotificationMails) $TechAndSecurityContacts)
+    $generalMatch = $CurrentInfo.privacyProfile.contactEmail -eq $contacts.GeneralContact
+
+    $state = $marketingMatch -and $techMatch -and $generalMatch
 
     if ($Settings.remediate -eq $true) {
         if ($state) {
@@ -105,13 +106,13 @@ function Invoke-CIPPStandardMailContacts {
     }
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails)
-            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails)
+            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object)
+            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Sort-Object)
             contactEmail                = $CurrentInfo.privacyProfile.contactEmail
         }
         $ExpectedValue = @{
-            marketingNotificationEmails = @($Contacts.MarketingContact)
-            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique)
+            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object)
+            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique | Sort-Object)
             contactEmail                = $Contacts.GeneralContact
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
