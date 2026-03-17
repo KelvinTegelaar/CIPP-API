@@ -27,4 +27,4 @@ jobs:
           app-name: 'cippdxkeb-proc'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A4E1F09C5571492D8D3577230FCD31DE }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BD63395E7D7B450C8386E99FB38AAB04 }}
