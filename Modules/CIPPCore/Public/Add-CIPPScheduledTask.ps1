@@ -17,6 +17,9 @@ function Add-CIPPScheduledTask {
         [switch]$RunNow,
 
         [Parameter(Mandatory = $false)]
+        [string]$RowKey = $null,
+
+        [Parameter(Mandatory = $false)]
         [string]$DesiredStartTime = $null,
 
         [Parameter(Mandatory = $false)]
