@@ -1,7 +1,7 @@
 function Add-CIPPScheduledTask {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [pscustomobject]$Task,
 
         [Parameter(Mandatory = $false)]
