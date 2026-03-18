@@ -40,7 +40,7 @@ function Invoke-ExecOffboardUser {
                 Headers = $Headers
             }
             if ($Request.Body.Scheduled.enabled) {
-                $taskObject.ScheduledTime = $Request.Body.Scheduled.date
+                $taskObject | Add-Member -NotePropertyName ScheduledTime -NotePropertyValue $Request.Body.Scheduled.date
             } else {
                 $Params.RunNow = $true
             }
