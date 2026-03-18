@@ -11,7 +11,6 @@ function Invoke-AddDefenderDeployment {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
     $Tenants = ($Request.Body.selectedTenants).value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
     $Compliance = $Request.Body.Compliance
@@ -22,6 +21,14 @@ function Invoke-AddDefenderDeployment {
     $Results = foreach ($tenant in $Tenants) {
         try {
             if ($Compliance) {
+                $ConnectorStatus = Enable-CIPPMDEConnector -TenantFilter $tenant
+                if (!$ConnectorStatus.Success) {
+                    "$($tenant): Failed to enable MDE Connector - $($ConnectorStatus.ErrorMessage)"
+                    continue
+                } else {
+                    "$($tenant): MDE Connector is $($ConnectorStatus.PartnerState). Attempting to set compliance and reporting settings..."
+                }
+
                 $SettingsObject = @{
                     id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
                     androidEnabled                                      = [bool]$Compliance.ConnectAndroid
