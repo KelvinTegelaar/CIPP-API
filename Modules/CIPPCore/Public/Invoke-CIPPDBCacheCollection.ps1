@@ -128,12 +128,15 @@ function Invoke-CIPPDBCacheCollection {
 
     Write-Information "Starting $CollectionType collection for $TenantFilter ($($CacheTypes.Count) cache types)"
 
+    $CollectionStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $SuccessCount = 0
     $FailedCount = 0
     $Errors = [System.Collections.Generic.List[string]]::new()
+    $Timings = [System.Collections.Generic.List[string]]::new()
 
     foreach ($CacheType in $CacheTypes) {
         $FullFunctionName = "Set-CIPPDBCache$CacheType"
+        $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             $Function = Get-Command -Name $FullFunctionName -ErrorAction SilentlyContinue
             if (-not $Function) {
@@ -145,16 +148,26 @@ function Invoke-CIPPDBCacheCollection {
 
             Write-Information "  [$CollectionType] Collecting $CacheType for $TenantFilter"
             & $FullFunctionName @Params
+            $ItemStopwatch.Stop()
+            $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
+            $Timings.Add("$CacheType : ${ElapsedSeconds}s")
+            Write-Information "  [$CollectionType] Completed $CacheType for $TenantFilter - Took ${ElapsedSeconds} seconds"
             $SuccessCount++
         } catch {
+            $ItemStopwatch.Stop()
+            $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
             $FailedCount++
             $Errors.Add("$CacheType : $($_.Exception.Message)")
-            Write-Warning "  [$CollectionType] Failed $CacheType for $TenantFilter : $($_.Exception.Message)"
+            $Timings.Add("$CacheType : ${ElapsedSeconds}s (FAILED)")
+            Write-Warning "  [$CollectionType] Failed $CacheType for $TenantFilter after ${ElapsedSeconds} seconds: $($_.Exception.Message)"
         }
     }
 
-    $Summary = "$CollectionType collection for $TenantFilter completed - $SuccessCount succeeded, $FailedCount failed out of $($CacheTypes.Count)"
+    $CollectionStopwatch.Stop()
+    $TotalElapsed = [math]::Round($CollectionStopwatch.Elapsed.TotalSeconds, 3)
+    $Summary = "$CollectionType collection for $TenantFilter completed in ${TotalElapsed} seconds - $SuccessCount succeeded, $FailedCount failed out of $($CacheTypes.Count)"
     Write-Information $Summary
+    Write-Information "  Timings: $($Timings -join ' | ')"
 
     if ($FailedCount -gt 0) {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$Summary. Errors: $($Errors -join '; ')" -sev Warning
@@ -166,6 +179,8 @@ function Invoke-CIPPDBCacheCollection {
         Success        = $SuccessCount
         Failed         = $FailedCount
         Total          = $CacheTypes.Count
+        TotalSeconds   = $TotalElapsed
+        Timings        = @($Timings)
         Errors         = @($Errors)
     }
 }
