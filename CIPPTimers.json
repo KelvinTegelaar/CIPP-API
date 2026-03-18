@@ -117,7 +117,7 @@
     "Id": "4ca242d0-8dc8-4256-b0ed-186599f4233f",
     "Command": "Start-UpdateTokensTimer",
     "Description": "Orchestrator to update tokens",
-    "Cron": "0 0 0 * * 0",
+    "Cron": "0 0 10 * * 0",
     "Priority": 7,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -135,7 +135,7 @@
     "Id": "c2ebde3f-fa35-45aa-8a6b-91c835050b79",
     "Command": "Start-DomainOrchestrator",
     "Description": "Orchestrator to process domains",
-    "Cron": "0 30 3 * * *",
+    "Cron": "0 30 13 * * *",
     "Priority": 22,
     "RunOnProcessor": true
   },
@@ -146,7 +146,7 @@
       "TriggerRefresh": true
     },
     "Description": "Update tenants",
-    "Cron": "0 0 23 * * *",
+    "Cron": "0 0 9 * * *",
     "Priority": 10,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -155,7 +155,7 @@
     "Id": "d9ff3af4-bd34-40d6-b12a-8fa24463f331",
     "Command": "Start-UpdatePermissionsOrchestrator",
     "Description": "Orchestrator to update CPV permissions",
-    "Cron": "0 0 0 * * *",
+    "Cron": "0 0 10 * * *",
     "Priority": 10,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -164,7 +164,7 @@
     "Id": "467787cf-01c5-4d20-8097-c2eef691a20e",
     "Command": "Start-BillingTimer",
     "Description": "Timer to process billing",
-    "Cron": "0 0 0 * * *",
+    "Cron": "0 0 10 * * *",
     "Priority": 12,
     "RunOnProcessor": true
   },
@@ -172,7 +172,7 @@
     "Id": "80070b4f-95ed-4e5f-be4c-9e339306d4aa",
     "Command": "Start-BPAOrchestrator",
     "Description": "Orchestrator to process BPA reports",
-    "Cron": "0 0 3 * * *",
+    "Cron": "0 0 13 * * *",
     "Priority": 10,
     "RunOnProcessor": true
   },
@@ -180,7 +180,7 @@
     "Id": "54c39540-fe91-4795-8613-ac4295751a51",
     "Command": "Start-ExtensionOrchestrator",
     "Description": "Orchestrator to process extensions",
-    "Cron": "0 0 */2 * * *",
+    "Cron": "0 10 */2 * * *",
     "Priority": 12,
     "RunOnProcessor": true
   },
@@ -188,7 +188,7 @@
     "Id": "3fb9745b-08c9-411b-bfac-dc48087489d5",
     "Command": "Start-CIPPStatsTimer",
     "Description": "Timer to process CIPP stats",
-    "Cron": "0 0 0 * * *",
+    "Cron": "0 0 10 * * *",
     "Priority": 15,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -197,7 +197,7 @@
     "Id": "f74a4540-c811-4037-997c-0d32d7d5742f",
     "Command": "Start-TableCleanup",
     "Description": "Timer to cleanup tables",
-    "Cron": "0 0 23 * * *",
+    "Cron": "0 0 13 * * *",
     "Priority": 20,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -209,7 +209,7 @@
       "CleanOld": true
     },
     "Description": "Timer to cleanup old tenants",
-    "Cron": "0 0 0 * * *",
+    "Cron": "0 0 10 * * *",
     "Priority": 20,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -218,7 +218,7 @@
     "Id": "b8f3c2e1-5d4a-4f7b-9a2c-1e6d8f3b5a7c",
     "Command": "Start-BackupRetentionCleanup",
     "Description": "Timer to cleanup old backups based on retention policy",
-    "Cron": "0 0 2 * * *",
+    "Cron": "0 0 12 * * *",
     "Priority": 21,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -227,7 +227,7 @@
     "Id": "a9e8d7c6-b5a4-3f2e-1d0c-9b8a7f6e5d4c",
     "Command": "Start-LogRetentionCleanup",
     "Description": "Timer to cleanup old logs based on retention policy",
-    "Cron": "0 30 2 * * *",
+    "Cron": "0 30 12 * * *",
     "Priority": 22,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -236,7 +236,7 @@
     "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
     "Command": "Start-CIPPDBCacheOrchestrator",
     "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
-    "Cron": "0 0 3 * * *",
+    "Cron": "0 0 13 * * *",
     "Priority": 23,
     "RunOnProcessor": true,
     "IsSystem": true
@@ -245,7 +245,7 @@
     "Id": "1f2e3d4c-5b6a-7c8d-9e0f-1a2b3c4d5e6f",
     "Command": "Start-TestsOrchestrator",
     "Description": "Timer to run security and compliance tests against cached data",
-    "Cron": "0 0 4 * * *",
+    "Cron": "0 0 14 * * *",
     "Priority": 24,
     "RunOnProcessor": true,
     "IsSystem": true
