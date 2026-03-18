@@ -487,53 +487,6 @@ function Receive-CIPPTimerTrigger {
 
     $UtcNow = (Get-Date).ToUniversalTime()
 
-    try {
-        #temporary orphan check - Remove at next release.
-        $OrphanConfigTable = Get-CIPPTable -tablename 'Config'
-        $OrphanFlag = Get-CIPPAzDataTableEntity @OrphanConfigTable -Filter "PartitionKey eq 'OrphanRequeue' and RowKey eq 'OrphanRequeue'" -ErrorAction SilentlyContinue
-        if (-not $OrphanFlag -or $OrphanFlag.state -ne $true) {
-            $OrchestratorTable = Get-CIPPTable -TableName 'CippOrchestratorInput'
-            $OrphanedInputs = Get-CIPPAzDataTableEntity @OrchestratorTable -Filter "PartitionKey eq 'Input'"
-            $CutoffTime = $UtcNow.AddMinutes(-5)
-            $MaxAge = $UtcNow.AddHours(-24)
-            $StaleOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -lt $CutoffTime -and $_.Timestamp.DateTime -gt $MaxAge })
-            if ($StaleOrphans.Count -gt 0) {
-                Write-Information "Found $($StaleOrphans.Count) orphaned orchestration inputs, re-queuing..."
-                foreach ($Orphan in $StaleOrphans) {
-                    try {
-                        Add-CippQueueMessage -Cmdlet 'Start-CIPPOrchestrator' -Parameters @{ InputObjectGuid = $Orphan.RowKey }
-                        Write-Information "Re-queued orphaned orchestration: $($Orphan.RowKey)"
-                    } catch {
-                        Write-Warning "Failed to re-queue orphan $($Orphan.RowKey): $($_.Exception.Message)"
-                    }
-                }
-                Write-LogMessage -API 'TimerFunction' -message "Re-queued $($StaleOrphans.Count) orphaned orchestration inputs" -sev Info
-            }
-            # Clean up orphans older than 24h - too stale to run
-            $ExpiredOrphans = @($OrphanedInputs | Where-Object { $_.Timestamp.DateTime -le $MaxAge })
-            if ($ExpiredOrphans.Count -gt 0) {
-                Write-Information "Removing $($ExpiredOrphans.Count) expired orphaned inputs (older than 24h)..."
-                foreach ($Expired in $ExpiredOrphans) {
-                    try {
-                        Remove-AzDataTableEntity @OrchestratorTable -Entity $Expired -Force
-                    } catch {
-                        Write-Warning "Failed to remove expired orphan $($Expired.RowKey): $($_.Exception.Message)"
-                    }
-                }
-            }
-            # Mark as completed so we don't scan again
-            $null = Add-CIPPAzDataTableEntity @OrphanConfigTable -Entity @{
-                PartitionKey = 'OrphanRequeue'
-                RowKey       = 'OrphanRequeue'
-                state        = $true
-                Timestamp    = $UtcNow
-                Count        = $StaleOrphans.Count
-            } -Force
-        }
-    } catch {
-        Write-Warning "Orphan re-queue check failed: $($_.Exception.Message)"
-    }
-
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
