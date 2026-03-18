@@ -49,8 +49,27 @@ function Invoke-CIPPStandardDisableGuests {
     $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
-            Where-Object { $_.signInActivity.lastSuccessfulSignInDateTime -le $Days }
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
+
+        $EnrichedGuests = [System.Collections.Generic.List[object]]::new()
+        foreach ($guest in $GraphRequest) {
+            $lastSignIn = $null
+            if ($guest.signInActivity -and $guest.signInActivity.lastSuccessfulSignInDateTime) {
+                $lastSignIn = [datetime]$guest.signInActivity.lastSuccessfulSignInDateTime
+            } else {
+                # signInActivity is null, try auditLogs/signIns
+                $SignInLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq '$($guest.id)' and status/errorCode eq 0&`$orderby=createdDateTime desc&`$top=1" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant -noPagination $true
+                if ($SignInLogs -and $SignInLogs.Count -gt 0) {
+                    $lastSignIn = [datetime]$SignInLogs[0].authenticationDetails.authenticationStepDateTime
+                }
+            }
+            # Only add guests whose last sign-in is older than cutoff
+            if ($lastSignIn -and $lastSignIn.ToUniversalTime() -le $Days) {
+                $guest | Add-Member -MemberType NoteProperty -Name 'EnrichedLastSignInDateTime' -Value $lastSignIn -Force
+                $EnrichedGuests.Add($guest)
+            }
+        }
+        $GraphRequest = $EnrichedGuests
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -84,8 +103,14 @@ function Invoke-CIPPStandardDisableGuests {
                     $result = $BulkResults[$i]
                     $guest = $GraphRequest[$i]
 
+                    $lastSignIn = $guest.signInActivity?.lastSuccessfulSignInDateTime
+                    if (-not $lastSignIn -and $guest.EnrichedLastSignInDateTime) {
+                        $lastSignIn = $guest.EnrichedLastSignInDateTime
+                    }
+
                     if ($result.status -eq 200 -or $result.status -eq 204) {
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $($guest.signInActivity.lastSuccessfulSignInDateTime)" -sev Info
+                        $guest.accountEnabled = $false
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $lastSignIn" -sev Info
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $errorMsg" -sev Error
@@ -110,7 +135,7 @@ function Invoke-CIPPStandardDisableGuests {
         }
     }
     if ($Settings.report -eq $true) {
-        $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled
+        $Filtered = $GraphRequest | Where-Object { $_.accountEnabled } | Select-Object -Property UserPrincipalName, id, signInActivity, EnrichedLastSignInDateTime, mail, userType, accountEnabled
 
         $CurrentValue = [PSCustomObject]@{
             GuestsDisabledAfterDays      = $checkDays
