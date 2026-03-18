@@ -47,8 +47,8 @@ function Invoke-CIPPStandardSafeSendersDisable {
                     CmdletInput = @{
                         CmdletName = 'Set-MailboxJunkEmailConfiguration'
                         Parameters = @{
-                            Identity                    = $Mailbox.UserPrincipalName
-                            TrustedRecipientsAndDomains = $null
+                            Identity                 = $Mailbox.UserPrincipalName
+                            TrustedSendersAndDomains = $null
                         }
                     }
                 }
