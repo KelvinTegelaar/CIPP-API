@@ -67,7 +67,6 @@ function Invoke-CIPPDBCacheCollection {
             'OAuth2PermissionGrants'
             'AppRoleAssignments'
             'LicenseOverview'
-            'MFAState'
             'BitlockerKeys'
         )
         ExchangeConfig     = @(

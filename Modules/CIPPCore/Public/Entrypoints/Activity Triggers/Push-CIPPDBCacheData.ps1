@@ -35,13 +35,22 @@ function Push-CIPPDBCacheData {
         # Build grouped collection tasks — one activity per license category instead of one per cache type
         $Tasks = [System.Collections.Generic.List[object]]::new()
 
-        # Graph collection always runs (no special license needed) — 26 cache types in one activity
+        # Graph collection always runs (no special license needed) — 25 cache types in one activity
         $Tasks.Add(@{
                 FunctionName   = 'ExecCIPPDBCache'
                 CollectionType = 'Graph'
                 TenantFilter   = $TenantFilter
                 QueueId        = $QueueId
                 QueueName      = "DB Cache Graph - $TenantFilter"
+            })
+        # MFAState runs as its own activity — it makes 6+ API calls, bulk group/role member
+        # resolution, and O(users × policies) CPU work that can take minutes on large tenants
+        $Tasks.Add(@{
+                FunctionName = 'ExecCIPPDBCache'
+                Name         = 'MFAState'
+                TenantFilter = $TenantFilter
+                QueueId      = $QueueId
+                QueueName    = "DB Cache MFAState - $TenantFilter"
             })
 
         # Exchange collections — split into config (quick policy calls), data (usage reports), and mailboxes (heavy, spawns permission/rule child orchestrators)
