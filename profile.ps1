@@ -1,3 +1,8 @@
+Write-Information "#### PROFILE START ####"
+Write-Information "WEBSITE_DEPLOYMENT_ID: $($env:WEBSITE_DEPLOYMENT_ID)"
+Write-Information "WEBSITE_SITE_NAME: $($env:WEBSITE_SITE_NAME)"
+Write-Information "AzureWebJobsStorage present: $($null -ne $env:AzureWebJobsStorage)"
+Write-Information "Derived KV name: $(($env:WEBSITE_DEPLOYMENT_ID -split '-')[0])"
 Write-Information '#### CIPP-API Start ####'
 
 $Timings = @{}
