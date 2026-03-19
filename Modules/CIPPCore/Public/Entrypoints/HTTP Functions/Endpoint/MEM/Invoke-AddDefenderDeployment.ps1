@@ -11,7 +11,6 @@ function Invoke-AddDefenderDeployment {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
     $Tenants = ($Request.Body.selectedTenants).value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
     $Compliance = $Request.Body.Compliance
@@ -22,6 +21,15 @@ function Invoke-AddDefenderDeployment {
     $Results = foreach ($tenant in $Tenants) {
         try {
             if ($Compliance) {
+                $ConnectorStatus = Enable-CIPPMDEConnector -TenantFilter $tenant
+                if (!$ConnectorStatus.Success) {
+                    "$($tenant): Failed to enable MDE Connector - $($ConnectorStatus.ErrorMessage)"
+                    continue
+                } else {
+                    "$($tenant): MDE Connector is $($ConnectorStatus.PartnerState)"
+                }
+
+
                 $SettingsObject = @{
                     id                                                  = 'fc780465-2017-40d4-a0c5-307022471b92'
                     androidEnabled                                      = [bool]$Compliance.ConnectAndroid
@@ -32,29 +40,44 @@ function Invoke-AddDefenderDeployment {
                     partnerUnresponsivenessThresholdInDays              = 7
                     allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
                     allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
+                    androidDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.androidDeviceBlockedOnMissingPartnerData
+                    iosDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.iosDeviceBlockedOnMissingPartnerData
+                    windowsDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData
+                    macDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.macDeviceBlockedOnMissingPartnerData
                     androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
                     iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
+                    windowsMobileApplicationManagementEnabled           = [bool]$Compliance.windowsMobileApplicationManagementEnabled
+                    allowPartnerToCollectIosCertificateMetadata         = [bool]$Compliance.allowPartnerToCollectIosCertificateMetadata
+                    allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalCertificateMetadata
                     microsoftDefenderForEndpointAttachEnabled           = [bool]$true
                 }
                 $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
+                $ConnectorUri = 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92'
+                $ConnectorExists = $false
+                $SettingsMatch = $false
                 try {
-                    $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
+                    $ExistingSettings = New-GraphGETRequest -uri $ConnectorUri -tenantid $tenant
+                    $ConnectorExists = $true
 
                     # Check if any setting doesn't match
+                    $SettingsMatch = $true
                     foreach ($key in $SettingsObject.Keys) {
                         if ($ExistingSettings.$key -ne $SettingsObject[$key]) {
-                            $ExistingSettings = $false
+                            $SettingsMatch = $false
                             break
                         }
                     }
                 } catch {
-                    $ExistingSettings = $false
+                    $ConnectorExists = $false
                 }
-                if ($ExistingSettings) {
+                if ($SettingsMatch) {
                     "Defender Intune Configuration already correct and active for $($tenant). Skipping"
+                } elseif ($ConnectorExists) {
+                    $null = New-GraphPOSTRequest -uri $ConnectorUri -tenantid $tenant -type PATCH -body $SettingsObj -AsApp $true
+                    "$($tenant): Successfully updated Defender Compliance and Reporting settings."
                 } else {
                     $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
-                    "$($tenant): Successfully set Defender Compliance and Reporting settings. Please remember to enable the Intune Connector in the Defender portal."
+                    "$($tenant): Successfully created Defender Compliance and Reporting settings."
                 }
             }
 

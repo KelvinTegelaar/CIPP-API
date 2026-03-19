@@ -9,11 +9,25 @@ function Invoke-ExecIncidentsList {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    $StartDate = $Request.Query.StartDate   # YYYYMMDD or null
+    $EndDate   = $Request.Query.EndDate     # YYYYMMDD or null
+
+    # Build OData $filter parts for Graph API (single-tenant path)
+    $GraphFilterParts = [System.Collections.Generic.List[string]]::new()
+    if ($StartDate) {
+        $GraphFilterParts.Add("createdDateTime ge $([datetime]::ParseExact($StartDate,'yyyyMMdd',$null).ToString('yyyy-MM-ddT00:00:00Z'))")
+    }
+    if ($EndDate) {
+        $GraphFilterParts.Add("createdDateTime le $([datetime]::ParseExact($EndDate,'yyyyMMdd',$null).ToString('yyyy-MM-ddT23:59:59Z'))")
+    }
+    $GraphODataFilter = if ($GraphFilterParts.Count -gt 0) { '$filter=' + ($GraphFilterParts -join ' and ') } else { $null }
 
     try {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
             # Single tenant functionality
-            $Incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $TenantFilter -AsApp $true
+            $IncidentsUri = 'https://graph.microsoft.com/beta/security/incidents'
+            if ($GraphODataFilter) { $IncidentsUri = "$IncidentsUri`?$GraphODataFilter" }
+            $Incidents = New-GraphGetRequest -uri $IncidentsUri -tenantid $TenantFilter -AsApp $true
 
             foreach ($incident in $Incidents) {
                 [PSCustomObject]@{
@@ -29,7 +43,7 @@ function Invoke-ExecIncidentsList {
                     Classification = $incident.classification
                     Determination  = $incident.determination
                     Severity       = $incident.severity
-                    Tags           = ($IncidentObj.tags -join ', ')
+                    Tags           = ($incident.tags -join ', ')
                     Comments       = $incident.comments
                 }
             }
@@ -75,6 +89,10 @@ function Invoke-ExecIncidentsList {
                 $Incidents = $Rows
                 foreach ($incident in $Incidents) {
                     $IncidentObj = $incident.Incident | ConvertFrom-Json
+                    # In-memory date filter for cached AllTenants data
+                    $created = [datetime]::Parse($IncidentObj.createdDateTime)
+                    if ($StartDate -and $created -lt [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null)) { continue }
+                    if ($EndDate   -and $created -ge [datetime]::ParseExact($EndDate,   'yyyyMMdd', $null).AddDays(1)) { continue }
                     [PSCustomObject]@{
                         Tenant         = $incident.Tenant
                         Id             = $IncidentObj.id

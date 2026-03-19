@@ -24,7 +24,9 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         ADDEDCOMPONENT
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"Everyone","value":"EveryoneUserOverride"},{"label":"People in my organization","value":"EveryoneInCompanyUserOverride"},{"label":"People in my organization and trusted organizations","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"Only organizer","value":"OrganizerOnlyUserOverride"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToStartMeeting","label":"Allow anonymous users to start meeting"}
             {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People who were invited","value":"InvitedUsers"}]}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowPSTNUsersToBypassLobby","label":"Allow dial-in users to bypass the lobby"}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowParticipantGiveRequestControl","label":"Participants can give or request control"}
@@ -62,9 +64,9 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     $AutoAdmittedUsers = $Settings.AutoAdmittedUsers.value ?? $Settings.AutoAdmittedUsers ?? $CurrentState.AutoAdmittedUsers # Default to current state if not set, for backward compatibility pre v8.6.0
 
     $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
-    ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
+    ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $Settings.AllowAnonymousUsersToStartMeeting) -and
     ($CurrentState.AutoAdmittedUsers -eq $AutoAdmittedUsers) -and
-    ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
+    ($CurrentState.AllowPSTNUsersToBypassLobby -eq $Settings.AllowPSTNUsersToBypassLobby) -and
     ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
     ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
     ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl) -and
@@ -78,9 +80,9 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             $cmdParams = @{
                 Identity                                   = 'Global'
                 AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
-                AllowAnonymousUsersToStartMeeting          = $false
+                AllowAnonymousUsersToStartMeeting          = $Settings.AllowAnonymousUsersToStartMeeting
                 AutoAdmittedUsers                          = $AutoAdmittedUsers
-                AllowPSTNUsersToBypassLobby                = $false
+                AllowPSTNUsersToBypassLobby                = $Settings.AllowPSTNUsersToBypassLobby
                 MeetingChatEnabledType                     = $MeetingChatEnabledType
                 DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
                 AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
@@ -120,9 +122,9 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         }
         $ExpectedValue = @{
             AllowAnonymousUsersToJoinMeeting           = $Settings.AllowAnonymousUsersToJoinMeeting
-            AllowAnonymousUsersToStartMeeting          = $false
+            AllowAnonymousUsersToStartMeeting          = $Settings.AllowAnonymousUsersToStartMeeting
             AutoAdmittedUsers                          = $AutoAdmittedUsers
-            AllowPSTNUsersToBypassLobby                = $false
+            AllowPSTNUsersToBypassLobby                = $Settings.AllowPSTNUsersToBypassLobby
             MeetingChatEnabledType                     = $MeetingChatEnabledType
             DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
             AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl

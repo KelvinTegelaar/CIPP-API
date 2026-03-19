@@ -61,7 +61,11 @@ function Invoke-AddUser {
             $body = [pscustomobject] @{
                 'Results'  = @(
                     $CreationResults.Results[0],
-                    $CreationResults.Results[1],
+                    @{
+                        'resultText' = $CreationResults.Results[1]
+                        'copyField'  = $CreationResults.Username
+                        'state'      = 'success'
+                    },
                     @{
                         'resultText' = $CreationResults.Results[2]
                         'copyField'  = $CreationResults.password
