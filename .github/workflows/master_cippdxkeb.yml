@@ -4,11 +4,12 @@
 name: Build and deploy Powershell project to Azure Function App - cippdxkeb
 
 on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
-
+  # push:
+  #  branches:
+  #    - master
+  workflow_dispatch:  # allows manual trigger from GitHub Actions tab
+  schedule:
+    - cron: '0 18 1-7 * 2' # First Tuesday of each month 1800 UTC (Wednesday 0200 WAST)
 env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
 
