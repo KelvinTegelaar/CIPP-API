@@ -20,7 +20,20 @@ function Set-CIPPDefaultAPDeploymentProfile {
     )
 
     try {
-        if ($Language -eq 'user-select') { $Language = '' }
+        if ($Language -in @('user-select', 'os-default')) { $Language = '' }
+
+        # userType in outOfBoxExperienceSetting is only valid for user-driven (singleUser) mode.
+        # The Intune API rejects it for self-deploying (shared) mode.
+        $OutOfBoxSetting = [ordered]@{
+            'deviceUsageType'              = "$DeploymentMode"
+            'escapeLinkHidden'             = $([bool]($true))
+            'privacySettingsHidden'        = $([bool]($HidePrivacy))
+            'eulaHidden'                   = $([bool]($HideTerms))
+            'keyboardSelectionPageSkipped' = $([bool]($AutoKeyboard))
+        }
+        if ($DeploymentMode -ne 'shared') {
+            $OutOfBoxSetting['userType'] = "$UserType"
+        }
 
         $ObjBody = [pscustomobject]@{
             '@odata.type'                   = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
@@ -32,14 +45,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'deviceType'                    = 'windowsPc'
             'hardwareHashExtractionEnabled' = $([bool]($CollectHash))
             'roleScopeTagIds'               = @()
-            'outOfBoxExperienceSetting'     = @{
-                'deviceUsageType'              = "$DeploymentMode"
-                'escapeLinkHidden'             = $([bool]($true))
-                'privacySettingsHidden'        = $([bool]($HidePrivacy))
-                'eulaHidden'                   = $([bool]($HideTerms))
-                'userType'                     = "$UserType"
-                'keyboardSelectionPageSkipped' = $([bool]($AutoKeyboard))
-            }
+            'outOfBoxExperienceSetting'     = $OutOfBoxSetting
         }
         $Body = ConvertTo-Json -InputObject $ObjBody -Depth 10
 

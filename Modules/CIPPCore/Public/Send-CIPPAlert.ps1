@@ -73,7 +73,7 @@ function Send-CIPPAlert {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-Information "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($_.Exception.Message)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
             return "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
         }
     }
@@ -122,13 +122,13 @@ function Send-CIPPAlert {
                             $TeamsBody = [PSCustomObject]@{
                                 text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
                             } | ConvertTo-Json -Compress
-                            Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $TeamsBody
+                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $TeamsBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                         }
                         '*discord.com*' {
                             $DiscordBody = [PSCustomObject]@{
                                 content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
                             } | ConvertTo-Json -Compress
-                            Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $DiscordBody
+                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $DiscordBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                         }
                         '*slack.com*' {
                             $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
@@ -139,32 +139,46 @@ function Send-CIPPAlert {
                                     text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
                                 } | ConvertTo-Json -Compress
                             }
-                            Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $SlackBody
+                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $SlackBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                         }
                         default {
                             $RestMethod = @{
-                                Uri         = $webhook
-                                Method      = 'POST'
-                                ContentType = 'application/json'
-                                Body        = $ReplacedContent
+                                Uri                = $webhook
+                                Method             = 'POST'
+                                ContentType        = 'application/json'
+                                Body               = $ReplacedContent
+                                StatusCodeVariable = 'WebhookStatusCode'
+                                SkipHttpErrorCheck = $true
                             }
                             if ($Headers) {
                                 $RestMethod['Headers'] = $Headers
                             }
-                            Invoke-RestMethod @RestMethod
+                            $WebhookResponse = Invoke-RestMethod @RestMethod
                         }
                     }
                 }
-                Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
+                $LogData = @{
+                    WebhookUrl = $webhook
+                    StatusCode = $WebhookStatusCode
+                    Response   = $WebhookResponse
+                }
+                if ($WebhookStatusCode -ge 200 -and $WebhookStatusCode -lt 300) {
+                    Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook. Status code: $WebhookStatusCode" -tenant $TenantFilter -sev info -LogData $LogData
+                    return "Sent webhook to $webhook with status code: $WebhookStatusCode"
+                } else {
+                    Write-LogMessage -API 'Webhook Alerts' -message "Webhook alert $title failed. $WebhookResponse" -tenant $TenantFilter -sev error -LogData $LogData
+                    return "Error: Webhook returned status code $WebhookStatusCode for $webhook - Response: $WebhookResponse"
+                }
             } else {
                 Write-LogMessage -API 'Webhook Alerts' -message 'No webhook URL configured' -sev warning
             }
 
         } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-Information "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
-            return "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
+            $ErrorObject = Get-CippException -Exception $_
+            $ErrorObject | Add-Member -NotePropertyName WebhookUrl -NotePropertyValue ($Config.webhook ?? $AltWebhook) -Force
+            Write-Information "Could not send alerts to webhook: $($_.Exception.Message)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.Message)" -tenant $TenantFilter -sev error -LogData $ErrorObject
+            return "Error: Could not send alerts to webhook $($_.Exception.Message)"
         }
     }
 

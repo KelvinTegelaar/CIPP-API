@@ -65,7 +65,7 @@ function Set-CIPPOffloadFunctionTriggers {
                 $SettingKey = "AzureWebJobs.$Trigger.Disabled"
                 # Convert setting key to environment variable format (dots become underscores)
                 $EnvVarName = $SettingKey -replace '\.', '_'
-                $CurrentValue = [System.Environment]::GetEnvironmentVariable($EnvVarName)
+                $CurrentValue = [System.Environment]::GetEnvironmentVariable($SettingKey) ?? [System.Environment]::GetEnvironmentVariable($EnvVarName)
 
                 if ($CurrentValue -eq '1') {
                     Write-Verbose "Skipping $SettingKey - already set to 1"
@@ -96,7 +96,7 @@ function Set-CIPPOffloadFunctionTriggers {
                 $SettingKey = "AzureWebJobs.$Trigger.Disabled"
                 # Convert setting key to environment variable format (dots become underscores)
                 $EnvVarName = $SettingKey -replace '\.', '_'
-                $CurrentValue = [System.Environment]::GetEnvironmentVariable($EnvVarName)
+                $CurrentValue = [System.Environment]::GetEnvironmentVariable($SettingKey) ?? [System.Environment]::GetEnvironmentVariable($EnvVarName)
 
                 if ([string]::IsNullOrEmpty($CurrentValue) -or $CurrentValue -ne '1') {
                     Write-Verbose "Skipping $SettingKey - already enabled or not set"

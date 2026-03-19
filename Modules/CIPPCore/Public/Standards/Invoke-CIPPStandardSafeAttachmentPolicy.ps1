@@ -195,7 +195,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
                 redirectAddress = $CurrentState.RedirectAddress
             }
 
-            $ExpectedValue = [pscustomobject]@{
+            $ExpectedValue = @{
                 name            = $PolicyName
                 enable          = $true
                 action          = $Settings.SafeAttachmentAction

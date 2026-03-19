@@ -183,7 +183,14 @@ function Invoke-ExecJITAdmin {
             'UserPrincipalName' = $Username
         }
         Roles        = $Request.Body.AdminRoles.value
-        Action       = 'AddRoles'
+        Groups       = $Request.Body.GroupMemberships.value
+        Action       = if ($Request.Body.AdminRoles.value -and $Request.Body.GroupMemberships.value) {
+            'AddRolesAndGroups'
+        } elseif ($Request.Body.GroupMemberships.value) {
+            'AddGroups'
+        } else {
+            'AddRoles'
+        }
         Reason       = $Request.Body.Reason
         Expiration   = $Expiration
         StartDate    = $Start
@@ -238,6 +245,7 @@ function Invoke-ExecJITAdmin {
                 'UserPrincipalName' = $Username
             }
             Roles        = $Request.Body.AdminRoles.value
+            Groups       = $Request.Body.GroupMemberships.value
             Reason       = $Request.Body.Reason
             Action       = $Request.Body.ExpireAction.value
         }

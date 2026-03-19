@@ -106,8 +106,8 @@ function Invoke-AddUserDefaults {
             copyFrom         = $CopyFrom
         }
 
-        # Generate GUID for the template
-        $GUID = (New-Guid).GUID
+        # Use existing GUID if editing, otherwise generate new one
+        $GUID = if ($Request.Body.GUID) { $Request.Body.GUID } else { (New-Guid).GUID }
 
         # Convert to JSON
         $JSON = ConvertTo-Json -InputObject $TemplateObject -Depth 100 -Compress
@@ -122,7 +122,8 @@ function Invoke-AddUserDefaults {
             GUID         = "$GUID"
         }
 
-        $Result = "Created User Default Template '$($TemplateName)' with GUID $GUID"
+        $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
+        $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
