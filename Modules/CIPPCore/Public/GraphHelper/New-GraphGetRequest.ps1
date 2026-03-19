@@ -110,6 +110,7 @@ function New-GraphGetRequest {
                             StatusCode        = $Data.StatusCode
                             StatusDescription = $Data.StatusDescription
                             Content           = $Content
+                            Headers           = $Data.Headers
                         }
                         $nextURL = $null
                     } elseif ($CountOnly) {

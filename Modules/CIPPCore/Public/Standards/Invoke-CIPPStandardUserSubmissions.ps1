@@ -252,7 +252,7 @@ function Invoke-CIPPStandardUserSubmissions {
             } else {
                 @{
                     State  = 'Enabled'
-                    SentTo = @($Email)
+                    SentTo = $Email
                 }
             }
         }

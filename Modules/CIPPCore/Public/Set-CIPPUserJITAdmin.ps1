@@ -15,6 +15,9 @@ function Set-CIPPUserJITAdmin {
     .PARAMETER Roles
     List of Role GUIDs to add or remove
 
+    .PARAMETER Groups
+    List of Group GUIDs to add or remove
+
     .PARAMETER Action
     Action to perform: Create, AddRoles, RemoveRoles, DeleteUser, DisableUser
 
@@ -38,8 +41,9 @@ function Set-CIPPUserJITAdmin {
         [Parameter(Mandatory = $true)]
         [hashtable]$User,
         [string[]]$Roles,
+        [string[]]$Groups,
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Create', 'AddRoles', 'RemoveRoles', 'DeleteUser', 'DisableUser')]
+        [ValidateSet('Create', 'AddRoles', 'AddGroups', 'AddRolesAndGroups', 'RemoveRoles', 'RemoveGroups', 'RemoveRolesAndGroups', 'DeleteUser', 'DisableUser')]
         [string]$Action,
         [datetime]$Expiration,
         [datetime]$StartDate,
@@ -108,14 +112,22 @@ function Set-CIPPUserJITAdmin {
                 }
             }
             'AddRoles' {
-                $Roles = $Roles | ForEach-Object {
-                    try {
-                        $Body = @{
-                            '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
+                if ($Roles) {
+                    $Roles | ForEach-Object {
+                        try {
+                            # Activate the directory role if not already active
+                            try {
+                                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles" -tenantid $TenantFilter -body (@{ roleTemplateId = $_ } | ConvertTo-Json) -ErrorAction SilentlyContinue
+                            } catch {}
+                            $Body = @{
+                                '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
+                            }
+                            $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to add role $($_) to user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
                         }
-                        $Json = ConvertTo-Json -Depth 5 -InputObject $Body
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
-                    } catch {}
+                    }
                 }
                 $UserEnabled = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)?`$select=accountEnabled" -tenantid $TenantFilter).accountEnabled
                 if (-not $UserEnabled) {
@@ -125,7 +137,9 @@ function Set-CIPPUserJITAdmin {
                     $Json = ConvertTo-Json -Depth 5 -InputObject $Body
                     try {
                         New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json | Out-Null
-                    } catch {}
+                    } catch {
+                        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to enable user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                    }
                 }
                 $CreatedBy = if ($Headers) {
                     ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
@@ -148,16 +162,130 @@ function Set-CIPPUserJITAdmin {
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info' -LogData $LogData
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
-            'RemoveRoles' {
-                $Roles = $Roles | ForEach-Object {
+            'AddGroups' {
+                if ($Groups) {
+                    foreach ($GroupId in $Groups) {
+                        try {
+                            $Body = @{
+                                '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
+                            }
+                            $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$GroupId/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to add user $($UserObj.userPrincipalName) to group $GroupId`: $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                $CreatedBy = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -StartDate $StartDate -Reason $Reason -CreatedBy $CreatedBy | Out-Null
+                $Message = "Added group memberships for user $($UserObj.displayName) ($($UserObj.userPrincipalName)). Reason: $Reason"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                return $Message
+            }
+            'AddRolesAndGroups' {
+                # Add roles
+                if ($Roles) {
+                    $Roles | ForEach-Object {
+                        try {
+                            # Activate the directory role if not already active
+                            try {
+                                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles" -tenantid $TenantFilter -body (@{ roleTemplateId = $_ } | ConvertTo-Json) -ErrorAction SilentlyContinue
+                            } catch {}
+                            $Body = @{
+                                '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
+                            }
+                            $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to add role $($_) to user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                # Add groups
+                if ($Groups) {
+                    foreach ($GroupId in $Groups) {
+                        try {
+                            $Body = @{
+                                '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
+                            }
+                            $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$GroupId/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to add group $GroupId to user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                $UserEnabled = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)?`$select=accountEnabled" -tenantid $TenantFilter).accountEnabled
+                if (-not $UserEnabled) {
+                    $Body = @{ accountEnabled = $true }
+                    $Json = ConvertTo-Json -Depth 5 -InputObject $Body
                     try {
-                        $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
-                    } catch {}
+                        New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json | Out-Null
+                    } catch {
+                        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to enable user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                    }
+                }
+                $CreatedBy = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration -StartDate $StartDate -Reason $Reason -CreatedBy $CreatedBy | Out-Null
+                $Message = "Added admin roles and group memberships for user $($UserObj.displayName) ($($UserObj.userPrincipalName)). Reason: $Reason"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                return $Message
+            }
+            'RemoveRoles' {
+                if ($Roles) {
+                    $Roles | ForEach-Object {
+                        try {
+                            $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to remove role $($_) from user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
                 }
                 Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear | Out-Null
                 $Message = "Removed admin roles from user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
                 return "Removed admin roles from user $($UserObj.displayName)"
+            }
+            'RemoveGroups' {
+                if ($Groups) {
+                    foreach ($GroupId in $Groups) {
+                        try {
+                            $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/groups/$GroupId/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to remove user $($UserObj.userPrincipalName) from group $GroupId`: $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear | Out-Null
+                $Message = "Removed group memberships from user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                return $Message
+            }
+            'RemoveRolesAndGroups' {
+                # Remove roles
+                if ($Roles) {
+                    $Roles | ForEach-Object {
+                        try {
+                            $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to remove role $($_) from user $($UserObj.userPrincipalName): $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                # Remove groups
+                if ($Groups) {
+                    foreach ($GroupId in $Groups) {
+                        try {
+                            $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/groups/$GroupId/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
+                        } catch {
+                            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to remove user $($UserObj.userPrincipalName) from group $GroupId`: $($_.Exception.Message)" -Sev 'Error'
+                        }
+                    }
+                }
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear | Out-Null
+                $Message = "Removed admin roles and group memberships from user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                return $Message
             }
             'DeleteUser' {
                 try {
