@@ -73,6 +73,30 @@ function Invoke-AddUserDefaults {
         $SetSponsor = $Request.Body.setSponsor
         $CopyFrom = $Request.Body.copyFrom
 
+        # Fetch group memberships from source user if provided
+        $GroupMemberships = @()
+        if ($Request.Body.sourceUserId -and $TenantFilter) {
+            try {
+                Write-Host "Fetching group memberships from source user: $($Request.Body.sourceUserId)"
+                $SourceGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Request.Body.sourceUserId)/memberOf" -tenantid $TenantFilter
+                $GroupMemberships = @($SourceGroups | Where-Object {
+                    $_.'@odata.type' -eq '#microsoft.graph.group' -and
+                    $_.groupTypes -notcontains 'DynamicMembership' -and
+                    $_.onPremisesSyncEnabled -ne $true
+                } | ForEach-Object {
+                    @{
+                        id          = $_.id
+                        displayName = $_.displayName
+                        mailEnabled = $_.mailEnabled
+                        groupTypes  = $_.groupTypes
+                    }
+                })
+                Write-Host "Found $($GroupMemberships.Count) group memberships to store in template"
+            } catch {
+                Write-Warning "Failed to fetch group memberships: $($_.Exception.Message)"
+            }
+        }
+
         # Create template object with all fields from CippAddEditUser
         $TemplateObject = @{
             tenantFilter     = $TenantFilter
@@ -104,6 +128,7 @@ function Invoke-AddUserDefaults {
             setManager       = $SetManager
             setSponsor       = $SetSponsor
             copyFrom         = $CopyFrom
+            groupMemberships = $GroupMemberships
         }
 
         # Use existing GUID if editing, otherwise generate new one
