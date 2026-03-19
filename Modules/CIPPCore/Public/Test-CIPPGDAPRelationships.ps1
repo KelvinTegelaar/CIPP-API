@@ -79,7 +79,7 @@ function Test-CIPPGDAPRelationships {
                         Issue        = "$($ExpectedGroup) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = '*Partner Tenant'
                         Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+                        Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
                     }) | Out-Null
                 $MissingGroups.Add([PSCustomObject]@{
@@ -94,7 +94,7 @@ function Test-CIPPGDAPRelationships {
                     Issue        = "We only found $($CIPPGroupCount) of the 15 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                     Tenant       = '*Partner Tenant'
                     Relationship = 'None'
-                    Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+                    Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
                 }) | Out-Null
         }
