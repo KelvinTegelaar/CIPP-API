@@ -1,4 +1,4 @@
-Function Invoke-ExecResetMFA {
+function Invoke-ExecResetMFA {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -7,8 +7,8 @@ Function Invoke-ExecResetMFA {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Headers = $Request.Headers
 
+    $Headers = $Request.Headers
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
