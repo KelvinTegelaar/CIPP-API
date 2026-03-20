@@ -203,15 +203,11 @@ function Invoke-CIPPStandardNinjaCveSync {
         }
 
         if ($CsvRows.Count -eq 0) {
-            Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "No valid CVEs found to upload for this tenant" -Sev 'Info'
-            
-            if ($Settings.report) {
-                Set-CIPPStandardsCompareField -FieldName 'standards.NinjaCveSync' -FieldValue "No valid CVEs detected" -TenantFilter $Tenant
-            }
-            return
+            Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "No CVEs found - uploading empty CSV to clear old data from NinjaOne" -Sev 'Info'
+            # Don't return - we still need to upload an empty CSV to clear NinjaOne's data
+        } else {
+            Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Prepared $($CsvRows.Count) CVE rows for upload" -Sev 'Info'
         }
-
-        Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Prepared $($CsvRows.Count) CVE rows for upload" -Sev 'Info'
 
         # ============================
         # 7. BUILD CSV BYTES (using helper function)
@@ -275,7 +271,11 @@ function Invoke-CIPPStandardNinjaCveSync {
         # 9. REPORT MODE
         # ============================
         if ($Settings.report) {
-            $ReportMessage = "Uploaded $($CsvRows.Count) CVEs to scan group '$ScanGroupName' (ID: $ResolvedScanGroupId)"
+            if ($CsvRows.Count -eq 0) {
+                $ReportMessage = "No CVEs detected - cleared scan group '$ScanGroupName' (ID: $ResolvedScanGroupId)"
+            } else {
+                $ReportMessage = "Uploaded $($CsvRows.Count) CVEs to scan group '$ScanGroupName' (ID: $ResolvedScanGroupId)"
+            }
             Set-CIPPStandardsCompareField -FieldName "standards.NinjaCveSync" -FieldValue $ReportMessage -TenantFilter $Tenant
         }
 
