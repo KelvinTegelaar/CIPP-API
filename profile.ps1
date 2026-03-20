@@ -1,3 +1,17 @@
+Write-Information "#### Direct table write attempt ####"
+try {
+    $storageAccountName = ($env:AzureWebJobsStorage -split ';' | Where-Object { $_ -match 'AccountName' }) -replace 'AccountName=', ''
+    $storageKey = ($env:AzureWebJobsStorage -split ';' | Where-Object { $_ -match 'AccountKey' }) -replace 'AccountKey=', ''
+    $date = (Get-Date).ToUniversalTime().ToString('R')
+    $body = @{ PartitionKey = 'test'; RowKey = [guid]::NewGuid().ToString(); Message = 'Profile test write' } | ConvertTo-Json
+    $stringToSign = "POST`napplication/json`n$date`n/tables/$storageAccountName/CippLogs"
+    $hmac = [System.Security.Cryptography.HMACSHA256]::new([Convert]::FromBase64String($storageKey))
+    $sig = [Convert]::ToBase64String($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($stringToSign)))
+    Invoke-RestMethod -Uri "https://$storageAccountName.table.core.windows.net/CippLogs" -Method Post -Headers @{ Authorization = "SharedKey $storageAccountName`:$sig"; 'x-ms-date' = $date; 'x-ms-version' = '2019-02-02'; Accept = 'application/json;odata=nometadata' } -Body $body -ContentType 'application/json'
+    Write-Information "#### Direct table write succeeded ####"
+} catch {
+    Write-Information "#### Direct table write failed: $($_.Exception.Message) ####"
+}
 Write-Information "#### Module check: CIPPCore loaded: $(Get-Module -Name CIPPCore -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) ####"
 Write-Information "#### Module check: AzBobbyTables loaded: $(Get-Module -Name AzBobbyTables -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) ####"
 Write-Information "#### PROFILE START ####"
