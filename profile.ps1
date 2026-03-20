@@ -1,3 +1,5 @@
+Write-Information "#### Module check: CIPPCore loaded: $(Get-Module -Name CIPPCore -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) ####"
+Write-Information "#### Module check: AzBobbyTables loaded: $(Get-Module -Name AzBobbyTables -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) ####"
 Write-Information "#### PROFILE START ####"
 Write-Information "WEBSITE_DEPLOYMENT_ID: $($env:WEBSITE_DEPLOYMENT_ID)"
 Write-Information "WEBSITE_SITE_NAME: $($env:WEBSITE_SITE_NAME)"
