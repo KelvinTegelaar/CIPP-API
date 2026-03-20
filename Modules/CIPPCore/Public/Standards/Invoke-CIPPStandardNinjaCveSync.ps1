@@ -86,6 +86,37 @@ function Invoke-CIPPStandardNinjaCveSync {
         Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Retrieved $($AllVulns.Count) vulnerabilities from Defender TVM" -Sev 'Info'
 
         # ============================
+        # 3.5. FILTER OUT EXCEPTED CVEs
+        # ============================
+        Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Checking for CVE exceptions to filter out" -Sev 'Debug'
+        
+        $ExceptionsTable = Get-CIPPTable -TableName CveExceptions
+        
+        # Get all exceptions that apply to this tenant (tenant-specific OR global)
+        # Exception structure: PartitionKey = cveId, RowKey = customerId (or "ALL" for global)
+        # We need to get all exceptions where RowKey matches our tenant OR "ALL"
+        $AllExceptions = Get-CIPPAzDataTableEntity @ExceptionsTable
+        
+        # Filter to exceptions that apply to this tenant
+        $ApplicableExceptions = $AllExceptions | Where-Object { $_.RowKey -eq $Tenant -or $_.RowKey -eq 'ALL' }
+        
+        if ($ApplicableExceptions) {
+            $ExceptedCveIds = $ApplicableExceptions | Select-Object -ExpandProperty cveId -Unique
+            Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Found $($ExceptedCveIds.Count) unique CVE(s) with exceptions for this tenant" -Sev 'Info'
+            
+            # Filter out excepted CVEs
+            $BeforeCount = $AllVulns.Count
+            $AllVulns = $AllVulns | Where-Object { $_.cveId -notin $ExceptedCveIds }
+            $FilteredCount = $BeforeCount - $AllVulns.Count
+            
+            if ($FilteredCount -gt 0) {
+                Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Filtered out $FilteredCount CVE entries due to exceptions (remaining: $($AllVulns.Count))" -Sev 'Info'
+            }
+        } else {
+            Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "No CVE exceptions found for this tenant" -Sev 'Debug'
+        }
+
+        # ============================
         # 4. GET NINJA TOKEN WITH CONFIG
         # ============================
         Write-LogMessage -API 'NinjaCveSync' -tenant $Tenant -message "Retrieving NinjaOne API token" -Sev 'Debug'
