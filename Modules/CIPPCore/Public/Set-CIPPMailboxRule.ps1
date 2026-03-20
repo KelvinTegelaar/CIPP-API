@@ -22,7 +22,7 @@
     }
 
     try {
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "$State-InboxRule" -Anchor $Username -cmdParams @{Identity = $RuleId; Mailbox = $UserId }
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "$State-InboxRule" -Anchor $Username -cmdParams @{Identity = $RuleId}
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully set mailbox rule $($RuleName) for $($Username) to $($State)d" -Sev 'Info' -tenant $TenantFilter
 
         # Update the cached rule if it exists (without calling Exchange again)

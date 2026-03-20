@@ -38,7 +38,7 @@ function Start-CIPPOrchestrator {
     # If already running in processor context (e.g., timer trigger) and we have an InputObject,
     # start orchestration directly without queuing
 
-    $OrchestratorTriggerDisabled = $env:AzureWebJobs_CIPPOrchestrator_Disabled -eq 'true' -or $env:AzureWebJobs_CIPPOrchestrator_Disabled -eq '1'
+    $OrchestratorTriggerDisabled = $env:AzureWebJobs_CIPPOrchestrator_Disabled -in @('true', '1') -or [System.Environment]::GetEnvironmentVariable('AzureWebJobs.CIPPOrchestrator.Disabled') -in @('true', '1')
 
     if ($InputObject -and -not $OrchestratorTriggerDisabled) {
         Write-Information 'Running in processor context - starting orchestration directly'
