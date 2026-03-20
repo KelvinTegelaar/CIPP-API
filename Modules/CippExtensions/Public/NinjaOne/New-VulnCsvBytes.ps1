@@ -9,7 +9,7 @@ function New-VulnCsvBytes {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][object[]]$Rows,
+        [Parameter()][object[]]$Rows = @(),
         [Parameter(Mandatory)][string[]]$Headers
     )
 
