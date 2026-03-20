@@ -1,3 +1,6 @@
+Write-Information "#### PSModulePath: $($env:PSModulePath) ####"
+Write-Information "#### Modules dir exists: $(Test-Path (Join-Path $PSScriptRoot 'Modules')) ####"
+Write-Information "#### CIPPCore dir exists: $(Test-Path (Join-Path $PSScriptRoot 'Modules/CIPPCore')) ####"
 Write-Information "#### Direct table write attempt ####"
 try {
     $storageAccountName = ($env:AzureWebJobsStorage -split ';' | Where-Object { $_ -match 'AccountName' }) -replace 'AccountName=', ''
