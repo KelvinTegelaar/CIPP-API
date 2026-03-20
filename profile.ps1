@@ -65,6 +65,13 @@ foreach ($Module in $Modules) {
 $SwModules.Stop()
 $Timings['AllModules'] = $SwModules.Elapsed.TotalMilliseconds
 
+try {
+    Import-Module -Name (Join-Path $ModulesPath 'CIPPCore') -ErrorAction Stop
+    Write-Information "#### CIPPCore loaded successfully ####"
+} catch {
+    Write-Information "#### CIPPCore import failed: $($_.Exception.Message) ####"
+}
+
 # Initialize global TelemetryClient only if Application Insights is configured
 $SwTelemetry = [System.Diagnostics.Stopwatch]::StartNew()
 if ($hasAppInsights -and -not $global:TelemetryClient) {
