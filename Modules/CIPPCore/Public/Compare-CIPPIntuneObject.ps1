@@ -514,6 +514,19 @@ function Compare-CIPPIntuneObject {
                             Value  = $value
                             Source = 'Reference'
                         }
+                    } elseif ($settingInstance.simpleSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = @($settingInstance.simpleSettingCollectionValue | ForEach-Object { $_.value })
+                        [PSCustomObject]@{
+                            Key    = "Simple-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
+                            Source = 'Reference'
+                        }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName
@@ -534,6 +547,30 @@ function Compare-CIPPIntuneObject {
                             Key    = "Choice-$($settingInstance.settingDefinitionId)"
                             Label  = $label
                             Value  = $value
+                            Source = 'Reference'
+                        }
+
+                        # Recurse into children of choice settings (e.g. firewall profile sub-settings)
+                        if ($settingInstance.choiceSettingValue.children) {
+                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
+                            foreach ($cr in $childResults) { $cr }
+                        }
+                    } elseif ($settingInstance.choiceSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = [System.Collections.Generic.List[string]]::new()
+                        foreach ($choiceValue in $settingInstance.choiceSettingCollectionValue) {
+                            $option = $intuneObj.options | Where-Object { $_.id -eq $choiceValue.value }
+                            $displayValue = if ($option?.displayName) { $option.displayName } else { $choiceValue.value }
+                            $values.Add($displayValue)
+                        }
+                        [PSCustomObject]@{
+                            Key    = "Choice-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
                             Source = 'Reference'
                         }
                     } else {
@@ -586,6 +623,19 @@ function Compare-CIPPIntuneObject {
                             Value  = $value
                             Source = 'Difference'
                         }
+                    } elseif ($settingInstance.simpleSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = @($settingInstance.simpleSettingCollectionValue | ForEach-Object { $_.value })
+                        [PSCustomObject]@{
+                            Key    = "Simple-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
+                            Source = 'Difference'
+                        }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName
@@ -608,6 +658,30 @@ function Compare-CIPPIntuneObject {
                             Value  = $value
                             Source = 'Difference'
                         }
+
+                        # Recurse into children of choice settings (e.g. firewall profile sub-settings)
+                        if ($settingInstance.choiceSettingValue.children) {
+                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
+                            foreach ($cr in $childResults) { $cr }
+                        }
+                    } elseif ($settingInstance.choiceSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = [System.Collections.Generic.List[string]]::new()
+                        foreach ($choiceValue in $settingInstance.choiceSettingCollectionValue) {
+                            $option = $intuneObj.options | Where-Object { $_.id -eq $choiceValue.value }
+                            $displayValue = if ($option?.displayName) { $option.displayName } else { $choiceValue.value }
+                            $values.Add($displayValue)
+                        }
+                        [PSCustomObject]@{
+                            Key    = "Choice-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
+                            Source = 'Difference'
+                        }
                     } else {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName
@@ -628,11 +702,16 @@ function Compare-CIPPIntuneObject {
 
         $result = [System.Collections.Generic.List[PSObject]]::new()
 
-        $allKeys = @($referenceItems | Select-Object -ExpandProperty Key) + @($differenceItems | Select-Object -ExpandProperty Key) | Sort-Object -Unique
+        $refItemsByKey = @{}
+        foreach ($item in $referenceItems) { $refItemsByKey[$item.Key] = $item }
+        $diffItemsByKey = @{}
+        foreach ($item in $differenceItems) { $diffItemsByKey[$item.Key] = $item }
+
+        $allKeys = @($refItemsByKey.Keys) + @($diffItemsByKey.Keys) | Sort-Object -Unique
 
         foreach ($key in $allKeys) {
-            $refItem = $referenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
-            $diffItem = $differenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
+            $refItem = $refItemsByKey[$key]
+            $diffItem = $diffItemsByKey[$key]
 
             $settingId = $key
             if ($key -like 'Simple-*') {
@@ -654,14 +733,14 @@ function Compare-CIPPIntuneObject {
             $diffValue = $diffRawValue
 
             if ($null -ne $settingDefinition -and $null -ne $settingDefinition.options) {
-                if ($null -ne $refRawValue -and $refRawValue -match '_\d+$') {
+                if ($null -ne $refRawValue -and $refRawValue -is [string]) {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $refRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
                         $refValue = $option.displayName
                     }
                 }
 
-                if ($null -ne $diffRawValue -and $diffRawValue -match '_\d+$') {
+                if ($null -ne $diffRawValue -and $diffRawValue -is [string]) {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $diffRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
                         $diffValue = $option.displayName
