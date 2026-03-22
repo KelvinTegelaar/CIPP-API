@@ -117,6 +117,7 @@ function Invoke-CIPPDBCacheCollection {
             'ManagedDeviceEncryptionStates'
             'IntuneAppProtectionPolicies'
             'DetectedApps'
+            'MDEOnboarding'
         )
     }
 
