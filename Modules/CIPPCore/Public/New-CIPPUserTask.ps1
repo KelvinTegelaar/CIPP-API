@@ -68,6 +68,33 @@ function New-CIPPUserTask {
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
     }
 
+    # Add to groups
+    if ($UserObj.AddToGroups) {
+        $UserObj.AddToGroups | ForEach-Object {
+            $GroupType = $_.addedFields.groupType
+            $GroupId = $_.value
+            $GroupName = $_.label
+            try {
+                if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+                    $Params = @{ Identity = $GroupID; Member = $CreationResults.Username; BypassSecurityGroupManagerCheck = $true }
+                    $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $Params -UseSystemMailbox $true
+                } else {
+                    $UserBody = [PSCustomObject]@{
+                        '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($CreationResults.User.id)"
+                    }
+                    $UserBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $UserBody
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/`$ref" -tenantid $UserObj.tenantFilter -type POST -body $UserBodyJSON -Verbose
+                }
+                Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Added $($CreationResults.Username) to $GroupName group" -Sev Info
+                $Results.Add("Added to group: $GroupName")
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Failed to add to group $GroupName. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+                $Results.Add("Failed to add to group ${GroupName}: $($ErrorMessage.NormalizedError)")
+            }
+        }
+    }
+
     if ($UserObj.setManager) {
         $ManagerResult = Set-CIPPManager -User $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResult)

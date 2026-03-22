@@ -73,6 +73,9 @@ function Invoke-AddUserDefaults {
         $SetSponsor = $Request.Body.setSponsor
         $CopyFrom = $Request.Body.copyFrom
 
+        # Groups
+        $GroupMemberships = if ($Request.Body.addToGroups) { $Request.Body.addToGroups } else { $Request.Body.groupMemberships }
+
         # Create template object with all fields from CippAddEditUser
         $TemplateObject = @{
             tenantFilter     = $TenantFilter
@@ -104,6 +107,7 @@ function Invoke-AddUserDefaults {
             setManager       = $SetManager
             setSponsor       = $SetSponsor
             copyFrom         = $CopyFrom
+            groupMemberships = $GroupMemberships
         }
 
         # Use existing GUID if editing, otherwise generate new one
