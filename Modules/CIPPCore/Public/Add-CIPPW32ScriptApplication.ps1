@@ -149,7 +149,8 @@ function Add-CIPPW32ScriptApplication {
     $UninstallScriptId = $null
 
     if ($Properties.installScript) {
-        $InstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.installScript))
+        $ReplacedInstallScript = Get-CIPPTextReplacement -Text $Properties.installScript -TenantFilter $TenantFilter
+        $InstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ReplacedInstallScript))
         $InstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppInstallPowerShellScript'
             displayName           = 'install.ps1'
@@ -172,7 +173,8 @@ function Add-CIPPW32ScriptApplication {
     }
 
     if ($Properties.uninstallScript) {
-        $UninstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.uninstallScript))
+        $ReplacedUninstallScript = Get-CIPPTextReplacement -Text $Properties.uninstallScript -TenantFilter $TenantFilter
+        $UninstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ReplacedUninstallScript))
         $UninstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppUninstallPowerShellScript'
             displayName           = 'uninstall.ps1'
