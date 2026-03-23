@@ -13,12 +13,6 @@ function Invoke-AddGroupTemplate {
         if (!$Request.Body.displayName) {
             throw 'You must enter a displayname'
         }
-        if (!$Request.Body.username) {
-            throw 'You must enter a username'
-        }
-        if (!$Request.Body.groupType) {
-            throw 'You must select a group type'
-        }
 
         # Normalize group type to match New-CIPPGroup expectations
         # Handle values from ListGroups calculatedGroupType and frontend form values
