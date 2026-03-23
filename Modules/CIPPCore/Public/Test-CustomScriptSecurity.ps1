@@ -32,6 +32,22 @@ function Test-CustomScriptSecurity {
         }
     }
 
+    # Block scoped and namespace-qualified variable access (e.g., $env:, $global:, $script:)
+    $VariableExpressions = $Ast.FindAll({
+        param($node)
+        $node -is [System.Management.Automation.Language.VariableExpressionAst]
+    }, $true)
+
+    foreach ($variableExpr in $VariableExpressions) {
+        $variablePath = $variableExpr.VariablePath
+        $userPath = $variablePath.UserPath
+
+        if ($userPath -match '^[^:]+:') {
+            $lineNumber = $variableExpr.Extent.StartLineNumber
+            throw "Security violation at line $lineNumber`: Scoped/namespace-qualified variable access is not allowed ('$userPath'). Avoid variables such as `$env:, `$global:, and `$script:."
+        }
+    }
+
     # ALLOWLIST: Only these commands are permitted
     $AllowedCommands = @(
         # Data manipulation cmdlets
