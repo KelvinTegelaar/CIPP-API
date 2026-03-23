@@ -22,13 +22,12 @@ function New-CIPPUserTask {
         if ($UserObj.licenses.value) {
             # Filter out licenses with no available units
             try {
-                $SubscribedSkus = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $UserObj.tenantFilter
+                $LicenseOverview = Get-CIPPLicenseOverview -TenantFilter $UserObj.tenantFilter
                 $FilteredLicenses = @(foreach ($LicenseId in $UserObj.licenses.value) {
-                    $Sku = $SubscribedSkus | Where-Object { $_.skuId -eq $LicenseId }
-                    $Available = [int]$Sku.prepaidUnits.enabled - [int]$Sku.consumedUnits
-                    if ($Sku -and $Available -le 0) {
-                        $null = $Results.Add("Skipped license $($Sku.skuPartNumber): no available units")
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Skipped license $($Sku.skuPartNumber) for $($CreationResults.Username): no available units" -Sev 'Warn'
+                    $Sku = $LicenseOverview | Where-Object { $_.skuId -eq $LicenseId }
+                    if ($Sku -and [int]$Sku.availableUnits -le 0) {
+                        $null = $Results.Add("Skipped license $($Sku.License): no available units")
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Skipped license $($Sku.License) for $($CreationResults.Username): no available units" -Sev 'Warn'
                     } else {
                         $LicenseId
                     }
@@ -87,16 +86,12 @@ function New-CIPPUserTask {
 
     if ($UserObj.groupMemberships -and ($UserObj.groupMemberships | Measure-Object).Count -gt 0) {
         Write-Host "Adding user to $(@($UserObj.groupMemberships).Count) groups from template"
-        $ODataBind = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $CreationResults.User.id
-        $AddMemberBody = @{ '@odata.id' = $ODataBind } | ConvertTo-Json -Compress
         foreach ($Group in $UserObj.groupMemberships) {
             try {
-                if ($Group.mailEnabled -and $Group.groupTypes -notcontains 'Unified') {
-                    $Params = @{ Identity = $Group.id; Member = $CreationResults.Username; BypassSecurityGroupManagerCheck = $true }
-                    $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $Params -UseSystemMailbox $true
-                } else {
-                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Group.id)/members/`$ref" -tenantid $UserObj.tenantFilter -body $AddMemberBody -Verbose
-                }
+                $GroupType = if ($Group.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                    elseif ($Group.mailEnabled) { 'Distribution list' }
+                    else { 'Security' }
+                Add-CIPPGroupMember -Headers $Headers -GroupType $GroupType -GroupId $Group.id -Member $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName
                 $Results.Add("Added user to group from template: $($Group.displayName)")
             } catch {
                 $Results.Add("Failed to add to group $($Group.displayName): $($_.Exception.Message)")

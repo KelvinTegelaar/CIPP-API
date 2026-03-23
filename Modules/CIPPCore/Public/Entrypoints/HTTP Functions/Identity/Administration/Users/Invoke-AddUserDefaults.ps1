@@ -149,7 +149,7 @@ function Invoke-AddUserDefaults {
 
         $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
         $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
