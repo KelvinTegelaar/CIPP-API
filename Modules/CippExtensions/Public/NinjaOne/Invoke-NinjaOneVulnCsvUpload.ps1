@@ -38,19 +38,13 @@ function Invoke-NinjaOneVulnCsvUpload {
         $mem.Write($trailerBytes, 0, $trailerBytes.Length)
         $mem.Position = 0
 
-        Write-LogMessage -API 'NinjaOne' -message "Uploading CVE CSV to $Uri ($($CsvBytes.Length) bytes)" -Sev 'Info'
-
-        # Debug: log a preview of the multipart body — Debug severity only
-        $debugBody = [System.Text.Encoding]::UTF8.GetString($mem.ToArray())
-        Write-LogMessage -API 'NinjaOne' -message "Multipart preview (first 300 chars): $($debugBody.Substring(0, [Math]::Min(300, $debugBody.Length)))" -Sev 'Debug'
-        $mem.Position = 0
+        Write-LogMessage -API 'NinjaOne' -message "Uploading CVE CSV to NinjaOne ($($CsvBytes.Length) bytes)" -Sev 'Debug'
 
         $resp = Invoke-RestMethod -Method POST -Uri $Uri `
             -Headers $Headers `
             -ContentType "multipart/form-data; boundary=$boundary" `
             -Body $mem
 
-        Write-LogMessage -API 'NinjaOne' -message "Upload successful" -Sev 'Info'
         return $resp
     }
     catch {

@@ -18,11 +18,9 @@ function Get-DefenderTvmRaw {
     $all   = New-Object System.Collections.Generic.List[object]
     $page  = 0
 
-    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message 'Fetching SoftwareVulnerabilitiesByMachine' -Sev 'Debug'
-
     try {
         do {
-            Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1) from: $uri" -Sev 'Debug'
+            Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetching page $($page + 1)" -Sev 'Debug'
 
             $resp = New-GraphGetRequest -tenantid $TenantId -uri $uri -scope $scope
 
@@ -30,11 +28,9 @@ function Get-DefenderTvmRaw {
                 if ($resp.ContainsKey('value')) {
                     $rows     = $resp.value
                     $nextLink = $resp.'@odata.nextLink'
-
-                    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): $($rows.Count) records. NextLink: $($null -ne $nextLink)" -Sev 'Info'
-
                     if ($rows) { $all.AddRange($rows) }
                     $uri = $nextLink
+                    Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): $($rows.Count) records" -Sev 'Debug'
                 }
                 else {
                     $all.Add($resp)
@@ -44,7 +40,6 @@ function Get-DefenderTvmRaw {
             elseif ($resp -is [System.Collections.IEnumerable] -and $resp -isnot [string]) {
                 $all.AddRange($resp)
                 $uri = $null
-                Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Page $($page + 1): $($resp.Count) records (array)" -Sev 'Info'
             }
             else {
                 $all.Add($resp)
@@ -60,7 +55,7 @@ function Get-DefenderTvmRaw {
 
         } while ($uri -and ($MaxPages -eq 0 -or $page -lt $MaxPages))
 
-        Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Fetch complete. Pages: $page, Records: $($all.Count)" -Sev 'Info'
+        Write-LogMessage -API 'DefenderTVM' -tenant $TenantId -message "Defender TVM fetch complete: $($all.Count) records across $page page(s)" -Sev 'Info'
         return $all
     }
     catch {

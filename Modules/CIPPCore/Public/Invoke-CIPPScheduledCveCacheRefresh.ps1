@@ -17,14 +17,12 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         # 1. GET TABLE REFERENCES
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Getting table references" -Sev 'Debug'
-        $CveCacheTable     = Get-CIPPTable -TableName 'CveCache'
+        $CveCacheTable      = Get-CIPPTable -TableName 'CveCache'
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
 
         # ============================
         # 2. PULL CVE DATA FROM DEFENDER TVM
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Pulling CVE data from Defender TVM" -Sev 'Debug'
         $AllVulns = Get-DefenderTvmRaw -TenantId $TenantFilter -MaxPages 0
 
         if (-not $AllVulns) {
@@ -37,8 +35,6 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         # 3. DELETE OLD ENTRIES FOR THIS TENANT
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Removing old cache entries for this tenant" -Sev 'Debug'
-
         try {
             $ExistingEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "customerId eq '$TenantFilter'"
 
@@ -53,25 +49,22 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                         Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Failed to delete old entry: $($_.Exception.Message)" -Sev 'Warning'
                     }
                 }
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Deleted $DeleteCount old cache entries" -Sev 'Debug'
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Cleared $DeleteCount old cache entries" -Sev 'Debug'
             }
         }
         catch {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Warning during cleanup: $($_.Exception.Message)" -Sev 'Warning'
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Warning during cache cleanup: $($_.Exception.Message)" -Sev 'Warning'
         }
 
         # ============================
         # 4. DEFENDER EXCEPTION STATUS (DISABLED — CAUSES OOM ON LARGE TENANTS)
         # ============================
         # TODO: Re-enable with pagination once OOM issue is resolved.
-        # $uri = 'https://api.securitycenter.microsoft.com/api/Vulnerabilities'
-        # $scope = 'https://api.securitycenter.microsoft.com/.default'
         $DefenderExceptions = @{}
 
         # ============================
         # 5. GET CIPP EXCEPTIONS FOR THIS TENANT
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Checking CIPP exceptions" -Sev 'Debug'
         $CippExceptions = @{}
 
         try {
@@ -83,18 +76,17 @@ function Invoke-CIPPScheduledCveCacheRefresh {
                         $CippExceptions[$exception.cveId] = $true
                     }
                 }
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Found $($CippExceptions.Count) CVEs with CIPP exceptions" -Sev 'Debug'
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "$($CippExceptions.Count) CVE exception(s) active for this tenant" -Sev 'Debug'
             }
         }
         catch {
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Warning: Could not retrieve CIPP exceptions: $($_.Exception.Message)" -Sev 'Warning'
+            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Could not retrieve CIPP exceptions: $($_.Exception.Message)" -Sev 'Warning'
         }
 
         # ============================
         # 6. BUILD ENTITIES
         # ============================
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Building cache entities" -Sev 'Debug'
-        $Entities    = @()
+        $Entities     = @()
         $SkippedCount = 0
 
         foreach ($vuln in $AllVulns) {
@@ -155,10 +147,6 @@ function Invoke-CIPPScheduledCveCacheRefresh {
         # ============================
         # 7. BATCH WRITE TO TABLE
         # ============================
-        # FIXED: Removed -CreateTableIfNotExists and -OperationType which are not valid
-        # parameters on Add-CIPPAzDataTableEntity for single/batch writes. Use -Force only.
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Starting batch write of $($Entities.Count) entities" -Sev 'Info'
-
         $SuccessCount = 0
         $FailCount    = 0
         $BatchSize    = 50
@@ -168,8 +156,6 @@ function Invoke-CIPPScheduledCveCacheRefresh {
             $BatchNumber = [Math]::Floor($i / $BatchSize) + 1
             $Batch       = $Entities[$i..[Math]::Min($i + $BatchSize - 1, $Entities.Count - 1)]
 
-            Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Writing batch $BatchNumber/$TotalBatches ($($Batch.Count) records)" -Sev 'Debug'
-
             try {
                 Add-CIPPAzDataTableEntity @CveCacheTable -Entity $Batch -Force
                 $SuccessCount += $Batch.Count
@@ -177,17 +163,17 @@ function Invoke-CIPPScheduledCveCacheRefresh {
             catch {
                 $FailCount    += $Batch.Count
                 $ErrorMessage  = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Batch $BatchNumber/$TotalBatches FAILED: $ErrorMessage" -Sev 'Error'
+                Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "Batch $BatchNumber/$TotalBatches failed: $ErrorMessage" -Sev 'Error'
             }
         }
 
         # ============================
         # 8. COMPLETION LOG
         # ============================
-        $UniqueCves   = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
+        $UniqueCves    = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
         $ExceptedCount = ($Entities | Where-Object { $_.hasException -eq $true }).Count
 
-        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "CVE Cache Refresh complete. Written: $SuccessCount, Failed: $FailCount, Unique CVEs: $UniqueCves, Excepted: $ExceptedCount" -Sev 'Info'
+        Write-LogMessage -API 'CveCacheRefresh' -tenant $TenantFilter -message "CVE Cache Refresh complete — $UniqueCves unique CVEs cached ($ExceptedCount excepted). Written: $SuccessCount, Failed: $FailCount" -Sev 'Info'
 
     }
     catch {

@@ -5,7 +5,7 @@ function Invoke-CIPPScheduledNinjaCveSync {
     .DESCRIPTION
         Called by the CIPP scheduler once per tenant. TenantFilter and ScanGroupPrefix
         are passed in via the task Parameters object when the task is registered via
-        the CippNinjaCveSyncScheduleDrawer. Reads NinjaOne credentials from
+        Register-CIPPExtensionScheduledTasks. Reads NinjaOne credentials from
         Extensionsconfig, pulls Defender TVM vulnerabilities, filters CIPP exceptions,
         and uploads a CSV to the configured NinjaOne scan group.
     #>
@@ -15,20 +15,14 @@ function Invoke-CIPPScheduledNinjaCveSync {
         [Parameter()][string]$ScanGroupPrefix = ''
     )
 
-    Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Starting scheduled NinjaCveSync" -Sev 'Info'
-
-    # ============================
-    # 1. BUILD SCAN GROUP NAME
-    # ============================
     $ScanGroupName = "$ScanGroupPrefix$TenantFilter"
-    Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Scan group name: '$ScanGroupName'" -Sev 'Info'
+    Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Starting NinjaCveSync — scan group: '$ScanGroupName'" -Sev 'Info'
 
     # ============================
-    # 2. LOAD NINJAONE CREDENTIALS FROM Extensionsconfig
+    # 1. LOAD NINJAONE CREDENTIALS FROM Extensionsconfig
     # ============================
     try {
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Retrieving NinjaOne credentials from Extensionsconfig" -Sev 'Debug'
-        $ExtTable = Get-CIPPTable -TableName 'Extensionsconfig'
+        $ExtTable     = Get-CIPPTable -TableName 'Extensionsconfig'
         $ConfigEntity = Get-CIPPAzDataTableEntity @ExtTable
 
         if (-not $ConfigEntity -or -not $ConfigEntity.config) {
@@ -40,8 +34,6 @@ function Invoke-CIPPScheduledNinjaCveSync {
         if (-not $Configuration -or -not $Configuration.Instance) {
             throw "NinjaOne configuration is missing or incomplete in Extensionsconfig"
         }
-
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "NinjaOne instance: $($Configuration.Instance)" -Sev 'Debug'
     }
     catch {
         Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Failed to retrieve NinjaOne configuration: $($_.Exception.Message)" -Sev 'Error'
@@ -50,9 +42,8 @@ function Invoke-CIPPScheduledNinjaCveSync {
 
     try {
         # ============================
-        # 3. PULL DEFENDER TVM DATA
+        # 2. PULL DEFENDER TVM DATA
         # ============================
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Pulling Defender TVM data" -Sev 'Debug'
         $AllVulns = Get-DefenderTvmRaw -TenantId $TenantFilter -MaxPages 0
 
         if (-not $AllVulns) {
@@ -60,45 +51,37 @@ function Invoke-CIPPScheduledNinjaCveSync {
             $AllVulns = @()
         }
 
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Retrieved $($AllVulns.Count) vulnerabilities" -Sev 'Info'
+        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Retrieved $($AllVulns.Count) vulnerabilities from Defender TVM" -Sev 'Info'
 
         # ============================
-        # 4. FILTER CIPP EXCEPTIONS
+        # 3. FILTER CIPP EXCEPTIONS
         # ============================
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Checking CVE exceptions" -Sev 'Debug'
-        $ExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
-        $AllExceptions = Get-CIPPAzDataTableEntity @ExceptionsTable
+        $ExceptionsTable     = Get-CIPPTable -TableName 'CveExceptions'
+        $AllExceptions       = Get-CIPPAzDataTableEntity @ExceptionsTable
         $ApplicableExceptions = $AllExceptions | Where-Object { $_.RowKey -eq $TenantFilter -or $_.RowKey -eq 'ALL' }
 
         if ($ApplicableExceptions) {
             $ExceptedCveIds = $ApplicableExceptions | Select-Object -ExpandProperty cveId -Unique
-            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Found $($ExceptedCveIds.Count) excepted CVE(s)" -Sev 'Info'
-            $BeforeCount = $AllVulns.Count
-            $AllVulns = $AllVulns | Where-Object { $_.cveId -notin $ExceptedCveIds }
-            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Filtered out $($BeforeCount - $AllVulns.Count) CVE entries (remaining: $($AllVulns.Count))" -Sev 'Info'
-        }
-        else {
-            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "No CVE exceptions found for this tenant" -Sev 'Debug'
+            $BeforeCount    = $AllVulns.Count
+            $AllVulns       = $AllVulns | Where-Object { $_.cveId -notin $ExceptedCveIds }
+            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Filtered $($BeforeCount - $AllVulns.Count) excepted CVEs — $($AllVulns.Count) remaining" -Sev 'Info'
         }
 
         # ============================
-        # 5. GET NINJAONE TOKEN
+        # 4. GET NINJAONE TOKEN
         # ============================
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Retrieving NinjaOne API token" -Sev 'Debug'
         $Token = Get-NinjaOneToken -configuration $Configuration
 
         if (-not $Token -or -not $Token.access_token) {
             throw "Failed to retrieve NinjaOne access token"
         }
 
-        $Headers = @{ 'Authorization' = "Bearer $($Token.access_token)" }
+        $Headers      = @{ 'Authorization' = "Bearer $($Token.access_token)" }
         $NinjaBaseUrl = "https://$($Configuration.Instance)/api/v2"
 
         # ============================
-        # 6. RESOLVE SCAN GROUP
+        # 5. RESOLVE SCAN GROUP
         # ============================
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Resolving scan group '$ScanGroupName'" -Sev 'Debug'
-
         try {
             $ScanGroups = Invoke-RestMethod -Method Get -Uri "$NinjaBaseUrl/vulnerability/scan-groups" -Headers $Headers -TimeoutSec 30
         }
@@ -118,19 +101,19 @@ function Invoke-CIPPScheduledNinjaCveSync {
         }
 
         $ResolvedScanGroupId = $ResolvedScanGroup.id
-        $DeviceIdHeader = $ResolvedScanGroup.deviceIdHeader
-        $CveIdHeader    = $ResolvedScanGroup.cveIdHeader
+        $DeviceIdHeader      = $ResolvedScanGroup.deviceIdHeader
+        $CveIdHeader         = $ResolvedScanGroup.cveIdHeader
 
         if ([string]::IsNullOrWhiteSpace($DeviceIdHeader) -or [string]::IsNullOrWhiteSpace($CveIdHeader)) {
             throw "Scan group missing required header config (deviceIdHeader: '$DeviceIdHeader', cveIdHeader: '$CveIdHeader')"
         }
 
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Scan group resolved — ID: $ResolvedScanGroupId, Headers: '$DeviceIdHeader' / '$CveIdHeader'" -Sev 'Info'
+        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Scan group '$ScanGroupName' resolved (ID: $ResolvedScanGroupId)" -Sev 'Debug'
 
         # ============================
-        # 7. BUILD CSV ROWS
+        # 6. BUILD CSV ROWS
         # ============================
-        $CsvRows = @()
+        $CsvRows      = @()
         $SkippedCount = 0
 
         foreach ($item in $AllVulns) {
@@ -148,10 +131,8 @@ function Invoke-CIPPScheduledNinjaCveSync {
             Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Skipped $SkippedCount rows (missing deviceName or cveId)" -Sev 'Warning'
         }
 
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Prepared $($CsvRows.Count) CSV rows for upload" -Sev 'Info'
-
         # ============================
-        # 8. BUILD CSV BYTES
+        # 7. BUILD CSV BYTES
         # ============================
         $CsvBytes = New-VulnCsvBytes -Rows $CsvRows -Headers @($DeviceIdHeader, $CveIdHeader)
 
@@ -159,27 +140,18 @@ function Invoke-CIPPScheduledNinjaCveSync {
             throw "Failed to generate CSV bytes"
         }
 
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "CSV payload: $($CsvBytes.Length) bytes" -Sev 'Debug'
-
         # ============================
-        # 9. UPLOAD TO NINJAONE
+        # 8. UPLOAD TO NINJAONE
         # ============================
         $UploadUri = "$NinjaBaseUrl/vulnerability/scan-groups/$ResolvedScanGroupId/upload"
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Uploading to NinjaOne (group: '$ScanGroupName', ID: $ResolvedScanGroupId)" -Sev 'Info'
-
-        $Response = Invoke-NinjaOneVulnCsvUpload -Uri $UploadUri -CsvBytes $CsvBytes -Headers $Headers
-
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Upload completed successfully" -Sev 'Info'
+        $Response  = Invoke-NinjaOneVulnCsvUpload -Uri $UploadUri -CsvBytes $CsvBytes -Headers $Headers
 
         if ($Response -and $Response.PollingTimedOut) {
-            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Status polling timed out — check NinjaOne UI to confirm" -Sev 'Warning'
+            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "Status polling timed out — check NinjaOne UI to confirm upload" -Sev 'Warning'
         }
 
-        if ($Response -and $Response.recordsProcessed) {
-            Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "NinjaOne processed $($Response.recordsProcessed) of $($CsvRows.Count) rows" -Sev 'Info'
-        }
-
-        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "NinjaCveSync complete — $($CsvRows.Count) CVEs uploaded to '$ScanGroupName'" -Sev 'Info'
+        $ProcessedCount = if ($Response -and $Response.recordsProcessed) { $Response.recordsProcessed } else { '?' }
+        Write-LogMessage -API 'NinjaCveSync' -tenant $TenantFilter -message "NinjaCveSync complete — $($CsvRows.Count) CVEs sent to '$ScanGroupName', $ProcessedCount processed by NinjaOne" -Sev 'Info'
 
     }
     catch {
