@@ -77,7 +77,7 @@ function Register-CIPPExtensionScheduledTasks {
                     continue
                 }
                 $MappedTenants.Add($Tenant.defaultDomainName)
-                
+
                 # Legacy Sync-CippExtensionData tasks are no longer needed - extensions now use CippReportingDB
                 # All cache data is now collected by Push-CIPPDBCacheData scheduled tasks
 
@@ -127,6 +127,79 @@ function Register-CIPPExtensionScheduledTasks {
     foreach ($Task in $PushTasks) {
         if ($Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
+            $Entity = $Task | Select-Object -Property PartitionKey, RowKey
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+        }
+    }
+
+    # ============================
+    # NINJAONE CVE SYNC TASKS
+    # ============================
+    # Managed separately from the main extension loop because NinjaOne uses a
+    # different command (Invoke-CIPPScheduledNinjaCveSync) rather than Push-CippExtensionData.
+    # Tasks are registered per mapped tenant when CveSyncEnabled is true.
+    # ============================
+
+    $NinjaConfig = $Config.NinjaOne
+    $NinjaCveSyncTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -eq 'Invoke-CIPPScheduledNinjaCveSync' }
+
+    if ($NinjaConfig.Enabled -eq $true -and $NinjaConfig.CveSyncEnabled -eq $true) {
+
+        # Build recurrence string from CveSyncHours — e.g. 24 -> '24h', 1 -> '1h'
+        # Default to 24h if not set or invalid
+        $CveSyncHours = [int]$NinjaConfig.CveSyncHours
+        if ($CveSyncHours -le 0) { $CveSyncHours = 24 }
+        $CveRecurrence = "${CveSyncHours}h"
+
+        $CveSyncPrefix = if ($NinjaConfig.CveSyncPrefix) { $NinjaConfig.CveSyncPrefix } else { '' }
+
+        # Get NinjaOne mapped tenants
+        $NinjaMappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq 'NinjaOneMapping'"
+
+        foreach ($Mapping in $NinjaMappings) {
+            $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
+            if (-not $Tenant) {
+                Write-Warning "NinjaCveSync: Tenant $($Mapping.RowKey) not found, skipping"
+                continue
+            }
+
+            $TenantDomain = $Tenant.defaultDomainName
+            $TaskName = "CIPP NinjaCveSync - $TenantDomain"
+
+            $ExistingTask = $NinjaCveSyncTasks | Where-Object { $_.Tenant -eq $TenantDomain }
+
+            if (-not $ExistingTask -or $Reschedule.IsPresent) {
+                # Remove existing task for this tenant if rescheduling
+                if ($ExistingTask -and $Reschedule.IsPresent) {
+                    $Entity = $ExistingTask | Select-Object -Property PartitionKey, RowKey
+                    Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+                    Write-Information "NinjaCveSync: Removed existing task for tenant $TenantDomain (rescheduling)"
+                }
+
+                $Task = [pscustomobject]@{
+                    Name          = $TaskName
+                    Command       = @{
+                        value = 'Invoke-CIPPScheduledNinjaCveSync'
+                        label = 'Invoke-CIPPScheduledNinjaCveSync'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        TenantFilter    = $TenantDomain
+                        ScanGroupPrefix = $CveSyncPrefix
+                    }
+                    Recurrence    = $CveRecurrence
+                    ScheduledTime = $NextSync
+                    TenantFilter  = $TenantDomain
+                }
+
+                $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType 'NinjaCveSync'
+                Write-Information "NinjaCveSync: Created task for tenant $TenantDomain (recurrence: $CveRecurrence, prefix: '$CveSyncPrefix')"
+            }
+        }
+
+    } else {
+        # NinjaOne disabled or CveSyncEnabled is false — remove all existing CVE sync tasks
+        foreach ($Task in $NinjaCveSyncTasks) {
+            Write-Information "NinjaCveSync: Removing task for tenant $($Task.Tenant) (sync disabled)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
         }
