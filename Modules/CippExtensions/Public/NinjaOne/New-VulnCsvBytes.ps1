@@ -4,6 +4,8 @@ function New-VulnCsvBytes {
         Build a CSV payload (UTF-8 bytes) from objects with explicit headers.
     .PARAMETER Rows
         Array of PSCustomObject where property names match the provided headers.
+        Optional — defaults to empty array to allow uploading an empty CSV to
+        clear stale NinjaOne data.
     .PARAMETER Headers
         Ordered list of column headers (and property names).
     #>
@@ -21,8 +23,9 @@ function New-VulnCsvBytes {
             $val = $r.$h
             if ($null -ne $val) {
                 $s = [string]$val
-                if ($s -match '[,"\r\n]') { '"' + ($s -replace '"','""') + '"' } else { $s }
-            } else { '' }
+                if ($s -match '[,"\r\n]') { '"' + ($s -replace '"', '""') + '"' } else { $s }
+            }
+            else { '' }
         }
         [void]$sb.AppendLine(($cells -join ','))
     }
