@@ -169,11 +169,71 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         )
     } | ConvertTo-Json -Depth 20
 
+    # Compares OMA-URI settings between expected and existing policy.
+    # The 'value' field of omaSettingString is itself a JSON string, so we parse it
+    # before calling Compare-CIPPIntuneObject to avoid false positives from whitespace
+    # or key-ordering differences introduced by Intune's API response serialization.
+    function Compare-OMAURISettings {
+        param(
+            [Parameter(Mandatory = $true)]$ExpectedSettings,
+            [Parameter(Mandatory = $true)]$ExistingConfig
+        )
+        $diffs = [System.Collections.Generic.List[PSCustomObject]]::new()
+        if ($null -eq $ExistingConfig -or $null -eq $ExistingConfig.omaSettings) { return $diffs }
+
+        foreach ($expectedSetting in $ExpectedSettings) {
+            $existingSetting = $ExistingConfig.omaSettings | Where-Object { $_.omaUri -eq $expectedSetting.omaUri }
+            if (-not $existingSetting) {
+                $diffs.Add([PSCustomObject]@{ Property = $expectedSetting.omaUri; ExpectedValue = 'present'; ReceivedValue = 'missing' })
+                continue
+            }
+            try {
+                $expectedValue = $expectedSetting.value | ConvertFrom-Json -Depth 20
+                $existingValue = $existingSetting.value | ConvertFrom-Json -Depth 20
+                $valueDiffs = Compare-CIPPIntuneObject -ReferenceObject $expectedValue -DifferenceObject $existingValue -CompareType 'Device'
+                foreach ($diff in $valueDiffs) {
+                    $diffs.Add([PSCustomObject]@{ Property = "$($expectedSetting.omaUri).$($diff.Property)"; ExpectedValue = $diff.ExpectedValue; ReceivedValue = $diff.ReceivedValue })
+                }
+            } catch {
+                # Fall back to string comparison if either value is not valid JSON
+                if ($expectedSetting.value -ne $existingSetting.value) {
+                    $diffs.Add([PSCustomObject]@{ Property = $expectedSetting.omaUri; ExpectedValue = '[expected value]'; ReceivedValue = '[current value differs]' })
+                }
+            }
+        }
+        return $diffs
+    }
+
     try {
-        # Check if the policies already exist
-        $ExistingPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations' -tenantid $Tenant
-        $ChromePolicyExists = $ExistingPolicies.value | Where-Object { $_.displayName -eq $ChromePolicyName }
-        $EdgePolicyExists = $ExistingPolicies.value | Where-Object { $_.displayName -eq $EdgePolicyName }
+        # Fetch existing policies with full configuration details for OMA-URI drift detection
+        $ExistingChromePolicy = Get-CIPPIntunePolicy -TemplateType 'Device' -DisplayName $ChromePolicyName -tenantFilter $Tenant
+        $ExistingEdgePolicy = Get-CIPPIntunePolicy -TemplateType 'Device' -DisplayName $EdgePolicyName -tenantFilter $Tenant
+
+        $ChromePolicyExists = $null -ne $ExistingChromePolicy
+        $EdgePolicyExists = $null -ne $ExistingEdgePolicy
+
+        # Build expected OMA-URI settings from the generated policy JSON for comparison
+        $ExpectedChromeSettings = ($ChromePolicyJSON | ConvertFrom-Json).omaSettings
+        $ExpectedEdgeSettings = ($EdgePolicyJSON | ConvertFrom-Json).omaSettings
+
+        # Detect configuration drift in existing policies
+        $ChromeDifferences = [System.Collections.Generic.List[PSCustomObject]]::new()
+        $EdgeDifferences = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+        if ($ExistingChromePolicy) {
+            # omaSettingString values are encrypted by Intune; decrypt before comparing
+            $DecryptedChromePolicy = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration ($ExistingChromePolicy.cippconfiguration | ConvertFrom-Json) -DeviceConfigurationId $ExistingChromePolicy.id -TenantFilter $Tenant
+            $ChromeDifferences = Compare-OMAURISettings -ExpectedSettings $ExpectedChromeSettings -ExistingConfig $DecryptedChromePolicy
+        }
+
+        if ($ExistingEdgePolicy) {
+            # omaSettingString values are encrypted by Intune; decrypt before comparing
+            $DecryptedEdgePolicy = Get-CIPPOmaSettingDecryptedValue -DeviceConfiguration ($ExistingEdgePolicy.cippconfiguration | ConvertFrom-Json) -DeviceConfigurationId $ExistingEdgePolicy.id -TenantFilter $Tenant
+            $EdgeDifferences = Compare-OMAURISettings -ExpectedSettings $ExpectedEdgeSettings -ExistingConfig $DecryptedEdgePolicy
+        }
+
+        $ChromePolicyCompliant = $ChromePolicyExists -and ($ChromeDifferences.Count -eq 0)
+        $EdgePolicyCompliant = $EdgePolicyExists -and ($EdgeDifferences.Count -eq 0)
 
         if ($Settings.remediate -eq $true) {
             # Handle assignment configuration
@@ -185,46 +245,63 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
                 $AssignTo = $Settings.customGroup
             }
 
-            # Deploy Chrome policy
+            # Deploy or remediate Chrome policy (create if missing, update if drifted)
             if (-not $ChromePolicyExists) {
                 $Result = Set-CIPPIntunePolicy -TemplateType 'Device' -Description 'Deploys and configures the Check Chrome extension for Google Chrome browsers' -DisplayName $ChromePolicyName -RawJSON $ChromePolicyJSON -AssignTo $AssignTo -ExcludeGroup $ExcludeGroup -tenantFilter $Tenant
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created Check Chrome Extension policy for Chrome: $ChromePolicyName" -sev Info
+            } elseif ($ChromeDifferences.Count -gt 0) {
+                $Result = Set-CIPPIntunePolicy -TemplateType 'Device' -Description 'Deploys and configures the Check Chrome extension for Google Chrome browsers' -DisplayName $ChromePolicyName -RawJSON $ChromePolicyJSON -AssignTo $AssignTo -ExcludeGroup $ExcludeGroup -tenantFilter $Tenant
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully corrected $($ChromeDifferences.Count) drifted OMA-URI setting(s) in Check Chrome Extension policy for Chrome" -sev Info
             } else {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policy for Chrome already exists, skipping creation' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policy for Chrome is compliant, no changes needed' -sev Info
             }
 
-            # Deploy Edge policy
+            # Deploy or remediate Edge policy (create if missing, update if drifted)
             if (-not $EdgePolicyExists) {
                 $Result = Set-CIPPIntunePolicy -TemplateType 'Device' -Description 'Deploys and configures the Check Chrome extension for Microsoft Edge browsers' -DisplayName $EdgePolicyName -RawJSON $EdgePolicyJSON -AssignTo $AssignTo -ExcludeGroup $ExcludeGroup -tenantFilter $Tenant
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created Check Chrome Extension policy for Edge: $EdgePolicyName" -sev Info
+            } elseif ($EdgeDifferences.Count -gt 0) {
+                $Result = Set-CIPPIntunePolicy -TemplateType 'Device' -Description 'Deploys and configures the Check Chrome extension for Microsoft Edge browsers' -DisplayName $EdgePolicyName -RawJSON $EdgePolicyJSON -AssignTo $AssignTo -ExcludeGroup $ExcludeGroup -tenantFilter $Tenant
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully corrected $($EdgeDifferences.Count) drifted OMA-URI setting(s) in Check Chrome Extension policy for Edge" -sev Info
             } else {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policy for Edge already exists, skipping creation' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policy for Edge is compliant, no changes needed' -sev Info
             }
         }
 
         if ($Settings.alert -eq $true) {
-            $BothPoliciesExist = $ChromePolicyExists -and $EdgePolicyExists
-            if ($BothPoliciesExist) {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policies are deployed for both Chrome and Edge' -sev Info
+            if ($ChromePolicyCompliant -and $EdgePolicyCompliant) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Check Chrome Extension policies are deployed and correctly configured for both Chrome and Edge' -sev Info
             } else {
-                $MissingPolicies = @()
-                if (-not $ChromePolicyExists) { $MissingPolicies += 'Chrome' }
-                if (-not $EdgePolicyExists) { $MissingPolicies += 'Edge' }
-                Write-StandardsAlert -message "Check Chrome Extension policies are missing for: $($MissingPolicies -join ', ')" -object @{ 'Missing Policies' = $MissingPolicies -join ',' } -tenant $Tenant -standardName 'DeployCheckChromeExtension' -standardId $Settings.standardId
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Check Chrome Extension policies are missing for: $($MissingPolicies -join ', ')" -sev Alert
+                $Issues = [System.Collections.Generic.List[string]]::new()
+                if (-not $ChromePolicyExists) {
+                    $Issues.Add('Chrome policy is missing')
+                } elseif ($ChromeDifferences.Count -gt 0) {
+                    $Issues.Add("Chrome policy OMA-URI settings differ ($($ChromeDifferences.Count) difference(s))")
+                }
+                if (-not $EdgePolicyExists) {
+                    $Issues.Add('Edge policy is missing')
+                } elseif ($EdgeDifferences.Count -gt 0) {
+                    $Issues.Add("Edge policy OMA-URI settings differ ($($EdgeDifferences.Count) difference(s))")
+                }
+                Write-StandardsAlert -message "Check Chrome Extension issues: $($Issues -join '; ')" -object @{ Issues = ($Issues -join '; '); ChromeDifferences = $ChromeDifferences; EdgeDifferences = $EdgeDifferences } -tenant $Tenant -standardName 'DeployCheckChromeExtension' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Check Chrome Extension issues: $($Issues -join '; ')" -sev Alert
             }
         }
 
         if ($Settings.report -eq $true) {
-            $StateIsCorrect = $ChromePolicyExists -and $EdgePolicyExists
+            $StateIsCorrect = $ChromePolicyCompliant -and $EdgePolicyCompliant
 
             $ExpectedValue = [PSCustomObject]@{
-                ChromePolicyDeployed = $true
-                EdgePolicyDeployed   = $true
+                ChromePolicyDeployed  = $true
+                ChromePolicyCompliant = $true
+                EdgePolicyDeployed    = $true
+                EdgePolicyCompliant   = $true
             }
             $CurrentValue = [PSCustomObject]@{
-                ChromePolicyDeployed = $ChromePolicyExists
-                EdgePolicyDeployed   = $EdgePolicyExists
+                ChromePolicyDeployed  = [bool]$ChromePolicyExists
+                ChromePolicyCompliant = [bool]$ChromePolicyCompliant
+                EdgePolicyDeployed    = [bool]$EdgePolicyExists
+                EdgePolicyCompliant   = [bool]$EdgePolicyCompliant
             }
             Set-CIPPStandardsCompareField -FieldName 'standards.DeployCheckChromeExtension' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
             Add-CIPPBPAField -FieldName 'DeployCheckChromeExtension' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
