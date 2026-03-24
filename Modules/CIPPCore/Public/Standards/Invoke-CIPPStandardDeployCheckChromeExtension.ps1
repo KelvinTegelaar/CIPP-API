@@ -7,14 +7,14 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     .SYNOPSIS
         (Label) Deploy Check Chrome Extension
     .DESCRIPTION
-        (Helptext) Deploys the Check Chrome extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
-        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check Chrome extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
+        (Helptext) Deploys the Check by CyberDrain extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
+        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check by CyberDrain extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
     .NOTES
         CAT
             Intune Standards
         TAG
         EXECUTIVETEXT
-            Automatically deploys the Check browser extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
+            Automatically deploys the Check by CyberDrain extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DeployCheckChromeExtension.showNotifications","label":"Show notifications","defaultValue":true}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableValidPageBadge","label":"Enable valid page badge","defaultValue":false}
@@ -61,14 +61,14 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         return $true
     }
 
-    Write-Information "Running CyberDrain Check Browser Extension standard for tenant $($Tenant)."
+    Write-Information "Running Check by CyberDrain standard for tenant $($Tenant)."
 
     ##########################################################################
     # Configuration values
     ##########################################################################
     $ChromeExtensionId = 'benimdeioplgkhanklclahllklceahbe'
     $EdgeExtensionId = 'knepjpocdagponkonnbggpcnhnaikajg'
-    $AppDisplayName = 'CyberDrain - Check Browser Extension'
+    $AppDisplayName = 'Check by CyberDrain - Browser Extension'
 
     # CIPP Url
     $CippConfigTable = Get-CippTable -tablename Config
@@ -369,7 +369,7 @@ exit 0
             # Deploy the Win32 script app
             $AppProperties = [PSCustomObject]@{
                 displayName           = $AppDisplayName
-                description           = 'Deploys and configures the Check phishing protection extension for Chrome and Edge browsers. Managed by CIPP.'
+                description           = 'Deploys and configures the Check by CyberDrain phishing protection extension for Chrome and Edge browsers. Managed by CIPP.'
                 publisher             = 'CIPP'
                 installScript         = $InstallScript
                 uninstallScript       = $UninstallScript
