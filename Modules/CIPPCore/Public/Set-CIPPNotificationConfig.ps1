@@ -7,24 +7,26 @@ function Set-CIPPNotificationConfig {
         $logsToInclude,
         $sendtoIntegration,
         $sev,
+        [boolean]$UseStandardizedSchema,
         $APIName = 'Set Notification Config'
     )
 
-    $results = try {
+    try {
         $Table = Get-CIPPTable -TableName SchedulerConfig
         $SchedulerConfig = @{
-            'tenant'            = 'Any'
-            'tenantid'          = 'TenantId'
-            'type'              = 'CIPPNotifications'
-            'schedule'          = 'Every 15 minutes'
-            'Severity'          = [string]$sev
-            'email'             = "$($email)"
-            'webhook'           = "$($webhook)"
-            'onePerTenant'      = [boolean]$onePerTenant
-            'sendtoIntegration' = [boolean]$sendtoIntegration
-            'includeTenantId'   = $true
-            'PartitionKey'      = 'CippNotifications'
-            'RowKey'            = 'CippNotifications'
+            'tenant'                 = 'Any'
+            'tenantid'               = 'TenantId'
+            'type'                   = 'CIPPNotifications'
+            'schedule'               = 'Every 15 minutes'
+            'Severity'               = [string]$sev
+            'email'                  = "$($email)"
+            'webhook'                = "$($webhook)"
+            'onePerTenant'           = [boolean]$onePerTenant
+            'sendtoIntegration'      = [boolean]$sendtoIntegration
+            'UseStandardizedSchema'  = [boolean]$UseStandardizedSchema
+            'includeTenantId'        = $true
+            'PartitionKey'           = 'CippNotifications'
+            'RowKey'                 = 'CippNotifications'
         }
         foreach ($logvalue in [pscustomobject]$logsToInclude) {
             $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true

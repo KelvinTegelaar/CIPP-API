@@ -10,9 +10,12 @@ function Send-CIPPAlert {
         $altEmail,
         $altWebhook,
         $APIName = 'Send Alert',
+        $SchemaSource,
+        $InvokingCommand,
         $Headers,
         $TableName,
-        $RowKey = [string][guid]::NewGuid()
+        $RowKey = [string][guid]::NewGuid(),
+        [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
     $Table = Get-CIPPTable -TableName SchedulerConfig
@@ -102,7 +105,13 @@ function Send-CIPPAlert {
         Write-Information 'Trying to send webhook'
 
         $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
-        $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json)
+        $ExtensionConfig = Get-CIPPAzDataTableEntity @ExtensionTable
+        # Check if config exists and is not null before parsing
+        if ($ExtensionConfig.config -and -not [string]::IsNullOrWhiteSpace($ExtensionConfig.config)) {
+            $Configuration = $ExtensionConfig.config | ConvertFrom-Json
+        } else {
+            $Configuration = $null
+        }
 
         if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
             $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
@@ -112,34 +121,75 @@ function Send-CIPPAlert {
             $Headers = $null
         }
 
-        $ReplacedContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $JSONContent -EscapeForJson
+        $UseStandardizedWebhookSchema = [boolean]$Config.UseStandardizedSchema
+        if ($PSBoundParameters.ContainsKey('UseStandardizedSchema')) {
+            $UseStandardizedWebhookSchema = [boolean]$UseStandardizedSchema
+        }
+
+        $EffectiveTitle = if ([string]::IsNullOrWhiteSpace($Title)) {
+            '{0} - {1} - Webhook Alert' -f $APIName, $TenantFilter
+        } else {
+            $Title
+        }
+
+        $EffectiveSchemaSource = if (![string]::IsNullOrWhiteSpace($SchemaSource)) {
+            $SchemaSource
+        } elseif (![string]::IsNullOrWhiteSpace($APIName)) {
+            $APIName
+        } else {
+            'CIPP'
+        }
+
+        $WebhookContent = if ($UseStandardizedWebhookSchema) {
+            New-CIPPStandardizedWebhookSchema -Title $EffectiveTitle -TenantFilter $TenantFilter -Payload $JSONContent -Source $EffectiveSchemaSource -InvokingCommand $InvokingCommand
+        } else {
+            $JSONContent
+        }
+
+        if ($WebhookContent -isnot [string]) {
+            $WebhookContent = $WebhookContent | ConvertTo-Json -Compress -Depth 50
+        }
+
+        $ReplacedContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $WebhookContent -EscapeForJson
         try {
             if (![string]::IsNullOrWhiteSpace($Config.webhook) -or ![string]::IsNullOrWhiteSpace($AltWebhook)) {
-                if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
-                    $webhook = if ($AltWebhook) { $AltWebhook } else { $Config.webhook }
+                $webhook = if ($AltWebhook) { $AltWebhook } else { $Config.webhook }
+                if ($PSCmdlet.ShouldProcess($webhook, 'Sending webhook')) {
                     switch -wildcard ($webhook) {
                         '*webhook.office.com*' {
-                            $TeamsBody = [PSCustomObject]@{
-                                text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
-                            } | ConvertTo-Json -Compress
-                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $TeamsBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            if ($UseStandardizedWebhookSchema) {
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            } else {
+                                $TeamsBody = [PSCustomObject]@{
+                                    text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
+                                } | ConvertTo-Json -Compress
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $TeamsBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            }
                         }
                         '*discord.com*' {
-                            $DiscordBody = [PSCustomObject]@{
-                                content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
-                            } | ConvertTo-Json -Compress
-                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $DiscordBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            if ($UseStandardizedWebhookSchema) {
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            } else {
+                                $DiscordBody = [PSCustomObject]@{
+                                    content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
+                                } | ConvertTo-Json -Compress
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $DiscordBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                            }
                         }
                         '*slack.com*' {
-                            $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
-                            if ($SlackBlocks.blocks) {
-                                $SlackBody = $SlackBlocks | ConvertTo-Json -Depth 10 -Compress
+                            if ($UseStandardizedWebhookSchema) {
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                             } else {
-                                $SlackBody = [PSCustomObject]@{
-                                    text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
-                                } | ConvertTo-Json -Compress
+                                $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
+                                if ($SlackBlocks.blocks) {
+                                    $SlackBody = $SlackBlocks | ConvertTo-Json -Depth 10 -Compress
+                                } else {
+                                    $SlackBody = [PSCustomObject]@{
+                                        text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
+                                    } | ConvertTo-Json -Compress
+                                }
+                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $SlackBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                             }
-                            $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $SlackBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
                         }
                         default {
                             $RestMethod = @{
