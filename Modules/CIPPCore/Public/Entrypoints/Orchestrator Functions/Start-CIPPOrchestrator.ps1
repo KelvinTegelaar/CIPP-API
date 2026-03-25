@@ -36,6 +36,10 @@ function Start-CIPPOrchestrator {
     $OrchestratorTable = Get-CippTable -TableName 'CippOrchestratorInput'
     $BatchTable = Get-CippTable -TableName 'CippOrchestratorBatch'
 
+    # Ensure orchestrator tables exist
+    $null = Get-CippTable -TableName "$($env:WEBSITE_SITE_NAME -replace '-', '')Instances"
+    $null = Get-CippTable -TableName "$($env:WEBSITE_SITE_NAME -replace '-', '')History"
+
     # If already running in processor context (e.g., timer trigger) and we have an InputObject,
     # start orchestration directly without queuing
 
