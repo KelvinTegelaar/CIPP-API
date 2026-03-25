@@ -16,9 +16,9 @@ function Invoke-ExecAddAlert {
         $Title = 'CIPP Notification Test'
         if ($Request.Body.sendEmailNow -eq $true) {
             $CIPPAlert = @{
-                Type        = 'email'
-                Title       = $Title
-                HTMLContent = $Request.Body.text
+                Type         = 'email'
+                Title        = $Title
+                HTMLContent  = $Request.Body.text
                 TenantFilter = $TenantFilter
             }
             Send-CIPPAlert @CIPPAlert
@@ -29,18 +29,19 @@ function Invoke-ExecAddAlert {
                 Text  = $Request.Body.text
             } | ConvertTo-Json -Compress
             $CIPPAlert = @{
-                Type        = 'webhook'
-                Title       = $Title
-                JSONContent = $JSONContent
-                TenantFilter = $TenantFilter
+                Type            = 'webhook'
+                Title           = $Title
+                JSONContent     = $JSONContent
+                TenantFilter    = $TenantFilter
+                InvokingCommand = 'Invoke-ExecAddAlert'
             }
             Send-CIPPAlert @CIPPAlert
         }
         if ($Request.Body.sendPsaNow -eq $true) {
             $CIPPAlert = @{
-                Type        = 'psa'
-                Title       = $Title
-                HTMLContent = $Request.Body.text
+                Type         = 'psa'
+                Title        = $Title
+                HTMLContent  = $Request.Body.text
                 TenantFilter = $TenantFilter
             }
             Send-CIPPAlert @CIPPAlert
