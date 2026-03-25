@@ -104,6 +104,79 @@ function Send-CIPPAlert {
     if ($Type -eq 'webhook') {
         Write-Information 'Trying to send webhook'
 
+        $GetWebhookSecret = {
+            param(
+                [string]$SecretName
+            )
+
+            if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+                return (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq '$SecretName' and RowKey eq '$SecretName'").APIKey
+            }
+
+            $KeyVaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            return (Get-CippKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -AsPlainText)
+        }
+
+        $RequestHeaders = @{}
+        if ($Headers -is [hashtable]) {
+            foreach ($HeaderName in $Headers.Keys) {
+                $RequestHeaders[$HeaderName] = $Headers[$HeaderName]
+            }
+        }
+
+        $WebhookAuthType = [string]$Config.webhookAuthType
+        switch ($WebhookAuthType.ToLowerInvariant()) {
+            'bearer' {
+                $WebhookAuthToken = [string]$Config.webhookAuthToken
+                if ($WebhookAuthToken -eq 'SentToKeyVault') {
+                    $WebhookAuthToken = & $GetWebhookSecret -SecretName 'CIPPNotificationsWebhookAuthToken'
+                }
+                if (![string]::IsNullOrWhiteSpace($WebhookAuthToken)) {
+                    $RequestHeaders['Authorization'] = "Bearer $WebhookAuthToken"
+                }
+            }
+            'basic' {
+                $WebhookAuthPassword = [string]$Config.webhookAuthPassword
+                if ($WebhookAuthPassword -eq 'SentToKeyVault') {
+                    $WebhookAuthPassword = & $GetWebhookSecret -SecretName 'CIPPNotificationsWebhookAuthPassword'
+                }
+                if (![string]::IsNullOrWhiteSpace($Config.webhookAuthUsername) -and ![string]::IsNullOrWhiteSpace($WebhookAuthPassword)) {
+                    $BasicAuthBytes = [System.Text.Encoding]::UTF8.GetBytes("$($Config.webhookAuthUsername):$WebhookAuthPassword")
+                    $RequestHeaders['Authorization'] = 'Basic {0}' -f [System.Convert]::ToBase64String($BasicAuthBytes)
+                }
+            }
+            'apikey' {
+                $WebhookAuthHeaderValue = [string]$Config.webhookAuthHeaderValue
+                if ($WebhookAuthHeaderValue -eq 'SentToKeyVault') {
+                    $WebhookAuthHeaderValue = & $GetWebhookSecret -SecretName 'CIPPNotificationsWebhookAuthHeaderValue'
+                }
+                if (![string]::IsNullOrWhiteSpace($Config.webhookAuthHeaderName) -and ![string]::IsNullOrWhiteSpace($WebhookAuthHeaderValue)) {
+                    $RequestHeaders[$Config.webhookAuthHeaderName] = $WebhookAuthHeaderValue
+                }
+            }
+            'customheaders' {
+                $WebhookAuthHeaders = [string]$Config.webhookAuthHeaders
+                if ($WebhookAuthHeaders -eq 'SentToKeyVault') {
+                    $WebhookAuthHeaders = & $GetWebhookSecret -SecretName 'CIPPNotificationsWebhookAuthHeaders'
+                }
+                if (![string]::IsNullOrWhiteSpace($WebhookAuthHeaders)) {
+                    try {
+                        $CustomHeaders = $WebhookAuthHeaders | ConvertFrom-Json -AsHashtable
+                        if ($CustomHeaders -is [hashtable]) {
+                            foreach ($HeaderName in $CustomHeaders.Keys) {
+                                if (![string]::IsNullOrWhiteSpace([string]$HeaderName)) {
+                                    $RequestHeaders[[string]$HeaderName] = [string]$CustomHeaders[$HeaderName]
+                                }
+                            }
+                        }
+                    } catch {
+                        Write-LogMessage -API 'Webhook Alerts' -message 'Webhook custom headers JSON is invalid. Continuing without custom auth headers.' -tenant $TenantFilter -sev warning
+                    }
+                }
+            }
+        }
+
         $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
         $ExtensionConfig = Get-CIPPAzDataTableEntity @ExtensionTable
         # Check if config exists and is not null before parsing
@@ -115,10 +188,9 @@ function Send-CIPPAlert {
 
         if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
             $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
-            $Headers = @{'CF-Access-Client-Id' = $Configuration.CFZTNA.ClientId; 'CF-Access-Client-Secret' = "$CFAPIKey" }
+            $RequestHeaders['CF-Access-Client-Id'] = $Configuration.CFZTNA.ClientId
+            $RequestHeaders['CF-Access-Client-Secret'] = "$CFAPIKey"
             Write-Information 'CF-Access-Client-Id and CF-Access-Client-Secret headers added to webhook API request'
-        } else {
-            $Headers = $null
         }
 
         $UseStandardizedWebhookSchema = [boolean]$Config.UseStandardizedSchema
@@ -155,30 +227,45 @@ function Send-CIPPAlert {
             if (![string]::IsNullOrWhiteSpace($Config.webhook) -or ![string]::IsNullOrWhiteSpace($AltWebhook)) {
                 $webhook = if ($AltWebhook) { $AltWebhook } else { $Config.webhook }
                 if ($PSCmdlet.ShouldProcess($webhook, 'Sending webhook')) {
+                    $RestMethod = @{
+                        Uri                = $webhook
+                        Method             = 'POST'
+                        ContentType        = 'application/json'
+                        StatusCodeVariable = 'WebhookStatusCode'
+                        SkipHttpErrorCheck = $true
+                    }
+                    if ($RequestHeaders.Count -gt 0) {
+                        $RestMethod['Headers'] = $RequestHeaders
+                    }
                     switch -wildcard ($webhook) {
                         '*webhook.office.com*' {
                             if ($UseStandardizedWebhookSchema) {
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $ReplacedContent
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             } else {
                                 $TeamsBody = [PSCustomObject]@{
                                     text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
                                 } | ConvertTo-Json -Compress
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $TeamsBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $TeamsBody
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             }
                         }
                         '*discord.com*' {
                             if ($UseStandardizedWebhookSchema) {
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $ReplacedContent
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             } else {
                                 $DiscordBody = [PSCustomObject]@{
                                     content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
                                 } | ConvertTo-Json -Compress
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $DiscordBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $DiscordBody
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             }
                         }
                         '*slack.com*' {
                             if ($UseStandardizedWebhookSchema) {
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $ReplacedContent -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $ReplacedContent
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             } else {
                                 $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
                                 if ($SlackBlocks.blocks) {
@@ -188,21 +275,12 @@ function Send-CIPPAlert {
                                         text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
                                     } | ConvertTo-Json -Compress
                                 }
-                                $WebhookResponse = Invoke-RestMethod -Uri $webhook -Method POST -ContentType 'Application/json' -Body $SlackBody -StatusCodeVariable WebhookStatusCode -SkipHttpErrorCheck
+                                $RestMethod['Body'] = $SlackBody
+                                $WebhookResponse = Invoke-RestMethod @RestMethod
                             }
                         }
                         default {
-                            $RestMethod = @{
-                                Uri                = $webhook
-                                Method             = 'POST'
-                                ContentType        = 'application/json'
-                                Body               = $ReplacedContent
-                                StatusCodeVariable = 'WebhookStatusCode'
-                                SkipHttpErrorCheck = $true
-                            }
-                            if ($Headers) {
-                                $RestMethod['Headers'] = $Headers
-                            }
+                            $RestMethod['Body'] = $ReplacedContent
                             $WebhookResponse = Invoke-RestMethod @RestMethod
                         }
                     }

@@ -11,6 +11,13 @@ Function Invoke-ExecNotificationConfig {
     $config = @{
         email                  = $Request.body.email
         webhook                = $Request.body.webhook
+        webhookAuthType        = $Request.body.webhookAuthType.value
+        webhookAuthToken       = $Request.body.webhookAuthToken
+        webhookAuthUsername    = $Request.body.webhookAuthUsername
+        webhookAuthPassword    = $Request.body.webhookAuthPassword
+        webhookAuthHeaderName  = $Request.body.webhookAuthHeaderName
+        webhookAuthHeaderValue = $Request.body.webhookAuthHeaderValue
+        webhookAuthHeaders     = $Request.body.webhookAuthHeaders
         onepertenant           = $Request.body.onePerTenant
         logsToInclude          = $Request.body.logsToInclude
         sendtoIntegration      = $Request.body.sendtoIntegration
