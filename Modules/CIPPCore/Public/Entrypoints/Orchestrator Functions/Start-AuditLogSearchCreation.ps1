@@ -68,7 +68,7 @@ function Start-AuditLogSearchCreation {
                 OrchestratorName = 'AuditLogSearchCreation'
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-CIPPOrchestrator -InputObject $InputObject
             Write-Information "Started Audit Log search creation orchestrator with $($Batch.Count) tenants"
         } else {
             Write-Information 'No tenants found for Audit Log search creation'

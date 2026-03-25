@@ -29,9 +29,8 @@ function Push-CIPPStandardsApplyBatch {
             SkipLog          = $true
         } | ConvertTo-Json -Depth 25 -Compress
         Write-Host "Standards InputObject: $InputObject"
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject $InputObject
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started standards apply orchestrator with ID = '$InstanceId'"
-
     } catch {
         Write-Warning "Error in standards apply batch aggregation: $($_.Exception.Message)"
     }

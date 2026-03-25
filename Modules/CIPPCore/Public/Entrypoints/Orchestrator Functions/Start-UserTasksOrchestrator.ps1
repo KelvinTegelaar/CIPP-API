@@ -198,7 +198,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Single-tenant orchestrator started for $TenantName with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start single-tenant orchestrator for $TenantName : $($_.Exception.Message)"
@@ -257,7 +257,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Multi-Tenant Task Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Multi-tenant orchestrator started for $($ParentTask.Name) with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start multi-tenant orchestrator for $($ParentTask.Name): $($_.Exception.Message)"

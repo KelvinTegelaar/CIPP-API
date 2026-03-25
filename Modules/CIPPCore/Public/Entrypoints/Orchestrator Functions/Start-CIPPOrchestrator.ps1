@@ -34,6 +34,7 @@ function Start-CIPPOrchestrator {
         [switch]$CallerIsQueueTrigger
     )
     $OrchestratorTable = Get-CippTable -TableName 'CippOrchestratorInput'
+    $BatchTable = Get-CippTable -TableName 'CippOrchestratorBatch'
 
     # If already running in processor context (e.g., timer trigger) and we have an InputObject,
     # start orchestration directly without queuing
@@ -42,6 +43,29 @@ function Start-CIPPOrchestrator {
 
     if ($InputObject -and -not $OrchestratorTriggerDisabled) {
         Write-Information 'Running in processor context - starting orchestration directly'
+        if ($InputObject.Batch) {
+            # Store batch items separately to enable querying and tracking
+            $BatchGuid = (New-Guid).Guid.ToString()
+            foreach ($BatchItem in $InputObject.Batch) {
+                $BatchEntity = @{
+                    PartitionKey = $BatchGuid
+                    RowKey       = (New-Guid).Guid.ToString()
+                    BatchItem    = [string]($BatchItem | ConvertTo-Json -Depth 10 -Compress)
+                }
+                Add-CIPPAzDataTableEntity @BatchTable -Entity $BatchEntity -Force
+            }
+
+            # Remove batch from main input object to reduce size
+            $InputObject.PSObject.Properties.Remove('Batch')
+
+            # Add queue function reference to retrieve batch items in orchestrator
+            $InputObject | Add-Member -NotePropertyName 'QueueFunction' -NotePropertyValue @{
+                FunctionName = 'OrchestratorBatchItems'
+                Parameters   = @{
+                    BatchId = $BatchGuid
+                }
+            }
+        }
         try {
             $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
             Write-Information "Orchestration started with instance ID: $InstanceId"
@@ -87,6 +111,29 @@ function Start-CIPPOrchestrator {
         try {
             # Store the input object in table storage
             $Guid = (New-Guid).Guid.ToString()
+
+            if ($InputObject.Batch) {
+                # Store batch items separately to enable querying and tracking
+                foreach ($BatchItem in $InputObject.Batch) {
+                    $BatchEntity = @{
+                        PartitionKey = $Guid
+                        RowKey       = (New-Guid).Guid.ToString()
+                        BatchItem    = [string]($BatchItem | ConvertTo-Json -Depth 10 -Compress)
+                    }
+                    Add-CIPPAzDataTableEntity @BatchTable -Entity $BatchEntity -Force
+                }
+
+                # Remove batch from main input object to reduce size
+                $InputObject.PSObject.Properties.Remove('Batch')
+
+                # Add queue function reference to retrieve batch items in orchestrator
+                $InputObject.QueueFunction = @{
+                    FunctionName = 'OrchestratorBatchItems'
+                    Parameters   = @{
+                        BatchId = $Guid
+                    }
+                }
+            }
 
             $StoredInput = @{
                 PartitionKey = 'Input'

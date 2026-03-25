@@ -176,7 +176,7 @@ function Set-CIPPDBCacheMailboxes {
                         }
                     }
                     Write-Information "Starting permissions caching orchestrator with $($PermissionBatches.Count) batches"
-                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($PermissionInputObject | ConvertTo-Json -Compress -Depth 5)
+                    Start-CIPPOrchestrator -InputObject $PermissionInputObject
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started permission caching orchestrator with $($PermissionBatches.Count) batches" -sev Debug
                 }
 
@@ -193,7 +193,7 @@ function Set-CIPPDBCacheMailboxes {
                         }
                     }
                     Write-Information "Starting rules caching orchestrator with $($RuleBatches.Count) batches"
-                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($RuleInputObject | ConvertTo-Json -Compress -Depth 5)
+                    Start-CIPPOrchestrator -InputObject $RuleInputObject
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started rules caching orchestrator with $($RuleBatches.Count) batches" -sev Debug
                 }
 
