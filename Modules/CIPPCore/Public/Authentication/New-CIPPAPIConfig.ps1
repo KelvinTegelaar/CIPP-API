@@ -81,7 +81,19 @@ function New-CIPPAPIConfig {
                 $APIIdUrl = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)" -AsApp $true -NoAuthCheck $true -type PATCH -body "{`"identifierUris`":[`"api://$($APIApp.appId)`"]}" -maxRetries 3
                 Write-Information 'Adding serviceprincipal'
                 $Step = 'Creating Service Principal'
-                $ServicePrincipal = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/serviceprincipals' -AsApp $true -NoAuthCheck $true -type POST -body "{`"accountEnabled`":true,`"appId`":`"$($APIApp.appId)`",`"displayName`":`"$AppName`",`"tags`":[`"WindowsAzureActiveDirectoryIntegratedApp`",`"AppServiceIntegratedApp`"]}" -maxRetries 3
+                $ServicePrincipalBody = "{`"accountEnabled`":true,`"appId`":`"$($APIApp.appId)`",`"displayName`":`"$AppName`",`"tags`":[`"WindowsAzureActiveDirectoryIntegratedApp`",`"AppServiceIntegratedApp`"]}"
+                for ($Attempt = 1; $Attempt -le 4; $Attempt++) {
+                    try {
+                        $ServicePrincipal = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/serviceprincipals' -AsApp $true -NoAuthCheck $true -type POST -body $ServicePrincipalBody -maxRetries 3
+                        break
+                    } catch {
+                        if ($Attempt -lt 4) {
+                            Start-Sleep -Seconds 1
+                            continue
+                        }
+                        throw
+                    }
+                }
                 Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'info'
             }
         }

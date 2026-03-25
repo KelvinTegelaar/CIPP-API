@@ -17,7 +17,9 @@ function Add-CIPPW32ScriptApplication {
         - publisher: Publisher name
         - installScript (required): PowerShell install script content (plaintext)
         - uninstallScript: PowerShell uninstall script content (plaintext)
-        - detectionPath (required): Full path to the file or folder to detect (e.g., 'C:\\Program Files\\MyApp')
+        - detectionScript: PowerShell detection script content (plaintext). Takes priority over file detection.
+          Script should write output to STDOUT and exit 0 when app is detected (installed).
+        - detectionPath: Full path to the file or folder to detect (e.g., 'C:\\Program Files\\MyApp')
         - detectionFile: File name to detect (optional, for folder path detection)
         - detectionType: 'exists', 'modifiedDate', 'createdDate', 'version', 'sizeInMB' (default: 'exists')
         - check32BitOn64System: Boolean, check 32-bit registry/paths on 64-bit systems (default: false)
@@ -69,9 +71,20 @@ function Add-CIPPW32ScriptApplication {
     $FileName = $ChocoXml.ApplicationInfo.FileName
     $UnencryptedSize = [int64]$ChocoXml.ApplicationInfo.UnencryptedContentSize
 
-    # Build detection rules
-    if ($Properties.detectionPath) {
-        # Determine if this is a file or folder detection
+    # Build detection rules — detection script takes priority, then file detection, then marker file fallback
+    if ($Properties.detectionScript) {
+        # PowerShell script detection: script should write to STDOUT and exit 0 when detected
+        $DetectionScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.detectionScript))
+        $DetectionRules = @(
+            @{
+                '@odata.type'         = '#microsoft.graph.win32LobAppPowerShellScriptDetection'
+                scriptContent         = $DetectionScriptContent
+                enforceSignatureCheck = if ($null -ne $Properties.enforceSignatureCheck) { [bool]$Properties.enforceSignatureCheck } else { $false }
+                runAs32Bit            = if ($null -ne $Properties.runAs32Bit) { [bool]$Properties.runAs32Bit } else { $false }
+            }
+        )
+    } elseif ($Properties.detectionPath) {
+        # File system detection
         $DetectionRule = @{
             '@odata.type'        = '#microsoft.graph.win32LobAppFileSystemDetection'
             check32BitOn64System = if ($null -ne $Properties.check32BitOn64System) { [bool]$Properties.check32BitOn64System } else { $false }
@@ -84,7 +97,6 @@ function Add-CIPPW32ScriptApplication {
             $DetectionRule['fileOrFolderName'] = $Properties.detectionFile
         } else {
             # Folder/File detection (full path)
-            # Split the path into directory and file/folder name
             $PathItem = Split-Path $Properties.detectionPath -Leaf
             $ParentPath = Split-Path $Properties.detectionPath -Parent
 
@@ -149,7 +161,8 @@ function Add-CIPPW32ScriptApplication {
     $UninstallScriptId = $null
 
     if ($Properties.installScript) {
-        $InstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.installScript))
+        $ReplacedInstallScript = Get-CIPPTextReplacement -Text $Properties.installScript -TenantFilter $TenantFilter
+        $InstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ReplacedInstallScript))
         $InstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppInstallPowerShellScript'
             displayName           = 'install.ps1'
@@ -172,7 +185,8 @@ function Add-CIPPW32ScriptApplication {
     }
 
     if ($Properties.uninstallScript) {
-        $UninstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Properties.uninstallScript))
+        $ReplacedUninstallScript = Get-CIPPTextReplacement -Text $Properties.uninstallScript -TenantFilter $TenantFilter
+        $UninstallScriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($ReplacedUninstallScript))
         $UninstallScriptBody = @{
             '@odata.type'         = '#microsoft.graph.win32LobAppUninstallPowerShellScript'
             displayName           = 'uninstall.ps1'

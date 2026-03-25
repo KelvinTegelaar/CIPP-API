@@ -78,10 +78,13 @@ function New-CIPPGroup {
         }
 
         # Determine if we should generate a mailNickname with a GUID, or use the username field
-        if (-not $GroupObject.Username) {
+        if (-not $GroupObject.Username -or $NormalizedGroupType -in @('Generic', 'AzureRole')) {
             $MailNickname = (New-Guid).guid.substring(0, 10)
         } else {
-            $MailNickname = $GroupObject.Username
+            $MailNickname = ($GroupObject.Username -split '@')[0] -replace '[^a-zA-Z0-9_-]', ''
+            if ([String]::IsNullOrEmpty($MailNickname)) {
+                $MailNickname = (New-Guid).guid
+            }
         }
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info
