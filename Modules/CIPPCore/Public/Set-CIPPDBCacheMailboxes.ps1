@@ -26,7 +26,7 @@ function Set-CIPPDBCacheMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Debug
 
         # Get mailboxes with select properties
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy'
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -52,6 +52,14 @@ function Set-CIPPDBCacheMailboxes {
                     ExternalDirectoryObjectId,
                     MessageCopyForSendOnBehalfEnabled,
                     MessageCopyForSentAsEnabled,
+                    LitigationHoldEnabled,
+                    LitigationHoldDate,
+                    LitigationHoldDuration,
+                    @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'BPOS_S_ArchiveAddOn' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+                    ComplianceTagHoldApplied,
+                    RetentionHoldEnabled,
+                    InPlaceHolds,
+                    RetentionPolicy,
                     GrantSendOnBehalfTo))
         }
 
