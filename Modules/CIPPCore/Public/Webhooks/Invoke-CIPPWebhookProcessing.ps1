@@ -144,6 +144,9 @@ function Invoke-CippWebhookProcessing {
                     Title        = $GenerateJSON.Title
                     JSONContent  = $JsonContent
                     TenantFilter = $TenantFilter
+                    APIName      = 'Audit Log Alerts'
+                    SchemaSource = 'Audit Log Alert'
+                    InvokingCommand = 'Start-AuditLogProcessingOrchestrator'
                 }
                 Write-Host 'Sending Webhook Content'
                 Send-CIPPAlert @CippAlert
