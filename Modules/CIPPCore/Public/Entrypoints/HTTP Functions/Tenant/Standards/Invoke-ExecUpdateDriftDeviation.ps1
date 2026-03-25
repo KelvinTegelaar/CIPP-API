@@ -58,6 +58,14 @@ function Invoke-ExecUpdateDriftDeviation {
                             $Settings = $StandardTemplate
                         } else {
                             $StandardTemplate = $StandardTemplate.standardSettings.$Setting
+                            # If the addedComponent values are stored nested under standards.<setting> instead of
+                            # flat on the object, promote them to the top level so the standard function can read them.
+                            if ($StandardTemplate.standards -and $StandardTemplate.standards.$Setting) {
+                                foreach ($Prop in $StandardTemplate.standards.$Setting.PSObject.Properties) {
+                                    $StandardTemplate | Add-Member -MemberType NoteProperty -Name $Prop.Name -Value $Prop.Value -Force
+                                }
+                                $StandardTemplate.PSObject.Properties.Remove('standards')
+                            }
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                             $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
                             $Settings = $StandardTemplate
