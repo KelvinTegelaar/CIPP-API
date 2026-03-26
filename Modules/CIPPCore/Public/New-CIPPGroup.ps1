@@ -184,7 +184,7 @@ function New-CIPPGroup {
                 GroupId      = [string]$GraphRequest.id
                 DisplayName  = [string]$GroupObject.displayName
                 GroupType    = [string]$NormalizedGroupType
-                Email        = [string](if ($NeedsEmail) { $Email } else { '' })
+                Email        = [string]$(if ($NeedsEmail) { $Email } else { '' })
                 Tenant       = [string]$TenantFilter
             }
             Add-CIPPAzDataTableEntity @GroupCacheTable -Entity $CacheEntity -Force
