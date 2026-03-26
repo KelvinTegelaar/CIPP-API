@@ -15,36 +15,41 @@ function Invoke-AddScheduledItem {
 
     $DisallowDuplicateName = $Request.Query.DisallowDuplicateName ?? $Request.Body.DisallowDuplicateName
 
-    if ($Request.Body.RunNow -eq $true) {
-        try {
-            $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-            $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
-            $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+    $HeaderProperties = @('x-ms-client-principal', 'x-ms-client-principal-id', 'x-ms-client-principal-name', 'x-forwarded-for')
+    $Headers = $Request.Headers | Select-Object -Property $HeaderProperties -ErrorAction SilentlyContinue
 
-            if ($ExistingTask) {
-                $RerunParams = @{
-                    TenantFilter = $ExistingTask.Tenant
-                    Type         = 'ScheduledTask'
-                    API          = $Request.Body.RowKey
-                    Clear        = $true
-                }
-                $null = Test-CIPPRerun @RerunParams
-                $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Request.Headers
-            } else {
-                $Result = "Task with id $($Request.Body.RowKey) does not exist"
-            }
-        } catch {
-            Write-Warning "Error scheduling task: $($_.Exception.Message)"
-            Write-Information $_.InvocationInfo.PositionMessage
-            $Result = "Error scheduling task: $($_.Exception.Message)"
+    $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+
+    if ($Request.Body.RowKey) {
+        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($Request.Body.RowKey)'"
+        $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+    }
+
+    if ($ExistingTask -and $Request.Body.RunNow -eq $true) {
+        $RerunParams = @{
+            TenantFilter = $ExistingTask.Tenant
+            Type         = 'ScheduledTask'
+            API          = $Request.Body.RowKey
+            Clear        = $true
         }
+        $null = Test-CIPPRerun @RerunParams
+        # Clear ExecutedTime so the one-time task rerun guard in Push-ExecScheduledCommand does not block re-execution
+        $null = Update-AzDataTableEntity -Force @Table -Entity @{
+            PartitionKey = $ExistingTask.PartitionKey
+            RowKey       = $ExistingTask.RowKey
+            ExecutedTime = ''
+        }
+        $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Headers
     } else {
         $ScheduledTask = @{
             Task                  = $Request.Body
-            Headers               = $Request.Headers
+            Headers               = $Headers
             Hidden                = $hidden
             DisallowDuplicateName = $DisallowDuplicateName
             DesiredStartTime      = $Request.Body.DesiredStartTime
+        }
+        if ($Request.Body.RunNow -eq $true) {
+            $ScheduledTask.RunNow = $true
         }
         $Result = Add-CIPPScheduledTask @ScheduledTask
     }

@@ -19,21 +19,21 @@ function Invoke-AddIntuneTemplate {
 
             $reusableTemplateRefs = @()
             $object = [PSCustomObject]@{
-                Displayname       = $Request.Body.displayName
-                Description       = $Request.Body.description
-                RAWJson           = $Request.Body.RawJSON
-                Type              = $Request.Body.TemplateType
-                GUID              = $GUID
-                ReusableSettings  = $reusableTemplateRefs
+                Displayname      = $Request.Body.displayName
+                Description      = $Request.Body.description
+                RAWJson          = $Request.Body.RawJSON
+                Type             = $Request.Body.TemplateType
+                GUID             = $GUID
+                ReusableSettings = $reusableTemplateRefs
             } | ConvertTo-Json
             $Table = Get-CippTable -tablename 'templates'
             $Table.Force = $true
             Add-CIPPAzDataTableEntity @Table -Entity @{
-                JSON              = "$object"
+                JSON                  = "$object"
                 ReusableSettingsCount = $reusableTemplateRefs.Count
-                RowKey            = "$GUID"
-                PartitionKey      = 'IntuneTemplate'
-                GUID              = "$GUID"
+                RowKey                = "$GUID"
+                PartitionKey          = 'IntuneTemplate'
+                GUID                  = "$GUID"
             }
             Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
 
@@ -48,16 +48,17 @@ function Invoke-AddIntuneTemplate {
 
             $reusableResult = Get-CIPPReusableSettingsFromPolicy -PolicyJson $Template.TemplateJson -Tenant $TenantFilter -Headers $Headers -APIName $APIName
             $reusableTemplateRefs = $reusableResult.ReusableSettings
+            # Intune templates store payload in RAWJson; only the content is rewritten to use reusable template GUID placeholders.
+            $templateJson = if ($reusableResult.RawJSON) { $reusableResult.RawJSON } else { $Template.TemplateJson }
 
             $object = [PSCustomObject]@{
                 Displayname      = $Template.DisplayName
                 Description      = $Template.Description
-                RAWJson          = $Template.TemplateJson
+                RAWJson          = $templateJson
                 Type             = $Template.Type
                 GUID             = $GUID
                 ReusableSettings = $reusableTemplateRefs
-            }
-
+            } | ConvertTo-Json -Compress
             $Table = Get-CippTable -tablename 'templates'
             $Table.Force = $true
             Add-CIPPAzDataTableEntity @Table -Entity @{

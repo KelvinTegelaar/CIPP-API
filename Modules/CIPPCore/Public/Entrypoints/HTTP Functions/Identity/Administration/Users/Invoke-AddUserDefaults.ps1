@@ -31,6 +31,14 @@ function Invoke-AddUserDefaults {
             $Request.Body.usernameFormat.value
         }
 
+        $UsernameSpaceHandling = if ($Request.Body.usernameSpaceHandling -is [string]) {
+            $Request.Body.usernameSpaceHandling
+        } else {
+            $Request.Body.usernameSpaceHandling.value
+        }
+
+        $UsernameSpaceReplacement = $Request.Body.usernameSpaceReplacement
+
         $PrimDomain = if ($Request.Body.primDomain -is [string]) {
             $Request.Body.primDomain
         } else {
@@ -73,41 +81,67 @@ function Invoke-AddUserDefaults {
         $SetSponsor = $Request.Body.setSponsor
         $CopyFrom = $Request.Body.copyFrom
 
-        # Create template object with all fields from CippAddEditUser
-        $TemplateObject = @{
-            tenantFilter     = $TenantFilter
-            templateName     = $TemplateName
-            defaultForTenant = [bool]$DefaultForTenant
-            givenName        = $GivenName
-            surname          = $Surname
-            displayName      = $DisplayName
-            usernameFormat   = $UsernameFormat
-            primDomain       = $PrimDomain
-            addedAliases     = $AddedAliases
-            Autopassword     = $Autopassword
-            password         = $Password
-            MustChangePass   = $MustChangePass
-            usageLocation    = $UsageLocation
-            licenses         = $Licenses
-            removeLicenses   = $RemoveLicenses
-            jobTitle         = $JobTitle
-            streetAddress    = $StreetAddress
-            city             = $City
-            state            = $State
-            postalCode       = $PostalCode
-            country          = $Country
-            companyName      = $CompanyName
-            department       = $Department
-            mobilePhone      = $MobilePhone
-            businessPhones   = $BusinessPhones
-            otherMails       = $OtherMails
-            setManager       = $SetManager
-            setSponsor       = $SetSponsor
-            copyFrom         = $CopyFrom
+        # Fetch group memberships from source user if provided
+        $GroupMemberships = @()
+        if ($Request.Body.sourceUserId -and $TenantFilter) {
+            try {
+                Write-Host "Fetching group memberships from source user: $($Request.Body.sourceUserId)"
+                $SourceGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Request.Body.sourceUserId)/memberOf" -tenantid $TenantFilter
+                $GroupMemberships = @($SourceGroups | Where-Object {
+                    $_.'@odata.type' -eq '#microsoft.graph.group' -and
+                    $_.groupTypes -notcontains 'DynamicMembership' -and
+                    $_.onPremisesSyncEnabled -ne $true
+                } | ForEach-Object {
+                    @{
+                        id          = $_.id
+                        displayName = $_.displayName
+                        mailEnabled = $_.mailEnabled
+                        groupTypes  = $_.groupTypes
+                    }
+                })
+                Write-Host "Found $($GroupMemberships.Count) group memberships to store in template"
+            } catch {
+                Write-Warning "Failed to fetch group memberships: $($_.Exception.Message)"
+            }
         }
 
-        # Generate GUID for the template
-        $GUID = (New-Guid).GUID
+        # Create template object with all fields from CippAddEditUser
+        $TemplateObject = @{
+            tenantFilter             = $TenantFilter
+            templateName             = $TemplateName
+            defaultForTenant         = [bool]$DefaultForTenant
+            givenName                = $GivenName
+            surname                  = $Surname
+            displayName              = $DisplayName
+            usernameFormat           = $UsernameFormat
+            usernameSpaceHandling    = $UsernameSpaceHandling
+            usernameSpaceReplacement = $UsernameSpaceReplacement
+            primDomain               = $PrimDomain
+            addedAliases             = $AddedAliases
+            Autopassword             = $Autopassword
+            password                 = $Password
+            MustChangePass           = $MustChangePass
+            usageLocation            = $UsageLocation
+            licenses                 = $Licenses
+            removeLicenses           = $RemoveLicenses
+            jobTitle                 = $JobTitle
+            streetAddress            = $StreetAddress
+            city                     = $City
+            state                    = $State
+            postalCode               = $PostalCode
+            country                  = $Country
+            companyName              = $CompanyName
+            department               = $Department
+            mobilePhone              = $MobilePhone
+            businessPhones           = $BusinessPhones
+            otherMails               = $OtherMails
+            setManager               = $SetManager
+            setSponsor               = $SetSponsor
+            copyFrom                 = $CopyFrom
+        }
+
+        # Use existing GUID if editing, otherwise generate new one
+        $GUID = if ($Request.Body.GUID) { $Request.Body.GUID } else { (New-Guid).GUID }
 
         # Convert to JSON
         $JSON = ConvertTo-Json -InputObject $TemplateObject -Depth 100 -Compress
@@ -122,8 +156,9 @@ function Invoke-AddUserDefaults {
             GUID         = "$GUID"
         }
 
-        $Result = "Created User Default Template '$($TemplateName)' with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
+        $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
+        $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {

@@ -18,7 +18,7 @@ function Set-CIPPDBCacheMailboxes {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$QueueId,
-        [ValidateSet('All', 'Permissions', 'CalendarPermissions', 'Rules')]
+        [ValidateSet('All', 'None', 'Permissions', 'CalendarPermissions', 'Rules')]
         [string[]]$Types = @('All')
     )
 
@@ -26,7 +26,7 @@ function Set-CIPPDBCacheMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Debug
 
         # Get mailboxes with select properties
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy'
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
@@ -51,7 +51,16 @@ function Set-CIPPDBCacheMailboxes {
                     HiddenFromAddressListsEnabled,
                     ExternalDirectoryObjectId,
                     MessageCopyForSendOnBehalfEnabled,
-                    MessageCopyForSentAsEnabled))
+                    MessageCopyForSentAsEnabled,
+                    LitigationHoldEnabled,
+                    LitigationHoldDate,
+                    LitigationHoldDuration,
+                    @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'EXCHANGE_S_ARCHIVE_ADDON' -or $_.PersistedCapabilities -contains 'BPOS_S_ArchiveAddOn' -or $_.PersistedCapabilities -contains 'EXCHANGE_S_ENTERPRISE' -or $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+                    ComplianceTagHoldApplied,
+                    RetentionHoldEnabled,
+                    InPlaceHolds,
+                    RetentionPolicy,
+                    GrantSendOnBehalfTo))
         }
 
         $Mailboxes | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -AddCount
@@ -61,6 +70,8 @@ function Set-CIPPDBCacheMailboxes {
         # Expand 'All' to all available types
         if ($Types -contains 'All') {
             $Types = @('Permissions', 'CalendarPermissions', 'Rules')
+        } elseif ($Types -contains 'None') {
+            $Types = @()
         }
 
         # Process additional types if specified
@@ -70,52 +81,66 @@ function Set-CIPPDBCacheMailboxes {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Starting batch caching for types: $($Types -join ', ')" -sev Debug
                 Write-Information "Starting batch caching for types: $($Types -join ', ')"
 
-                # Create batches based on selected types
-                $BatchSize = 10
-                $TotalBatches = [Math]::Ceiling($Mailboxes.Count / $BatchSize)
+                # Batch sizes per type:
+                # - Permissions & Rules use New-ExoBulkRequest (single POST), scales well → 50
+                # - Calendar makes 2 serial Exchange calls per mailbox, needs smaller batches → 25
+                $PermissionBatchSize = 50
+                $CalendarBatchSize = 25
+                $RulesBatchSize = 50
 
                 # Separate batches for permissions and rules
                 $PermissionBatches = [System.Collections.Generic.List[object]]::new()
                 $RuleBatches = [System.Collections.Generic.List[object]]::new()
+                $AllMailboxData = @($Mailboxes | Select-Object id, UPN, GrantSendOnBehalfTo)
+                $AllMailboxUPNs = @($Mailboxes | Select-Object -ExpandProperty UPN)
 
-                for ($i = 0; $i -lt $Mailboxes.Count; $i += $BatchSize) {
-                    $BatchMailboxes = $Mailboxes[$i..[Math]::Min($i + $BatchSize - 1, $Mailboxes.Count - 1)]
-                    $BatchMailboxUPNs = $BatchMailboxes | Select-Object -ExpandProperty UPN
-                    $BatchNumber = [Math]::Floor($i / $BatchSize) + 1
-
-                    # Add mailbox permissions batch if requested
-                    if ($Types -contains 'Permissions') {
+                # Build permission batches (mailbox + calendar in their respective sizes)
+                if ($Types -contains 'Permissions') {
+                    $TotalPermBatches = [Math]::Ceiling($Mailboxes.Count / $PermissionBatchSize)
+                    for ($i = 0; $i -lt $Mailboxes.Count; $i += $PermissionBatchSize) {
+                        $BatchMailboxUPNs = $AllMailboxUPNs[$i..[Math]::Min($i + $PermissionBatchSize - 1, $Mailboxes.Count - 1)]
+                        $BatchNumber = [Math]::Floor($i / $PermissionBatchSize) + 1
                         $PermissionBatches.Add([PSCustomObject]@{
                                 FunctionName = 'GetMailboxPermissionsBatch'
-                                QueueName    = "Mailbox Permissions Batch $BatchNumber/$TotalBatches - $TenantFilter"
+                                QueueName    = "Mailbox Permissions Batch $BatchNumber/$TotalPermBatches - $TenantFilter"
                                 TenantFilter = $TenantFilter
                                 Mailboxes    = $BatchMailboxUPNs
+                                MailboxData  = $AllMailboxData
                                 BatchNumber  = $BatchNumber
-                                TotalBatches = $TotalBatches
+                                TotalBatches = $TotalPermBatches
                             })
                     }
+                }
 
-                    # Add calendar permissions batch if requested
-                    if ($Types -contains 'CalendarPermissions') {
+                if ($Types -contains 'CalendarPermissions') {
+                    $TotalCalBatches = [Math]::Ceiling($Mailboxes.Count / $CalendarBatchSize)
+                    for ($i = 0; $i -lt $Mailboxes.Count; $i += $CalendarBatchSize) {
+                        $BatchMailboxUPNs = $AllMailboxUPNs[$i..[Math]::Min($i + $CalendarBatchSize - 1, $Mailboxes.Count - 1)]
+                        $BatchNumber = [Math]::Floor($i / $CalendarBatchSize) + 1
                         $PermissionBatches.Add([PSCustomObject]@{
                                 FunctionName = 'GetCalendarPermissionsBatch'
-                                QueueName    = "Calendar Permissions Batch $BatchNumber/$TotalBatches - $TenantFilter"
+                                QueueName    = "Calendar Permissions Batch $BatchNumber/$TotalCalBatches - $TenantFilter"
                                 TenantFilter = $TenantFilter
                                 Mailboxes    = $BatchMailboxUPNs
                                 BatchNumber  = $BatchNumber
-                                TotalBatches = $TotalBatches
+                                TotalBatches = $TotalCalBatches
                             })
                     }
+                }
 
-                    # Add mailbox rules batch if requested
-                    if ($Types -contains 'Rules') {
+                # Build rules batches
+                if ($Types -contains 'Rules') {
+                    $TotalRuleBatches = [Math]::Ceiling($Mailboxes.Count / $RulesBatchSize)
+                    for ($i = 0; $i -lt $Mailboxes.Count; $i += $RulesBatchSize) {
+                        $BatchMailboxUPNs = $AllMailboxUPNs[$i..[Math]::Min($i + $RulesBatchSize - 1, $Mailboxes.Count - 1)]
+                        $BatchNumber = [Math]::Floor($i / $RulesBatchSize) + 1
                         $RuleBatches.Add([PSCustomObject]@{
                                 FunctionName = 'GetMailboxRulesBatch'
-                                QueueName    = "Mailbox Rules Batch $BatchNumber/$TotalBatches - $TenantFilter"
+                                QueueName    = "Mailbox Rules Batch $BatchNumber/$TotalRuleBatches - $TenantFilter"
                                 TenantFilter = $TenantFilter
                                 Mailboxes    = $BatchMailboxUPNs
                                 BatchNumber  = $BatchNumber
-                                TotalBatches = $TotalBatches
+                                TotalBatches = $TotalRuleBatches
                             })
                     }
                 }
@@ -151,7 +176,7 @@ function Set-CIPPDBCacheMailboxes {
                         }
                     }
                     Write-Information "Starting permissions caching orchestrator with $($PermissionBatches.Count) batches"
-                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($PermissionInputObject | ConvertTo-Json -Compress -Depth 5)
+                    Start-CIPPOrchestrator -InputObject $PermissionInputObject
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started permission caching orchestrator with $($PermissionBatches.Count) batches" -sev Debug
                 }
 
@@ -168,7 +193,7 @@ function Set-CIPPDBCacheMailboxes {
                         }
                     }
                     Write-Information "Starting rules caching orchestrator with $($RuleBatches.Count) batches"
-                    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($RuleInputObject | ConvertTo-Json -Compress -Depth 5)
+                    Start-CIPPOrchestrator -InputObject $RuleInputObject
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Started rules caching orchestrator with $($RuleBatches.Count) batches" -sev Debug
                 }
 

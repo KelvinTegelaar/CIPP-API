@@ -9,6 +9,7 @@ function Invoke-ExecDomainAction {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $Request.Body.tenantFilter
     $DomainName = $Request.Body.domain
     $Action = $Request.Body.Action
@@ -37,8 +38,7 @@ function Invoke-ExecDomainAction {
                     state      = 'success'
                 }
 
-                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Verified domain $DomainName" -Sev 'Info'
-                $StatusCode = [HttpStatusCode]::OK
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Verified domain $DomainName" -Sev 'Info'
             }
             'delete' {
                 Write-Information "Deleting domain $DomainName from tenant $TenantFilter"
@@ -50,8 +50,7 @@ function Invoke-ExecDomainAction {
                     state      = 'success'
                 }
 
-                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Deleted domain $DomainName" -Sev 'Info'
-                $StatusCode = [HttpStatusCode]::OK
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted domain $DomainName" -Sev 'Info'
             }
             'setDefault' {
                 Write-Information "Setting domain $DomainName as default for tenant $TenantFilter"
@@ -60,15 +59,14 @@ function Invoke-ExecDomainAction {
                     isDefault = $true
                 } | ConvertTo-Json -Compress
 
-                $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/domains/$DomainName" -tenantid $TenantFilter -type PATCH -body $Body -AsApp $true
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/domains/$DomainName" -tenantid $TenantFilter -type PATCH -body $Body -AsApp $true
 
                 $Result = @{
                     resultText = "Domain $DomainName has been set as the default domain successfully."
                     state      = 'success'
                 }
 
-                Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Set domain $DomainName as default" -Sev 'Info'
-                $StatusCode = [HttpStatusCode]::OK
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Set domain $DomainName as default" -Sev 'Info'
             }
             default {
                 throw "Invalid action: $Action"
@@ -80,12 +78,12 @@ function Invoke-ExecDomainAction {
             resultText = "Failed to perform action on domain $DomainName`: $($ErrorMessage.NormalizedError)"
             state      = 'error'
         }
-        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to perform action on domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to perform action on domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = $StatusCode
+            StatusCode = ($StatusCode ?? [HttpStatusCode]::OK)
             Body       = @{'Results' = $Result }
         })
 }

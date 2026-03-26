@@ -34,7 +34,8 @@ function Compare-CIPPIntuneObject {
             'agents',
             'isSynced'
             'locationInfo',
-            'templateId'
+            'templateId',
+            'source'
         )
 
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
@@ -47,6 +48,38 @@ function Compare-CIPPIntuneObject {
             return ($PropertyName -like '*@OData*' -or
                 $PropertyName -like '#microsoft.graph*' -or
                 $excludeProps -contains $PropertyName)
+        }
+
+        function ShouldCompareAsUnorderedSet {
+            param (
+                [string]$PropertyPath
+            )
+            # Properties that should be compared as sets (order doesn't matter)
+            $unorderedSetPatterns = @(
+                'includeGroups',
+                'excludeGroups',
+                'includeUsers',
+                'excludeUsers',
+                'includeApplications',
+                'excludeApplications',
+                'includeRoles',
+                'excludeRoles',
+                'includePlatforms',
+                'excludePlatforms',
+                'includeLocations',
+                'excludeLocations',
+                'includeDevices',
+                'excludeDevices',
+                'includeGuestOrExternalUserTypes',
+                'excludeGuestOrExternalUserTypes'
+            )
+
+            foreach ($pattern in $unorderedSetPatterns) {
+                if ($PropertyPath -match "\.$pattern(\.\d+)?$" -or $PropertyPath -eq $pattern) {
+                    return $true
+                }
+            }
+            return $false
         }
 
         function Compare-ObjectsRecursively {
@@ -136,25 +169,65 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
-                $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
-
-                for ($i = 0; $i -lt $maxLength; $i++) {
-                    $newPath = "$PropertyPath.$i"
-
-                    if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
-                        Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
-                    } elseif ($i -lt $Object1.Count) {
+                # Check if this array should be compared as an unordered set
+                if (ShouldCompareAsUnorderedSet -PropertyPath $PropertyPath) {
+                    # For unordered sets, compare contents regardless of order
+                    if ($Object1.Count -ne $Object2.Count) {
+                        # Different lengths - report the difference
                         $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = $Object1[$i]
-                                ReceivedValue = ''
+                                Property      = $PropertyPath
+                                ExpectedValue = "Array with $($Object1.Count) items"
+                                ReceivedValue = "Array with $($Object2.Count) items"
                             })
                     } else {
-                        $result.Add([PSCustomObject]@{
-                                Property      = $newPath
-                                ExpectedValue = ''
-                                ReceivedValue = $Object2[$i]
-                            })
+                        # Same length - check if all items exist in both arrays
+                        $array1Sorted = @($Object1 | Sort-Object)
+                        $array2Sorted = @($Object2 | Sort-Object)
+
+                        for ($i = 0; $i -lt $array1Sorted.Count; $i++) {
+                            $item1 = $array1Sorted[$i]
+                            $item2 = $array2Sorted[$i]
+
+                            # For primitive types, direct comparison
+                            if ($item1 -is [string] -or $item1 -is [int] -or $item1 -is [long] -or $item1 -is [bool] -or $item1 -is [double] -or $item1 -is [decimal]) {
+                                if ($item1 -ne $item2) {
+                                    # Items don't match even after sorting - arrays have different contents
+                                    $result.Add([PSCustomObject]@{
+                                            Property      = $PropertyPath
+                                            ExpectedValue = ($Object1 -join ', ')
+                                            ReceivedValue = ($Object2 -join ', ')
+                                        })
+                                    break
+                                }
+                            } else {
+                                # For complex objects, recursively compare with a generic path
+                                $newPath = "$PropertyPath[$i]"
+                                Compare-ObjectsRecursively -Object1 $item1 -Object2 $item2 -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                            }
+                        }
+                    }
+                } else {
+                    # Ordered array comparison (original behavior)
+                    $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
+
+                    for ($i = 0; $i -lt $maxLength; $i++) {
+                        $newPath = "$PropertyPath.$i"
+
+                        if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
+                            Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                        } elseif ($i -lt $Object1.Count) {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = $Object1[$i]
+                                    ReceivedValue = ''
+                                })
+                        } else {
+                            $result.Add([PSCustomObject]@{
+                                    Property      = $newPath
+                                    ExpectedValue = ''
+                                    ReceivedValue = $Object2[$i]
+                                })
+                        }
                     }
                 }
             } elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
@@ -204,29 +277,45 @@ function Compare-CIPPIntuneObject {
                                 ($Object2 -is [Array] -or $Object2 -is [System.Collections.IList])) {
                                 continue
                             }
-                            if ($Object1.$propName -and $Object2.$propName) {
-                                Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                            $val1 = $Object1.$propName
+                            $val2 = $Object2.$propName
+                            $val1IsEmpty = ($null -eq $val1 -or $val1 -eq '' -or ($val1 -is [Array] -and $val1.Count -eq 0))
+                            $val2IsEmpty = ($null -eq $val2 -or $val2 -eq '' -or ($val2 -is [Array] -and $val2.Count -eq 0))
+                            if ($val1IsEmpty -and $val2IsEmpty) {
+                                # Both empty (null, "", []) - no difference
+                                continue
+                            }
+                            if ($val1 -or $val2) {
+                                Compare-ObjectsRecursively -Object1 $val1 -Object2 $val2 -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
                             }
                         } catch {
                             throw
                         }
                     } elseif ($prop1Exists) {
                         try {
-                            $result.Add([PSCustomObject]@{
+                            $val = $Object1.$propName
+                            $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
+                            if (-not $valIsEmpty) {
+                                $result.Add([PSCustomObject]@{
                                     Property      = $newPath
-                                    ExpectedValue = $Object1.$propName
+                                    ExpectedValue = $val
                                     ReceivedValue = ''
                                 })
+                            }
                         } catch {
                             throw
                         }
                     } else {
                         try {
-                            $result.Add([PSCustomObject]@{
+                            $val = $Object2.$propName
+                            $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
+                            if (-not $valIsEmpty) {
+                                $result.Add([PSCustomObject]@{
                                     Property      = $newPath
                                     ExpectedValue = ''
-                                    ReceivedValue = $Object2.$propName
+                                    ReceivedValue = $val
                                 })
+                            }
                         } catch {
                             throw
                         }
@@ -267,6 +356,11 @@ function Compare-CIPPIntuneObject {
         }
     } else {
         $intuneCollection = Get-Content .\intuneCollection.json | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Build a hashtable index for O(1) lookups instead of O(n) Where-Object scans
+        $intuneCollectionIndex = @{}
+        foreach ($item in $intuneCollection) {
+            if ($item.id) { $intuneCollectionIndex[$item.id] = $item }
+        }
 
         # Recursive function to process group setting collections at any depth
         function Process-GroupSettingChildren {
@@ -276,13 +370,13 @@ function Compare-CIPPIntuneObject {
                 [Parameter(Mandatory = $true)]
                 [string]$Source,
                 [Parameter(Mandatory = $true)]
-                $IntuneCollection
+                $IntuneCollectionIndex
             )
 
             $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 
             foreach ($child in $Children) {
-                $childIntuneObj = $IntuneCollection | Where-Object { $_.id -eq $child.settingDefinitionId }
+                $childIntuneObj = $IntuneCollectionIndex[$child.settingDefinitionId]
                 $childLabel = if ($childIntuneObj?.displayName) {
                     $childIntuneObj.displayName
                 } else {
@@ -294,7 +388,7 @@ function Compare-CIPPIntuneObject {
                         if ($child.groupSettingCollectionValue) {
                             foreach ($groupValue in $child.groupSettingCollectionValue) {
                                 if ($groupValue.children) {
-                                    $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollection $IntuneCollection
+                                    $nestedResults = Process-GroupSettingChildren -Children $groupValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
                                     foreach ($nr in $nestedResults) { $results.Add($nr) }
                                 }
                             }
@@ -380,7 +474,7 @@ function Compare-CIPPIntuneObject {
 
                 # Also process any children within choice setting values
                 if ($child.choiceSettingValue?.children) {
-                    $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollection $IntuneCollection
+                    $nestedResults = Process-GroupSettingChildren -Children $child.choiceSettingValue.children -Source $Source -IntuneCollectionIndex $IntuneCollectionIndex
                     foreach ($nr in $nestedResults) { $results.Add($nr) }
                 }
             }
@@ -391,14 +485,14 @@ function Compare-CIPPIntuneObject {
         # Process reference object settings
         $referenceItems = $ReferenceObject.settings | ForEach-Object {
             $settingInstance = $_.settingInstance
-            $intuneObj = $intuneCollection | Where-Object { $_.id -eq $settingInstance.settingDefinitionId }
+            $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
             $tempOutput = switch ($settingInstance.'@odata.type') {
                 '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance' {
                     if ($null -ne $settingInstance.groupSettingCollectionValue) {
                         $groupResults = [System.Collections.Generic.List[PSCustomObject]]::new()
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
-                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollection $intuneCollection
+                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
                                 foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
@@ -418,6 +512,19 @@ function Compare-CIPPIntuneObject {
                             Key    = "Simple-$($settingInstance.settingDefinitionId)"
                             Label  = $label
                             Value  = $value
+                            Source = 'Reference'
+                        }
+                    } elseif ($settingInstance.simpleSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = @($settingInstance.simpleSettingCollectionValue | ForEach-Object { $_.value })
+                        [PSCustomObject]@{
+                            Key    = "Simple-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
                             Source = 'Reference'
                         }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
@@ -440,6 +547,30 @@ function Compare-CIPPIntuneObject {
                             Key    = "Choice-$($settingInstance.settingDefinitionId)"
                             Label  = $label
                             Value  = $value
+                            Source = 'Reference'
+                        }
+
+                        # Recurse into children of choice settings (e.g. firewall profile sub-settings)
+                        if ($settingInstance.choiceSettingValue.children) {
+                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Reference' -IntuneCollectionIndex $intuneCollectionIndex
+                            foreach ($cr in $childResults) { $cr }
+                        }
+                    } elseif ($settingInstance.choiceSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = [System.Collections.Generic.List[string]]::new()
+                        foreach ($choiceValue in $settingInstance.choiceSettingCollectionValue) {
+                            $option = $intuneObj.options | Where-Object { $_.id -eq $choiceValue.value }
+                            $displayValue = if ($option?.displayName) { $option.displayName } else { $choiceValue.value }
+                            $values.Add($displayValue)
+                        }
+                        [PSCustomObject]@{
+                            Key    = "Choice-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
                             Source = 'Reference'
                         }
                     } else {
@@ -463,14 +594,14 @@ function Compare-CIPPIntuneObject {
         # Process difference object settings
         $differenceItems = $DifferenceObject.settings | ForEach-Object {
             $settingInstance = $_.settingInstance
-            $intuneObj = $intuneCollection | Where-Object { $_.id -eq $settingInstance.settingDefinitionId }
+            $intuneObj = $intuneCollectionIndex[$settingInstance.settingDefinitionId]
             $tempOutput = switch ($settingInstance.'@odata.type') {
                 '#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance' {
                     if ($null -ne $settingInstance.groupSettingCollectionValue) {
                         $groupResults = [System.Collections.Generic.List[PSCustomObject]]::new()
                         foreach ($groupValue in $settingInstance.groupSettingCollectionValue) {
                             if ($groupValue.children -is [System.Array]) {
-                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollection $intuneCollection
+                                $childResults = Process-GroupSettingChildren -Children $groupValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
                                 foreach ($cr in $childResults) { $groupResults.Add($cr) }
                             }
                         }
@@ -490,6 +621,19 @@ function Compare-CIPPIntuneObject {
                             Key    = "Simple-$($settingInstance.settingDefinitionId)"
                             Label  = $label
                             Value  = $value
+                            Source = 'Difference'
+                        }
+                    } elseif ($settingInstance.simpleSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = @($settingInstance.simpleSettingCollectionValue | ForEach-Object { $_.value })
+                        [PSCustomObject]@{
+                            Key    = "Simple-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
                             Source = 'Difference'
                         }
                     } elseif ($settingInstance.choiceSettingValue?.value) {
@@ -514,6 +658,30 @@ function Compare-CIPPIntuneObject {
                             Value  = $value
                             Source = 'Difference'
                         }
+
+                        # Recurse into children of choice settings (e.g. firewall profile sub-settings)
+                        if ($settingInstance.choiceSettingValue.children) {
+                            $childResults = Process-GroupSettingChildren -Children $settingInstance.choiceSettingValue.children -Source 'Difference' -IntuneCollectionIndex $intuneCollectionIndex
+                            foreach ($cr in $childResults) { $cr }
+                        }
+                    } elseif ($settingInstance.choiceSettingCollectionValue) {
+                        $label = if ($intuneObj?.displayName) {
+                            $intuneObj.displayName
+                        } else {
+                            $settingInstance.settingDefinitionId
+                        }
+                        $values = [System.Collections.Generic.List[string]]::new()
+                        foreach ($choiceValue in $settingInstance.choiceSettingCollectionValue) {
+                            $option = $intuneObj.options | Where-Object { $_.id -eq $choiceValue.value }
+                            $displayValue = if ($option?.displayName) { $option.displayName } else { $choiceValue.value }
+                            $values.Add($displayValue)
+                        }
+                        [PSCustomObject]@{
+                            Key    = "Choice-$($settingInstance.settingDefinitionId)"
+                            Label  = $label
+                            Value  = ($values | Sort-Object) -join ', '
+                            Source = 'Difference'
+                        }
                     } else {
                         $label = if ($intuneObj?.displayName) {
                             $intuneObj.displayName
@@ -534,11 +702,16 @@ function Compare-CIPPIntuneObject {
 
         $result = [System.Collections.Generic.List[PSObject]]::new()
 
-        $allKeys = @($referenceItems | Select-Object -ExpandProperty Key) + @($differenceItems | Select-Object -ExpandProperty Key) | Sort-Object -Unique
+        $refItemsByKey = @{}
+        foreach ($item in $referenceItems) { $refItemsByKey[$item.Key] = $item }
+        $diffItemsByKey = @{}
+        foreach ($item in $differenceItems) { $diffItemsByKey[$item.Key] = $item }
+
+        $allKeys = @($refItemsByKey.Keys) + @($diffItemsByKey.Keys) | Sort-Object -Unique
 
         foreach ($key in $allKeys) {
-            $refItem = $referenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
-            $diffItem = $differenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
+            $refItem = $refItemsByKey[$key]
+            $diffItem = $diffItemsByKey[$key]
 
             $settingId = $key
             if ($key -like 'Simple-*') {
@@ -551,7 +724,7 @@ function Compare-CIPPIntuneObject {
                 $settingId = $key.Substring(8)
             }
 
-            $settingDefinition = $intuneCollection | Where-Object { $_.id -eq $settingId }
+            $settingDefinition = $intuneCollectionIndex[$settingId]
 
             $refRawValue = if ($refItem) { $refItem.Value } else { $null }
             $diffRawValue = if ($diffItem) { $diffItem.Value } else { $null }
@@ -560,14 +733,14 @@ function Compare-CIPPIntuneObject {
             $diffValue = $diffRawValue
 
             if ($null -ne $settingDefinition -and $null -ne $settingDefinition.options) {
-                if ($null -ne $refRawValue -and $refRawValue -match '_\d+$') {
+                if ($null -ne $refRawValue -and $refRawValue -is [string]) {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $refRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
                         $refValue = $option.displayName
                     }
                 }
 
-                if ($null -ne $diffRawValue -and $diffRawValue -match '_\d+$') {
+                if ($null -ne $diffRawValue -and $diffRawValue -is [string]) {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $diffRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
                         $diffValue = $option.displayName

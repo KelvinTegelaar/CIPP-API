@@ -16,14 +16,15 @@ function Invoke-RemoveStandardTemplate {
     $ID = $Request.Body.ID ?? $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'StandardsTemplateV2' and GUID eq '$ID'"
-        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, JSON
+        $Filter = "PartitionKey eq 'StandardsTemplateV2' and (RowKey eq '$ID' or OriginalEntityId eq '$ID' or OriginalEntityId eq guid'$ID')"
+        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($ClearRow.JSON) {
             $TemplateName = (ConvertFrom-Json -InputObject $ClearRow.JSON -ErrorAction SilentlyContinue).templateName
         } else {
             $TemplateName = ''
         }
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        $Entities = Get-AzDataTableEntity @Table -Filter $Filter
+        Remove-AzDataTableEntity -Force @Table -Entity $Entities
         $Result = "Removed Standards Template named: '$($TemplateName)' with id: $($ID)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK

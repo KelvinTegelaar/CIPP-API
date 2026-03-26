@@ -99,12 +99,16 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
-            $Owner = $env:WEBSITE_OWNER_NAME
-            Write-Information "Owner: $Owner"
-            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            } else {
+            if ($env:WEBSITE_RESOURCE_GROUP) {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
+            } else {
+                $Owner = $env:WEBSITE_OWNER_NAME
+                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+                    $RGName = $Matches.RGName
+                } else {
+                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
+                    $RGName = $null
+                }
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
@@ -122,11 +126,16 @@ function Invoke-ExecApiClient {
         }
         'SaveToAzure' {
             $TenantId = $env:TenantID
-            $Owner = $env:WEBSITE_OWNER_NAME
-            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            } else {
+            if ($env:WEBSITE_RESOURCE_GROUP) {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
+            } else {
+                $Owner = $env:WEBSITE_OWNER_NAME
+                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+                    $RGName = $Matches.RGName
+                } else {
+                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
+                    $RGName = $null
+                }
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
@@ -192,7 +201,7 @@ function Invoke-ExecApiClient {
                     $Body = @{ Results = "API client $ClientId not found or not a valid CIPP-API application" }
                 }
             } catch {
-                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -Sev 'Warning'
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -sev 'Warn'
             }
         }
         default {

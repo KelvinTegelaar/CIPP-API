@@ -28,6 +28,7 @@ function Push-StoreMailboxPermissions {
         # Aggregate results by command type from all batches
         $AllMailboxPermissions = [System.Collections.Generic.List[object]]::new()
         $AllRecipientPermissions = [System.Collections.Generic.List[object]]::new()
+        $AllSendOnBehalfPermissions = [System.Collections.Generic.List[object]]::new()
         $AllCalendarPermissions = [System.Collections.Generic.List[object]]::new()
 
         foreach ($BatchResult in $Results) {
@@ -39,20 +40,28 @@ function Push-StoreMailboxPermissions {
                 $ActualResult = $BatchResult[0]
             }
 
-            if ($ActualResult -and $ActualResult -is [hashtable]) {
+            if ($ActualResult -and ($ActualResult -is [hashtable] -or $ActualResult -is [System.Collections.IDictionary])) {
                 Write-Information "Processing hashtable result with keys: $($ActualResult.Keys -join ', ')"
                 # Results are grouped by cmdlet name due to ReturnWithCommand
                 if ($ActualResult['Get-MailboxPermission']) {
-                    Write-Information "Adding $($ActualResult['Get-MailboxPermission'].Count) mailbox permissions"
-                    $AllMailboxPermissions.AddRange($ActualResult['Get-MailboxPermission'])
+                    $MailboxPerms = @($ActualResult['Get-MailboxPermission'])
+                    Write-Information "Adding $($MailboxPerms.Count) mailbox permissions"
+                    $AllMailboxPermissions.AddRange($MailboxPerms)
                 }
                 if ($ActualResult['Get-RecipientPermission']) {
-                    Write-Information "Adding $($ActualResult['Get-RecipientPermission'].Count) recipient permissions"
-                    $AllRecipientPermissions.AddRange($ActualResult['Get-RecipientPermission'])
+                    $RecipientPerms = @($ActualResult['Get-RecipientPermission'])
+                    Write-Information "Adding $($RecipientPerms.Count) recipient permissions"
+                    $AllRecipientPermissions.AddRange($RecipientPerms)
+                }
+                if ($ActualResult['Get-Mailbox']) {
+                    $SendOnBehalfRows = @($ActualResult['Get-Mailbox'])
+                    Write-Information "Adding $($SendOnBehalfRows.Count) send-on-behalf permissions"
+                    $AllSendOnBehalfPermissions.AddRange($SendOnBehalfRows)
                 }
                 if ($ActualResult['Get-MailboxFolderPermission']) {
-                    Write-Information "Adding $($ActualResult['Get-MailboxFolderPermission'].Count) calendar permissions"
-                    $AllCalendarPermissions.AddRange($ActualResult['Get-MailboxFolderPermission'])
+                    $CalendarPerms = @($ActualResult['Get-MailboxFolderPermission'])
+                    Write-Information "Adding $($CalendarPerms.Count) calendar permissions"
+                    $AllCalendarPermissions.AddRange($CalendarPerms)
                 }
             } else {
                 Write-Information "Skipping non-hashtable result: $($ActualResult.GetType().Name)"
@@ -63,8 +72,9 @@ function Push-StoreMailboxPermissions {
         $AllPermissions = [System.Collections.Generic.List[object]]::new()
         $AllPermissions.AddRange($AllMailboxPermissions)
         $AllPermissions.AddRange($AllRecipientPermissions)
+        $AllPermissions.AddRange($AllSendOnBehalfPermissions)
 
-        Write-Information "Aggregated $($AllPermissions.Count) total permissions ($($AllMailboxPermissions.Count) mailbox + $($AllRecipientPermissions.Count) recipient)"
+        Write-Information "Aggregated $($AllPermissions.Count) total permissions ($($AllMailboxPermissions.Count) mailbox + $($AllRecipientPermissions.Count) recipient + $($AllSendOnBehalfPermissions.Count) send-on-behalf)"
         Write-Information "Aggregated $($AllCalendarPermissions.Count) calendar permissions"
 
         # Store all permissions together as MailboxPermissions

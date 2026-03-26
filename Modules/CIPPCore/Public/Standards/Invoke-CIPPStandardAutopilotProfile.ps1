@@ -52,7 +52,7 @@ function Invoke-CIPPStandardAutopilotProfile {
             Where-Object { $_.displayName -eq $Settings.DisplayName } |
             Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, outOfBoxExperienceSetting
 
-        if ($Settings.NotLocalAdmin -eq $true) { $userType = 'Standard' } else { $userType = 'Administrator' }
+        if ($Settings.NotLocalAdmin -eq $true) { $userType = 'standard' } else { $userType = 'administrator' }
         if ($Settings.SelfDeployingMode -eq $true) {
             $DeploymentMode = 'shared'
             $Settings.AllowWhiteGlove = $false
@@ -69,7 +69,7 @@ function Invoke-CIPPStandardAutopilotProfile {
         ($CurrentConfig.outOfBoxExperienceSetting.deviceUsageType -eq $DeploymentMode) -and
         ($CurrentConfig.outOfBoxExperienceSetting.privacySettingsHidden -eq $Settings.HidePrivacy) -and
         ($CurrentConfig.outOfBoxExperienceSetting.eulaHidden -eq $Settings.HideTerms) -and
-        ($CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
+        ($DeploymentMode -eq 'shared' -or $CurrentConfig.outOfBoxExperienceSetting.userType -eq $userType) -and
         ($CurrentConfig.outOfBoxExperienceSetting.keyboardSelectionPageSkipped -eq $Settings.AutoKeyboard)
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -78,14 +78,26 @@ function Invoke-CIPPStandardAutopilotProfile {
     }
 
     $CurrentValue = $CurrentConfig | Select-Object -Property displayName, description, deviceNameTemplate, locale, preprovisioningAllowed, hardwareHashExtractionEnabled, @{Name = 'outOfBoxExperienceSetting'; Expression = {
-            [PSCustomObject]@{
+            $oobe = [PSCustomObject]@{
                 deviceUsageType              = $_.outOfBoxExperienceSetting.deviceUsageType
                 privacySettingsHidden        = $_.outOfBoxExperienceSetting.privacySettingsHidden
                 eulaHidden                   = $_.outOfBoxExperienceSetting.eulaHidden
-                userType                     = $_.outOfBoxExperienceSetting.userType
                 keyboardSelectionPageSkipped = $_.outOfBoxExperienceSetting.keyboardSelectionPageSkipped
             }
+            if ($DeploymentMode -ne 'shared') {
+                $oobe | Add-Member -NotePropertyName 'userType' -NotePropertyValue $_.outOfBoxExperienceSetting.userType
+            }
+            $oobe
         }
+    }
+    $ExpectedOobe = [PSCustomObject]@{
+        deviceUsageType              = $DeploymentMode
+        privacySettingsHidden        = $Settings.HidePrivacy
+        eulaHidden                   = $Settings.HideTerms
+        keyboardSelectionPageSkipped = $Settings.AutoKeyboard
+    }
+    if ($DeploymentMode -ne 'shared') {
+        $ExpectedOobe | Add-Member -NotePropertyName 'userType' -NotePropertyValue $userType
     }
     $ExpectedValue = [PSCustomObject]@{
         displayName                   = $Settings.DisplayName
@@ -94,13 +106,7 @@ function Invoke-CIPPStandardAutopilotProfile {
         locale                        = $Settings.Languages.value
         preprovisioningAllowed        = $Settings.AllowWhiteGlove
         hardwareHashExtractionEnabled = $Settings.CollectHash
-        outOfBoxExperienceSetting     = [PSCustomObject]@{
-            deviceUsageType              = $DeploymentMode
-            privacySettingsHidden        = $Settings.HidePrivacy
-            eulaHidden                   = $Settings.HideTerms
-            userType                     = $userType
-            keyboardSelectionPageSkipped = $Settings.AutoKeyboard
-        }
+        outOfBoxExperienceSetting     = $ExpectedOobe
     }
 
     # Remediate if the state is not correct
@@ -110,18 +116,18 @@ function Invoke-CIPPStandardAutopilotProfile {
         } else {
             try {
                 $Parameters = @{
-                    tenantFilter       = $Tenant
-                    displayName        = $Settings.DisplayName
-                    description        = $Settings.Description
-                    userType           = $userType
+                    TenantFilter       = $Tenant
+                    DisplayName        = $Settings.DisplayName
+                    Description        = $Settings.Description
+                    UserType           = $userType
                     DeploymentMode     = $DeploymentMode
                     AssignTo           = $Settings.AssignToAllDevices
-                    devicenameTemplate = $Settings.DeviceNameTemplate
-                    allowWhiteGlove    = $Settings.AllowWhiteGlove
+                    DeviceNameTemplate = $Settings.DeviceNameTemplate
+                    AllowWhiteGlove    = $Settings.AllowWhiteGlove
                     CollectHash        = $Settings.CollectHash
-                    hideChangeAccount  = $true
-                    hidePrivacy        = $Settings.HidePrivacy
-                    hideTerms          = $Settings.HideTerms
+                    HideChangeAccount  = $true
+                    HidePrivacy        = $Settings.HidePrivacy
+                    HideTerms          = $Settings.HideTerms
                     AutoKeyboard       = $Settings.AutoKeyboard
                     Language           = $Settings.Languages.value
                 }

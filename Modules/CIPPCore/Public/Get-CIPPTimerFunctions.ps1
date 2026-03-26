@@ -14,7 +14,7 @@ function Get-CIPPTimerFunctions {
 
     $FunctionName = $env:WEBSITE_SITE_NAME
     $MainFunctionVersion = ($Nodes | Where-Object { $_.RowKey -eq $FunctionName }).Version
-    $AvailableNodes = $Nodes.RowKey | Where-Object { $_.RowKey -match '-' -and $_.Version -eq $MainFunctionVersion } | ForEach-Object { ($_ -split '-')[1] }
+    $AvailableNodes = $Nodes | Where-Object { $_.RowKey -match '-' -and $_.Version -eq $MainFunctionVersion } | ForEach-Object { ($_.RowKey -split '-')[1] }
 
     # Get node name
     if ($FunctionName -match '-') {
@@ -131,7 +131,7 @@ function Get-CIPPTimerFunctions {
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
                     $PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
-                    if ($Status.PSObject.Properites.Name -notcontains 'PreferredProcessor') {
+                    if ($Status.PSObject.Properties.Name -notcontains 'PreferredProcessor') {
                         $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $PreferredProcessor -Force
                     } else {
                         $Status.PreferredProcessor = $PreferredProcessor

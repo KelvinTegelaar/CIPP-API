@@ -11,6 +11,12 @@
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueItem",
+      "queueName": "cippqueue"
     }
   ]
 }

@@ -54,20 +54,13 @@ function Invoke-CIPPStandardDeployMailContact {
         return
     }
 
-    # Prepare contact data for reuse
-    $ContactData = @{
-        DisplayName          = $Settings.DisplayName
-        ExternalEmailAddress = $Settings.ExternalEmailAddress
-        FirstName            = $Settings.FirstName
-        LastName             = $Settings.LastName
-    }
-
     # Check if contact already exists
     try {
         $ExistingContact = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailContact' -cmdParams @{
             Identity    = $Settings.ExternalEmailAddress
             ErrorAction = 'Stop'
         }
+        $ExistingContactLookup = New-GraphGetRequest -tenantid $Tenant -uri "https://graph.microsoft.com/beta/contacts/$($ExistingContact.ExternalDirectoryObjectId)" -ErrorAction 'Stop'
     } catch {
         if ($_.Exception.Message -like "*couldn't be found*") {
             $ExistingContact = $null
@@ -80,12 +73,32 @@ function Invoke-CIPPStandardDeployMailContact {
     # Remediation
     if ($Settings.remediate -eq $true -and -not $ExistingContact) {
         try {
-            $NewContactParams = $ContactData.Clone()
+            $NewContactParams = @{
+                Name                 = $Settings.DisplayName
+                ExternalEmailAddress = $Settings.ExternalEmailAddress
+                FirstName            = $Settings.FirstName
+                LastName             = $Settings.LastName
+            }
             $NewContactParams.Name = $Settings.DisplayName
             $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
+            # I would like to update the contact object here but exchange replication delays make it unreliable, so instead it will alert on the discrepancy until the next run - Zac
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
         } catch {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $(Get-CippException -Exception $_).NormalizedError" -sev Error
+        }
+    } elseif ($Settings.remediate -eq $true -and $ExistingContact -and ($ExistingContactLookup.givenName -ne $Settings.FirstName -or $ExistingContactLookup.surname -ne $Settings.LastName -or $ExistingContactLookup.displayName -ne $Settings.DisplayName)) {
+        try {
+            $ContactParams = @{
+                Identity            = $ExistingContact.Guid
+                DisplayName         = $Settings.DisplayName
+                FirstName           = $Settings.FirstName
+                LastName            = $Settings.LastName
+            }
+            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Contact' -cmdParams $ContactParams
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully updated contact properties for $($Settings.DisplayName)" -sev Info
+            # I would like to update the contact object here but exchange replication delays make it unreliable, so instead it will alert on the discrepancy until the next run - Zac
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not update mail contact. $(Get-CippException -Exception $_).NormalizedError" -sev Error
         }
     }
 
@@ -101,21 +114,19 @@ function Invoke-CIPPStandardDeployMailContact {
 
     # Report
     if ($Settings.report -eq $true) {
-        $ReportData = $ContactData.Clone()
         $ContactData = @{
             DisplayName          = $Settings.DisplayName
             ExternalEmailAddress = $Settings.ExternalEmailAddress
-            FirstName            = $Settings.FirstName
-            LastName             = $Settings.LastName
+            FirstName            = $Settings.FirstName ?? ''
+            LastName             = $Settings.LastName ?? ''
         }
-        $CurrentValue = $ExistingContact | Select-Object DisplayName, ExternalEmailAddress, FirstName, LastName
         $currentValue = @{
-            DisplayName          = $ExistingContact.displayName
+            DisplayName          = $ExistingContactLookup.displayName
             ExternalEmailAddress = ($ExistingContact.ExternalEmailAddress -replace 'SMTP:', '')
-            FirstName            = $ExistingContact.firstName
-            LastName             = $ExistingContact.lastName
+            FirstName            = $ExistingContactLookup.givenName ?? ''
+            LastName             = $ExistingContactLookup.surname ?? ''
         }
-        Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ReportData -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ContactData -StoreAs json -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ContactData -Tenant $Tenant
     }
 }

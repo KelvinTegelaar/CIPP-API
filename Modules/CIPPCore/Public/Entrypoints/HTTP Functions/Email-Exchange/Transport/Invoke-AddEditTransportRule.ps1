@@ -54,7 +54,13 @@ function Invoke-AddEditTransportRule {
     $FromAddressMatchesPatterns = $Request.Body.FromAddressMatchesPatterns
     $AttachmentContainsWords = $Request.Body.AttachmentContainsWords
     $AttachmentMatchesPatterns = $Request.Body.AttachmentMatchesPatterns
+    $AttachmentNameMatchesPatterns = $Request.Body.AttachmentNameMatchesPatterns
+    $AttachmentPropertyContainsWords = $Request.Body.AttachmentPropertyContainsWords
     $AttachmentExtensionMatchesWords = $Request.Body.AttachmentExtensionMatchesWords
+    $AttachmentHasExecutableContent = $Request.Body.AttachmentHasExecutableContent
+    $AttachmentIsPasswordProtected = $Request.Body.AttachmentIsPasswordProtected
+    $AttachmentIsUnsupported = $Request.Body.AttachmentIsUnsupported
+    $AttachmentProcessingLimitExceeded = $Request.Body.AttachmentProcessingLimitExceeded
     $AttachmentSizeOver = $Request.Body.AttachmentSizeOver
     $MessageSizeOver = $Request.Body.MessageSizeOver
     $SCLOver = $Request.Body.SCLOver
@@ -82,6 +88,7 @@ function Invoke-AddEditTransportRule {
     $DeleteMessage = $Request.Body.DeleteMessage
     $Quarantine = $Request.Body.Quarantine
     $RedirectMessageTo = $Request.Body.RedirectMessageTo
+    $RouteMessageOutboundConnector = $Request.Body.RouteMessageOutboundConnector
     $BlindCopyTo = $Request.Body.BlindCopyTo
     $CopyTo = $Request.Body.CopyTo
     $ModerateMessageByUser = $Request.Body.ModerateMessageByUser
@@ -98,6 +105,7 @@ function Invoke-AddEditTransportRule {
     $ApplyHtmlDisclaimerLocation = $Request.Body.ApplyHtmlDisclaimerLocation
     $ApplyHtmlDisclaimerFallbackAction = $Request.Body.ApplyHtmlDisclaimerFallbackAction
     $GenerateIncidentReport = $Request.Body.GenerateIncidentReport
+    $IncidentReportContent = $Request.Body.IncidentReportContent
     $GenerateNotification = $Request.Body.GenerateNotification
     $ApplyOME = $Request.Body.ApplyOME
 
@@ -116,7 +124,13 @@ function Invoke-AddEditTransportRule {
     $ExceptIfFromAddressMatchesPatterns = $Request.Body.ExceptIfFromAddressMatchesPatterns
     $ExceptIfAttachmentContainsWords = $Request.Body.ExceptIfAttachmentContainsWords
     $ExceptIfAttachmentMatchesPatterns = $Request.Body.ExceptIfAttachmentMatchesPatterns
+    $ExceptIfAttachmentNameMatchesPatterns = $Request.Body.ExceptIfAttachmentNameMatchesPatterns
+    $ExceptIfAttachmentPropertyContainsWords = $Request.Body.ExceptIfAttachmentPropertyContainsWords
     $ExceptIfAttachmentExtensionMatchesWords = $Request.Body.ExceptIfAttachmentExtensionMatchesWords
+    $ExceptIfAttachmentHasExecutableContent = $Request.Body.ExceptIfAttachmentHasExecutableContent
+    $ExceptIfAttachmentIsPasswordProtected = $Request.Body.ExceptIfAttachmentIsPasswordProtected
+    $ExceptIfAttachmentIsUnsupported = $Request.Body.ExceptIfAttachmentIsUnsupported
+    $ExceptIfAttachmentProcessingLimitExceeded = $Request.Body.ExceptIfAttachmentProcessingLimitExceeded
     $ExceptIfAttachmentSizeOver = $Request.Body.ExceptIfAttachmentSizeOver
     $ExceptIfMessageSizeOver = $Request.Body.ExceptIfMessageSizeOver
     $ExceptIfSCLOver = $Request.Body.ExceptIfSCLOver
@@ -265,6 +279,8 @@ function Invoke-AddEditTransportRule {
     $FromAddressMatchesPatterns = Process-TextArrayField -Field $FromAddressMatchesPatterns
     $AttachmentContainsWords = Process-TextArrayField -Field $AttachmentContainsWords
     $AttachmentMatchesPatterns = Process-TextArrayField -Field $AttachmentMatchesPatterns
+    $AttachmentNameMatchesPatterns = Process-TextArrayField -Field $AttachmentNameMatchesPatterns
+    $AttachmentPropertyContainsWords = Process-TextArrayField -Field $AttachmentPropertyContainsWords
     $AttachmentExtensionMatchesWords = Process-TextArrayField -Field $AttachmentExtensionMatchesWords
     $RecipientAddressContainsWords = Process-TextArrayField -Field $RecipientAddressContainsWords
     $RecipientAddressMatchesPatterns = Process-TextArrayField -Field $RecipientAddressMatchesPatterns
@@ -272,6 +288,7 @@ function Invoke-AddEditTransportRule {
     $AnyOfRecipientAddressMatchesPatterns = Process-TextArrayField -Field $AnyOfRecipientAddressMatchesPatterns
     $HeaderContainsWords = Process-TextArrayField -Field $HeaderContainsWords
     $HeaderMatchesPatterns = Process-TextArrayField -Field $HeaderMatchesPatterns
+    $IncidentReportContent = Process-TextArrayField -Field $IncidentReportContent
 
     # Process exception text array fields
     $ExceptIfSubjectContainsWords = Process-TextArrayField -Field $ExceptIfSubjectContainsWords
@@ -282,6 +299,8 @@ function Invoke-AddEditTransportRule {
     $ExceptIfFromAddressMatchesPatterns = Process-TextArrayField -Field $ExceptIfFromAddressMatchesPatterns
     $ExceptIfAttachmentContainsWords = Process-TextArrayField -Field $ExceptIfAttachmentContainsWords
     $ExceptIfAttachmentMatchesPatterns = Process-TextArrayField -Field $ExceptIfAttachmentMatchesPatterns
+    $ExceptIfAttachmentNameMatchesPatterns = Process-TextArrayField -Field $ExceptIfAttachmentNameMatchesPatterns
+    $ExceptIfAttachmentPropertyContainsWords = Process-TextArrayField -Field $ExceptIfAttachmentPropertyContainsWords
     $ExceptIfAttachmentExtensionMatchesWords = Process-TextArrayField -Field $ExceptIfAttachmentExtensionMatchesWords
     $ExceptIfRecipientAddressContainsWords = Process-TextArrayField -Field $ExceptIfRecipientAddressContainsWords
     $ExceptIfRecipientAddressMatchesPatterns = Process-TextArrayField -Field $ExceptIfRecipientAddressMatchesPatterns
@@ -365,8 +384,26 @@ function Invoke-AddEditTransportRule {
         if ($null -ne $AttachmentMatchesPatterns -and $AttachmentMatchesPatterns.Count -gt 0) {
             $ruleParams.Add('AttachmentMatchesPatterns', $AttachmentMatchesPatterns)
         }
+        if ($null -ne $AttachmentNameMatchesPatterns -and $AttachmentNameMatchesPatterns.Count -gt 0) {
+            $ruleParams.Add('AttachmentNameMatchesPatterns', $AttachmentNameMatchesPatterns)
+        }
+        if ($null -ne $AttachmentPropertyContainsWords -and $AttachmentPropertyContainsWords.Count -gt 0) {
+            $ruleParams.Add('AttachmentPropertyContainsWords', $AttachmentPropertyContainsWords)
+        }
         if ($null -ne $AttachmentExtensionMatchesWords -and $AttachmentExtensionMatchesWords.Count -gt 0) {
             $ruleParams.Add('AttachmentExtensionMatchesWords', $AttachmentExtensionMatchesWords)
+        }
+        if ($null -ne $AttachmentHasExecutableContent) {
+            $ruleParams.Add('AttachmentHasExecutableContent', $AttachmentHasExecutableContent)
+        }
+        if ($null -ne $AttachmentIsPasswordProtected) {
+            $ruleParams.Add('AttachmentIsPasswordProtected', $AttachmentIsPasswordProtected)
+        }
+        if ($null -ne $AttachmentIsUnsupported) {
+            $ruleParams.Add('AttachmentIsUnsupported', $AttachmentIsUnsupported)
+        }
+        if ($null -ne $AttachmentProcessingLimitExceeded) {
+            $ruleParams.Add('AttachmentProcessingLimitExceeded', $AttachmentProcessingLimitExceeded)
         }
         if ($null -ne $AttachmentSizeOver) { $ruleParams.Add('AttachmentSizeOver', $AttachmentSizeOver) }
         if ($null -ne $MessageSizeOver) { $ruleParams.Add('MessageSizeOver', $MessageSizeOver) }
@@ -436,6 +473,7 @@ function Invoke-AddEditTransportRule {
         if ($null -ne $RedirectMessageTo -and $RedirectMessageTo.Count -gt 0) {
             $ruleParams.Add('RedirectMessageTo', $RedirectMessageTo)
         }
+        if ($null -ne$RouteMessageOutboundConnector) {$ruleParams.Add('RouteMessageOutboundConnector', $RouteMessageOutboundConnector)}
         if ($null -ne $BlindCopyTo -and $BlindCopyTo.Count -gt 0) { $ruleParams.Add('BlindCopyTo', $BlindCopyTo) }
         if ($null -ne $CopyTo -and $CopyTo.Count -gt 0) { $ruleParams.Add('CopyTo', $CopyTo) }
         if ($null -ne $ModerateMessageByUser -and $ModerateMessageByUser.Count -gt 0) {
@@ -474,6 +512,9 @@ function Invoke-AddEditTransportRule {
         }
         if ($null -ne $GenerateIncidentReport -and $GenerateIncidentReport.Count -gt 0) {
             $ruleParams.Add('GenerateIncidentReport', $GenerateIncidentReport)
+            if ($null -ne $IncidentReportContent -and $IncidentReportContent.Count -gt 0) {
+                $ruleParams.Add('IncidentReportContent', $IncidentReportContent)
+            }
         }
         if ($null -ne $GenerateNotification -and $GenerateNotification -ne '') {
             $ruleParams.Add('GenerateNotification', $GenerateNotification)
@@ -517,8 +558,26 @@ function Invoke-AddEditTransportRule {
         if ($null -ne $ExceptIfAttachmentMatchesPatterns -and $ExceptIfAttachmentMatchesPatterns.Count -gt 0) {
             $ruleParams.Add('ExceptIfAttachmentMatchesPatterns', $ExceptIfAttachmentMatchesPatterns)
         }
+        if ($null -ne $ExceptIfAttachmentNameMatchesPatterns -and $ExceptIfAttachmentNameMatchesPatterns.Count -gt 0) {
+            $ruleParams.Add('ExceptIfAttachmentNameMatchesPatterns', $ExceptIfAttachmentNameMatchesPatterns)
+        }
+        if ($null -ne $ExceptIfAttachmentPropertyContainsWords -and $ExceptIfAttachmentPropertyContainsWords.Count -gt 0) {
+            $ruleParams.Add('ExceptIfAttachmentPropertyContainsWords', $ExceptIfAttachmentPropertyContainsWords)
+        }
         if ($null -ne $ExceptIfAttachmentExtensionMatchesWords -and $ExceptIfAttachmentExtensionMatchesWords.Count -gt 0) {
             $ruleParams.Add('ExceptIfAttachmentExtensionMatchesWords', $ExceptIfAttachmentExtensionMatchesWords)
+        }
+        if ($null -ne $ExceptIfAttachmentHasExecutableContent) {
+            $ruleParams.Add('ExceptIfAttachmentHasExecutableContent', $ExceptIfAttachmentHasExecutableContent)
+        }
+        if ($null -ne $ExceptIfAttachmentIsPasswordProtected) {
+            $ruleParams.Add('ExceptIfAttachmentIsPasswordProtected', $ExceptIfAttachmentIsPasswordProtected)
+        }
+        if ($null -ne $ExceptIfAttachmentIsUnsupported) {
+            $ruleParams.Add('ExceptIfAttachmentIsUnsupported', $ExceptIfAttachmentIsUnsupported)
+        }
+        if ($null -ne $ExceptIfAttachmentProcessingLimitExceeded) {
+            $ruleParams.Add('ExceptIfAttachmentProcessingLimitExceeded', $ExceptIfAttachmentProcessingLimitExceeded)
         }
         if ($null -ne $ExceptIfAttachmentSizeOver) {
             $ruleParams.Add('ExceptIfAttachmentSizeOver', $ExceptIfAttachmentSizeOver)

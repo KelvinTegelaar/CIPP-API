@@ -58,9 +58,17 @@ function Invoke-ExecUpdateDriftDeviation {
                             $Settings = $StandardTemplate
                         } else {
                             $StandardTemplate = $StandardTemplate.standardSettings.$Setting
-                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
-                            $StandardTemplate.standards.$Setting | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
-                            $Settings = $StandardTemplate.standards.$Setting
+                            # If the addedComponent values are stored nested under standards.<setting> instead of
+                            # flat on the object, promote them to the top level so the standard function can read them.
+                            if ($StandardTemplate.standards -and $StandardTemplate.standards.$Setting) {
+                                foreach ($Prop in $StandardTemplate.standards.$Setting.PSObject.Properties) {
+                                    $StandardTemplate | Add-Member -MemberType NoteProperty -Name $Prop.Name -Value $Prop.Value -Force
+                                }
+                                $StandardTemplate.PSObject.Properties.Remove('standards')
+                            }
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                            $Settings = $StandardTemplate
                         }
                         $TaskBody = @{
                             TenantFilter  = $TenantFilter
@@ -100,7 +108,7 @@ function Invoke-ExecUpdateDriftDeviation {
                             Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
                         } else {
                             "could not find policy with ID $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -Sev 'Warning'
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warn'
                         }
 
 
