@@ -135,52 +135,28 @@ function Register-CIPPExtensionScheduledTasks {
     # ============================
     # NINJAONE CVE SYNC TASK
     # ============================
-    # Registered as a single MSP-level task that loops all mapped tenants
-    # sequentially inside one function execution. This prevents simultaneous
-    # uploads to NinjaOne which caused issues with per-tenant parallel tasks.
-    # ============================
-
-    $NinjaConfig       = $Config.NinjaOne
-    $NinjaCveSyncTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -eq 'Invoke-CIPPScheduledNinjaCveSync' }
+    $NinjaConfig      = $Config.NinjaOne
+    $NinjaCveSyncTask = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -eq 'Invoke-CIPPScheduledNinjaCveSync' } | Select-Object -First 1
 
     if ($NinjaConfig.Enabled -eq $true -and $NinjaConfig.CveSyncEnabled -eq $true) {
-
-        $CveSyncHours = [int]$NinjaConfig.CveSyncHours
-        if ($CveSyncHours -le 0) { $CveSyncHours = 24 }
-        $CveRecurrence = "${CveSyncHours}h"
-
-        $ExistingTask = $NinjaCveSyncTasks | Select-Object -First 1
-
-        if (-not $ExistingTask -or $Reschedule.IsPresent) {
-            # Remove all existing CVE sync tasks (clean up any old per-tenant tasks)
-            foreach ($OldTask in $NinjaCveSyncTasks) {
-                $Entity = $OldTask | Select-Object -Property PartitionKey, RowKey
-                Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
-                Write-Information "NinjaCveSync: Removed old task $($OldTask.Name)"
-            }
+        if (-not $NinjaCveSyncTask) {
+            $CveSyncHours = [int]$NinjaConfig.CveSyncHours
+            if ($CveSyncHours -le 0) { $CveSyncHours = 24 }
 
             $Task = [pscustomobject]@{
                 Name          = 'CIPP NinjaCveSync - All Tenants'
-                Command       = @{
-                    value = 'Invoke-CIPPScheduledNinjaCveSync'
-                    label = 'Invoke-CIPPScheduledNinjaCveSync'
-                }
-                Parameters    = [pscustomobject]@{}
-                Recurrence    = $CveRecurrence
+                Command       = @{ value = 'Invoke-CIPPScheduledNinjaCveSync'; label = 'Invoke-CIPPScheduledNinjaCveSync' }
+                Recurrence    = "${CveSyncHours}h"
                 ScheduledTime = $NextSync
-                TenantFilter  = 'PartnerTenant'
+                TenantFilter  = 'AllTenants'
             }
-
             $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType 'NinjaCveSync'
-            Write-Information "NinjaCveSync: Registered single all-tenants task (recurrence: $CveRecurrence)"
+            Write-Information "NinjaCveSync: Created task (recurrence: ${CveSyncHours}h)"
         }
-
     } else {
-        # NinjaOne disabled or CveSyncEnabled is false — remove all existing CVE sync tasks
-        foreach ($Task in $NinjaCveSyncTasks) {
-            Write-Information "NinjaCveSync: Removing task $($Task.Name) (sync disabled)"
-            $Entity = $Task | Select-Object -Property PartitionKey, RowKey
-            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+        if ($NinjaCveSyncTask) {
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity ($NinjaCveSyncTask | Select-Object PartitionKey, RowKey)
+            Write-Information "NinjaCveSync: Removed task (sync disabled)"
         }
     }
 }
