@@ -57,8 +57,9 @@ try {
     Write-Host "Applying exception to tenants: $($TenantsToUpdate -join ', ')"
     
     # Get current user from headers
-    $Username = $Headers.'x-ms-client-principal'
+    $Username = $Headers.'x-ms-client-principal-name'
     $CurrentDate = (Get-Date).ToUniversalTime().ToString('o')
+    $ReadableDate = (Get-Date).ToString()
     
     # Create exception entries
     $ExceptionsAdded = @()
@@ -77,6 +78,7 @@ try {
             exceptionComment        = [string]$justification
             exceptionCreatedBy      = [string]$Username
             exceptionCreatedDate    = [string]$CurrentDate
+            exceptionReadableDate   = [string]$ReadableDate
             exceptionExpiry         = if ($expiryDate) { [string]$expiryDate } else { "" }
             source                  = "CIPP"
         }
