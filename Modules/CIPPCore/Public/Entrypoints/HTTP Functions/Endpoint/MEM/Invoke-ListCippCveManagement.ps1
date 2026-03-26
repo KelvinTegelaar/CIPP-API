@@ -40,12 +40,12 @@ function Invoke-ListCippCveManagement {
                 $ExceptionsByCve[$ex.cveId] = [System.Collections.Generic.List[object]]::new()
             }
             $ExceptionsByCve[$ex.cveId].Add([PSCustomObject]@{
-                customerId           = $ex.customerId
-                exceptionType        = $ex.exceptionType
-                exceptionComment     = $ex.exceptionComment
-                exceptionCreatedBy   = $ex.exceptionCreatedBy
-                exceptionCreatedDate = $ex.exceptionCreatedDate
-                exceptionExpiry      = $ex.exceptionExpiry
+                customerId            = $ex.customerId
+                exceptionType         = $ex.exceptionType
+                exceptionComment      = $ex.exceptionComment
+                exceptionCreatedBy    = $ex.exceptionCreatedBy
+                exceptionReadableDate = $ex.exceptionReadableDate
+                exceptionExpiry       = $ex.exceptionExpiry
             })
         }
  
@@ -73,7 +73,7 @@ function Invoke-ListCippCveManagement {
  
             # Get the single most recent exception for this CVE
             $latestException = if ($exceptions.Count -gt 0) {
-                $exceptions | Sort-Object -Property exceptionCreatedDate -Descending | Select-Object -First 1
+                $exceptions | Sort-Object -Property exceptionReadableDate -Descending | Select-Object -First 1
             } else { $null }
  
             [PSCustomObject]@{
@@ -93,7 +93,7 @@ function Invoke-ListCippCveManagement {
                 exceptionType              = if ($latestException) { $latestException.exceptionType } else { '' }
                 exceptionComment           = if ($latestException) { $latestException.exceptionComment } else { '' }
                 exceptionCreatedBy         = if ($latestException) { $latestException.exceptionCreatedBy } else { '' }
-                exceptionCreatedDate       = if ($latestException) { $latestException.exceptionCreatedDate } else { '' }
+                exceptionReadableDate      = if ($latestException) { $latestException.exceptionReadableDate } else { '' }
                 exceptionExpiry            = if ($latestException) { $latestException.exceptionExpiry } else { '' }
             }
         }
