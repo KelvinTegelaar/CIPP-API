@@ -27,8 +27,8 @@ function Push-CIPPStandardsApplyBatch {
             OrchestratorName = 'StandardsApply'
             Batch            = @($AllStandards)
             SkipLog          = $true
-        } | ConvertTo-Json -Depth 25 -Compress
-        Write-Host "Standards InputObject: $InputObject"
+        }
+        Write-Host "Standards InputObject: $($InputObject | ConvertTo-Json -Depth 25 -Compress)"
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started standards apply orchestrator with ID = '$InstanceId'"
     } catch {
