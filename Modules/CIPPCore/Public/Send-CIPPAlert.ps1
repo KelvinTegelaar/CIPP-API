@@ -179,6 +179,7 @@ function Send-CIPPAlert {
 
         $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
         $ExtensionConfig = Get-CIPPAzDataTableEntity @ExtensionTable
+
         # Check if config exists and is not null before parsing
         if ($ExtensionConfig.config -and -not [string]::IsNullOrWhiteSpace($ExtensionConfig.config)) {
             $Configuration = $ExtensionConfig.config | ConvertFrom-Json
