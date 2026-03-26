@@ -20,6 +20,22 @@ function New-CIPPUserTask {
 
     try {
         if ($UserObj.licenses.value) {
+            # Filter out licenses with no available units
+            try {
+                $LicenseOverview = Get-CIPPLicenseOverview -TenantFilter $UserObj.tenantFilter
+                $FilteredLicenses = @(foreach ($LicenseId in $UserObj.licenses.value) {
+                    $Sku = $LicenseOverview | Where-Object { $_.skuId -eq $LicenseId }
+                    if ($Sku -and [int]$Sku.availableUnits -le 0) {
+                        $null = $Results.Add("Skipped license $($Sku.License): no available units")
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Skipped license $($Sku.License) for $($CreationResults.Username): no available units" -Sev 'Warn'
+                    } else {
+                        $LicenseId
+                    }
+                })
+                $UserObj.licenses = [PSCustomObject]@{ value = $FilteredLicenses }
+            } catch {
+                Write-Warning "Failed to check available licenses: $($_.Exception.Message)"
+            }
             if ($UserObj.sherwebLicense.value) {
                 $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
                 $null = $Results.Add('Added Sherweb License, scheduling assignment')
@@ -68,14 +84,17 @@ function New-CIPPUserTask {
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
     }
 
-    # Add to groups
-    if ($UserObj.AddToGroups) {
-        $UserObj.AddToGroups | ForEach-Object {
+    if ($UserObj.groupMemberships -and ($UserObj.groupMemberships | Measure-Object).Count -gt 0) {
+        Write-Host "Adding user to $(@($UserObj.groupMemberships).Count) groups from template"
+        foreach ($Group in $UserObj.groupMemberships) {
             try {
-                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $_.addedFields.groupType -GroupId $_.value -Member $CreationResults.Username -TenantFilter $UserObj.tenantFilter
-                $Results.Add($AddMemberResult)
+                $GroupType = if ($Group.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                    elseif ($Group.mailEnabled) { 'Distribution list' }
+                    else { 'Security' }
+                Add-CIPPGroupMember -Headers $Headers -GroupType $GroupType -GroupId $Group.id -Member $CreationResults.Username -TenantFilter $UserObj.tenantFilter -APIName $APIName
+                $Results.Add("Added user to group from template: $($Group.displayName)")
             } catch {
-                $Results.Add("Failed to add to group $($_.label): $_")
+                $Results.Add("Failed to add to group $($Group.displayName): $($_.Exception.Message)")
             }
         }
     }

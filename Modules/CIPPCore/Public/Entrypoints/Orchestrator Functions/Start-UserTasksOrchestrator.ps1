@@ -89,7 +89,7 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange($AllTenantCommands)
+                    $Batch.AddRange(@($AllTenantCommands))
                 } elseif ($task.TenantGroup) {
                     # Handle tenant groups - expand group to individual tenants
                     try {
@@ -123,7 +123,7 @@ function Start-UserTasksOrchestrator {
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
-                        $Batch.AddRange($GroupTenantCommands)
+                        $Batch.AddRange(@($GroupTenantCommands))
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
@@ -198,7 +198,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Single-tenant orchestrator started for $TenantName with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start single-tenant orchestrator for $TenantName : $($_.Exception.Message)"
@@ -257,7 +257,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Multi-Tenant Task Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Multi-tenant orchestrator started for $($ParentTask.Name) with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start multi-tenant orchestrator for $($ParentTask.Name): $($_.Exception.Message)"

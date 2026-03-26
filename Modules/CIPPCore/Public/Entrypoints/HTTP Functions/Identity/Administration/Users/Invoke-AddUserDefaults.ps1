@@ -31,6 +31,14 @@ function Invoke-AddUserDefaults {
             $Request.Body.usernameFormat.value
         }
 
+        $UsernameSpaceHandling = if ($Request.Body.usernameSpaceHandling -is [string]) {
+            $Request.Body.usernameSpaceHandling
+        } else {
+            $Request.Body.usernameSpaceHandling.value
+        }
+
+        $UsernameSpaceReplacement = $Request.Body.usernameSpaceReplacement
+
         $PrimDomain = if ($Request.Body.primDomain -is [string]) {
             $Request.Body.primDomain
         } else {
@@ -128,7 +136,7 @@ function Invoke-AddUserDefaults {
 
         $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
         $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
