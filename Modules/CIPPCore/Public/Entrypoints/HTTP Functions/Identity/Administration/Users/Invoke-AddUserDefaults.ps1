@@ -81,63 +81,41 @@ function Invoke-AddUserDefaults {
         $SetSponsor = $Request.Body.setSponsor
         $CopyFrom = $Request.Body.copyFrom
 
-        # Fetch group memberships from source user if provided
-        $GroupMemberships = @()
-        if ($Request.Body.sourceUserId -and $TenantFilter) {
-            try {
-                Write-Host "Fetching group memberships from source user: $($Request.Body.sourceUserId)"
-                $SourceGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Request.Body.sourceUserId)/memberOf" -tenantid $TenantFilter
-                $GroupMemberships = @($SourceGroups | Where-Object {
-                    $_.'@odata.type' -eq '#microsoft.graph.group' -and
-                    $_.groupTypes -notcontains 'DynamicMembership' -and
-                    $_.onPremisesSyncEnabled -ne $true
-                } | ForEach-Object {
-                    @{
-                        id          = $_.id
-                        displayName = $_.displayName
-                        mailEnabled = $_.mailEnabled
-                        groupTypes  = $_.groupTypes
-                    }
-                })
-                Write-Host "Found $($GroupMemberships.Count) group memberships to store in template"
-            } catch {
-                Write-Warning "Failed to fetch group memberships: $($_.Exception.Message)"
-            }
-        }
+        # Groups
+        $GroupMemberships = if ($Request.Body.addToGroups) { $Request.Body.addToGroups } else { $Request.Body.groupMemberships }
 
         # Create template object with all fields from CippAddEditUser
         $TemplateObject = @{
-            tenantFilter             = $TenantFilter
-            templateName             = $TemplateName
-            defaultForTenant         = [bool]$DefaultForTenant
-            givenName                = $GivenName
-            surname                  = $Surname
-            displayName              = $DisplayName
-            usernameFormat           = $UsernameFormat
-            usernameSpaceHandling    = $UsernameSpaceHandling
-            usernameSpaceReplacement = $UsernameSpaceReplacement
-            primDomain               = $PrimDomain
-            addedAliases             = $AddedAliases
-            Autopassword             = $Autopassword
-            password                 = $Password
-            MustChangePass           = $MustChangePass
-            usageLocation            = $UsageLocation
-            licenses                 = $Licenses
-            removeLicenses           = $RemoveLicenses
-            jobTitle                 = $JobTitle
-            streetAddress            = $StreetAddress
-            city                     = $City
-            state                    = $State
-            postalCode               = $PostalCode
-            country                  = $Country
-            companyName              = $CompanyName
-            department               = $Department
-            mobilePhone              = $MobilePhone
-            businessPhones           = $BusinessPhones
-            otherMails               = $OtherMails
-            setManager               = $SetManager
-            setSponsor               = $SetSponsor
-            copyFrom                 = $CopyFrom
+            tenantFilter     = $TenantFilter
+            templateName     = $TemplateName
+            defaultForTenant = [bool]$DefaultForTenant
+            givenName        = $GivenName
+            surname          = $Surname
+            displayName      = $DisplayName
+            usernameFormat   = $UsernameFormat
+            primDomain       = $PrimDomain
+            addedAliases     = $AddedAliases
+            Autopassword     = $Autopassword
+            password         = $Password
+            MustChangePass   = $MustChangePass
+            usageLocation    = $UsageLocation
+            licenses         = $Licenses
+            removeLicenses   = $RemoveLicenses
+            jobTitle         = $JobTitle
+            streetAddress    = $StreetAddress
+            city             = $City
+            state            = $State
+            postalCode       = $PostalCode
+            country          = $Country
+            companyName      = $CompanyName
+            department       = $Department
+            mobilePhone      = $MobilePhone
+            businessPhones   = $BusinessPhones
+            otherMails       = $OtherMails
+            setManager       = $SetManager
+            setSponsor       = $SetSponsor
+            copyFrom         = $CopyFrom
+            groupMemberships = $GroupMemberships
         }
 
         # Use existing GUID if editing, otherwise generate new one
