@@ -68,7 +68,7 @@ function Start-CIPPOrchestrator {
                 Parameters   = @{
                     BatchId = $BatchGuid
                 }
-            }
+            } -Force
         }
         try {
             $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
@@ -131,7 +131,7 @@ function Start-CIPPOrchestrator {
                 $InputObject.PSObject.Properties.Remove('Batch')
 
                 # Add queue function reference to retrieve batch items in orchestrator
-                $InputObject.QueueFunction = @{
+                $InputObject | Add-Member -MemberType NoteProperty -Force -Name QueueFunction -Value @{
                     FunctionName = 'OrchestratorBatchItems'
                     Parameters   = @{
                         BatchId = $Guid

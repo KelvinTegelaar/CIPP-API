@@ -143,7 +143,7 @@ function Update-CIPPDynamicTenantGroups {
 
                 Write-Information "Found $($MatchingTenants.Count) matching tenants for group '$($Group.Name)'"
 
-                $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$($Group.RowKey)'"
+                $CurrentMembers = @($AllGroupMembers | Where-Object { $_.GroupId -eq $Group.RowKey })
                 $CurrentMemberIds = $CurrentMembers.customerId
                 $NewMemberIds = $MatchingTenants.customerId
 
@@ -183,6 +183,9 @@ function Update-CIPPDynamicTenantGroups {
         }
 
         Write-LogMessage -API 'TenantGroups' -message "Dynamic tenant group update completed. Groups processed: $GroupsProcessed, Members added: $TotalMembersAdded, Members removed: $TotalMembersRemoved" -sev Info
+
+        # Bust the TenantGroups cache so subsequent calls reflect the changes made above
+        Get-TenantGroups -SkipCache | Out-Null
 
         return @{
             MembersAdded    = $TotalMembersAdded
