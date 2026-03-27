@@ -3,7 +3,7 @@ function Invoke-ListCustomScripts {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.CustomScript.Read
+        CIPP.Tests.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
