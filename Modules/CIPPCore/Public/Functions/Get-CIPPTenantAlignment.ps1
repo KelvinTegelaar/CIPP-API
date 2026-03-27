@@ -229,6 +229,20 @@ function Get-CIPPTenantAlignment {
                             }
                         }
                     }
+                }
+                # Handle QuarantineTemplate — each policy is keyed by hex-encoded display name
+                elseif ($StandardKey -eq 'QuarantineTemplate' -and $StandardConfig -is [array]) {
+                    foreach ($QTemplate in $StandardConfig) {
+                        $PolicyDisplayName = if ($QTemplate.displayName.value) { $QTemplate.displayName.value } else { [string]$QTemplate.displayName }
+                        if ([string]::IsNullOrWhiteSpace($PolicyDisplayName)) { continue }
+                        $HexName = -join ($PolicyDisplayName.ToCharArray() | ForEach-Object { '{0:X2}' -f [int][char]$_ })
+                        $QActions = if ($QTemplate.action) { $QTemplate.action } else { @() }
+                        $QReportingEnabled = ($QActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+                        [PSCustomObject]@{
+                            StandardId       = "standards.QuarantineTemplate.$HexName"
+                            ReportingEnabled = $QReportingEnabled
+                        }
+                    }
                 } else {
                     [PSCustomObject]@{
                         StandardId       = $StandardId
