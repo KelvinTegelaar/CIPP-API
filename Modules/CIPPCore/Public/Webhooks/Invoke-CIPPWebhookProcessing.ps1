@@ -6,6 +6,7 @@ function Invoke-CippWebhookProcessing {
         $Resource,
         $Operations,
         $CIPPURL,
+        $AlertComment,
         $APIName = 'Process webhook',
         $Headers
     )
@@ -76,10 +77,19 @@ function Invoke-CippWebhookProcessing {
         }
     }
 
+    $CustomSubject = $null
+    if ($Data.CIPPRuleId) {
+        $WebhookRulesTable = Get-CIPPTable -TableName 'WebhookRules'
+        $WebhookRule = Get-CIPPAzDataTableEntity @WebhookRulesTable -Filter "PartitionKey eq 'WebhookRule' and RowKey eq '$($Data.CIPPRuleId)'"
+        if (![string]::IsNullOrEmpty($WebhookRule.CustomSubject)) {
+            $CustomSubject = $WebhookRule.CustomSubject
+        }
+    }
+
     # Save audit log entry to table
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
     $AuditRecord = $Data.AuditRecord | ConvertFrom-Json -ErrorAction SilentlyContinue
-    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -AlertComment $WebhookRule.AlertComment
+    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -AlertComment $WebhookRule.AlertComment -CustomSubject $CustomSubject -Tenant $Tenant.defaultDomainName
     $JsonContent = @{
         Title                 = $GenerateJSON.Title
         ActionUrl             = $GenerateJSON.ButtonUrl
@@ -89,6 +99,7 @@ function Invoke-CippWebhookProcessing {
         PotentialLocationInfo = $LocationInfo
         ActionsTaken          = $ActionResults
         AuditRecord           = $AuditRecord
+        AlertComment          = $AlertComment
     } | ConvertTo-Json -Depth 15 -Compress
 
     $CIPPAlert = @{
@@ -102,7 +113,7 @@ function Invoke-CippWebhookProcessing {
     $LogId = Send-CIPPAlert @CIPPAlert
 
     $AuditLogLink = '{0}/tenant/administration/audit-logs/log?logId={1}&tenantFilter={2}' -f $CIPPURL, $LogId, $Tenant.defaultDomainName
-    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $WebhookRule.AlertComment
+    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $AlertComment
 
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
@@ -133,6 +144,9 @@ function Invoke-CippWebhookProcessing {
                     Title        = $GenerateJSON.Title
                     JSONContent  = $JsonContent
                     TenantFilter = $TenantFilter
+                    APIName      = 'Audit Log Alerts'
+                    SchemaSource = 'Audit Log Alert'
+                    InvokingCommand = 'Start-AuditLogProcessingOrchestrator'
                 }
                 Write-Host 'Sending Webhook Content'
                 Send-CIPPAlert @CippAlert

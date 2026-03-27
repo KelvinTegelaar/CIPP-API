@@ -11,10 +11,25 @@ function Invoke-ListRoles {
     $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
+        [System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles' -tenantid $TenantFilter
+
+        $MemberRequests = $Roles | ForEach-Object {
+            @{
+                id     = $_.id
+                method = 'GET'
+                url    = "/directoryRoles/$($_.id)/members"
+            }
+        }
+        $MemberResponses = New-GraphBulkRequest -Requests $MemberRequests -tenantid $TenantFilter -Version 'v1.0'
+
+        $MemberMap = @{}
+        foreach ($Response in $MemberResponses) {
+            $MemberMap[$Response.id] = $Response.body.value
+        }
+
         $GraphRequest = foreach ($Role in $Roles) {
-            $Members = if ($Role.members) {
-                $Role.members | ForEach-Object { [PSCustomObject]@{
+            $Members = if ($MemberMap[$Role.id]) {
+                $MemberMap[$Role.id] | ForEach-Object { [PSCustomObject]@{
                         displayName       = $_.displayName
                         userPrincipalName = $_.userPrincipalName
                         id                = $_.id
@@ -26,6 +41,7 @@ function Invoke-ListRoles {
                 DisplayName    = $Role.displayName
                 Description    = $Role.description
                 Members        = @($Members)
+                SID            = (Convert-AzureAdObjectIdToSid -ObjectID $Role.id)
             }
         }
         $StatusCode = [HttpStatusCode]::OK

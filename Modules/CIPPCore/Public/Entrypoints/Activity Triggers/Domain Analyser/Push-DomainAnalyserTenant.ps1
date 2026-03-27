@@ -5,7 +5,7 @@ function Push-DomainAnalyserTenant {
         #>
     param($Item)
 
-    $Tenant = Get-Tenants -TenantFilter $Item.customerId
+    $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeAll
     $DomainTable = Get-CippTable -tablename 'Domains'
 
     if ($Tenant.Excluded -eq $true) {
@@ -132,7 +132,7 @@ function Push-DomainAnalyserTenant {
                                 }
                             }
                         }
-                        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+                        Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
                         Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {

@@ -51,8 +51,27 @@ function Invoke-ExecSetOoO {
             $EndTime = $Request.Body.EndTime -match '^\d+$' ? [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Body.EndTime).DateTime : $Request.Body.EndTime
             $SplatParams.StartTime = $StartTime
             $SplatParams.EndTime = $EndTime
+
+            # Calendar options — only pass when explicitly provided in the request body
+            if ($null -ne $Request.Body.CreateOOFEvent) {
+                $SplatParams.CreateOOFEvent = [bool]$Request.Body.CreateOOFEvent
+            }
+            if (-not [string]::IsNullOrWhiteSpace($Request.Body.OOFEventSubject)) {
+                $SplatParams.OOFEventSubject = $Request.Body.OOFEventSubject
+            }
+            if ($null -ne $Request.Body.AutoDeclineFutureRequestsWhenOOF) {
+                $SplatParams.AutoDeclineFutureRequestsWhenOOF = [bool]$Request.Body.AutoDeclineFutureRequestsWhenOOF
+            }
+            if ($null -ne $Request.Body.DeclineEventsForScheduledOOF) {
+                $SplatParams.DeclineEventsForScheduledOOF = [bool]$Request.Body.DeclineEventsForScheduledOOF
+                $SplatParams.DeclineAllEventsForScheduledOOF = [bool]$Request.Body.DeclineEventsForScheduledOOF
+            }
+            if (-not [string]::IsNullOrWhiteSpace($Request.Body.DeclineMeetingMessage)) {
+                $SplatParams.DeclineMeetingMessage = $Request.Body.DeclineMeetingMessage
+            }
         }
 
+        Write-Information "Setting Out of Office with the following parameters: $($SplatParams | ConvertTo-Json -Depth 10)"
         $Results = Set-CIPPOutOfOffice @SplatParams
         $StatusCode = [HttpStatusCode]::OK
     } catch {

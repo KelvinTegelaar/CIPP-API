@@ -19,7 +19,7 @@ function Push-CIPPOffboardingTask {
         Write-Information "Executing offboarding cmdlet: $Cmdlet"
 
         # Check if cmdlet exists
-        $CmdletInfo = Get-Command -Name $Cmdlet -ErrorAction SilentlyContinue
+        $CmdletInfo = Get-Command -Name $Cmdlet -Module CIPPCore -ErrorAction SilentlyContinue
         if (-not $CmdletInfo) {
             throw "Cmdlet $Cmdlet does not exist"
         }

@@ -81,8 +81,8 @@ function Invoke-ExecAlertsList {
                         DurableName  = 'ExecAlertsListAllTenants'
                     }
                     SkipLog          = $true
-                } | ConvertTo-Json -Depth 10
-                Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject $InputObject
+                }
+                Start-CIPPOrchestrator -InputObject $InputObject
             } else {
                 $Metadata = [PSCustomObject]@{
                     QueueId = $RunningQueue.RowKey ?? $null

@@ -12,7 +12,7 @@ function Get-CIPPTextReplacement {
         Get-CIPPTextReplacement -TenantFilter 'contoso.com' -Text 'Hello %tenantname%'
     #>
     param (
-        [string]$TenantFilter,
+        [string]$TenantFilter = $env:TenantID,
         $Text,
         [switch]$EscapeForJson
     )

@@ -40,7 +40,7 @@ function Test-CIPPAccessTenant {
             OrchestratorName = 'CippAccessTenantTest'
             SkipLog          = $true
         }
-        $null = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
+        $null = Start-CIPPOrchestrator -InputObject $InputObject
         $Results = "Queued $($TenantList.Count) tenants for access checks"
 
     } else {
@@ -135,7 +135,7 @@ function Test-CIPPAccessTenant {
                 Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
                 $ExchangeStatus = $false
                 $ExchangeTest = 'Connected to Exchange but missing permissions in Organization Management. This may impact the ability to manage Exchange features'
-                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -Sev 'Warning' -LogData $MissingOrgMgmtRoles
+                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warn' -LogData $MissingOrgMgmtRoles
             } else {
                 Write-Warning 'All available Organization Management roles are present in Exchange'
                 $ExchangeStatus = $true

@@ -34,6 +34,7 @@ function Get-CIPPTenantAlignment {
             $JSON = $_.JSON
             try {
                 $RowKey = $_.RowKey
+                if ([string]::IsNullOrWhiteSpace($JSON)) { return }
                 $Data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             } catch {
                 Write-Warning "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
@@ -112,11 +113,36 @@ function Get-CIPPTenantAlignment {
             $TemplateAssignedTenants = @()
             $AppliestoAllTenants = $false
 
+            # Build excluded tenants list (mirrors Get-CIPPStandards logic, including group expansion)
+            $ExcludedTenantValues = [System.Collections.Generic.List[string]]::new()
+            if ($Template.excludedTenants) {
+                $ExcludeList = if ($Template.excludedTenants -is [System.Collections.IEnumerable] -and -not ($Template.excludedTenants -is [string])) {
+                    $Template.excludedTenants
+                } else {
+                    @($Template.excludedTenants)
+                }
+                foreach ($excludeItem in $ExcludeList) {
+                    $ExcludeValue = $excludeItem.value
+                    if ($excludeItem.type -eq 'Group') {
+                        $GroupMembers = $TenantGroups | Where-Object { $_.Id -eq $ExcludeValue }
+                        if ($GroupMembers -and $GroupMembers.Members) {
+                            foreach ($member in $GroupMembers.Members.defaultDomainName) {
+                                $ExcludedTenantValues.Add($member)
+                            }
+                        }
+                    } else {
+                        if ($ExcludeValue) { $ExcludedTenantValues.Add($ExcludeValue) }
+                    }
+                }
+            }
+            $ExcludedTenantsSet = [System.Collections.Generic.HashSet[string]]::new()
+            foreach ($item in $ExcludedTenantValues) { [void]$ExcludedTenantsSet.Add($item) }
+
             if ($Template.tenantFilter -and $Template.tenantFilter.Count -gt 0) {
                 # Extract tenant values from the tenantFilter array
                 $TenantValues = [System.Collections.Generic.List[string]]::new()
                 foreach ($filterItem in $Template.tenantFilter) {
-                    if ($filterItem.type -eq 'group') {
+                    if ($filterItem.type -eq 'Group') {
                         # Look up group members by Id (GUID in the value field)
                         $GroupMembers = $TenantGroups | Where-Object { $_.Id -eq $filterItem.value }
                         if ($GroupMembers -and $GroupMembers.Members) {
@@ -128,8 +154,8 @@ function Get-CIPPTenantAlignment {
                         $TenantValues.Add($filterItem.value)
                     }
                 }
-`
-                    if ($TenantValues -contains 'AllTenants') {
+
+                if ($TenantValues -contains 'AllTenants') {
                     $AppliestoAllTenants = $true
                 } elseif ($TenantValues.Count -gt 0) {
                     $TemplateAssignedTenants = @($TenantValues)
@@ -223,6 +249,10 @@ function Get-CIPPTenantAlignment {
             } else { $null }
 
             foreach ($TenantName in $TenantStandards.Keys) {
+                # Skip explicitly excluded tenants regardless of AllTenants or specific assignment
+                if ($ExcludedTenantsSet.Contains($TenantName)) {
+                    continue
+                }
                 # Check tenant scope with HashSet and cache tenant data
                 if (-not $AppliestoAllTenants) {
                     if ($TemplateAssignedTenantsSet -and -not $TemplateAssignedTenantsSet.Contains($TenantName)) {

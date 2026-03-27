@@ -149,11 +149,12 @@ function Test-CIPPAuditLogRules {
             # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
             if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
                 [pscustomobject]@{
-                    Tenants    = $Tenants
-                    Excluded   = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                    Conditions = $ConfigEntry.Conditions
-                    Actions    = $ConfigEntry.Actions
-                    LogType    = $ConfigEntry.Type
+                    Tenants      = $Tenants
+                    Excluded     = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                    Conditions   = $ConfigEntry.Conditions
+                    Actions      = $ConfigEntry.Actions
+                    LogType      = $ConfigEntry.Type
+                    AlertComment = $ConfigEntry.AlertComment
                 }
             }
         }
@@ -519,71 +520,98 @@ function Test-CIPPAuditLogRules {
                     if ($TenantFilter -in $Config.Excluded.value) {
                         continue
                     }
-                    $conditions = $Config.Conditions | ConvertFrom-Json | Where-Object { $Config.Input.value -ne '' }
+                    $conditions = $Config.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
                     $actions = $Config.Actions
-                    $conditionStrings = [System.Collections.Generic.List[string]]::new()
                     $CIPPClause = [System.Collections.Generic.List[string]]::new()
-                    $AddedLocationCondition = $false
-                    foreach ($condition in $conditions) {
-                        if ($condition.Property.label -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
-                            $conditionStrings.Add("`$_.HasLocationData -eq `$true")
-                            $CIPPClause.Add('HasLocationData is true')
-                            $ExcludedUsers = $ExcludedUsers | Where-Object { $_.Type -eq 'Location' }
-                            # Build single -notin condition against all excluded user keys
-                            $ExcludedUserKeys = @($ExcludedUsers.RowKey)
-                            if ($ExcludedUserKeys.Count -gt 0) {
-                                $conditionStrings.Add("`$(`$_.CIPPUserKey) -notin @('$($ExcludedUserKeys -join "', '")')")
-                                $CIPPClause.Add("CIPPUserKey not in [$($ExcludedUserKeys -join ', ')]")
-                            }
-                            $AddedLocationCondition = $true
-                        }
-                        $value = if ($condition.Input.value -is [array]) {
-                            $arrayAsString = $condition.Input.value | ForEach-Object {
-                                "'$_'"
-                            }
-                            "@($($arrayAsString -join ', '))"
-                        } else { "'$($condition.Input.value)'" }
 
-                        $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
-                        $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
+                    # Build excluded user keys for location-based conditions
+                    $LocationExcludedUserKeys = @()
+                    $HasGeoCondition = $false
+                    foreach ($condition in $conditions) {
+                        if ($condition.Property.label -eq 'CIPPGeoLocation') {
+                            $HasGeoCondition = $true
+                            $LocationExcludedUsers = $ExcludedUsers | Where-Object { $_.Type -eq 'Location' }
+                            $LocationExcludedUserKeys = @($LocationExcludedUsers.RowKey)
+                        }
+                        $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $($condition.Input.value)")
                     }
-                    $finalCondition = $conditionStrings -join ' -AND '
 
                     [PSCustomObject]@{
-                        clause         = $finalCondition
-                        expectedAction = $actions
-                        CIPPClause     = $CIPPClause
+                        conditions       = $conditions
+                        expectedAction   = $actions
+                        CIPPClause       = $CIPPClause
+                        AlertComment     = $Config.AlertComment
+                        HasGeoCondition  = $HasGeoCondition
+                        ExcludedUserKeys = $LocationExcludedUserKeys
                     }
                 }
             } catch {
                 Write-Warning "Error creating where clause: $($_.Exception.Message)"
                 Write-Information $_.InvocationInfo.PositionMessage
-                #Write-LogMessage -API 'Webhooks' -message 'Error creating where clause' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
                 throw $_
             }
 
             $MatchedRules = [System.Collections.Generic.List[string]]::new()
+            $UnsafeValueRegex = [regex]'[;|`\$\{\}]'
             $DataToProcess = foreach ($clause in $Where) {
                 try {
                     $ClauseStartTime = Get-Date
-                    Write-Warning "Webhook: Processing clause: $($clause.clause)"
+                    Write-Warning "Webhook: Processing conditions: $($clause.CIPPClause -join ' and ')"
                     Write-Information "Webhook: Available operations in data: $(($ProcessedData.Operation | Select-Object -Unique) -join ', ')"
-                    $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
+
+                    # Build sanitized condition strings instead of direct evaluation
+                    $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                    $validClause = $true
+                    foreach ($condition in $clause.conditions) {
+                        # Add geo-location prerequisites before the condition itself
+                        if ($condition.Property.label -eq 'CIPPGeoLocation') {
+                            $conditionStrings.Add('$_.HasLocationData -eq $true')
+                            if ($clause.ExcludedUserKeys.Count -gt 0) {
+                                $sanitizedKeys = foreach ($key in $clause.ExcludedUserKeys) {
+                                    $keyStr = [string]$key
+                                    if ($UnsafeValueRegex.IsMatch($keyStr)) {
+                                        Write-Warning "Blocked unsafe excluded user key: '$keyStr'"
+                                        $validClause = $false
+                                        break
+                                    }
+                                    "'{0}'" -f ($keyStr -replace "'", "''")
+                                }
+                                if (-not $validClause) { break }
+                                $conditionStrings.Add("`$_.CIPPUserKey -notin @($($sanitizedKeys -join ', '))")
+                            }
+                        }
+                        $sanitized = Test-CIPPConditionFilter -Condition $condition
+                        if ($null -eq $sanitized) {
+                            Write-Warning "Skipping rule due to invalid condition for property '$($condition.Property.label)'"
+                            $validClause = $false
+                            break
+                        }
+                        $conditionStrings.Add($sanitized)
+                    }
+
+                    if (-not $validClause -or $conditionStrings.Count -eq 0) {
+                        continue
+                    }
+
+                    $WhereString = $conditionStrings -join ' -and '
+                    $WhereBlock = [ScriptBlock]::Create($WhereString)
+                    $ReturnedData = $ProcessedData | Where-Object $WhereBlock
                     if ($ReturnedData) {
                         Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
                         $ReturnedData = foreach ($item in $ReturnedData) {
                             $item.CIPPAction = $clause.expectedAction
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
+                            $item | Add-Member -NotePropertyName 'CIPPAlertComment' -NotePropertyValue $clause.AlertComment -Force -ErrorAction SilentlyContinue
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
                     }
                     $ClauseEndTime = Get-Date
                     $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
-                    Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
+                    Write-Warning "Task took $ClauseSeconds seconds for conditions: $($clause.CIPPClause -join ' and ')"
                     $ReturnedData
                 } catch {
-                    Write-Warning "Error processing clause: $($clause.clause): $($_.Exception.Message)"
+                    Write-Warning "Error processing conditions: $($clause.CIPPClause -join ' and '): $($_.Exception.Message)"
                 }
             }
             $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)
@@ -601,6 +629,7 @@ function Test-CIPPAuditLogRules {
                     Data         = $AuditLog
                     CIPPURL      = [string]$CIPPURL
                     TenantFilter = $TenantFilter
+                    AlertComment = $AuditLog.CIPPAlertComment
                 }
                 try {
                     Invoke-CippWebhookProcessing @Webhook

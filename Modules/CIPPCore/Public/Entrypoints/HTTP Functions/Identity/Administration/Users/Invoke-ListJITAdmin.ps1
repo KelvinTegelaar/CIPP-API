@@ -32,7 +32,7 @@
             $BulkRequests.Add(@{
                     id     = $User.id
                     method = 'GET'
-                    url    = "users/$($User.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+                    url    = "users/$($User.id)/memberOf?`$select=id,displayName"
                 })
         }
         $RoleResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)
@@ -93,7 +93,7 @@
                 }
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-CIPPOrchestrator -InputObject $InputObject
         } else {
             $Metadata = [PSCustomObject]@{
                 QueueId = $RunningQueue.RowKey ?? $null

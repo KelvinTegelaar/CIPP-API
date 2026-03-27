@@ -301,7 +301,6 @@ function Invoke-NinjaOneTenantSync {
         $MailboxStatsFull = $ExtensionCache.MailboxUsage
         $Permissions = $ExtensionCache.MailboxPermissions
         $SecureScore = $ExtensionCache.SecureScore
-        $Subscriptions = if ($ExtensionCache.Licenses) { $ExtensionCache.Licenses.TermInfo | Where-Object { $null -ne $_ } } else { @() }
         $SecureScoreProfiles = $ExtensionCache.SecureScoreControlProfiles
         $TenantDetails = $ExtensionCache.Organization
         $RawDomains = $ExtensionCache.Domains
@@ -358,7 +357,7 @@ function Invoke-NinjaOneTenantSync {
 
         # Get the license overview for the tenant
         if ($Licenses) {
-            $LicensesParsed = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { (Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $_.SkuPartNumber).Tolower()) } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
+            $LicensesParsed = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { $_.skuPartNumber } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
         }
 
         Write-Verbose "$(Get-Date) - Parsing Device Compliance Policies"
@@ -891,7 +890,7 @@ function Invoke-NinjaOneTenantSync {
                         $UserLic = $_
                         try {
                             $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            '<li>' + "$((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $SkuPartNumber).Tolower()))</li>"
+                            '<li>' + "$($SkuPartNumber)</li>"
                         } catch {}
                     }) -join ''
 
@@ -1027,13 +1026,16 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
-
-                # Format Conditional Access Polcies
-                $UserPoliciesFormatted = '<ul>'
-                foreach ($Policy in $UserPolicies) {
-                    $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
+                if ($UserPolicies) {
+                    # Format Conditional Access Policies
+                    $UserPoliciesFormatted = '<ul>'
+                    foreach ($Policy in $UserPolicies) {
+                        $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
+                    }
+                    $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
+                } else {
+                    $UserPoliciesFormatted = 'No Conditional Access Policies Assigned'
                 }
-                $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
 
 
                 $UserOverviewCard = [PSCustomObject]@{
@@ -1384,14 +1386,9 @@ function Invoke-NinjaOneTenantSync {
         if ($Configuration.LicenseDocumentsEnabled -eq $True) {
 
             $LicenseDetails = foreach ($License in $Licenses) {
-                $MatchedSubscriptions = $Subscriptions | Where-Object -Property skuid -EQ $License.skuId
-
-                try {
-                    $FriendlyLicenseName = $((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $License.SkuPartNumber).Tolower()))
-                } catch {
-                    $FriendlyLicenseName = $License.SkuPartNumber
-                }
-
+                $MatchedSubscriptions = $License.TermInfo
+                Write-Information "License info: $($License | ConvertTo-Json -Depth 100)"
+                $FriendlyLicenseName = $License.skuPartNumber
 
                 $LicenseUsers = foreach ($SubUser in $Users) {
                     $MatchedLicense = $SubUser.assignedLicenses | Where-Object { $License.skuId -in $_.skuId }
@@ -1451,7 +1448,7 @@ function Invoke-NinjaOneTenantSync {
                 $LicenseFields = @{
                     cippLicenseSummary = @{'html' = $LicenseSummaryHTML }
                     cippLicenseUsers   = @{'html' = $LicenseUsersHTML }
-                    cippLicenseID      = $License.id
+                    cippLicenseID      = $License.skuId
                 }
 
 

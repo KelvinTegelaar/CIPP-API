@@ -23,6 +23,7 @@ function Invoke-AddTestReport {
         $ReportId = New-Guid
         $IdentityTests = $Body.IdentityTests ? ($Body.IdentityTests | ConvertTo-Json -Compress) : '[]'
         $DevicesTests = $Body.DevicesTests ? ($Body.DevicesTests | ConvertTo-Json -Compress) : '[]'
+        $CustomTests = $Body.CustomTests ? ($Body.CustomTests | ConvertTo-Json -Compress) : '[]'
 
         # Create report object
         $Report = [PSCustomObject]@{
@@ -33,6 +34,7 @@ function Invoke-AddTestReport {
             version       = '1.0'
             IdentityTests = [string]$IdentityTests
             DevicesTests  = [string]$DevicesTests
+            CustomTests   = [string]$CustomTests
             CreatedAt     = [string](Get-Date).ToString('o')
         }
 
