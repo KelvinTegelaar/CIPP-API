@@ -5,24 +5,12 @@ function Invoke-CippTestCopilotReady001 {
     #>
     param($Tenant)
 
-    # SKU part numbers that qualify as Copilot prerequisites per Microsoft licensing docs
+    # Service plan names that indicate a qualifying Copilot base license.
+    # All Microsoft 365 Copilot-eligible plans (E3, E5, Business Basic/Standard/Premium, F1, F3, A1/A3/A5)
+    # include Teams (TEAMS1 or MCOSTANDARD). Using service plans avoids dependency on SKU part number
+    # values — CIPP's LicenseOverview caches friendly display names, not raw API SKU codes.
     # https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-licensing
-    $PrerequisiteSkus = @(
-        'SPE_E3', 'SPE_E5',                                         # Microsoft 365 E3/E5
-        'M365_F1', 'M365_F3',                                       # Microsoft 365 F1/F3
-        'O365_BUSINESS_ESSENTIALS', 'O365_BUSINESS_PREMIUM',        # M365 Business Basic/Standard
-        'SPB',                                                       # M365 Business Premium
-        'MCOEV', 'ENTERPRISEPACK', 'ENTERPRISEPREMIUM',             # Office 365 E1/E3/E5
-        'DESKLESSPACK',                                              # Office 365 F3
-        'MCOSTANDARD', 'MCOSTANDARD_GOV',                           # Teams Essentials / Enterprise
-        'EXCHANGESTANDARD', 'EXCHANGEENTERPRISE',                   # Exchange Plan 1/2
-        'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE',               # SharePoint Plan 1/2
-        'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE',                    # OneDrive Plan 1/2
-        'PROJECTESSENTIALS', 'PROJECTPREMIUM', 'PROJECTPROFESSIONAL', # Project plans
-        'VISIOONLINE_PLAN1', 'VISIOCLIENT',                         # Visio plans
-        'M365EDU_A1', 'M365EDU_A3_FACULTY', 'M365EDU_A5_FACULTY',  # Education
-        'STANDARDPACK', 'STANDARDWOFFPACK_FACULTY'                  # Office 365 A1/A3
-    )
+    $PrerequisiteServicePlans = @('TEAMS1', 'MCOSTANDARD')
 
     try {
         $LicenseData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'LicenseOverview'
@@ -39,19 +27,20 @@ function Invoke-CippTestCopilotReady001 {
         $AssignableCount = 0
 
         foreach ($Sku in $Skus) {
-            if ($Sku.skuPartNumber -in $PrerequisiteSkus -and $Sku.prepaidUnits.enabled -gt 0) {
+            $HasQualifyingPlan = $Sku.ServicePlans | Where-Object { $_.servicePlanName -in $PrerequisiteServicePlans }
+            if ($HasQualifyingPlan -and [int]$Sku.TotalLicenses -gt 0) {
                 $EligibleSkus.Add($Sku) | Out-Null
-                $AssignableCount += $Sku.prepaidUnits.enabled
+                $AssignableCount += [int]$Sku.TotalLicenses
             }
         }
 
         if ($EligibleSkus.Count -gt 0) {
             $Status = 'Passed'
             $Result = "Tenant has **$($EligibleSkus.Count)** eligible prerequisite license plan(s) covering **$AssignableCount** seats that qualify for Microsoft 365 Copilot.`n`n"
-            $Result += "| License | Enabled Seats | Consumed |`n"
-            $Result += "|---------|--------------|---------|`n"
+            $Result += "| License | Total Seats | Assigned |`n"
+            $Result += "|---------|------------|---------|`n"
             foreach ($Sku in $EligibleSkus) {
-                $Result += "| $($Sku.skuPartNumber) | $($Sku.prepaidUnits.enabled) | $($Sku.consumedUnits) |`n"
+                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) |`n"
             }
         } else {
             $Status = 'Failed'

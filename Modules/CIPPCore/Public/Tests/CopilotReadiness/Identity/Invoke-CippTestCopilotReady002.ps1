@@ -5,12 +5,10 @@ function Invoke-CippTestCopilotReady002 {
     #>
     param($Tenant)
 
-    # All known Copilot add-on SKU part numbers
-    $CopilotSkus = @(
-        'Microsoft_365_Copilot',       # Microsoft Copilot for Microsoft 365 (commercial)
-        'Microsoft_365_Copilot_EDU',   # Microsoft 365 Copilot (Education Faculty)
-        'Microsoft_365_Copilot_GCC'    # Microsoft 365 Copilot (GCC)
-    )
+    # Copilot add-on licenses are matched by friendly name (License field) since CIPP's LicenseOverview
+    # caches display names rather than raw SKU part numbers. All Copilot add-on SKUs contain 'Copilot'.
+    # Service plan anchor: 'M365_COPILOT' is present in all Copilot add-on SKUs.
+    $CopilotServicePlan = 'M365_COPILOT'
 
     try {
         $LicenseData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'LicenseOverview'
@@ -28,11 +26,15 @@ function Invoke-CippTestCopilotReady002 {
         $TotalAvailable = 0
 
         foreach ($Sku in $Skus) {
-            if ($Sku.skuPartNumber -in $CopilotSkus) {
+            $IsCopilot = ($Sku.License -like '*Copilot*') -or
+                         ($Sku.ServicePlans | Where-Object { $_.servicePlanName -eq $CopilotServicePlan })
+            if ($IsCopilot) {
                 $CopilotLicenses.Add($Sku) | Out-Null
-                $TotalEnabled += $Sku.prepaidUnits.enabled
-                $TotalConsumed += $Sku.consumedUnits
-                $TotalAvailable += ($Sku.prepaidUnits.enabled - $Sku.consumedUnits)
+                $Enabled = [int]$Sku.TotalLicenses
+                $Consumed = [int]$Sku.CountUsed
+                $TotalEnabled += $Enabled
+                $TotalConsumed += $Consumed
+                $TotalAvailable += ($Enabled - $Consumed)
             }
         }
 
@@ -43,20 +45,20 @@ function Invoke-CippTestCopilotReady002 {
         } elseif ($TotalConsumed -eq 0) {
             $Status = 'Failed'
             $Result = "Microsoft 365 Copilot licenses exist (**$TotalEnabled** seats) but **none are assigned** to any users.`n`n"
-            $Result += "| SKU | Enabled | Assigned | Available |`n"
-            $Result += "|-----|---------|----------|-----------|`n"
+            $Result += "| License | Total Seats | Assigned | Available |`n"
+            $Result += "|---------|------------|----------|-----------|`n"
             foreach ($Sku in $CopilotLicenses) {
-                $Available = $Sku.prepaidUnits.enabled - $Sku.consumedUnits
-                $Result += "| $($Sku.skuPartNumber) | $($Sku.prepaidUnits.enabled) | $($Sku.consumedUnits) | $Available |`n"
+                $Available = [int]$Sku.TotalLicenses - [int]$Sku.CountUsed
+                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n"
             }
         } else {
             $Status = 'Passed'
             $Result = "Microsoft 365 Copilot licenses are purchased and assigned.`n`n"
-            $Result += "| SKU | Enabled | Assigned | Available |`n"
-            $Result += "|-----|---------|----------|-----------|`n"
+            $Result += "| License | Total Seats | Assigned | Available |`n"
+            $Result += "|---------|------------|----------|-----------|`n"
             foreach ($Sku in $CopilotLicenses) {
-                $Available = $Sku.prepaidUnits.enabled - $Sku.consumedUnits
-                $Result += "| $($Sku.skuPartNumber) | $($Sku.prepaidUnits.enabled) | $($Sku.consumedUnits) | $Available |`n"
+                $Available = [int]$Sku.TotalLicenses - [int]$Sku.CountUsed
+                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n"
             }
             if ($TotalAvailable -gt 0) {
                 $Result += "`n**$TotalAvailable unassigned seat(s)** are available to assign to additional users."

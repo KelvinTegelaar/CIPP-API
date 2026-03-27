@@ -57,10 +57,27 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Exchange license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
-        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, Exchange: $ExchangeCapable"
+        $ComplianceCapable = $false
+        try {
+            $ComplianceCapable = Test-CIPPStandardLicense -StandardName 'ComplianceLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2') -SkipLog
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+        }
+
+        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable"
 
         # Build grouped collection tasks — one activity per license category instead of one per cache type
         $Tasks = [System.Collections.Generic.List[object]]::new()
+
+        # CopilotUsage always runs — endpoints return empty when no Copilot licenses are in use
+        $Tasks.Add(@{
+                FunctionName   = 'ExecCIPPDBCache'
+                CollectionType = 'CopilotUsage'
+                TenantFilter   = $TenantFilter
+                QueueId        = $QueueId
+                QueueName      = "DB Cache CopilotUsage - $TenantFilter"
+            })
 
         # Graph collection always runs (no special license needed) — 25 cache types in one activity
         $Tasks.Add(@{
@@ -143,6 +160,18 @@ function Push-CIPPDBCacheData {
                 })
         } else {
             Write-Host "Skipping Intune data collection for $TenantFilter - no required license"
+        }
+
+        if ($ComplianceCapable) {
+            $Tasks.Add(@{
+                    FunctionName   = 'ExecCIPPDBCache'
+                    CollectionType = 'Compliance'
+                    TenantFilter   = $TenantFilter
+                    QueueId        = $QueueId
+                    QueueName      = "DB Cache Compliance - $TenantFilter"
+                })
+        } else {
+            Write-Host "Skipping Compliance data collection for $TenantFilter - no required license"
         }
 
         Write-Information "Built $($Tasks.Count) grouped cache tasks for tenant $TenantFilter (down from individual per-type tasks)"
