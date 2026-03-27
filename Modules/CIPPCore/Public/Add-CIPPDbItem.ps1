@@ -162,7 +162,7 @@ function Add-CIPPDbItem {
             if ($null -eq $Item) { continue }
 
             # Convert to entity
-            $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId
+            $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [Guid]::NewGuid().ToString()
             $Entity = @{
                 PartitionKey = $TenantFilter
                 RowKey       = Format-RowKey "$Type-$ItemId"

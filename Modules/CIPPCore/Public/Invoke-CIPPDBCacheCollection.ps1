@@ -96,6 +96,9 @@ function Invoke-CIPPDBCacheCollection {
             'CASMailboxes'
             'MailboxUsage'
             'OneDriveUsage'
+            'OfficeActivations'
+            'EmailActivity'
+            'TeamsUserActivity'
         )
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'

@@ -280,6 +280,21 @@
     "description": "OneDrive usage statistics"
   },
   {
+    "type": "OfficeActivations",
+    "friendlyName": "Office Activations",
+    "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"
+  },
+  {
+    "type": "EmailActivity",
+    "friendlyName": "Email Activity",
+    "description": "Exchange Online email activity per user over 30 days"
+  },
+  {
+    "type": "TeamsUserActivity",
+    "friendlyName": "Teams User Activity",
+    "description": "Microsoft Teams user activity per user over 30 days"
+  },
+  {
     "type": "ConditionalAccessPolicies",
     "friendlyName": "Conditional Access Policies",
     "description": "Azure AD Conditional Access policies"
