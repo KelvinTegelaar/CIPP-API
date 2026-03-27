@@ -7,15 +7,31 @@ function Start-UserTasksOrchestrator {
     Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param(
+        $TaskId = $null
+    )
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    # Pending = orchestrator queued, Running = actively executing
-    # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
-    $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-    $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
+    if ($TaskId) {
+        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$TaskId'"
+        $task = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+
+        if (-not $task.RowKey) {
+            Write-Warning "No scheduled task found with ID: $TaskId"
+            return
+        } else {
+            Write-Information "Starting orchestrator for scheduled task: $($task.Name) with ID: $TaskId"
+            $tasks = @($task)
+        }
+    } else {
+        $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        # Pending = orchestrator queued, Running = actively executing
+        # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
+        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
     $TenantList = Get-Tenants -IncludeErrors
@@ -73,7 +89,7 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange($AllTenantCommands)
+                    $Batch.AddRange(@($AllTenantCommands))
                 } elseif ($task.TenantGroup) {
                     # Handle tenant groups - expand group to individual tenants
                     try {
@@ -107,7 +123,7 @@ function Start-UserTasksOrchestrator {
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
-                        $Batch.AddRange($GroupTenantCommands)
+                        $Batch.AddRange(@($GroupTenantCommands))
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
@@ -182,7 +198,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Single-tenant orchestrator started for $TenantName with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start single-tenant orchestrator for $TenantName : $($_.Exception.Message)"
@@ -241,7 +257,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Multi-Tenant Task Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Multi-tenant orchestrator started for $($ParentTask.Name) with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start multi-tenant orchestrator for $($ParentTask.Name): $($_.Exception.Message)"

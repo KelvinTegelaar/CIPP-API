@@ -68,6 +68,18 @@ function New-CIPPUserTask {
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
     }
 
+    # Add to groups
+    if ($UserObj.AddToGroups) {
+        $UserObj.AddToGroups | ForEach-Object {
+            try {
+                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $_.addedFields.groupType -GroupId $_.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
+                $Results.Add($AddMemberResult)
+            } catch {
+                $Results.Add("Failed to add to group $($_.label): $_")
+            }
+        }
+    }
+
     if ($UserObj.setManager) {
         $ManagerResult = Set-CIPPManager -User $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
         $Results.Add($ManagerResult)

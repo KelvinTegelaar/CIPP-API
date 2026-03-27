@@ -98,5 +98,5 @@ function Start-TableCleanup {
         SkipLog          = $true
     }
 
-    Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+    Start-CIPPOrchestrator -InputObject $InputObject
 }

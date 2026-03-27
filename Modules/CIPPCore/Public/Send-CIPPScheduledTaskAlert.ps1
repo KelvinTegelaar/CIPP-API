@@ -71,6 +71,11 @@ function Send-CIPPScheduledTaskAlert {
 
         Write-Information 'Scheduler: Sending the results to configured targets.'
 
+        $NotificationTable = Get-CIPPTable -TableName SchedulerConfig
+        $NotificationFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
+        $NotificationConfig = [pscustomobject](Get-CIPPAzDataTableEntity @NotificationTable -Filter $NotificationFilter)
+        $UseStandardizedSchema = [boolean]$NotificationConfig.UseStandardizedSchema
+
         # Send to configured alert targets
         switch -wildcard ($TaskInfo.PostExecution) {
             '*psa*' {
@@ -80,14 +85,34 @@ function Send-CIPPScheduledTaskAlert {
                 Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
             }
             '*webhook*' {
-                $Webhook = [PSCustomObject]@{
-                    'tenantId'     = $TenantInfo.customerId
-                    'Tenant'       = $TenantFilter
-                    'TaskInfo'     = $TaskInfo
-                    'Results'      = $Results
-                    'AlertComment' = $TaskInfo.AlertComment
+                $Webhook = if ($UseStandardizedSchema) {
+                    [PSCustomObject]@{
+                        tenantId     = $TenantInfo.customerId
+                        tenant       = $TenantFilter
+                        taskType     = $TaskType
+                        task         = [PSCustomObject]@{
+                            id         = $TaskInfo.RowKey
+                            name       = $TaskInfo.Name
+                            command    = $TaskInfo.Command
+                            state      = $TaskInfo.TaskState
+                            reference  = $TaskInfo.Reference
+                            scheduled  = $TaskInfo.ScheduledTime
+                            executed   = $TaskInfo.ExecutedTime
+                            partition  = $TaskInfo.PartitionKey
+                        }
+                        results      = $Results
+                        alertComment = $TaskInfo.AlertComment
+                    }
+                } else {
+                    [PSCustomObject]@{
+                        tenantId     = $TenantInfo.customerId
+                        Tenant       = $TenantFilter
+                        TaskInfo     = $TaskInfo
+                        Results      = $Results
+                        AlertComment = $TaskInfo.AlertComment
+                    }
                 }
-                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $TenantFilter -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
+                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $TenantFilter -JSONContent $($Webhook | ConvertTo-Json -Depth 20) -APIName 'Scheduled Task Alerts' -SchemaSource $TaskType -InvokingCommand $TaskInfo.Command -UseStandardizedSchema:$UseStandardizedSchema
             }
         }
 

@@ -258,7 +258,7 @@ function Push-ExecScheduledCommand {
                     $commandParameters['TaskInfo'] = $task
                 }
 
-                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json)"
+                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json -Depth 10)"
                 $results = & $Item.Command @commandParameters
             } catch {
                 $results = "Task Failed: $($_.Exception.Message)"

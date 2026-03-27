@@ -4,7 +4,11 @@ function Push-ExecCIPPDBCache {
         Generic wrapper to execute CIPP DB cache functions
 
     .DESCRIPTION
-        Executes the specified Set-CIPPDBCache* function with the provided parameters
+        Supports two modes:
+        - Grouped collection: When CollectionType is specified, delegates to Invoke-CIPPDBCacheCollection
+          which runs all cache functions for that license group sequentially in one activity.
+        - Single type (legacy): When Name is specified, executes a single Set-CIPPDBCache* function.
+          Used by the HTTP endpoint for on-demand single-type cache refreshes.
 
     .FUNCTIONALITY
         Entrypoint
@@ -12,12 +16,30 @@ function Push-ExecCIPPDBCache {
     [CmdletBinding()]
     param($Item)
 
-    $Name = $Item.Name
     $TenantFilter = $Item.TenantFilter
     $QueueId = $Item.QueueId
-    $Types = $Item.Types
 
     try {
+        # Grouped collection mode — runs all cache types for a license category in one activity
+        if ($Item.CollectionType) {
+            Write-Information "Collecting $($Item.CollectionType) group for tenant $TenantFilter"
+
+            $Params = @{
+                CollectionType = $Item.CollectionType
+                TenantFilter   = $TenantFilter
+            }
+            if ($QueueId) { $Params.QueueId = $QueueId }
+
+            $Result = Invoke-CIPPDBCacheCollection @Params
+
+            Write-Information "Completed $($Item.CollectionType) group for $TenantFilter - $($Result.Success)/$($Result.Total) succeeded"
+            return "Successfully executed $($Item.CollectionType) collection for $TenantFilter ($($Result.Success)/$($Result.Total))"
+        }
+
+        # Single-type mode (legacy) — used by HTTP endpoint for on-demand cache refresh
+        $Name = $Item.Name
+        $Types = $Item.Types
+
         Write-Information "Collecting $Name for tenant $TenantFilter"
 
         # Build the full function name
@@ -53,7 +75,7 @@ function Push-ExecCIPPDBCache {
         return "Successfully executed $Name for tenant $TenantFilter"
 
     } catch {
-        $ErrorMsg = "Failed to execute $Name for tenant $TenantFilter : $($_.Exception.Message)"
+        $ErrorMsg = "Failed to execute $(if ($Item.CollectionType) { "$($Item.CollectionType) collection" } else { $Item.Name }) for tenant $TenantFilter : $($_.Exception.Message)"
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message $ErrorMsg -sev Error
         throw $ErrorMsg
     }

@@ -26,12 +26,36 @@ function Invoke-ExecScheduleOOOVacation {
         $UserDisplay = ($UserUPNs | Select-Object -First 3) -join ', '
         if ($UserUPNs.Count -gt 3) { $UserDisplay += " (+$($UserUPNs.Count - 3) more)" }
 
+        # Convert epoch timestamps to datetime strings for Scheduled mode
+        $StartTimeStr = [DateTimeOffset]::FromUnixTimeSeconds([int64]$StartDate).DateTime.ToString()
+        $EndTimeStr   = [DateTimeOffset]::FromUnixTimeSeconds([int64]$EndDate).DateTime.ToString()
+
         $SharedParams = [PSCustomObject]@{
             TenantFilter    = $TenantFilter
             Users           = $UserUPNs
             InternalMessage = $InternalMessage
             ExternalMessage = $ExternalMessage
             APIName         = $APIName
+            StartTime       = $StartTimeStr
+            EndTime         = $EndTimeStr
+        }
+
+        # Calendar options — conditionally add when truthy in the request body
+        if ($Request.Body.CreateOOFEvent) {
+            $SharedParams | Add-Member -NotePropertyName 'CreateOOFEvent' -NotePropertyValue $true
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Request.Body.OOFEventSubject)) {
+            $SharedParams | Add-Member -NotePropertyName 'OOFEventSubject' -NotePropertyValue $Request.Body.OOFEventSubject
+        }
+        if ($Request.Body.AutoDeclineFutureRequestsWhenOOF) {
+            $SharedParams | Add-Member -NotePropertyName 'AutoDeclineFutureRequestsWhenOOF' -NotePropertyValue $true
+        }
+        if ($Request.Body.DeclineEventsForScheduledOOF) {
+            $SharedParams | Add-Member -NotePropertyName 'DeclineEventsForScheduledOOF' -NotePropertyValue $true
+            $SharedParams | Add-Member -NotePropertyName 'DeclineAllEventsForScheduledOOF' -NotePropertyValue $true
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Request.Body.DeclineMeetingMessage)) {
+            $SharedParams | Add-Member -NotePropertyName 'DeclineMeetingMessage' -NotePropertyValue $Request.Body.DeclineMeetingMessage
         }
 
         # Add task — enables OOO with messages at start date
