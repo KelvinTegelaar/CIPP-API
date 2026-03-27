@@ -35,6 +35,15 @@
     ]
   },
   {
+    "resourceAppId": "507bc9da-c4e2-40cb-96a7-ac90df92685c",
+    "resourceAccess": [
+      {
+        "id": "user_impersonation",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
     "resourceAppId": "00000003-0000-0ff1-ce00-000000000000",
     "resourceAccess": [
       {

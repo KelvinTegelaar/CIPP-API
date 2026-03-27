@@ -285,14 +285,9 @@
     "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"
   },
   {
-    "type": "EmailActivity",
-    "friendlyName": "Email Activity",
-    "description": "Exchange Online email activity per user over 30 days"
-  },
-  {
-    "type": "TeamsUserActivity",
-    "friendlyName": "Teams User Activity",
-    "description": "Microsoft Teams user activity per user over 30 days"
+    "type": "CopilotReadinessActivity",
+    "friendlyName": "Copilot Readiness Activity",
+    "description": "Per-user Copilot readiness signals (update channel, Teams, Outlook, Office docs) over 30 days"
   },
   {
     "type": "ConditionalAccessPolicies",

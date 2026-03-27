@@ -97,8 +97,7 @@ function Invoke-CIPPDBCacheCollection {
             'MailboxUsage'
             'OneDriveUsage'
             'OfficeActivations'
-            'EmailActivity'
-            'TeamsUserActivity'
+            'CopilotReadinessActivity'
         )
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'
