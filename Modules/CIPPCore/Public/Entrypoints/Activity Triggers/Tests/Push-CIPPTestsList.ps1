@@ -23,6 +23,9 @@ function Push-CIPPTestsList {
             $_ -replace '^Invoke-CippTest', ''
         }
 
+        # Custom scripts are scheduled individually using ScriptGuid identifiers
+        $AllTests = @($AllTests | Where-Object { $_ -ne 'CustomScripts' })
+
         if ($AllTests.Count -eq 0) {
             Write-Information 'No test functions found'
             return @()
@@ -36,11 +39,38 @@ function Push-CIPPTestsList {
         }
 
         # Build test task list for this tenant — returned for PostExecution aggregation
-        $Tasks = foreach ($Test in $AllTests) {
-            [PSCustomObject]@{
+        $Tasks = [System.Collections.Generic.List[object]]::new()
+        foreach ($Test in $AllTests) {
+            $Tasks.Add([PSCustomObject]@{
                 FunctionName = 'CIPPTest'
                 TenantFilter = $TenantFilter
                 TestId       = $Test
+            })
+        }
+
+        # Add custom scripts as individual tests (CustomScript-<Guid>) using latest enabled versions
+        $CustomTestsTable = Get-CippTable -tablename 'CustomPowershellScripts'
+        $CustomScripts = @(Get-CIPPAzDataTableEntity @CustomTestsTable -Filter "PartitionKey eq 'CustomScript'")
+        if ($CustomScripts.Count -gt 0) {
+            $LatestCustomScripts = $CustomScripts |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_.ScriptGuid) } |
+                Group-Object -Property ScriptGuid |
+                ForEach-Object {
+                    $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
+                }
+
+            foreach ($Script in @($LatestCustomScripts)) {
+                # We can't prefilter this on table lookup as each script version has its own Enabled property, so we need to check here if the latest version is enabled
+                $IsEnabled = if ($Script.PSObject.Properties['Enabled']) { [bool]$Script.Enabled } else { $true }
+                if (-not $IsEnabled) {
+                    continue
+                }
+
+                $Tasks.Add([PSCustomObject]@{
+                        FunctionName = 'CIPPTest'
+                        TenantFilter = $TenantFilter
+                        TestId       = "CustomScript-$($Script.ScriptGuid)"
+                    })
             }
         }
 
