@@ -94,7 +94,7 @@ function Invoke-ListGraphReports {
                 } catch {
                     $UriBare = "https://graph.microsoft.com/beta/reports/$Report"
                     Write-Information "Period-based fetch failed, retrying: $UriBare"
-                    $Data = New-GraphGetRequest -uri $UriBare -tenantid $TenantFilter -AsApp $true
+                    $Data = New-GraphGetRequest -uri $UriBare -tenantid $TenantFilter
                 }
             }
 
