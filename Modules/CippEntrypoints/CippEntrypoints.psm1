@@ -439,6 +439,8 @@ function Receive-CippActivityTrigger {
                 }
             } catch {
                 $ErrorMsg = $_.Exception.Message
+                Write-Information "Error in activity function $FunctionName : $ErrorMsg"
+                Write-Information $_.InvocationInfo.PositionMessage
                 $Status = 'Failed'
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Failed'
