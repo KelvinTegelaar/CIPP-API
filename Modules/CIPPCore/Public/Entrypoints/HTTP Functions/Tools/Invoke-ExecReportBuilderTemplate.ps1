@@ -15,7 +15,8 @@ function Invoke-ExecReportBuilderTemplate {
         $Body = $Request.Body
         $Action = $Body.Action
 
-        $Table = Get-CippTable -tablename 'ReportBuilderTemplates'
+        $Table = Get-CippTable -tablename 'templates'
+        $Table.Force = $true
 
         switch ($Action) {
             'save' {
@@ -24,18 +25,19 @@ function Invoke-ExecReportBuilderTemplate {
                 }
 
                 $GUID = if ($Body.GUID) { $Body.GUID } else { (New-Guid).GUID }
-                $BlocksJson = ConvertTo-Json -InputObject @($Body.Blocks) -Depth 20 -Compress
+                $JSON = ConvertTo-Json -InputObject @{
+                    Name      = $Body.Name
+                    Blocks    = @($Body.Blocks)
+                    GUID      = $GUID
+                    CreatedAt = (Get-Date).ToString('o')
+                } -Depth 20 -Compress
 
-                $Entity = @{
+                Add-CIPPAzDataTableEntity @Table -Entity @{
                     PartitionKey = 'ReportBuilderTemplate'
                     RowKey       = [string]$GUID
-                    Name         = [string]$Body.Name
-                    Blocks       = [string]$BlocksJson
-                    CreatedAt    = [string](Get-Date).ToString('o')
+                    JSON         = [string]$JSON
                     GUID         = [string]$GUID
                 }
-
-                Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
                 Write-LogMessage -headers $Headers -API $APIName -message "Saved report builder template '$($Body.Name)' with GUID $GUID" -Sev 'Info'
 
                 $Result = @{

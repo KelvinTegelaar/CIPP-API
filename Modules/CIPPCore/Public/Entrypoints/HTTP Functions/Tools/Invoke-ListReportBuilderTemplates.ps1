@@ -12,15 +12,17 @@ function Invoke-ListReportBuilderTemplates {
     Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $Table = Get-CippTable -tablename 'ReportBuilderTemplates'
+        $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'ReportBuilderTemplate'"
         $Entities = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         $Templates = @($Entities | ForEach-Object {
+                $TemplateData = @{}
                 $Blocks = @()
-                if ($_.Blocks) {
+                if ($_.JSON) {
                     try {
-                        $Blocks = @(ConvertFrom-Json -InputObject $_.Blocks)
+                        $TemplateData = ConvertFrom-Json -InputObject $_.JSON
+                        $Blocks = @($TemplateData.Blocks)
                     } catch {
                         $Blocks = @()
                     }
@@ -29,12 +31,12 @@ function Invoke-ListReportBuilderTemplates {
                 $CustomCount = @($Blocks | Where-Object { $_.type -eq 'blank' }).Count
                 [PSCustomObject]@{
                     RowKey      = $_.RowKey
-                    Name        = $_.Name
+                    Name        = $TemplateData.Name
                     Blocks      = $Blocks
                     Sections    = $Blocks.Count
                     TestCount   = $TestCount
                     CustomCount = $CustomCount
-                    CreatedAt   = $_.CreatedAt
+                    CreatedAt   = $TemplateData.CreatedAt
                     GUID        = $_.GUID
                 }
             })

@@ -28,10 +28,11 @@ function Push-ExecGenerateReportBuilderReport {
                 $ParsedBlocks = @($Blocks)
             }
         } elseif ($TemplateGUID) {
-            $TemplateTable = Get-CippTable -tablename 'ReportBuilderTemplates'
+            $TemplateTable = Get-CippTable -tablename 'templates'
             $Template = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$($TemplateGUID)'"
-            if ($Template -and $Template.Blocks) {
-                $ParsedBlocks = @(ConvertFrom-Json -InputObject $Template.Blocks)
+            if ($Template -and $Template.JSON) {
+                $TemplateData = ConvertFrom-Json -InputObject $Template.JSON
+                $ParsedBlocks = @($TemplateData.Blocks)
             }
         }
 
