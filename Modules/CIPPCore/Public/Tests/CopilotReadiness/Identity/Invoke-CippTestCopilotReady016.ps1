@@ -37,8 +37,9 @@ function Invoke-CippTestCopilotReady016 {
         $Result += "|-----|-------------|`n"
 
         foreach ($App in ($AppCounts | Sort-Object Value -Descending)) {
-            # Format the property name to be more readable
-            $AppName = $App.Name -replace '([A-Z])', ' $1' -replace '^ ', '' -replace 'Active Users', ''
+            # Format the property name to be more readable — insert space before each capital
+            # that follows a lowercase letter to avoid double-spacing sequences like 'AI' -> 'A I'
+            $AppName = $App.Name -replace '([a-z])([A-Z])', '$1 $2' -replace 'Active Users', ''
             $Result += "| $($AppName.Trim()) | $($App.Value) |`n"
         }
 

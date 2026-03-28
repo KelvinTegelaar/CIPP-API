@@ -43,6 +43,7 @@ function Invoke-CippTestCopilotReady017 {
         }
 
         # Determine trend direction if we have a count field and at least 2 data points
+        $Status = 'Informational'
         if ($CountField -and $TrendPoints.Count -ge 2) {
             $Earliest = [int]($TrendPoints[0].$CountField)
             $Latest = [int]($TrendPoints[-1].$CountField)
@@ -51,15 +52,12 @@ function Invoke-CippTestCopilotReady017 {
             if ($Delta -gt 0) {
                 $TrendIcon = '📈'
                 $TrendText = "**Trending up** — active Copilot users increased by $Delta over the 7-day window."
-                $Status = 'Informational'
             } elseif ($Delta -eq 0) {
                 $TrendIcon = '➡️'
                 $TrendText = '**Stable** — active Copilot user count is unchanged over the 7-day window.'
-                $Status = 'Informational'
             } else {
                 $TrendIcon = '📉'
                 $TrendText = "**Trending down** — active Copilot users decreased by $([math]::Abs($Delta)) over the 7-day window. Consider reviewing adoption activities to re-engage users."
-                $Status = 'Informational'
             }
 
             $Result += "`n$TrendIcon $TrendText"
