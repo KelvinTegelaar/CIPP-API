@@ -2,6 +2,27 @@ Write-Information '#### CIPP-API Start ####'
 
 $Timings = @{}
 $TotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+# Test Proxyman CA certificate into trusted store if present (for local dev HTTPS inspection)
+$ProxymanCert = Join-Path $PSScriptRoot 'proxyman.pem'
+if (Test-Path $ProxymanCert) {
+    # Verify the cert is trusted in the system store
+    try {
+        $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($ProxymanCert)
+        $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+        $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        $trusted = $chain.Build($cert)
+        if ($trusted) {
+            Write-Information 'Proxyman CA certificate is trusted.'
+        } else {
+            $chainStatus = $chain.ChainStatus | ForEach-Object { $_.StatusInformation.Trim() }
+            Write-Warning "Proxyman CA certificate is NOT trusted: $($chainStatus -join '; ')"
+        }
+    } catch {
+        Write-Warning "Failed to verify Proxyman CA certificate trust: $($_.Exception.Message)"
+    }
+}
+
 # Only load Application Insights SDK for telemetry if a connection string or instrumentation key is set
 $hasAppInsights = $false
 if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTATIONKEY) {

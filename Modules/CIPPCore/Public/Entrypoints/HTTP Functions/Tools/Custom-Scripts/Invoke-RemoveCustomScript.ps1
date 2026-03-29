@@ -3,7 +3,7 @@ function Invoke-RemoveCustomScript {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.CustomScript.ReadWrite
+        CIPP.Tests.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

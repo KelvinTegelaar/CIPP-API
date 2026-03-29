@@ -307,6 +307,48 @@ function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step3.Status -eq 'succeeded') {
+            # Check if the relationship was recently activated — Microsoft propagation may not have settled yet
+            if ($Relationship.activatedDateTime) {
+                try {
+                    $ActivatedTime = [datetime]::Parse($Relationship.activatedDateTime)
+                    $MinutesSinceActivation = ([datetime]::UtcNow - $ActivatedTime).TotalMinutes
+                    if ($MinutesSinceActivation -lt 15) {
+                        $Logs.Add([PSCustomObject]@{
+                                Date = (Get-Date).ToUniversalTime()
+                                Log  = 'GDAP relationship was activated {0:N1} minutes ago. Rescheduling onboarding in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                            })
+                        $RetryEpoch = [int64](([datetime]::UtcNow.AddMinutes(15)) - (Get-Date '1/1/1970')).TotalSeconds
+                        $RetryParams = [PSCustomObject]@{
+                            id                         = $Item.id
+                            Roles                      = $Item.Roles
+                            AutoMapRoles               = $Item.AutoMapRoles
+                            IgnoreMissingRoles         = $Item.IgnoreMissingRoles
+                            StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                        }
+                        $RetryTask = [PSCustomObject]@{
+                            Name          = "Onboarding retry: $Id"
+                            Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
+                            Parameters    = $RetryParams
+                            TenantFilter  = 'AllTenants'
+                            Recurrence    = ''
+                            ScheduledTime = 0
+                        }
+                        $null = Add-CIPPScheduledTask -Task $RetryTask -Hidden $true -DesiredStartTime ([string]$RetryEpoch)
+                        $RetryMessage = 'Rescheduled: GDAP relationship was activated {0:N1} minutes ago. Retrying in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                        $OnboardingSteps.Step4.Status = 'pending'
+                        $OnboardingSteps.Step4.Message = $RetryMessage
+                        $TenantOnboarding.Status = 'running'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        Write-LogMessage -API 'Onboarding' -message $RetryMessage -Sev 'Info'
+                        return
+                    }
+                } catch {
+                    Write-Warning "Failed to check activatedDateTime for relationship ${Id}: $($_.Exception.Message)"
+                }
+            }
+
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Setting up CPV consent' })
             $OnboardingSteps.Step4.Status = 'running'
             $OnboardingSteps.Step4.Message = 'Setting up CPV consent'
