@@ -16,7 +16,6 @@ function Invoke-ExecReportBuilderTemplate {
         $Action = $Body.Action
 
         $Table = Get-CippTable -tablename 'templates'
-        $Table.Force = $true
 
         switch ($Action) {
             'save' {
@@ -32,6 +31,7 @@ function Invoke-ExecReportBuilderTemplate {
                     CreatedAt = (Get-Date).ToString('o')
                 } -Depth 20 -Compress
 
+                $Table.Force = $true
                 Add-CIPPAzDataTableEntity @Table -Entity @{
                     PartitionKey = 'ReportBuilderTemplate'
                     RowKey       = [string]$GUID
