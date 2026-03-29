@@ -3,11 +3,15 @@ function Invoke-CippTestCustomScripts {
     .SYNOPSIS
     Run enabled custom scripts as CIPP tests
     #>
-    param($Tenant)
+    param(
+        $Tenant,
+        [string]$ScriptGuid
+    )
 
     try {
         $Table = Get-CippTable -tablename 'CustomPowershellScripts'
-        $Scripts = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CustomScript'")
+        $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '$ScriptGuid'"
+        $Scripts = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         if (-not $Scripts) {
             return
         }
@@ -16,7 +20,13 @@ function Invoke-CippTestCustomScripts {
             $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($ScriptGuid) -and $LatestScripts.Count -eq 0) {
+            Write-Information "No latest custom script found for ScriptGuid: $ScriptGuid"
+            return
+        }
+
         foreach ($Script in $LatestScripts) {
+            # We can't prefilter this on table lookup as each script version has its own Enabled property, so we need to check here if the latest version is enabled
             $IsEnabled = if ($Script.PSObject.Properties['Enabled']) { [bool]$Script.Enabled } else { $true }
             if (-not $IsEnabled) {
                 continue

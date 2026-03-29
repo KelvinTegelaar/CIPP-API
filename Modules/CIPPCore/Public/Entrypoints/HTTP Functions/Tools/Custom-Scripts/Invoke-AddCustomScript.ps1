@@ -12,10 +12,62 @@ function Invoke-AddCustomScript {
     $Headers = $Request.Headers
 
     try {
+        $Action = $Request.Body.Action
         $RestoreToVersion = $Request.Body.RestoreToVersion
         $ScriptGuid = $Request.Body.ScriptGuid
 
-        if ($RestoreToVersion) {
+        if ($Action) {
+            if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+                throw 'ScriptGuid is required for action operations'
+            }
+
+            $Table = Get-CippTable -tablename 'CustomPowershellScripts'
+            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+            $ExistingVersions = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            if (-not $ExistingVersions -or $ExistingVersions.Count -eq 0) {
+                throw "Script with GUID '$ScriptGuid' not found"
+            }
+
+            $LatestVersion = $ExistingVersions | Sort-Object -Property Version -Descending | Select-Object -First 1
+            $CurrentEnabled = if ($LatestVersion.PSObject.Properties['Enabled']) { [bool]$LatestVersion.Enabled } else { $true }
+            $CurrentAlertOnFailure = if ($LatestVersion.PSObject.Properties['AlertOnFailure']) { [bool]$LatestVersion.AlertOnFailure } else { $false }
+
+            $NewEnabled = $CurrentEnabled
+            $NewAlertOnFailure = $CurrentAlertOnFailure
+
+            switch ($Action) {
+                'EnableScript' {
+                    $NewEnabled = $true
+                }
+                'DisableScript' {
+                    $NewEnabled = $false
+                }
+                'EnableAlerts' {
+                    $NewAlertOnFailure = $true
+                }
+                'DisableAlerts' {
+                    $NewAlertOnFailure = $false
+                }
+            }
+
+            $MergeEntity = @{
+                PartitionKey   = $LatestVersion.PartitionKey
+                RowKey         = $LatestVersion.RowKey
+                Enabled        = $NewEnabled
+                AlertOnFailure = $NewAlertOnFailure
+            }
+
+            Add-CIPPAzDataTableEntity @Table -Entity $MergeEntity -OperationType UpsertMerge
+            Write-LogMessage -API $APIName -headers $Headers -message "Updated custom script '$($LatestVersion.ScriptName)' via action '$Action', Enabled: $NewEnabled, AlertOnFailure: $NewAlertOnFailure)" -sev 'Info'
+
+            $Body = @{
+                Results = "Successfully updated custom script '$($LatestVersion.ScriptName)'"
+            }
+
+            $StatusCode = [HttpStatusCode]::OK
+        }
+
+        elseif ($RestoreToVersion) {
             if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
                 throw 'ScriptGuid is required for restore operation'
             }
