@@ -189,25 +189,27 @@ function Invoke-ListTests {
 
         $TestCounts = @{
             Identity = @{
-                Passed      = @($IdentityResults | Where-Object { $_.Status -eq 'Passed' }).Count
-                Failed      = @($IdentityResults | Where-Object { $_.Status -eq 'Failed' }).Count
-                Investigate = @($IdentityResults | Where-Object { $_.Status -eq 'Investigate' }).Count
-                Skipped     = @($IdentityResults | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Total       = $IdentityTotal
+                Passed         = @($IdentityResults | Where-Object { $_.Status -eq 'Passed' }).Count
+                Failed         = @($IdentityResults | Where-Object { $_.Status -in @('Failed', 'Active', 'Postponed') }).Count
+                NeedsAttention = @($IdentityResults | Where-Object { $_.Status -eq 'Investigate' }).Count
+                Skipped        = @($IdentityResults | Where-Object { $_.Status -eq 'Skipped' }).Count
+                Informational  = @($IdentityResults | Where-Object { $_.Status -eq 'Informational' }).Count
+                Total          = $IdentityTotal
             }
             Devices  = @{
-                Passed      = @($DeviceResults | Where-Object { $_.Status -eq 'Passed' }).Count
-                Failed      = @($DeviceResults | Where-Object { $_.Status -eq 'Failed' }).Count
-                Investigate = @($DeviceResults | Where-Object { $_.Status -eq 'Investigate' }).Count
-                Skipped     = @($DeviceResults | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Total       = $DevicesTotal
+                Passed         = @($DeviceResults | Where-Object { $_.Status -eq 'Passed' }).Count
+                Failed         = @($DeviceResults | Where-Object { $_.Status -in @('Failed', 'Active', 'Postponed') }).Count
+                NeedsAttention = @($DeviceResults | Where-Object { $_.Status -eq 'Investigate' }).Count
+                Skipped        = @($DeviceResults | Where-Object { $_.Status -eq 'Skipped' }).Count
+                Informational  = @($DeviceResults | Where-Object { $_.Status -eq 'Informational' }).Count
+                Total          = $DevicesTotal
             }
             Custom   = @{
-                Passed      = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Passed' }).Count
-                Failed      = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Failed' }).Count
-                Investigate = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Investigate' }).Count
-                Skipped     = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Skipped' }).Count
-                Total       = $CustomTotal
+                Passed         = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Passed' }).Count
+                Failed         = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Failed' }).Count
+                Skipped        = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Skipped' }).Count
+                Informational  = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Informational' }).Count
+                Total          = $CustomTotal
             }
         }
 

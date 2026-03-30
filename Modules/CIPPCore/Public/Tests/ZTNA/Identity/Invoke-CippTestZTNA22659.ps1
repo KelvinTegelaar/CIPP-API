@@ -24,7 +24,7 @@ function Invoke-CippTestZTNA22659 {
             $TestParams = @{
                 TestId               = 'ZTNA22659'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve service principal risk detections from cache.'
                 Risk                 = 'High'
@@ -82,7 +82,7 @@ function Invoke-CippTestZTNA22659 {
         $TestParams = @{
             TestId               = 'ZTNA22659'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'High'
@@ -97,7 +97,7 @@ function Invoke-CippTestZTNA22659 {
         $TestParams = @{
             TestId               = 'ZTNA22659'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'High'
