@@ -31,7 +31,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CopilotReadiness', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CopilotReadiness', 'GenericTests', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]
@@ -46,6 +46,7 @@ function Invoke-CIPPTestCollection {
         EIDSCA           = 'Invoke-CippTestEIDSCA*'
         CISA             = 'Invoke-CippTestCISA*'
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
+        GenericTests     = 'Invoke-CippTestGenericTest*'
     }
 
     $SuiteStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
