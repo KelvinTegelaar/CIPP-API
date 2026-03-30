@@ -29,14 +29,10 @@ function Invoke-CippTestGenericTest001 {
             $Total = [int]$License.TotalLicenses
             $Available = $Total - $Used
             $Util = if ($Total -gt 0) { [math]::Round(($Used / $Total) * 100, 0) } else { 0 }
-            $UtilIcon = if ($Util -ge 90) { "🔴 $Util%" } elseif ($Util -ge 70) { "🟡 $Util%" } else { "🟢 $Util%" }
+            $UtilIcon = if ($Util -ge 90) { "🟢 $Util%" } elseif ($Util -ge 70) { "🟡 $Util%" } else { "🟢 $Util%" }
             $Result += "| $LicName | $Used | $Total | $Available | $UtilIcon |`n"
         }
 
-        $HighUtil = @($Licenses | Where-Object { [int]$_.TotalLicenses -gt 0 -and ([int]$_.CountUsed / [int]$_.TotalLicenses) -ge 0.9 })
-        if ($HighUtil.Count -gt 0) {
-            $Result += "`n**⚠️ Heads up:** $($HighUtil.Count) license(s) are at 90% or higher utilization. You may want to plan for additional seats before running out.`n"
-        }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest001' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Tenant License Overview' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
 
