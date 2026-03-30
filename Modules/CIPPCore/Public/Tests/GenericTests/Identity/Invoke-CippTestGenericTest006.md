@@ -5,4 +5,5 @@ This report covers all standard (non-admin) user accounts and their MFA enrollme
 A single compromised user account can give an attacker a foothold to escalate privileges, exfiltrate data, or launch further attacks within your organization.
 
 <!--- Results --->
+
 %TestResult%

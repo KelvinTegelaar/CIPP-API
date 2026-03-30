@@ -12,4 +12,5 @@ This report identifies any accounts still relying on Per-User MFA so you can pla
 - [Conditional Access: Require MFA for all users](https://learn.microsoft.com/en-us/entra/identity/conditional-access/howto-conditional-access-policy-all-users-mfa)
 
 <!--- Results --->
+
 %TestResult%

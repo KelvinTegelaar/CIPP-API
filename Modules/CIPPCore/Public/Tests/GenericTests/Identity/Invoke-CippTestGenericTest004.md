@@ -7,4 +7,5 @@ This report provides a complete overview of your tenant's MFA posture across all
 Accounts without MFA enforcement are significantly more vulnerable to phishing and credential-stuffing attacks.
 
 <!--- Results --->
+
 %TestResult%

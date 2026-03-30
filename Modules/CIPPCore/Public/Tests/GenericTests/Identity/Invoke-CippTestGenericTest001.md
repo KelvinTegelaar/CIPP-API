@@ -5,4 +5,5 @@ This report gives you a clear picture of the Microsoft 365 licenses in your tena
 Licenses at high utilization may need attention before new hires or projects push you over the limit. Unused licenses are an opportunity to reduce costs.
 
 <!--- Results --->
+
 %TestResult%

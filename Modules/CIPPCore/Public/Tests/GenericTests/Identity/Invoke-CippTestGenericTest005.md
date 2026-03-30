@@ -5,4 +5,5 @@ Administrator accounts are the keys to the kingdom — they can manage users, re
 This report focuses exclusively on accounts with admin roles and verifies that each one has MFA registered and enforced. Even a single unprotected admin account is a critical risk.
 
 <!--- Results --->
+
 %TestResult%

@@ -9,4 +9,5 @@ Think of Secure Score as a security health check — it's not perfect, but a ris
 - [Microsoft Secure Score overview](https://learn.microsoft.com/en-us/microsoft-365/security/defender/microsoft-secure-score)
 
 <!--- Results --->
+
 %TestResult%
