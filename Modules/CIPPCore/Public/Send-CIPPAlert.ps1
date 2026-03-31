@@ -15,6 +15,7 @@ function Send-CIPPAlert {
         $Headers,
         $TableName,
         $RowKey = [string][guid]::NewGuid(),
+        $Attachments,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -58,6 +59,18 @@ function Send-CIPPAlert {
                         toRecipients = @($Recipients)
                     }
                     saveToSentItems = 'true'
+                }
+
+                # Add file attachments if provided
+                if ($Attachments -and $Attachments.Count -gt 0) {
+                    $PowerShellBody.message.attachments = @($Attachments | ForEach-Object {
+                        @{
+                            '@odata.type'  = '#microsoft.graph.fileAttachment'
+                            name           = $_.Name
+                            contentType    = $_.ContentType
+                            contentBytes   = $_.ContentBytes
+                        }
+                    })
                 }
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody

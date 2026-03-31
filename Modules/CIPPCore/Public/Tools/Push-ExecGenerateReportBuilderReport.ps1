@@ -11,7 +11,8 @@ function Push-ExecGenerateReportBuilderReport {
         $TenantFilter,
         $TemplateName,
         $Blocks,
-        $TemplateGUID
+        $TemplateGUID,
+        $IncludeRawAttachments
     )
 
     try {
@@ -143,7 +144,75 @@ function Push-ExecGenerateReportBuilderReport {
         Add-CIPPAzDataTableEntity @ReportTable -Entity $ReportEntity -Force
         Write-LogMessage -API 'ReportBuilder' -tenant $TenantFilter -message "Generated report builder report '$TemplateName' with GUID $ReportGUID" -Sev 'Info'
 
-        return "Successfully generated report '$TemplateName' for $TenantFilter (GUID: $ReportGUID)"
+        # Build result message with direct link
+        $CippConfigTable = Get-CippTable -tablename Config
+        $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+        $ReportLink = if ($CippConfig.Value) {
+            "https://$($CippConfig.Value)/tools/report-builder/view?id=$ReportGUID"
+        } else { $null }
+        $ResultMessage = "Successfully generated report '$TemplateName' for $TenantFilter (GUID: $ReportGUID)"
+        if ($ReportLink) {
+            $ResultMessage += ". View report: $ReportLink"
+        }
+
+        # Build file attachments for database blocks if requested
+        if ($IncludeRawAttachments -eq 'true') {
+            $TaskAttachments = @()
+            foreach ($Block in $EnrichedBlocks) {
+                if ($Block.type -ne 'database' -or -not $Block.dbType) { continue }
+                $Format = if ($Block.format) { $Block.format } else { 'csv' }
+                $FileName = "$($Block.title ?? $Block.dbType)_$TenantFilter"
+                $FileName = $FileName -replace '[^a-zA-Z0-9_\-]', '_'
+                switch ($Format) {
+                    'json' {
+                        $FileContent = $Block.content
+                        $FileName += '.json'
+                        $ContentType = 'application/json'
+                    }
+                    'csv' {
+                        $FileContent = $Block.content
+                        $FileName += '.csv'
+                        $ContentType = 'text/csv'
+                    }
+                    default {
+                        # For text/markdown, export as CSV for attachment
+                        try {
+                            $DbData = New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Block.dbType
+                            $SelectedHeaders = @($Block.selectedHeaders)
+                            $Rows = @(@($DbData) | ForEach-Object {
+                                    $Row = $_
+                                    $Obj = [ordered]@{}
+                                    foreach ($Header in $SelectedHeaders) {
+                                        $Val = $Row.$Header
+                                        $Obj[$Header] = if ($null -ne $Val) { $Val } else { '' }
+                                    }
+                                    [PSCustomObject]$Obj
+                                })
+                            $FileContent = ($Rows | ConvertTo-Csv -NoTypeInformation) -join "`n"
+                        } catch {
+                            $FileContent = $Block.content
+                        }
+                        $FileName += '.csv'
+                        $ContentType = 'text/csv'
+                    }
+                }
+                $Bytes = [System.Text.Encoding]::UTF8.GetBytes($FileContent)
+                $Base64 = [Convert]::ToBase64String($Bytes)
+                $TaskAttachments += @{
+                    Name        = $FileName
+                    ContentType = $ContentType
+                    ContentBytes = $Base64
+                }
+            }
+            if ($TaskAttachments.Count -gt 0) {
+                return @{
+                    TaskAttachments = $TaskAttachments
+                    Results         = $ResultMessage
+                }
+            }
+        }
+
+        return $ResultMessage
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'ReportBuilder' -tenant $TenantFilter -message "Report generation error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
