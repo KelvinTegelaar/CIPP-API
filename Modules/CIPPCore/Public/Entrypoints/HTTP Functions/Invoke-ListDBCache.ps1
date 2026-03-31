@@ -36,6 +36,15 @@ function Invoke-ListDBCache {
             })
     }
 
+    if ($Type -eq '_availableTypes') {
+        $Types = Get-CIPPDbItem -CountsOnly -TenantFilter $Tenant | Select-Object -ExpandProperty RowKey
+        $Types = $Types | ForEach-Object { $_ -replace '-Count$', '' } | Sort-Object
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{ Results = @($Types) }
+            })
+    }
+
     if ($Tenant) {
         $Results = New-CIPPDbRequest -TenantFilter $Tenant -Type $Type
     }
