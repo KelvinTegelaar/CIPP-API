@@ -57,6 +57,21 @@ function Invoke-ExecTimeSettings {
         Write-Information "Updating function app time settings: Timezone=$Timezone, BusinessHoursStart=$BusinessHoursStart, BusinessHoursEnd=$BusinessHoursEnd"
 
         # Build app settings hashtable
+        # Linux Consumption (Dynamic SKU) does not support WEBSITE_TIME_ZONE
+        $IsLinuxConsumption = $IsLinux -and $env:WEBSITE_SKU -ne 'FlexConsumption'
+
+        if ($IsLinuxConsumption) {
+            Write-Information 'Skipping WEBSITE_TIME_ZONE — not supported on Linux Consumption plans'
+            $Results = @{
+                Results = 'Timezone setting is not supported on Linux Consumption function apps. No changes were made.'
+                SKU     = $env:WEBSITE_SKU
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = [httpstatusCode]::OK
+                    Body       = $Results
+                })
+        }
+
         $AppSettings = @{
             'WEBSITE_TIME_ZONE' = $Timezone
         }
