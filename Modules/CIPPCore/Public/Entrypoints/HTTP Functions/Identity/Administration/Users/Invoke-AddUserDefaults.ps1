@@ -73,7 +73,7 @@ function Invoke-AddUserDefaults {
 
         # Contact fields
         $MobilePhone = $Request.Body.mobilePhone
-        $BusinessPhones = $Request.Body.'businessPhones[0]'
+        $BusinessPhones = $Request.Body.businessPhones[0]
         $OtherMails = $Request.Body.otherMails
 
         # User relations

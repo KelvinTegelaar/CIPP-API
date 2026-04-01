@@ -30,11 +30,26 @@ function Send-CIPPScheduledTaskAlert {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
-        [string]$TaskType = 'Scheduled Task'
+        [string]$TaskType = 'Scheduled Task',
+
+        [Parameter(Mandatory = $false)]
+        $Attachments
     )
 
     try {
         Write-Information "Sending post-execution alerts for task $($TaskInfo.Name)"
+
+        # Use attachments from parameter, or extract from structured results as fallback
+        $TaskAttachments = $Attachments
+        if (-not $TaskAttachments) {
+            if ($Results -is [hashtable] -and $Results.ContainsKey('TaskAttachments')) {
+                $TaskAttachments = $Results.TaskAttachments
+                $Results = $Results.Results
+            } elseif ($Results -is [PSCustomObject] -and $null -ne $Results.TaskAttachments) {
+                $TaskAttachments = $Results.TaskAttachments
+                $Results = $Results.Results
+            }
+        }
 
         # Get tenant information
         $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
@@ -82,7 +97,16 @@ function Send-CIPPScheduledTaskAlert {
                 Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
             }
             '*email*' {
-                Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
+                $EmailParams = @{
+                    Type         = 'email'
+                    Title        = $title
+                    HTMLContent  = $HTML
+                    TenantFilter = $TenantFilter
+                }
+                if ($TaskAttachments) {
+                    $EmailParams.Attachments = $TaskAttachments
+                }
+                Send-CIPPAlert @EmailParams
             }
             '*webhook*' {
                 $Webhook = if ($UseStandardizedSchema) {

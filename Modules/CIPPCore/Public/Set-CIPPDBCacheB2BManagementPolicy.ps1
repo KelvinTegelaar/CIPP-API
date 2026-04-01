@@ -24,6 +24,7 @@ function Set-CIPPDBCacheB2BManagementPolicy {
 
         if ($B2BManagementPolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'B2BManagementPolicy' -Data @($B2BManagementPolicy)
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'B2BManagementPolicy' -Data @($B2BManagementPolicy) -Count
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached B2B management policy successfully' -sev Debug
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No B2B management policy found' -sev Debug

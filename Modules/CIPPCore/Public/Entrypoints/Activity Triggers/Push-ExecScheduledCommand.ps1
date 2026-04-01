@@ -266,6 +266,17 @@ function Push-ExecScheduledCommand {
             }
             Write-Information 'Ran the command. Processing results'
         }
+
+        # Extract TaskAttachments from structured output before general result processing
+        $TaskAttachments = $null
+        if ($results -is [hashtable] -and $results.ContainsKey('TaskAttachments')) {
+            $TaskAttachments = $results.TaskAttachments
+            $results = $results.Results
+        } elseif ($results -is [PSCustomObject] -and $null -ne $results.TaskAttachments) {
+            $TaskAttachments = $results.TaskAttachments
+            $results = $results.Results
+        }
+
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
@@ -347,7 +358,16 @@ function Push-ExecScheduledCommand {
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
     if ($Results -and $Item.Command -notin $OrchestratorBasedCommands -and -not [string]::IsNullOrWhiteSpace($Task.PostExecution)) {
         Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
-        Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
+        $AlertParams = @{
+            Results      = $Results
+            TaskInfo     = $task
+            TenantFilter = $Tenant
+            TaskType     = $TaskType
+        }
+        if ($TaskAttachments) {
+            $AlertParams.Attachments = $TaskAttachments
+        }
+        Send-CIPPScheduledTaskAlert @AlertParams
     }
 
     try {

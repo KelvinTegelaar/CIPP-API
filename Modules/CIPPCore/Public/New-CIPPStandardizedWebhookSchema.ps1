@@ -41,7 +41,11 @@ function New-CIPPStandardizedWebhookSchema {
         $NormalizedPayload = $Payload
     }
 
-    $AlertCount = if ($NormalizedPayload -is [array]) { $NormalizedPayload.Count } else { 1 }
+    if ($NormalizedPayload -isnot [array]) {
+        $NormalizedPayload = @($NormalizedPayload)
+    }
+
+    $AlertCount = $NormalizedPayload.Count
 
     $DetectedInvokingCommand = $null
 

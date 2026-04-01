@@ -14,6 +14,7 @@ function Push-CIPPTest {
 
     try {
         if ($TestId -like 'CustomScript-*') {
+            $ScriptGuid = $TestId -replace '^CustomScript-', ''
             Write-Information "Executing Invoke-CippTestCustomScripts for $TenantFilter (ScriptGuid: $ScriptGuid)"
             Invoke-CippTestCustomScripts -Tenant $TenantFilter -ScriptGuid $ScriptGuid
             Write-Host "Returning true, test has run for $tenantFilter"

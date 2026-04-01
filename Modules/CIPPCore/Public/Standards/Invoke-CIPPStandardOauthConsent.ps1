@@ -47,30 +47,49 @@ function Invoke-CIPPStandardOauthConsent {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the OauthConsent state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
+    $AllowedAppIdsForTenant = @($settings.AllowedApps -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique)
+    $CompareIncludes = @()
+    $CompareIncludesFetched = $false
+    try {
+        $CompareIncludes = @(New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes')
+        $CompareIncludesFetched = $true
+    } catch {
+        $CompareIncludes = @()
+    }
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
     if ($Settings.remediate -eq $true) {
-        $AllowedAppIdsForTenant = $settings.AllowedApps -split ',' | ForEach-Object { $_.Trim() }
+        $DidRemediationChange = $false
         try {
-            $Existing = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/' -tenantid $tenant) | Where-Object -Property id -EQ 'cipp-consent-policy'
-            if (!$Existing) {
-                New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies' -Type POST -Body '{ "id":"cipp-consent-policy", "displayName":"Application Consent Policy", "description":"This policy controls the current application consent policies."}' -ContentType 'application/json'
-                # Replaced static web app appid with Office 365 Management by Microsoft's recommendation
-                New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body '{"permissionClassification":"all","permissionType":"delegated","clientApplicationIds":["00b41c95-dab0-4487-9791-b9d2c32c80f2"]}' -ContentType 'application/json'
+            if (-not $CompareIncludesFetched) {
+                $Existing = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/' -tenantid $tenant) | Where-Object -Property id -EQ 'cipp-consent-policy'
+                if (!$Existing) {
+                    New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies' -Type POST -Body '{ "id":"cipp-consent-policy", "displayName":"Application Consent Policy", "description":"This policy controls the current application consent policies."}' -ContentType 'application/json'
+                    # Replaced static web app appid with Office 365 Management by Microsoft's recommendation
+                    New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body '{"permissionClassification":"all","permissionType":"delegated","clientApplicationIds":["00b41c95-dab0-4487-9791-b9d2c32c80f2"]}' -ContentType 'application/json'
+                    $DidRemediationChange = $true
+                }
             }
 
             try {
-                $ExistingIncludes = New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes'
-
-                $ExistingAppIds = foreach ($entry in $ExistingIncludes.value) {
-                    $entry.clientApplicationIds
-                }
-                $ExistingAppIds = $ExistingAppIds | Sort-Object -Unique
+                $ExistingIncludesEntries = @($CompareIncludes)
 
                 foreach ($AllowedApp in $AllowedAppIdsForTenant) {
-                    if ($AllowedApp -and ($AllowedApp -notin $ExistingAppIds)) {
+                    $HasDelegated = $ExistingIncludesEntries | Where-Object {
+                        $_.permissionType -eq 'delegated' -and $_.clientApplicationIds -contains $AllowedApp
+                    }
+                    $HasApplication = $ExistingIncludesEntries | Where-Object {
+                        $_.permissionType -eq 'application' -and $_.clientApplicationIds -contains $AllowedApp
+                    }
+
+                    if (-not $HasDelegated) {
                         New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body ('{"permissionType": "delegated","clientApplicationIds": ["' + $AllowedApp + '"]}') -ContentType 'application/json'
+                        $DidRemediationChange = $true
+                    }
+
+                    if (-not $HasApplication) {
                         New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body ('{ "permissionType": "Application", "clientApplicationIds": ["' + $AllowedApp + '"] }') -ContentType 'application/json'
+                        $DidRemediationChange = $true
                     }
                 }
             } catch {
@@ -79,6 +98,17 @@ function Invoke-CIPPStandardOauthConsent {
 
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('ManagePermissionGrantsForSelf.cipp-consent-policy')) {
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type PATCH -Body '{"permissionGrantPolicyIdsAssignedToDefaultUserRole":["ManagePermissionGrantsForSelf.cipp-consent-policy"]}' -ContentType 'application/json'
+                $DidRemediationChange = $true
+            }
+
+            if ($DidRemediationChange) {
+                try {
+                    $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
+                    $CompareIncludes = @(New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes')
+                    $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unable to refresh OauthConsent state/includes after remediation.' -sev Warning
+                }
             }
 
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode has been enabled.' -sev Info
@@ -98,12 +128,85 @@ function Invoke-CIPPStandardOauthConsent {
     }
 
     if ($Settings.report -eq $true) {
+        $ExpectedIncludeMap = @{
+            'delegated|00b41c95-dab0-4487-9791-b9d2c32c80f2' = @{
+                permissionType           = 'delegated'
+                permissionClassification = 'all'
+                clientApplicationIds     = @('00b41c95-dab0-4487-9791-b9d2c32c80f2')
+            }
+        }
+        foreach ($AllowedApp in $AllowedAppIdsForTenant) {
+            $ExpectedIncludeMap["delegated|$AllowedApp"] = @{
+                permissionType           = 'delegated'
+                permissionClassification = 'all'
+                clientApplicationIds     = @($AllowedApp)
+            }
+            $ExpectedIncludeMap["application|$AllowedApp"] = @{
+                permissionType           = 'application'
+                permissionClassification = 'all'
+                clientApplicationIds     = @($AllowedApp)
+            }
+        }
+
+        $CurrentIncludesForCompare = @(
+            $CompareIncludes | ForEach-Object {
+                $CurrentPermissionType = "$($_.permissionType)".ToLowerInvariant()
+                $CurrentClientApplicationIds = @($_.clientApplicationIds)
+
+                $IncludeInCurrentConfig = $false
+                foreach ($CurrentClientApplicationId in $CurrentClientApplicationIds) {
+                    if ($ExpectedIncludeMap.ContainsKey("$CurrentPermissionType|$CurrentClientApplicationId")) {
+                        $IncludeInCurrentConfig = $true
+                        break
+                    }
+                }
+
+                if ($IncludeInCurrentConfig) {
+                    @{
+                        permissionType           = $_.permissionType
+                        permissionClassification = $_.permissionClassification
+                        clientApplicationIds     = $CurrentClientApplicationIds
+                    }
+                }
+            }
+        )
+        $CurrentIncludesForCompare = @(
+            $CurrentIncludesForCompare | Sort-Object permissionType, @{ Expression = { ($_.clientApplicationIds -join ',') } }
+        )
+
+        $ExpectedIncludesForCompare = @(
+            @($ExpectedIncludeMap.Values) | Sort-Object permissionType, @{ Expression = { ($_.clientApplicationIds -join ',') } }
+        )
+
+        $IncludesAreConfigured = $true
+        foreach ($ExpectedInclude in $ExpectedIncludesForCompare) {
+            $ExpectedPermissionType = $ExpectedInclude.permissionType
+            $ExpectedClientApplicationIds = @($ExpectedInclude.clientApplicationIds)
+            $ExpectedClassification = $ExpectedInclude.permissionClassification
+
+            $MatchingEntry = $CurrentIncludesForCompare | Where-Object {
+                $_.permissionType -eq $ExpectedPermissionType -and
+                $_.permissionClassification -eq $ExpectedClassification -and
+                ((@($_.clientApplicationIds) | Sort-Object) -join ',') -eq (($ExpectedClientApplicationIds | Sort-Object) -join ',')
+            } | Select-Object -First 1
+
+            if (-not $MatchingEntry) {
+                $IncludesAreConfigured = $false
+                break
+            }
+        }
+
+        $StateIsCorrect = ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.cipp-consent-policy') -and $IncludesAreConfigured
+
         Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+
         $CurrentValue = @{
             permissionGrantPolicyIdsAssignedToDefaultUserRole = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
+            includes = $CurrentIncludesForCompare
         }
         $ExpectedValue = @{
             permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.cipp-consent-policy')
+            includes = $ExpectedIncludesForCompare
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
