@@ -1,4 +1,4 @@
-function Invoke-ListRooms {
+Function Invoke-ListRooms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,48 +13,7 @@ function Invoke-ListRooms {
 
     # I dont like that i had to change it to EXO commands, but the waiting time for the Rooms to sync to Graph is too long :(  -Bobby
     try {
-        if ($TenantFilter -eq 'AllTenants' -and !$RoomId) {
-            # AllTenants functionality
-            $Table = Get-CIPPTable -TableName CacheRooms
-            $PartitionKey = 'Room'
-            $Filter = "PartitionKey eq '$PartitionKey'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-60)
-            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
-            if ($RunningQueue) {
-                $Metadata = [PSCustomObject]@{
-                    QueueMessage = 'Still loading rooms for all tenants. Please check back in a few more minutes'
-                    QueueId      = $RunningQueue.RowKey
-                }
-            } elseif (!$Rows -and !$RunningQueue) {
-                $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Rooms - All Tenants' -Link '/email/resources/management/list-rooms?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
-                $Metadata = [PSCustomObject]@{
-                    QueueMessage = 'Loading rooms for all tenants. Please check back in a few minutes'
-                    QueueId      = $Queue.RowKey
-                }
-                $InputObject = [PSCustomObject]@{
-                    OrchestratorName = 'RoomsOrchestrator'
-                    QueueFunction    = @{
-                        FunctionName = 'GetTenants'
-                        QueueId      = $Queue.RowKey
-                        TenantParams = @{
-                            IncludeErrors = $true
-                        }
-                        DurableName  = 'ListRoomsAllTenants'
-                    }
-                    SkipLog          = $true
-                }
-                Start-CIPPOrchestrator -InputObject $InputObject | Out-Null
-            } else {
-                $Metadata = [PSCustomObject]@{
-                    QueueId = $RunningQueue.RowKey ?? $null
-                }
-                $GraphRequest = foreach ($policy in $Rows) {
-                    ($policy.Policy | ConvertFrom-Json)
-                }
-            }
-        } elseif ($RoomId) {
+        if ($RoomId) {
             # Get specific room mailbox
             $RoomMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{
                 Identity             = $RoomId
@@ -210,12 +169,8 @@ function Invoke-ListRooms {
         $GraphRequest = $ErrorMessage
     }
 
-    $Body = [PSCustomObject]@{
-        Results  = @($GraphRequest | Where-Object { $_.Id -ne $null } | Sort-Object displayName)
-        Metadata = $Metadata
-    }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Body
+            Body       = @($GraphRequest | Sort-Object displayName)
         })
 }
