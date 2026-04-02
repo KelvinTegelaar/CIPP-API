@@ -1,4 +1,4 @@
-Function Invoke-AddTenantAllowBlockListTemplate {
+function Invoke-AddTenantAllowBlockListTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -15,10 +15,10 @@ Function Invoke-AddTenantAllowBlockListTemplate {
     try {
         $GUID = (New-Guid).GUID
         $JSON = @{
-            entries    = $Request.body.entries
-            listType   = $Request.body.listType
-            listMethod = $Request.body.listMethod
-            notes      = $Request.body.notes
+            entries      = $Request.body.entries
+            listType     = $Request.body.listType
+            listMethod   = $Request.body.listMethod
+            notes        = $Request.body.notes
             NoExpiration = [bool]$Request.body.NoExpiration
             RemoveAfter  = [bool]$Request.body.RemoveAfter
             templateName = $Request.body.templateName
