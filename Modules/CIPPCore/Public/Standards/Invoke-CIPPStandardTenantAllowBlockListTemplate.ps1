@@ -12,7 +12,7 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     .NOTES
         CAT
             Templates
-        MULTIPLE
+        MULTI
             True
         DISABLEDFEATURES
             {"report":true,"warn":true,"remediate":false}
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
         EXECUTIVETEXT
             Deploys standardized tenant allow/block list entries across tenants. These templates ensure consistent email filtering rules are applied, managing which senders, URLs, file hashes, and IP addresses are allowed or blocked across the organization.
         ADDEDCOMPONENT
-            {"type":"autoComplete","name":"TemplateList","multiple":true,"label":"Select Tenant Allow/Block List Templates","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
+            {"type":"autoComplete","name":"TemplateList","multiple":false,"label":"Select Tenant Allow/Block List Template","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -38,10 +38,10 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     }
 
     $Table = Get-CippTable -tablename 'templates'
-    $TemplateList = @($Settings.TemplateList) | Where-Object { $_ -and $_.value }
+    $TemplateId = $Settings.TemplateList.value
 
-    $ResolvedTemplates = foreach ($Template in $TemplateList) {
-        $TemplateId = $Template.value
+    $ResolvedTemplates = @(foreach ($_ in @($TemplateId)) {
+        $TemplateId = $_
         $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$TemplateId'"
         $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
@@ -56,7 +56,7 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to parse Tenant Allow/Block List template $TemplateId. $ErrorMessage" -sev 'Error'
         }
-    }
+    })
 
     if ($Settings.remediate -eq $true) {
         foreach ($TemplateData in $ResolvedTemplates) {
