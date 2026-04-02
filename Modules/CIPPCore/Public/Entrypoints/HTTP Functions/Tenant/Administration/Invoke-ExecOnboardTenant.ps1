@@ -16,7 +16,7 @@ function Invoke-ExecOnboardTenant {
     if ($Id) {
         try {
             $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
-            $SafeId = ConvertTo-CIPPODataFilterValue -Value $Id -Type Guid
+            $SafeId = ConvertTo-CIPPODataFilterValue -Value $Id -Type String
             if ($Request.Body.Cancel -eq $true) {
                 $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId'"
                 if ($TenantOnboarding) {
