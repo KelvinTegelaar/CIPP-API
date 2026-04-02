@@ -41,22 +41,22 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     $TemplateId = $Settings.TemplateList.value
 
     $ResolvedTemplates = @(foreach ($_ in @($TemplateId)) {
-        $TemplateId = $_
-        $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$TemplateId'"
-        $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+            $TemplateId = $_
+            $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$TemplateId'"
+            $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
-        if (-not $TemplateEntity -or [string]::IsNullOrWhiteSpace($TemplateEntity.JSON)) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to find Tenant Allow/Block List template $TemplateId. Has it been deleted?" -sev 'Error'
-            continue
-        }
+            if (-not $TemplateEntity -or [string]::IsNullOrWhiteSpace($TemplateEntity.JSON)) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to find Tenant Allow/Block List template $TemplateId. Has it been deleted?" -sev 'Error'
+                continue
+            }
 
-        try {
-            $TemplateEntity.JSON | ConvertFrom-Json -Depth 10
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to parse Tenant Allow/Block List template $TemplateId. $ErrorMessage" -sev 'Error'
-        }
-    })
+            try {
+                $TemplateEntity.JSON | ConvertFrom-Json -Depth 10
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to parse Tenant Allow/Block List template $TemplateId. $ErrorMessage" -sev 'Error'
+            }
+        })
 
     if ($Settings.remediate -eq $true) {
         foreach ($TemplateData in $ResolvedTemplates) {
@@ -67,10 +67,10 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
                     tenantid  = $Tenant
                     cmdlet    = 'New-TenantAllowBlockListItems'
                     cmdParams = @{
-                        Entries                    = $Entries
-                        ListType                   = [string]$TemplateData.listType
-                        Notes                      = [string]$TemplateData.notes
-                        $TemplateData.listMethod   = [bool]$true
+                        Entries                  = $Entries
+                        ListType                 = [string]$TemplateData.listType
+                        Notes                    = [string]$TemplateData.notes
+                        $TemplateData.listMethod = [bool]$true
                     }
                 }
 
