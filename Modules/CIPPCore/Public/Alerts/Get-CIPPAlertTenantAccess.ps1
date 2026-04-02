@@ -63,20 +63,20 @@ function Get-CIPPAlertTenantAccess {
             if ($MissingRoles.Count -gt 0) {
                 $GraphMessage = "Graph connected but missing required GDAP roles: $($MissingRoles -join ', ')"
                 $Issues.Add([PSCustomObject]@{
-                    Issue        = 'MissingGDAPRoles'
-                    Message      = $GraphMessage
-                    MissingRoles = ($MissingRoles -join ', ')
-                    Tenant       = $TenantFilter
-                })
+                        Issue        = 'MissingGDAPRoles'
+                        Message      = $GraphMessage
+                        MissingRoles = ($MissingRoles -join ', ')
+                        Tenant       = $TenantFilter
+                    })
             }
         } catch {
             $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
             $GraphMessage = "Failed to connect to Graph API: $ErrorMessage"
             $Issues.Add([PSCustomObject]@{
-                Issue   = 'GraphFailure'
-                Message = $GraphMessage
-                Tenant  = $TenantFilter
-            })
+                    Issue   = 'GraphFailure'
+                    Message = $GraphMessage
+                    Tenant  = $TenantFilter
+                })
         }
 
         # Test Exchange Online connectivity
@@ -87,46 +87,46 @@ function Get-CIPPAlertTenantAccess {
         } catch {
             $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
             $Issues.Add([PSCustomObject]@{
-                Issue   = 'ExchangeFailure'
-                Message = "Failed to connect to Exchange Online: $ErrorMessage"
-                Tenant  = $TenantFilter
-            })
+                    Issue   = 'ExchangeFailure'
+                    Message = "Failed to connect to Exchange Online: $ErrorMessage"
+                    Tenant  = $TenantFilter
+                })
         }
 
         # Build alert data only if there are issues
         $AlertData = @()
         if (-not $GraphStatus -and -not $ExchangeStatus) {
             $AlertData = @([PSCustomObject]@{
-                Message        = "Tenant $TenantFilter is inaccessible. Graph API and Exchange Online connectivity both failed. This tenant may have removed GDAP permissions or requires consent refresh."
-                GraphStatus    = $false
-                ExchangeStatus = $false
-                Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
-                Tenant         = $TenantFilter
-            })
+                    Message        = "Tenant $TenantFilter is inaccessible. Graph API and Exchange Online connectivity both failed. This tenant may have removed GDAP permissions or requires consent refresh."
+                    GraphStatus    = $false
+                    ExchangeStatus = $false
+                    Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
+                    Tenant         = $TenantFilter
+                })
         } elseif (-not $GraphStatus) {
             $AlertData = @([PSCustomObject]@{
-                Message        = "Tenant $TenantFilter has lost Graph API access. $GraphMessage"
-                GraphStatus    = $false
-                ExchangeStatus = $ExchangeStatus
-                Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
-                Tenant         = $TenantFilter
-            })
+                    Message        = "Tenant $TenantFilter has lost Graph API access. $GraphMessage"
+                    GraphStatus    = $false
+                    ExchangeStatus = $ExchangeStatus
+                    Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
+                    Tenant         = $TenantFilter
+                })
         } elseif (-not $ExchangeStatus) {
             $AlertData = @([PSCustomObject]@{
-                Message        = "Tenant $TenantFilter has lost Exchange Online access. This may indicate missing Exchange Administrator GDAP role or removed consent."
-                GraphStatus    = $GraphStatus
-                ExchangeStatus = $false
-                Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
-                Tenant         = $TenantFilter
-            })
+                    Message        = "Tenant $TenantFilter has lost Exchange Online access. This may indicate missing Exchange Administrator GDAP role or removed consent."
+                    GraphStatus    = $GraphStatus
+                    ExchangeStatus = $false
+                    Issues         = ($Issues | ForEach-Object { $_.Message }) -join '; '
+                    Tenant         = $TenantFilter
+                })
         } elseif ($MissingRoles.Count -gt 0) {
             $AlertData = @([PSCustomObject]@{
-                Message        = "Tenant $TenantFilter is accessible but missing required GDAP roles: $($MissingRoles -join ', '). This may indicate a CIPP-SAM permission update is needed."
-                GraphStatus    = $GraphStatus
-                ExchangeStatus = $ExchangeStatus
-                MissingRoles   = ($MissingRoles -join ', ')
-                Tenant         = $TenantFilter
-            })
+                    Message        = "Tenant $TenantFilter is accessible but missing required GDAP roles: $($MissingRoles -join ', '). This may indicate a CIPP-SAM permission update is needed."
+                    GraphStatus    = $GraphStatus
+                    ExchangeStatus = $ExchangeStatus
+                    MissingRoles   = ($MissingRoles -join ', ')
+                    Tenant         = $TenantFilter
+                })
         }
 
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
