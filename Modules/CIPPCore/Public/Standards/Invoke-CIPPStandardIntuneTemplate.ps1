@@ -53,6 +53,8 @@ function Invoke-CIPPStandardIntuneTemplate {
         return $true
     }
 
+    $Template = Repair-CIPPIntuneTemplateNesting -Template $Template -Table $Table
+
     $rawJsonFromTemplate = $Template.RAWJson
     try {
         $reusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $Template -Tenant $Tenant -ErrorAction Stop

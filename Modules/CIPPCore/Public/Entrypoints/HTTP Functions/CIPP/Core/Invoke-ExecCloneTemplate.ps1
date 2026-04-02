@@ -16,7 +16,7 @@ function Invoke-ExecCloneTemplate {
     if ($GUID -and $Type) {
         $Table = Get-CIPPTable -tablename templates
         $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
-        $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+        $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
         $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeType' and RowKey eq '$SafeGUID'"
 
         if ($Template) {
