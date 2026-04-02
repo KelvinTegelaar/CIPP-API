@@ -37,7 +37,7 @@ function Get-CIPPDbItem {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
         if ($TenantFilter -ne 'allTenants') {
-            $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -ExpandProperty defaultDomainName
+            $Tenant = Get-Tenants -TenantFilter $TenantFilter
             if (-not $Tenant) {
                 throw "Tenant '$TenantFilter' not found"
             }
