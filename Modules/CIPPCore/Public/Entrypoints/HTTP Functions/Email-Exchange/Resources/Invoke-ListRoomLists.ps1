@@ -1,4 +1,4 @@
-Function Invoke-ListRoomLists {
+function Invoke-ListRoomLists {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,7 +14,53 @@ Function Invoke-ListRoomLists {
     $Owners = $Request.Query.owners
 
     try {
-        if ($GroupID) {
+        if ($TenantFilter -eq 'AllTenants' -and !$GroupID) {
+            # AllTenants functionality
+            $Table = Get-CIPPTable -TableName CacheRoomLists
+            $PartitionKey = 'RoomList'
+            $Filter = "PartitionKey eq '$PartitionKey'"
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-60)
+            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            if ($RunningQueue) {
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Still loading room lists for all tenants. Please check back in a few more minutes'
+                    QueueId      = $RunningQueue.RowKey
+                }
+            } elseif (!$Rows -and !$RunningQueue) {
+                $TenantList = Get-Tenants -IncludeErrors
+                $Queue = New-CippQueueEntry -Name 'Room Lists - All Tenants' -Link '/email/resources/management/room-lists?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Loading room lists for all tenants. Please check back in a few minutes'
+                    QueueId      = $Queue.RowKey
+                }
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'RoomListsOrchestrator'
+                    QueueFunction    = @{
+                        FunctionName = 'GetTenants'
+                        QueueId      = $Queue.RowKey
+                        TenantParams = @{
+                            IncludeErrors = $true
+                        }
+                        DurableName  = 'ListRoomListsAllTenants'
+                    }
+                    SkipLog          = $true
+                }
+                Start-CIPPOrchestrator -InputObject $InputObject | Out-Null
+            } else {
+                $Metadata = [PSCustomObject]@{
+                    QueueId = $RunningQueue.RowKey ?? $null
+                }
+                $RoomLists = foreach ($policy in $Rows) {
+                    ($policy.Policy | ConvertFrom-Json)
+                }
+            }
+            $StatusCode = [HttpStatusCode]::OK
+            $ResponseBody = [PSCustomObject]@{
+                Results  = @($RoomLists)
+                Metadata = $Metadata
+            }
+        } elseif ($GroupID) {
             # Get specific room list with detailed information
             $GroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -useSystemMailbox $true |
                 Select-Object -ExcludeProperty *data.type*
@@ -93,7 +139,10 @@ Function Invoke-ListRoomLists {
             $RoomLists = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{RecipientTypeDetails = 'RoomList'; ResultSize = 'Unlimited' } |
                 Select-Object Guid, DisplayName, PrimarySmtpAddress, Alias, Phone, Identity, Notes, Description, Id -ExcludeProperty *data.type*
             $StatusCode = [HttpStatusCode]::OK
-            $ResponseBody = @{ Results = @($RoomLists | Sort-Object DisplayName) }
+            $ResponseBody = [PSCustomObject]@{
+                Results  = @($RoomLists | Where-Object { $_.Id -ne $null } | Sort-Object DisplayName)
+                Metadata = $Metadata
+            }
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

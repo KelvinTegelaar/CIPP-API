@@ -16,7 +16,8 @@ function Invoke-RemoveStandardTemplate {
     $ID = $Request.Body.ID ?? $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'StandardsTemplateV2' and (RowKey eq '$ID' or OriginalEntityId eq '$ID' or OriginalEntityId eq guid'$ID')"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'StandardsTemplateV2' and (RowKey eq '$SafeID' or OriginalEntityId eq '$SafeID' or OriginalEntityId eq guid'$SafeID')"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($ClearRow.JSON) {
             $TemplateName = (ConvertFrom-Json -InputObject $ClearRow.JSON -ErrorAction SilentlyContinue).templateName

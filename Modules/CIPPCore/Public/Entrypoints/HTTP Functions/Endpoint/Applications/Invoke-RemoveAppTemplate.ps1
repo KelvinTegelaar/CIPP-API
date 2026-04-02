@@ -16,7 +16,8 @@ function Invoke-RemoveAppTemplate {
         if (!$ID) { throw 'No template ID provided' }
 
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$SafeID'"
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($Entity) {
             Remove-AzDataTableEntity @Table -Entity $Entity

@@ -26,7 +26,8 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
 
         # Get the specific template from Azure Table Storage
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Template) {

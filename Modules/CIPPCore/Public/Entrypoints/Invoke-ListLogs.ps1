@@ -21,8 +21,9 @@ function Invoke-ListLogs {
         }
     } elseif ($Request.Query.logentryid) {
         # Return single log entry by RowKey
-        $DateFilter = $Request.Query.DateFilter ?? (Get-Date -UFormat '%Y%m%d')
-        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $Request.Query.logentryid, $DateFilter
+        $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? (Get-Date -UFormat '%Y%m%d')) -Type Date
+        $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type Guid
+        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $SafeLogEntryId, $DateFilter
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting single log entry for RowKey: $($Request.Query.logentryid)"
 
@@ -89,8 +90,8 @@ function Invoke-ListLogs {
             $StandardFilter = $Request.Query.StandardTemplateId
             $ScheduledTaskFilter = $Request.Query.ScheduledTaskId
 
-            $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
-            $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
+            $StartDate = if ($Request.Query.StartDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.StartDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
+            $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
 
             if ($StartDate -and $EndDate) {
                 # Collect logs for date range

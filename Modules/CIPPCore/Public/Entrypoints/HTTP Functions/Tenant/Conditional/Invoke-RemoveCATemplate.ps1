@@ -16,7 +16,8 @@ Function Invoke-RemoveCATemplate {
     try {
         $Table = Get-CippTable -tablename 'templates'
 
-        $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Conditional Access Template with ID $ID"

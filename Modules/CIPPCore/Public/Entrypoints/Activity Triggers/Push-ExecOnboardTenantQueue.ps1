@@ -319,19 +319,21 @@ function Push-ExecOnboardTenantQueue {
                             })
                         $RetryEpoch = [int64](([datetime]::UtcNow.AddMinutes(15)) - (Get-Date '1/1/1970')).TotalSeconds
                         $RetryParams = [PSCustomObject]@{
-                            id                         = $Item.id
-                            Roles                      = $Item.Roles
-                            AutoMapRoles               = $Item.AutoMapRoles
-                            IgnoreMissingRoles         = $Item.IgnoreMissingRoles
-                            StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                            Item = [PSCustomObject]@{
+                                id                         = $Item.id
+                                Roles                      = $Item.Roles
+                                AutoMapRoles               = $Item.AutoMapRoles
+                                IgnoreMissingRoles         = $Item.IgnoreMissingRoles
+                                StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                            }
                         }
                         $RetryTask = [PSCustomObject]@{
-                            Name          = "Onboarding retry: $Id"
+                            Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
                             Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
                             Parameters    = $RetryParams
-                            TenantFilter  = 'AllTenants'
+                            TenantFilter  = $env:TenantID
                             Recurrence    = ''
-                            ScheduledTime = 0
+                            ScheduledTime = $RetryEpoch
                         }
                         $null = Add-CIPPScheduledTask -Task $RetryTask -Hidden $true -DesiredStartTime ([string]$RetryEpoch)
                         $RetryMessage = 'Rescheduled: GDAP relationship was activated {0:N1} minutes ago. Retrying in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
