@@ -181,14 +181,14 @@ function Send-CIPPScheduledTaskAlert {
                         tenant       = $TenantFilter
                         taskType     = $TaskType
                         task         = [PSCustomObject]@{
-                            id         = $TaskInfo.RowKey
-                            name       = $TaskInfo.Name
-                            command    = $TaskInfo.Command
-                            state      = $TaskInfo.TaskState
-                            reference  = $TaskInfo.Reference
-                            scheduled  = $TaskInfo.ScheduledTime
-                            executed   = $TaskInfo.ExecutedTime
-                            partition  = $TaskInfo.PartitionKey
+                            id        = $TaskInfo.RowKey
+                            name      = $TaskInfo.Name
+                            command   = $TaskInfo.Command
+                            state     = $TaskInfo.TaskState
+                            reference = $TaskInfo.Reference
+                            scheduled = $TaskInfo.ScheduledTime
+                            executed  = $TaskInfo.ExecutedTime
+                            partition = $TaskInfo.PartitionKey
                         }
                         results      = $Results
                         alertComment = $TaskInfo.AlertComment
