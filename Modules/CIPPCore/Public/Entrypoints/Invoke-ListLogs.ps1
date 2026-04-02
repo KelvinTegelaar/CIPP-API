@@ -22,7 +22,7 @@ function Invoke-ListLogs {
     } elseif ($Request.Query.logentryid) {
         # Return single log entry by RowKey
         $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? (Get-Date -UFormat '%Y%m%d')) -Type Date
-        $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type String
+        $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type Guid
         $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $SafeLogEntryId, $DateFilter
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting single log entry for RowKey: $($Request.Query.logentryid)"

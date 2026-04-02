@@ -23,7 +23,8 @@ Function Invoke-EditSafeLinksPolicyTemplate {
 
         # Check if template exists
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingTemplate) {
