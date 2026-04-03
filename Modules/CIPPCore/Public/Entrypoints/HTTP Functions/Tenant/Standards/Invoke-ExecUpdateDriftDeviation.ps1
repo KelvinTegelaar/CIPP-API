@@ -46,10 +46,28 @@ function Invoke-ExecUpdateDriftDeviation {
                         if ($Setting -like '*IntuneTemplate*') {
                             $Setting = 'IntuneTemplate'
                             $TemplateId = $Deviation.standardName.split('.') | Select-Object -Index 2
-                            $StandardTemplate = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object { $_.TemplateList.value -like "*$TemplateId*" }
-                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
-                            $StandardTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
-                            $Settings = $StandardTemplate
+                            $MatchedTemplate = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object { $_.TemplateList.value -like "*$TemplateId*" } | Select-Object -First 1
+                            if (-not $MatchedTemplate) {
+                                # Template may be inside a TemplateList-Tags bundle, expand it
+                                $BundleEntry = $StandardTemplate.standardSettings.IntuneTemplate | Where-Object {
+                                    $_.'TemplateList-Tags'.rawData.templates | Where-Object { $_.GUID -like "*$TemplateId*" }
+                                } | Select-Object -First 1
+                                if ($BundleEntry) {
+                                    $MatchedTemplate = $BundleEntry.PSObject.Copy()
+                                    $MatchedTemplate.PSObject.Properties.Remove('TemplateList-Tags')
+                                    $MatchedTemplate | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
+                                        label = $TemplateId
+                                        value = $TemplateId
+                                    }) -Force
+                                }
+                            }
+                            if (-not $MatchedTemplate) {
+                                Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find IntuneTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warn'
+                            } else {
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
+                                $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
+                                $Settings = $MatchedTemplate
+                            }
                         } elseif ($Setting -like '*ConditionalAccessTemplate*') {
                             $Setting = 'ConditionalAccessTemplate'
                             $TemplateId = $Deviation.standardName.split('.') | Select-Object -Index 2
@@ -91,7 +109,7 @@ function Invoke-ExecUpdateDriftDeviation {
                             }
                         }
                         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
-                        Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
+                        Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
 
                         if ($PersistentDeny) {
                             $PersistentTaskBody = @{
