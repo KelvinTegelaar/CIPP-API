@@ -23,7 +23,7 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
         EXECUTIVETEXT
             Deploys standardized tenant allow/block list entries across tenants. These templates ensure consistent email filtering rules are applied, managing which senders, URLs, file hashes, and IP addresses are allowed or blocked across the organization.
         ADDEDCOMPONENT
-            {"type":"autoComplete","name":"TemplateList","multiple":false,"label":"Select Tenant Allow/Block List Template","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
+            {"type":"autoComplete","name":"standards.TenantAllowBlockListTemplate.TemplateList","multiple":true,"label":"Select Tenant Allow/Block List Template","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -38,7 +38,7 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     }
 
     $Table = Get-CippTable -tablename 'templates'
-    $TemplateId = $Settings.TemplateList.value
+    $TemplateId = $Settings.TenantAllowBlockListTemplate.value
 
     $ResolvedTemplates = @(foreach ($_ in @($TemplateId)) {
             $TemplateId = $_
