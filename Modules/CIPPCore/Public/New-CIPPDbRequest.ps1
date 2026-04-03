@@ -43,8 +43,6 @@ function New-CIPPDbRequest {
             $Filter = "PartitionKey eq '{0}'" -f $SafeTenantFilter
         }
 
-        Write-Information "Filter: $Filter"
-
         $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         return ($Results.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)
