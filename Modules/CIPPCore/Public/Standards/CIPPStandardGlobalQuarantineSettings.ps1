@@ -22,7 +22,7 @@ function Invoke-CIPPStandardGlobalQuarantineSettings {
         IMPACT
             Low Impact
         ADDEDDATE
-            2025-09-07
+            2026-04-03
         POWERSHELLEQUIVALENT
             Set-QuarantinePolicy (GlobalQuarantinePolicy)
         RECOMMENDEDBY
