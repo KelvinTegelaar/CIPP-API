@@ -29,6 +29,7 @@ function Invoke-ExecUpdateDriftDeviation {
         } else {
             $Deviations = $Request.Body.deviations
             $Reason = $Request.Body.reason
+            $PersistentDeny = [bool]($Request.Body.persistentDeny)
             $Results = foreach ($Deviation in $Deviations) {
                 try {
                     $user = $request.headers.'x-ms-client-principal'
@@ -40,7 +41,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     }
                     Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
                     if ($Deviation.status -eq 'DeniedRemediate') {
-                        $Setting = $Deviation.standardName -replace 'standards.', ''
+                        $Setting = $Deviation.standardName -replace 'standards\.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
                         if ($Setting -like '*IntuneTemplate*') {
                             $Setting = 'IntuneTemplate'
@@ -91,6 +92,30 @@ function Invoke-ExecUpdateDriftDeviation {
                         }
                         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
                         Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled drift remediation task for $Setting" -Sev 'Info'
+
+                        if ($PersistentDeny) {
+                            $PersistentTaskBody = @{
+                                TenantFilter  = $TenantFilter
+                                Name          = "Persistent Drift Remediation: $Setting - $TenantFilter"
+                                Command       = @{
+                                    value = "Invoke-CIPPStandard$Setting"
+                                    label = "Invoke-CIPPStandard$Setting"
+                                }
+                                Parameters    = [pscustomobject]@{
+                                    Tenant   = $TenantFilter
+                                    Settings = $Settings
+                                }
+                                ScheduledTime = '0'
+                                Recurrence    = '12h'
+                                PostExecution = @{
+                                    Webhook = $false
+                                    Email   = $false
+                                    PSA     = $false
+                                }
+                            }
+                            Add-CIPPScheduledTask -Task $PersistentTaskBody -hidden $false
+                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled persistent drift remediation task (12h recurrence) for $Setting" -Sev 'Info'
+                        }
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
                         $Policy = $Deviation.receivedValue | ConvertFrom-Json -ErrorAction SilentlyContinue

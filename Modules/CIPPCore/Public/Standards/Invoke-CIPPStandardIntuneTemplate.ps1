@@ -53,6 +53,8 @@ function Invoke-CIPPStandardIntuneTemplate {
         return $true
     }
 
+    $Template = Repair-CIPPIntuneTemplateNesting -Template $Template -Table $Table
+
     $rawJsonFromTemplate = $Template.RAWJson
     try {
         $reusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $Template -Tenant $Tenant -ErrorAction Stop
@@ -145,6 +147,10 @@ function Invoke-CIPPStandardIntuneTemplate {
             }
 
             Set-CIPPIntunePolicy @PolicyParams
+            # Remediation succeeded — accept Graph return and update state so report reflects it
+            $CompareResult.compare = $null
+            $CompareResult.MatchFailed = $false
+            $CompareResult.AssignmentsMatch = $true
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($CompareResult.displayname), Error: $ErrorMessage" -sev 'Error'

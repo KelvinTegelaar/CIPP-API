@@ -1,4 +1,4 @@
-Function Invoke-RemoveSafeLinksPolicyTemplate {
+function Invoke-RemoveSafeLinksPolicyTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -13,7 +13,7 @@ Function Invoke-RemoveSafeLinksPolicyTemplate {
     $ID = $request.query.ID ?? $request.body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
         $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow

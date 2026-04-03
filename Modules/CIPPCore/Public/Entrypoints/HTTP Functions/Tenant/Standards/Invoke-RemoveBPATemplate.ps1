@@ -1,4 +1,4 @@
-Function Invoke-RemoveBPATemplate {
+function Invoke-RemoveBPATemplate {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,7 +16,7 @@ Function Invoke-RemoveBPATemplate {
     try {
         $Table = Get-CippTable -tablename 'templates'
 
-        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
         $Filter = "PartitionKey eq 'BPATemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
