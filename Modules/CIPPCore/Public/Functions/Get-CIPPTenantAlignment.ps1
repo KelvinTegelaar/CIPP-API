@@ -228,6 +228,22 @@ function Get-CIPPTenantAlignment {
                                 ReportingEnabled = $CAReportingEnabled
                             }
                         }
+
+                        if ($CATemplate.'TemplateList-Tags') {
+                            foreach ($Tag in $CATemplate.'TemplateList-Tags') {
+                                Write-Host "Processing CA Tag: $($Tag.value)"
+                                $CAActions = if ($CATemplate.action) { $CATemplate.action } else { @() }
+                                $CAReportingEnabled = ($CAActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+                                $TagTemplate = $TagTemplates | Where-Object -Property package -EQ $Tag.value
+                                $TagTemplate | ForEach-Object {
+                                    $TagStandardId = "standards.ConditionalAccessTemplate.$($_.GUID)"
+                                    [PSCustomObject]@{
+                                        StandardId       = $TagStandardId
+                                        ReportingEnabled = $CAReportingEnabled
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 # Handle QuarantineTemplate — each policy is keyed by hex-encoded display name
