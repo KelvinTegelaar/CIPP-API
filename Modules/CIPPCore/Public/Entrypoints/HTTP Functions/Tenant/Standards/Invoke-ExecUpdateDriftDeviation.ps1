@@ -9,7 +9,7 @@ function Invoke-ExecUpdateDriftDeviation {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $TenantFilter = $Request.Body.TenantFilter
@@ -25,7 +25,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     success = $true
                     result  = "All drift customizations removed for tenant $TenantFilter"
                 })
-            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed all drift customizations for tenant $TenantFilter" -Sev 'Info'
+            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Removed all drift customizations for tenant $TenantFilter" -Sev 'Info'
         } else {
             $Deviations = $Request.Body.deviations
             $Reason = $Request.Body.reason
@@ -39,7 +39,7 @@ function Invoke-ExecUpdateDriftDeviation {
                         success = $true
                         result  = $Result
                     }
-                    Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
+                    Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Updated drift deviation status for $($Deviation.standardName) to $($Deviation.status) with reason: $Reason" -Sev 'Info'
                     if ($Deviation.status -eq 'DeniedRemediate') {
                         $Setting = $Deviation.standardName -replace 'standards\.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
@@ -62,7 +62,7 @@ function Invoke-ExecUpdateDriftDeviation {
                                 }
                             }
                             if (-not $MatchedTemplate) {
-                                Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find IntuneTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warn'
+                                Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find IntuneTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warn'
                             } else {
                                 $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                                 $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
@@ -132,7 +132,7 @@ function Invoke-ExecUpdateDriftDeviation {
                                 }
                             }
                             Add-CIPPScheduledTask -Task $PersistentTaskBody -hidden $false
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Scheduled persistent drift remediation task (12h recurrence) for $Setting" -Sev 'Info'
+                            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Scheduled persistent drift remediation task (12h recurrence) for $Setting" -Sev 'Info'
                         }
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
@@ -148,10 +148,10 @@ function Invoke-ExecUpdateDriftDeviation {
                             Write-Host "Going to delete Policy with ID $($Policy.ID) Deviation Name is $($Deviation.standardName)"
                             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($URLName)/$($ID)" -type DELETE -tenant $TenantFilter
                             "Deleted Policy $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
+                            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
                         } else {
                             "could not find policy with ID $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warn'
+                            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warn'
                         }
 
 
@@ -162,7 +162,7 @@ function Invoke-ExecUpdateDriftDeviation {
                         success      = $false
                         error        = $_.Exception.Message
                     }
-                    Write-LogMessage -tenant $TenantFilter -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to update drift deviation for $($Deviation.standardName): $($_.Exception.Message)" -Sev 'Error'
+                    Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Failed to update drift deviation for $($Deviation.standardName): $($_.Exception.Message)" -Sev 'Error'
                 }
             }
         }
@@ -175,7 +175,7 @@ function Invoke-ExecUpdateDriftDeviation {
             })
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to update drift deviation: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -Headers $Request.Headers -API $APINAME -message "Failed to update drift deviation: $($_.Exception.Message)" -Sev 'Error'
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = @{error = $_.Exception.Message }

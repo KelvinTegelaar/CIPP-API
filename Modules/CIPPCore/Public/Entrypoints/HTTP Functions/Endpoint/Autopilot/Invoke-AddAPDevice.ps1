@@ -51,9 +51,36 @@ function Invoke-AddAPDevice {
         if ($NewStatus.status -ne 'finished') { throw 'Could not retrieve status of import - This job might still be running. Check the autopilot device list in 10 minutes for the latest status.' }
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
 
+        # Apply group tags from CSV if any devices have them
+        $DevicesWithGroupTags = @($rawDevices | Where-Object { $_.groupTag -and $_.groupTag.Trim() -ne '' })
+        $GroupTagResults = [System.Collections.Generic.List[string]]::new()
+        if ($DevicesWithGroupTags.Count -gt 0) {
+            $TenantFilter = $Request.Body.TenantFilter.value
+            try {
+                $AutopilotDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?$top=999' -tenantid $TenantFilter
+                foreach ($Device in $DevicesWithGroupTags) {
+                    try {
+                        $APDevice = $AutopilotDevices | Where-Object { $_.serialNumber -eq $Device.SerialNumber } | Select-Object -First 1
+                        if ($APDevice) {
+                            $body = @{ groupTag = $Device.groupTag } | ConvertTo-Json
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($APDevice.id)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
+                            $GroupTagResults.Add("Set group tag '$($Device.groupTag)' for device '$($Device.SerialNumber)'")
+                        } else {
+                            $GroupTagResults.Add("Could not find Autopilot device for serial '$($Device.SerialNumber)' to set group tag - device may still be syncing")
+                        }
+                    } catch {
+                        $GroupTagResults.Add("Failed to set group tag for device '$($Device.SerialNumber)': $($_.Exception.Message)")
+                    }
+                }
+            } catch {
+                $GroupTagResults.Add("Failed to retrieve Autopilot devices for group tag assignment: $($_.Exception.Message)")
+            }
+        }
+
         [PSCustomObject]@{
-            Status  = 'Import Job Completed'
-            Devices = @($NewStatus.devicesStatus)
+            Status         = 'Import Job Completed'
+            Devices        = @($NewStatus.devicesStatus)
+            GroupTagStatus = $GroupTagResults
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
