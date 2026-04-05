@@ -140,9 +140,13 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
         Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
     }
 
-    $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
-    Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
-    Write-Debug 'Cleared GitHub release notes cache to force refresh on version update.'
+    try {
+        $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
+        Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
+        Write-Debug 'Cleared GitHub release notes cache to force refresh on version update.'
+    } catch {
+        Write-Debug -Message 'Failed to clear GitHub release notes cache after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
+    }
 }
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
