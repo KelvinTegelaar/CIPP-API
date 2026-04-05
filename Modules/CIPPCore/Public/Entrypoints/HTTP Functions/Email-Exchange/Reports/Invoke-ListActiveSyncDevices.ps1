@@ -25,7 +25,8 @@ function Invoke-ListActiveSyncDevices {
         @{ Name = 'lastSyncAttemptTime'; Expression = { if ($_.LastSyncAttemptTime) { $_.LastSyncAttemptTime.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { '' } } },
         @{ Name = 'lastSuccessSync'; Expression = { if ($_.LastSuccessSync) { $_.LastSuccessSync.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { '' } } },
         @{ Name = 'deviceID'; Expression = { $_.DeviceId } },
-        @{ Name = 'identity'; Expression = { $_.Identity } }
+        @{ Name = 'identity'; Expression = { $_.Identity } },
+        @{ Name = 'Guid'; Expression = { $_.Guid } }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
