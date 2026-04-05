@@ -8,6 +8,7 @@ function Invoke-ListLogs {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Table = Get-CIPPTable
+    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
 
     $TemplatesTable = Get-CIPPTable -tablename 'templates'
     $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
@@ -21,7 +22,8 @@ function Invoke-ListLogs {
         }
     } elseif ($Request.Query.logentryid) {
         # Return single log entry by RowKey
-        $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? (Get-Date -UFormat '%Y%m%d')) -Type Date
+        $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+        $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? $LocalNow.ToString('yyyyMMdd')) -Type Date
         $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type Guid
         $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $SafeLogEntryId, $DateFilter
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
@@ -99,11 +101,11 @@ function Invoke-ListLogs {
             } elseif ($StartDate) {
                 $Filter = "PartitionKey eq '{0}'" -f $StartDate
             } else {
-                $Filter = "PartitionKey eq '{0}'" -f (Get-Date -UFormat '%Y%m%d')
+                $Filter = "PartitionKey eq '{0}'" -f [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
             }
         } else {
             $LogLevel = 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert'
-            $PartitionKey = Get-Date -UFormat '%Y%m%d'
+            $PartitionKey = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
             $username = '*'
             $TenantFilter = $null
             $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
