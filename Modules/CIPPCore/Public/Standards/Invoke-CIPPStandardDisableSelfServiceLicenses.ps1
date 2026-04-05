@@ -17,6 +17,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             Prevents employees from purchasing Microsoft 365 licenses independently, ensuring all software acquisitions go through proper procurement channels. This maintains budget control, prevents unauthorized spending, and ensures compliance with corporate licensing agreements.
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.DisableSelfServiceLicenses.Exclusions","label":"License Ids to exclude from this standard","required":false}
+            {"type":"switch","name":"standards.DisableSelfServiceLicenses.DisableTrials","label":"Disable starting trials on behalf of your organization"}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -51,7 +52,27 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         $exclusions = $settings.Exclusions -split (',')
     }
 
-    $CurrentValues = $selfServiceItems | Select-Object -Property productName, productId, policyValue
+    $CurrentValues = [System.Collections.Generic.List[PSCustomObject]]::new()
+    foreach ($Item in $selfServiceItems) {
+        $CurrentValues.Add([PSCustomObject]@{
+            productName = $Item.productName
+            productId   = $Item.productId
+            policyValue = $Item.policyValue
+        })
+    }
+
+    if ($Settings.DisableTrials) {
+        try {
+            $AutoClaimPolicy = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim'
+            $CurrentValues.Add([PSCustomObject]@{
+                productName = 'Trial Autoclaim'
+                productId   = 'autoclaim'
+                policyValue = $AutoClaimPolicy.policyValue
+            })
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy: $($_.Exception.Message)" -sev Error
+        }
+    }
 
     $ExpectedValues = [System.Collections.Generic.List[PSCustomObject]]::new()
 
@@ -69,6 +90,14 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             productName = $Item.productName
             productId   = $Item.productId
             policyValue = $desiredPolicyValue
+        })
+    }
+
+    if ($Settings.DisableTrials) {
+        $ExpectedValues.Add([PSCustomObject]@{
+            productName = 'Trial Autoclaim'
+            productId   = 'autoclaim'
+            policyValue = 'Disabled'
         })
     }
 
@@ -90,7 +119,12 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
                     $currentValue = if ($currentItem) { $currentItem.policyValue } else { "<unknown>" }
 
                     $body = @{ policyValue = $Item.policyValue } | ConvertTo-Json -Compress
-                    New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
+
+                    if ($Item.productId -eq 'autoclaim') {
+                        New-GraphPostRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim' -Body $body
+                    } else {
+                        New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
+                    }
 
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Changed Self Service status for product '$($Item.productName) - $($Item.productId)' from '$currentValue' to '$($Item.policyValue)'" -sev Info
                 } catch {
@@ -99,7 +133,27 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             }
         }
 
-        $CurrentValues = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items | Select-Object -Property productName, productId, policyValue
+        $CurrentValues = [System.Collections.Generic.List[PSCustomObject]]::new()
+        $refreshedItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
+        foreach ($Item in $refreshedItems) {
+            $CurrentValues.Add([PSCustomObject]@{
+                productName = $Item.productName
+                productId   = $Item.productId
+                policyValue = $Item.policyValue
+            })
+        }
+        if ($Settings.DisableTrials) {
+            try {
+                $AutoClaimPolicy = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim'
+                $CurrentValues.Add([PSCustomObject]@{
+                    productName = 'Trial Autoclaim'
+                    productId   = 'autoclaim'
+                    policyValue = $AutoClaimPolicy.policyValue
+                })
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy after remediation: $($_.Exception.Message)" -sev Error
+            }
+        }
     }
 
     if ($Settings.alert) {
