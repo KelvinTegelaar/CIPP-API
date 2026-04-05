@@ -44,7 +44,9 @@ function Write-LogMessage {
     if ($sev -eq 'Debug' -and $env:DebugMode -ne $true) {
         return
     }
-    $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
+    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+    $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+    $PartitionKey = $LocalNow.ToString('yyyyMMdd')
     $TableRow = @{
         'Tenant'       = [string]$tenant
         'API'          = [string]$API

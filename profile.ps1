@@ -156,6 +156,26 @@ if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:NonLocal
     Set-CIPPOffloadFunctionTriggers
 }
 
+$SwTimezone = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $TimeSettingsTable = Get-CIPPTable -tablename Config
+    $TimeSettings = Get-CIPPAzDataTableEntity @TimeSettingsTable -Filter "PartitionKey eq 'TimeSettings' and RowKey eq 'TimeSettings'"
+    if ($TimeSettings.Timezone) {
+        # Validate before storing
+        $null = [TimeZoneInfo]::FindSystemTimeZoneById($TimeSettings.Timezone)
+        $env:CIPP_TIMEZONE = $TimeSettings.Timezone
+        Write-Information "Timezone: $($TimeSettings.Timezone)"
+    } else {
+        $env:CIPP_TIMEZONE = 'UTC'
+        Write-Information 'Timezone: UTC (default)'
+    }
+} catch {
+    $env:CIPP_TIMEZONE = 'UTC'
+    Write-Warning "Failed to load timezone from config, defaulting to UTC: $($_.Exception.Message)"
+}
+$SwTimezone.Stop()
+$Timings['Timezone'] = $SwTimezone.Elapsed.TotalMilliseconds
+
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds
 
