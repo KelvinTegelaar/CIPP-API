@@ -187,34 +187,59 @@ function Test-CIPPAuditLogRules {
         }
 
         if (!$Lookups -or $NeedsRefresh) {
-            # Collect bulk data for users/groups/devices/applications
-            $Requests = @(
-                @{
-                    id     = 'users'
-                    url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
-                    method = 'GET'
+            # Try CippReportingDB first (pre-populated by timer, same pattern as Add-CIPPApplicationPermission)
+            Write-Information "Checking CippReportingDB for directory data for tenant $TenantFilter"
+            try {
+                $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users')
+                $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+            } catch {
+                Write-Information "CippReportingDB query failed for ${TenantFilter}: $($_.Exception.Message)"
+                $Users = @()
+                $ServicePrincipals = @()
+            }
+
+            if (!$Users -or !$ServicePrincipals) {
+                # DB cache is empty or unavailable, fall back to Graph bulk request
+                Write-Information "CippReportingDB has no data for $TenantFilter, falling back to Graph bulk request"
+                $Requests = @(
+                    @{
+                        id     = 'users'
+                        url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'groups'
+                        url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'devices'
+                        url    = '/devices?$select=id,displayName,deviceId&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'servicePrincipals'
+                        url    = '/servicePrincipals?$select=id,displayName&$top=999'
+                        method = 'GET'
+                    }
+                )
+                $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
+                $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
+                $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
+                $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
+                $Response = $null
+            } else {
+                try {
+                    $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups')
+                    $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices')
+                } catch {
+                    Write-Information "CippReportingDB Groups/Devices query failed for ${TenantFilter}: $($_.Exception.Message)"
+                    $Groups = @()
+                    $Devices = @()
                 }
-                @{
-                    id     = 'groups'
-                    url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
-                    method = 'GET'
-                }
-                @{
-                    id     = 'devices'
-                    url    = '/devices?$select=id,displayName,deviceId&$top=999'
-                    method = 'GET'
-                }
-                @{
-                    id     = 'servicePrincipals'
-                    url    = '/servicePrincipals?$select=id,displayName&$top=999'
-                    method = 'GET'
-                }
-            )
-            $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
-            $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
-            $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
-            $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-            $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
+                Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
+            }
 
             # Build hashtables for O(1) GUID lookups
             Write-Information "Building hashtable lookups for tenant $TenantFilter"
@@ -342,17 +367,28 @@ function Test-CIPPAuditLogRules {
             }
         }
 
-        # partner users
-        $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
-
-        # Build partner user hashtable
-        $PartnerUserLookup = @{}
-        foreach ($PartnerUser in $PartnerUsers) {
-            if (![string]::IsNullOrEmpty($PartnerUser.id)) {
-                $PartnerUserLookup[$PartnerUser.id] = $PartnerUser
+        # Partner users - cache in cacheauditloglookups (PartitionKey '_partner') to avoid a fresh Graph fetch every invocation
+        $PartnerUsersCache = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '_partner' and RowKey eq 'users' and Timestamp gt datetime'$1dayago'"
+        if ($PartnerUsersCache -and $PartnerUsersCache.Format -eq 'hashtable') {
+            Write-Information 'Loading partner user hashtable from cache'
+            $PartnerUserLookup = ($PartnerUsersCache.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+        } else {
+            $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
+            $PartnerUserLookup = @{}
+            foreach ($PartnerUser in $PartnerUsers) {
+                if (![string]::IsNullOrEmpty($PartnerUser.id)) {
+                    $PartnerUserLookup[$PartnerUser.id] = $PartnerUser
+                }
             }
+            Add-CIPPAzDataTableEntity @Table -Entity @{
+                PartitionKey = '_partner'
+                RowKey       = 'users'
+                Data         = [string]($PartnerUserLookup | ConvertTo-Json -Compress)
+                Format       = 'hashtable'
+            } -Force
+            $PartnerUsers = $null
         }
-        Write-Information "Built partner user hashtable: $($PartnerUserLookup.Count) partner users"
+        Write-Information "Partner user hashtable: $($PartnerUserLookup.Count) partner users"
 
         Write-Warning '## Audit Log Configuration ##'
         Write-Information ($Configuration | ConvertTo-Json -Depth 10)
