@@ -1,9 +1,6 @@
 name: Deploy CIPP API
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:
