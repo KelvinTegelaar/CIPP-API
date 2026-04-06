@@ -1,0 +1,56 @@
+name: Sync upstream CIPP-API
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+env:
+  ENABLE_EMAIL_NOTIFICATION: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          git remote add upstream https://github.com/CyberDrain/CIPP-API.git
+          git fetch upstream
+          NEW_COMMITS=$(git rev-list HEAD..upstream/main --count)
+          echo "new_commits=$NEW_COMMITS" >> $GITHUB_OUTPUT
+
+      - name: Create sync branch
+        if: steps.check.outputs.new_commits != '0'
+        run: |
+          BRANCH="upstream-sync/$(date +%Y-%m-%d)"
+          git checkout -b "$BRANCH"
+          git merge upstream/main --ff-only
+          git push origin "$BRANCH"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Send email notification
+        if: steps.check.outputs.new_commits != '0' && env.ENABLE_EMAIL_NOTIFICATION == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          to: dereki@venture.ca,jonathan.smith@venture.ca
+          from: ${{ secrets.SMTP_USERNAME }}
+          subject: "CIPP-API update available — ${{ env.BRANCH }}"
+          body: |
+            A new upstream update is available for your CIPP-API fork.
+
+            Branch: ${{ env.BRANCH }}
+            New commits: ${{ steps.check.outputs.new_commits }}
+
+            Review the changes and merge when ready:
+            https://github.com/${{ github.repository }}/compare/main...${{ env.BRANCH }}
