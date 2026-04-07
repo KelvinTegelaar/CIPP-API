@@ -8,7 +8,8 @@ function Set-CIPPDefenderAVPolicy {
         [string]$TenantFilter,
         $PolicySettings,
         $Headers,
-        [string]$APIName
+        [string]$APIName,
+        [switch]$TemplateOnly
     )
 
     # Builds a choice-type setting entry
@@ -157,19 +158,23 @@ function Set-CIPPDefenderAVPolicy {
             })
     }
 
+    $PolBodyObj = @{
+        name              = 'Default AV Policy'
+        description       = ''
+        platforms         = 'windows10'
+        technologies      = 'mdm,microsoftSense'
+        roleScopeTagIds   = @('0')
+        templateReference = @{ templateId = '804339ad-1553-4478-a742-138fb5807418_1' }
+        settings          = @($Settings)
+    }
+
+    if ($TemplateOnly) { return $PolBodyObj }
+
     $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter
     if ('Default AV Policy' -in $CheckExisting.Name) {
         "$($TenantFilter): AV Policy already exists. Skipping"
     } else {
-        $PolBody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
-            name              = 'Default AV Policy'
-            description       = ''
-            platforms         = 'windows10'
-            technologies      = 'mdm,microsoftSense'
-            roleScopeTagIds   = @('0')
-            templateReference = @{ templateId = '804339ad-1553-4478-a742-138fb5807418_1' }
-            settings          = @($Settings)
-        }
+        $PolBody = ConvertTo-Json -Depth 10 -Compress -InputObject $PolBodyObj
 
         $PolicyRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter -type POST -body $PolBody
         if ($PolicySettings.AssignTo -ne 'None') {
