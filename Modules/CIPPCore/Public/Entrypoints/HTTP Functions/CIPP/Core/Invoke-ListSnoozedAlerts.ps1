@@ -43,7 +43,6 @@ function Invoke-ListSnoozedAlerts {
                     SnoozedBy      = $_.SnoozedBy
                     SnoozedAt      = $_.SnoozedAt
                     SnoozeUntil    = $_.SnoozeUntil
-                    IsForever      = $IsForever
                     IsExpired      = $IsExpired
                     RemainingDays  = $RemainingDays
                     Status         = if ($IsForever) { 'Forever' } elseif ($IsExpired) { 'Expired' } else { 'Active' }

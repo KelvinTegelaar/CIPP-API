@@ -22,16 +22,16 @@ function Invoke-ExecSnoozeAlert {
 
         if ([string]::IsNullOrWhiteSpace($CmdletName) -or [string]::IsNullOrWhiteSpace($TenantFilter) -or $null -eq $AlertItem) {
             return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = @{ Results = 'CmdletName, TenantFilter, and AlertItem are required.' }
-            })
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = 'CmdletName, TenantFilter, and AlertItem are required.' }
+                })
         }
 
         if ($Duration -notin @(7, 14, 30, -1)) {
             return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = @{ Results = 'Duration must be 7, 14, 30, or -1 (forever).' }
-            })
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = 'Duration must be 7, 14, 30, or -1 (forever).' }
+                })
         }
 
         # Compute content hash for this alert item
@@ -67,20 +67,20 @@ function Invoke-ExecSnoozeAlert {
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
 
         return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{
-                Results      = $Result
-                ContentHash  = $HashResult.ContentHash
-                SnoozeUntil  = $SnoozeUntil
-                SnoozedBy    = $SnoozedBy
-            }
-        })
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @{
+                    Results     = $Result
+                    ContentHash = $HashResult.ContentHash
+                    SnoozeUntil = $SnoozeUntil
+                    SnoozedBy   = $SnoozedBy
+                }
+            })
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to snooze alert: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter
         return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::InternalServerError
-            Body       = @{ Results = "Failed to snooze alert: $($ErrorMessage.NormalizedError)" }
-        })
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = @{ Results = "Failed to snooze alert: $($ErrorMessage.NormalizedError)" }
+            })
     }
 }
