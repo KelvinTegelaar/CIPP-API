@@ -64,7 +64,6 @@ function Invoke-CippTestCopilotReady009 {
             $Result = "Only **$MediumOrAbove of $Total licensed users ($ReadyPercent%)** score Medium or above on Copilot readiness signals — below the $AdoptionThresholdPercent% threshold.`n`n"
             $Result += "**$LowCount users** have low M365 engagement (≤2 of 6 signals). Copilot delivers the most value where users are already active across Teams, Outlook, and Office apps.`n`n"
             $Result += "Consider running an M365 adoption campaign — focused on Teams meetings, Teams chat, Outlook, and OneDrive/SharePoint file usage — before or alongside a Copilot rollout.`n`n"
-            $Result += 'See test CopilotReady008 for a full breakdown of users by tier.'
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady009' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Majority of users are Copilot-ready (Medium or above)' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'
