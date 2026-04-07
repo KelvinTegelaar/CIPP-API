@@ -28,10 +28,13 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             {"type":"textField","name":"standards.DeployCheckChromeExtension.webhookUrl","label":"Webhook URL","placeholder":"https://webhook.example.com/endpoint","required":false}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Webhook Events","name":"standards.DeployCheckChromeExtension.webhookEvents","placeholder":"e.g. pageBlocked, pageAllowed"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"URL Allowlist","name":"standards.DeployCheckChromeExtension.urlAllowlist","placeholder":"e.g. https://example.com/*"}
+            {"type":"switch","name":"standards.DeployCheckChromeExtension.domainSquattingEnabled","label":"Enable domain squatting detection","defaultValue":true}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.companyName","label":"Company Name","placeholder":"YOUR-COMPANY","required":false}
-            {"type":"textField","name":"standards.DeployCheckChromeExtension.companyURL","label":"Company URL","placeholder":"https://yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.productName","label":"Product Name","placeholder":"YOUR-PRODUCT-NAME","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportEmail","label":"Support Email","placeholder":"support@yourcompany.com","required":false}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.supportUrl","label":"Support URL","placeholder":"https://support.yourcompany.com","required":false}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.privacyPolicyUrl","label":"Privacy Policy URL","placeholder":"https://yourcompany.com/privacy","required":false}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.aboutUrl","label":"About URL","placeholder":"https://yourcompany.com/about","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.primaryColor","label":"Primary Color","placeholder":"#F77F00","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.logoUrl","label":"Logo URL","placeholder":"https://yourcompany.com/logo.png","required":false}
             {"name":"AssignTo","label":"Who should this app be assigned to?","type":"radio","options":[{"label":"Do not assign","value":"On"},{"label":"Assign to all users","value":"allLicensedUsers"},{"label":"Assign to all devices","value":"AllDevices"},{"label":"Assign to all users and devices","value":"AllDevicesAndUsers"},{"label":"Assign to Custom Group","value":"customGroup"}]}
@@ -90,10 +93,13 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     $WebhookUrl = $Settings.webhookUrl ?? ''
     $WebhookEvents = @($Settings.webhookEvents | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ })
     $UrlAllowlist = @($Settings.urlAllowlist | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ })
+    $DomainSquattingEnabled = [int][bool]($Settings.domainSquattingEnabled ?? $true)
     $CompanyName = $Settings.companyName ?? ''
-    $CompanyURL = $Settings.companyURL ?? ''
     $ProductName = $Settings.productName ?? ''
     $SupportEmail = $Settings.supportEmail ?? ''
+    $SupportUrl = $Settings.supportUrl ?? ''
+    $PrivacyPolicyUrl = $Settings.privacyPolicyUrl ?? ''
+    $AboutUrl = $Settings.aboutUrl ?? ''
     $PrimaryColor = if ($Settings.primaryColor) { $Settings.primaryColor } else { '#F77F00' }
     $LogoUrl = $Settings.logoUrl ?? ''
 
@@ -140,13 +146,21 @@ foreach (`$b in `$browsers) {
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'updateInterval'       -PropertyType DWord  -Value $UpdateInterval       -Force | Out-Null
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'enableDebugLogging'   -PropertyType DWord  -Value $EnableDebugLogging   -Force | Out-Null
 
+    # Managed storage - domainSquatting subkey
+    `$domainSquattingKey = "`$(`$b.ManagedStorageKey)\domainSquatting"
+    if (!(Test-Path `$domainSquattingKey)) { New-Item -Path `$domainSquattingKey -Force | Out-Null }
+    New-ItemProperty -Path `$domainSquattingKey -Name 'enabled' -PropertyType DWord -Value $DomainSquattingEnabled -Force | Out-Null
+
     # Managed storage - customBranding subkey
     `$brandingKey = "`$(`$b.ManagedStorageKey)\customBranding"
     if (!(Test-Path `$brandingKey)) { New-Item -Path `$brandingKey -Force | Out-Null }
     New-ItemProperty -Path `$brandingKey -Name 'companyName'   -PropertyType String -Value '$($CompanyName -replace "'", "''")'   -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'companyURL'    -PropertyType String -Value '$($CompanyURL -replace "'", "''")'    -Force | Out-Null
+
     New-ItemProperty -Path `$brandingKey -Name 'productName'   -PropertyType String -Value '$($ProductName -replace "'", "''")'   -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'supportEmail'  -PropertyType String -Value '$($SupportEmail -replace "'", "''")'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'supportEmail'  -PropertyType String -Value '$($SupportEmail -replace "'", "''")' -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'supportUrl'    -PropertyType String -Value '$($SupportUrl -replace "'", "''")'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'privacyPolicyUrl' -PropertyType String -Value '$($PrivacyPolicyUrl -replace "'", "''")'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'aboutUrl'      -PropertyType String -Value '$($AboutUrl -replace "'", "''")'  -Force | Out-Null
     New-ItemProperty -Path `$brandingKey -Name 'primaryColor'  -PropertyType String -Value '$PrimaryColor'  -Force | Out-Null
     New-ItemProperty -Path `$brandingKey -Name 'logoUrl'       -PropertyType String -Value '$($LogoUrl -replace "'", "''")'       -Force | Out-Null
 
@@ -251,13 +265,21 @@ foreach (`$key in @(`$chromeKey, `$edgeKey)) {
     if (!(Test-RegValue `$key 'cippTenantId'   '$CippTenantId'))   { exit 1 }
     if (!(Test-RegValue `$key 'customRulesUrl' '$CustomRulesUrl')) { exit 1 }
 
+    # domainSquatting subkey
+    `$domainSquattingKey = "`$key\domainSquatting"
+    if (!(Test-Path `$domainSquattingKey)) { exit 1 }
+    if (!(Test-RegValue `$domainSquattingKey 'enabled' $DomainSquattingEnabled)) { exit 1 }
+
     # customBranding subkey
     `$brandingKey = "`$key\customBranding"
     if (!(Test-Path `$brandingKey)) { exit 1 }
     if (!(Test-RegValue `$brandingKey 'companyName'  '$($CompanyName -replace "'", "''")'))  { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'companyURL'   '$($CompanyURL -replace "'", "''")'))   { exit 1 }
+
     if (!(Test-RegValue `$brandingKey 'productName'  '$($ProductName -replace "'", "''")'))  { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'supportEmail' '$($SupportEmail -replace "'", "''")')) { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'supportEmail'    '$($SupportEmail -replace "'", "''")'))    { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'supportUrl'       '$($SupportUrl -replace "'", "''")'))       { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'privacyPolicyUrl' '$($PrivacyPolicyUrl -replace "'", "''")')) { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'aboutUrl'         '$($AboutUrl -replace "'", "''")'))         { exit 1 }
     if (!(Test-RegValue `$brandingKey 'primaryColor' '$PrimaryColor')) { exit 1 }
     if (!(Test-RegValue `$brandingKey 'logoUrl'      '$($LogoUrl -replace "'", "''")'))      { exit 1 }
 
@@ -313,6 +335,16 @@ exit 0
 "@
 
     ##########################################################################
+    # Compute a settings fingerprint from the install script so we can skip
+    # redeploy when nothing has changed.
+    ##########################################################################
+    $Sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $SettingsHash = ([System.BitConverter]::ToString(
+            $Sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($InstallScript))
+        ) -replace '-', '').Substring(0, 16)
+    $AppDescription = "Deploys and configures the Check by CyberDrain phishing protection extension for Chrome and Edge browsers. Managed by CIPP. [cfg:$SettingsHash]"
+
+    ##########################################################################
     # Legacy OMA-URI policy cleanup
     ##########################################################################
     $LegacyPolicyNames = @(
@@ -325,7 +357,7 @@ exit 0
         # Check for existing Win32 app
         ##########################################################################
         $Baseuri = 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps'
-        $ExistingApps = New-GraphGetRequest -Uri "$Baseuri`?`$filter=displayName eq '$AppDisplayName'&`$select=id,displayName" -tenantid $Tenant | Where-Object {
+        $ExistingApps = New-GraphGetRequest -Uri "$Baseuri`?`$filter=displayName eq '$AppDisplayName'&`$select=id,displayName,description" -tenantid $Tenant | Where-Object {
             $_.'@odata.type' -eq '#microsoft.graph.win32LobApp'
         }
         $AppExists = ($null -ne $ExistingApps -and @($ExistingApps).Count -gt 0)
@@ -358,9 +390,20 @@ exit 0
             }
 
             if ($AppExists) {
-                # App exists — delete and recreate to pick up any script changes
-                foreach ($ExistingApp in @($ExistingApps)) {
-                    $null = New-GraphPostRequest -Uri "$Baseuri/$($ExistingApp.id)" -Type DELETE -tenantid $Tenant
+                # Check if the settings hash matches — skip redeploy if nothing changed
+                $ExistingHash = $null
+                $ExistingApp = @($ExistingApps)[0]
+                if ($ExistingApp.description -match '\[cfg:([0-9A-Fa-f]{16})\]') {
+                    $ExistingHash = $Matches[1]
+                }
+
+                if ($ExistingHash -eq $SettingsHash) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "$AppDisplayName settings unchanged — skipping redeploy" -sev Info
+                    return
+                }
+
+                foreach ($App in @($ExistingApps)) {
+                    $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed existing $AppDisplayName app to redeploy with updated settings" -sev Info
                 }
                 Start-Sleep -Seconds 2
@@ -369,7 +412,7 @@ exit 0
             # Deploy the Win32 script app
             $AppProperties = [PSCustomObject]@{
                 displayName           = $AppDisplayName
-                description           = 'Deploys and configures the Check by CyberDrain phishing protection extension for Chrome and Edge browsers. Managed by CIPP.'
+                description           = $AppDescription
                 publisher             = 'CIPP'
                 installScript         = $InstallScript
                 uninstallScript       = $UninstallScript
