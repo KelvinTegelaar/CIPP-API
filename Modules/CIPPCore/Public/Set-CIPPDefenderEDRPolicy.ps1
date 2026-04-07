@@ -8,7 +8,8 @@ function Set-CIPPDefenderEDRPolicy {
         [string]$TenantFilter,
         $EDR,
         $Headers,
-        [string]$APIName
+        [string]$APIName,
+        [switch]$TemplateOnly
     )
 
     $EDRSettings = [System.Collections.Generic.List[object]]::new()
@@ -57,7 +58,7 @@ function Set-CIPPDefenderEDRPolicy {
     }
 
     if (($EDRSettings | Measure-Object).Count -gt 0) {
-        $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+        $EDRBodyObj = @{
             name              = 'EDR Configuration'
             description       = ''
             platforms         = 'windows10'
@@ -66,6 +67,8 @@ function Set-CIPPDefenderEDRPolicy {
             templateReference = @{templateId = '0385b795-0f2f-44ac-8602-9f65bf6adede_1' }
             settings          = @($EDRSettings)
         }
+        if ($TemplateOnly) { return $EDRBodyObj }
+        $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject $EDRBodyObj
         Write-Host ($EDRbody)
         $CheckExistingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter | Where-Object -Property Name -EQ 'EDR Configuration'
         if ($CheckExistingEDR) {

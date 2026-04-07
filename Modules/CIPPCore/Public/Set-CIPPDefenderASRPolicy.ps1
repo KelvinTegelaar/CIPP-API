@@ -8,7 +8,8 @@ function Set-CIPPDefenderASRPolicy {
         [string]$TenantFilter,
         $ASR,
         $Headers,
-        [string]$APIName
+        [string]$APIName,
+        [switch]$TemplateOnly
     )
 
     # Fallback to block mode
@@ -52,7 +53,7 @@ function Set-CIPPDefenderASRPolicy {
         }
     }
 
-    $ASRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+    $ASRBodyObj = @{
         name              = 'ASR Default rules'
         description       = ''
         platforms         = 'windows10'
@@ -70,6 +71,9 @@ function Set-CIPPDefenderASRPolicy {
             })
     }
 
+    if ($TemplateOnly) { return $ASRBodyObj }
+
+    $ASRbody = ConvertTo-Json -Depth 15 -Compress -InputObject $ASRBodyObj
     $CheckExistingASR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter
     if ('ASR Default rules' -in $CheckExistingASR.Name) {
         "$($TenantFilter): ASR Policy already exists. Skipping"

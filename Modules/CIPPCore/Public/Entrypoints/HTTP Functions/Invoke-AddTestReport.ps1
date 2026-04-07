@@ -18,6 +18,9 @@ function Invoke-AddTestReport {
         if ([string]::IsNullOrEmpty($Body.name)) {
             throw 'Report name is required'
         }
+        if ($Body.name.Length -gt 256) {
+            throw 'Report name must be 256 characters or fewer'
+        }
 
         $IsUpdate = -not [string]::IsNullOrWhiteSpace([string]$Body.ReportId)
         $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
