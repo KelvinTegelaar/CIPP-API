@@ -22,6 +22,9 @@ function Invoke-ExecReportBuilderTemplate {
                 if ([string]::IsNullOrEmpty($Body.Name)) {
                     throw 'Template name is required'
                 }
+                if ($Body.Name.Length -gt 256) {
+                    throw 'Template name must be 256 characters or fewer'
+                }
 
                 $GUID = if ($Body.GUID) { $Body.GUID } else { (New-Guid).GUID }
                 $JSON = ConvertTo-Json -InputObject @{
