@@ -1,4 +1,4 @@
-﻿#Region './Private/Get-DomainMacros.ps1' -1
+#Region './Private/Get-DomainMacros.ps1' -1
 
 function Get-DomainMacros {
     [CmdletBinding()]
@@ -1730,7 +1730,15 @@ function Read-SpfRecord {
 
     # Look for expected include record and report pass or fail
     if ($ExpectedInclude -ne '') {
-        if ($RecordList.Domain -notcontains $ExpectedInclude) {
+        $SpfMatch = $SpfResults.MailProvider.SpfMatch
+        $RegexMatchedDomain = if ($SpfMatch) {
+            $RecordList.Domain | Where-Object { $_ -match $SpfMatch } | Select-Object -First 1
+        }
+
+        if ($RegexMatchedDomain) {
+            $ValidationPasses.Add('The expected mail provider entry is part of the record.') | Out-Null
+        }
+        elseif ($RecordList.Domain -notcontains $ExpectedInclude) {
             $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude -Level ExpectedInclude
             $ExpectedIPCount = $ExpectedIncludeSpf.IPAddresses | Measure-Object | Select-Object -ExpandProperty Count
             $FoundIPCount = Compare-Object $IPAddresses $ExpectedIncludeSpf.IPAddresses -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
