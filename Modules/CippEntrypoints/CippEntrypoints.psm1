@@ -230,10 +230,6 @@ function Receive-CippOrchestrationTrigger {
             BackoffCoefficient  = 2
         }
 
-        if ($env:WEBSITE_SKU -match '^Premium') {
-            $OrchestratorInput | Add-Member -MemberType NoteProperty -Name DurableMode -Value 'FanOut' -Force
-        }
-
         switch ($OrchestratorInput.DurableMode) {
             'FanOut' {
                 $DurableMode = 'FanOut'

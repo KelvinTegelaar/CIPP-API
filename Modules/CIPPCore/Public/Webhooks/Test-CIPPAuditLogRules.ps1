@@ -434,7 +434,7 @@ function Test-CIPPAuditLogRules {
                     Add-CIPPGuidMappings -DataObject $RootProperties -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup
 
                     if ($Data.ExtendedProperties) {
-                        $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress -Depth 10)
                         $Data.ExtendedProperties | ForEach-Object {
                             if ($_.Value -in $ExtendedPropertiesIgnoreList) {
                                 #write-warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation):$($_.Value) - $($TenantFilter)"
@@ -444,15 +444,15 @@ function Test-CIPPAuditLogRules {
                         }
                     }
                     if ($Data.DeviceProperties) {
-                        $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress -Depth 10)
                         $Data.DeviceProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.parameters) {
-                        $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress)
+                        $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress -Depth 10)
                         $Data.parameters | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.ModifiedProperties) {
-                        $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress -Depth 10)
                         try {
                             $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
                         } catch {
@@ -530,11 +530,11 @@ function Test-CIPPAuditLogRules {
                             $Data.CIPPBadRepIP = $Proxy
                             $Data.CIPPHostedIP = $hosting
                             $Data.CIPPIPDetected = $IP
-                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress)
+                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress -Depth 10)
                             $HasLocationData = $true
                         }
                     }
-                    $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress)
+                    $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress -Depth 10)
                     $Data | Select-Object *,
                     @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
                 } catch {
