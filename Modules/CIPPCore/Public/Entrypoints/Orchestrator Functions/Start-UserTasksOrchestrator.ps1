@@ -61,6 +61,17 @@ function Start-UserTasksOrchestrator {
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 if (!$task.Parameters) { $task.Parameters = @{} }
 
+                if ($task.Command -in (Get-CIPPSchedulerBlockedCommands)) {
+                    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Blocked execution of restricted command '$($task.Command)' in task $($task.Name)" -Sev 'Warning'
+                    $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "Task blocked: '$($task.Command)' is not permitted to run as a scheduled task."
+                        TaskState    = 'Failed'
+                    }
+                    continue
+                }
+
                 # Cache Get-Command result to avoid repeated expensive reflection calls
                 $CommandInfo = Get-Command $task.Command
                 $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
