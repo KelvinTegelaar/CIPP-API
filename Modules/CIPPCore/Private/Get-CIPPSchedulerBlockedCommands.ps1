@@ -17,6 +17,7 @@ function Get-CIPPSchedulerBlockedCommands {
         'Get-ClassicAPIToken'
         'Get-CIPPAzIdentityToken'
         'Get-CIPPAuthentication'
+        'New-CIPPAzServiceSAS'
 
         # Extension authentication tokens
         'Get-GradientToken'
@@ -41,7 +42,13 @@ function Get-CIPPSchedulerBlockedCommands {
         # Direct storage access - bypasses CIPP data access controls
         'Get-CIPPTable'
         'Get-CIPPAzDataTableEntity'
+        'Get-AzDataTableEntity'
+        'Get-AzDataTable'
         'Add-CIPPAzDataTableEntity'
+        'Add-AzDataTableEntity'
+        'Update-AzDataTableEntity'
+        'Remove-AzDataTableEntity'
+        'Remove-AzDataTable'
 
         # Backup & restore
         'Get-CIPPBackup'
