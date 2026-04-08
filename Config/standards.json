@@ -1458,6 +1458,21 @@
     "recommendedBy": []
   },
   {
+    "name": "standards.DisableCalendarTentative",
+    "cat": "Exchange Standards",
+    "tag": [],
+    "helpText": "Sets AutomateProcessing to None on all mailboxes, preventing calendar invites from automatically appearing as tentative in Outlook.",
+    "docsDescription": "Sets AutomateProcessing to None on all mailboxes, preventing calendar invites from automatically appearing as tentative in Outlook. This applies to all mailbox types including user and shared mailboxes.",
+    "executiveText": "Prevents calendar invites from automatically populating as tentative in Outlook for all mailboxes. This reduces the risk of unintended calendar visibility and ensures users explicitly accept or decline meeting invitations.",
+    "addedComponent": [],
+    "label": "Disable auto-tentative calendar invites for all mailboxes",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-04-08",
+    "powershellEquivalent": "Set-CalendarProcessing -Identity <mailbox> -AutomateProcessing None",
+    "recommendedBy": []
+  },
+  {
     "name": "standards.EnableLitigationHold",
     "cat": "Exchange Standards",
     "tag": [],
