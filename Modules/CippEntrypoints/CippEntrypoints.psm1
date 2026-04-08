@@ -255,14 +255,10 @@ function Receive-CippOrchestrationTrigger {
         Write-Information "Durable Mode: $DurableMode"
 
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
-
-        $HasBatch = $OrchestratorInput.Batch -and @($OrchestratorInput.Batch).Count -gt 0
-        $HasQueueFunction = $null -ne $OrchestratorInput.QueueFunction -and $OrchestratorInput.QueueFunction -ne ''
-
-        if ($HasBatch) {
-            $Batch = $OrchestratorInput.Batch | Where-Object { $null -ne $_.FunctionName }
-        } elseif ($HasQueueFunction) {
+        if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0 -and $OrchestratorInput.QueueFunction) {
             $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop) | Where-Object { $null -ne $_.FunctionName }
+        } elseif ($OrchestratorInput.Batch) {
+            $Batch = $OrchestratorInput.Batch | Where-Object { $null -ne $_.FunctionName }
         } else {
             Write-Information 'No batch or queue function provided to orchestrator input'
             $Batch = @()
@@ -458,6 +454,7 @@ function Receive-CippActivityTrigger {
         }
     } catch {
         Write-Error "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
+        Write-Error $_.InvocationInfo.PositionMessage
         $Status = 'Failed'
         $Output = $null
         if ($TaskStatus) {
@@ -488,7 +485,6 @@ function Receive-CIPPTimerTrigger {
     param($Timer)
 
     $UtcNow = (Get-Date).ToUniversalTime()
-
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
@@ -551,7 +547,6 @@ function Receive-CIPPTimerTrigger {
 
             $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
 
-
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results -join ','
                 $Status = 'Started'
@@ -577,5 +572,4 @@ function Receive-CIPPTimerTrigger {
 }
 
 Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
-
 
