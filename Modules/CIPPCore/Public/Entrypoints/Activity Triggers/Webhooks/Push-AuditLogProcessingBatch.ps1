@@ -51,7 +51,6 @@ function Push-AuditLogProcessingBatch {
                     $ClaimEntity = [PSCustomObject]@{
                         PartitionKey          = $Row.PartitionKey
                         RowKey                = $Row.RowKey
-                        ETag                  = $Row.ETag
                         CippProcessing        = $true
                         CippProcessingStarted = $ProcessingTimestamp
                     }
