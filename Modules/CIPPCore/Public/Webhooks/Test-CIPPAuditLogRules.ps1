@@ -190,11 +190,16 @@ function Test-CIPPAuditLogRules {
             # Try CippReportingDB first (pre-populated by timer, same pattern as Add-CIPPApplicationPermission)
             Write-Information "Checking CippReportingDB for directory data for tenant $TenantFilter"
             try {
-                $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users')
-                $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+                $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users') | Select-Object id, displayName, userPrincipalName, accountEnabled
+                $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups') | Select-Object id, displayName, mailEnabled, securityEnabled
+                $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices') | Select-Object id, displayName, deviceId
+                $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals') | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
+                Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
             } catch {
                 Write-Information "CippReportingDB query failed for ${TenantFilter}: $($_.Exception.Message)"
                 $Users = @()
+                $Groups = @()
+                $Devices = @()
                 $ServicePrincipals = @()
             }
 
@@ -227,18 +232,8 @@ function Test-CIPPAuditLogRules {
                 $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
                 $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
                 $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-                $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
+                $ServicePrincipals = @(($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value) | Select-Object id, displayName
                 $Response = $null
-            } else {
-                try {
-                    $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups')
-                    $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices')
-                } catch {
-                    Write-Information "CippReportingDB Groups/Devices query failed for ${TenantFilter}: $($_.Exception.Message)"
-                    $Groups = @()
-                    $Devices = @()
-                }
-                Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
             }
 
             # Build hashtables for O(1) GUID lookups
@@ -322,15 +317,28 @@ function Test-CIPPAuditLogRules {
                 $UserLookup = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
                 $GroupLookup = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
                 $DeviceLookup = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
-                $ServicePrincipalLookup = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                $ServicePrincipalLookup = @{}
+                $RawSPLookup = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                foreach ($key in $RawSPLookup.Keys) {
+                    $sp = $RawSPLookup[$key]
+                    $ServicePrincipalLookup[$key] = [ordered]@{
+                        id                   = $sp.id
+                        appId                = $sp.appId
+                        displayName          = $sp.displayName
+                        appDisplayName       = $sp.appDisplayName
+                        accountEnabled       = $sp.accountEnabled
+                        servicePrincipalType = $sp.servicePrincipalType
+                        tags                 = $sp.tags
+                    }
+                }
                 Write-Information "Loaded hashtables: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
             } else {
                 # Old format (array) - convert to hashtables
                 Write-Information "Converting legacy array cache to hashtables for tenant $TenantFilter"
-                $Users = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $Groups = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $Devices = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $ServicePrincipals = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+                $Users = @(($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, userPrincipalName, accountEnabled
+                $Groups = @(($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, mailEnabled, securityEnabled
+                $Devices = @(($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, deviceId
+                $ServicePrincipals = @(($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
 
                 # Build hashtables
                 $UserLookup = @{}
