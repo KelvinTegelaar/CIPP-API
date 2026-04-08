@@ -161,6 +161,22 @@ function Push-ExecScheduledCommand {
         }
     }
 
+    if ($Item.Command -in (Get-CIPPSchedulerBlockedCommands)) {
+        $Results = "Task blocked: '$($Item.Command)' is not permitted to run as a scheduled task."
+        $State = 'Failed'
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Blocked execution of restricted command '$($Item.Command)' in task $($task.Name)" -sev Warning
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey = $task.PartitionKey
+                RowKey       = $task.RowKey
+                Results      = "$Results"
+                TaskState    = $State
+            }
+        }
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+        return
+    }
+
     $Function = Get-Command -Name $Item.Command
     if ($null -eq $Function) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
