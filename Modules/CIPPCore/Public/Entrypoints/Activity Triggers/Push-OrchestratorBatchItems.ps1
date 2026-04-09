@@ -14,7 +14,7 @@ function Push-OrchestratorBatchItems {
             $Item = $_.BatchItem | ConvertFrom-Json
             $BatchItems.Add($Item)
         }
-        Write-Information "Retrieved $($BatchItems.Count) batch items for BatchId: $($Item.Parameters.BatchId). Batch will be cleaned up by post-execution."
+        Write-Information "Retrieved $($BatchItems.Count) batch items for BatchId: $($Item.Parameters.BatchId)"
     } else {
         $BatchItems = [system.Collections.Generic.List[object]]::new()
     }
