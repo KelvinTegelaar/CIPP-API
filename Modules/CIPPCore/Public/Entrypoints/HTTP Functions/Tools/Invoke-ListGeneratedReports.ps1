@@ -19,12 +19,22 @@ function Invoke-ListGeneratedReports {
 
         if ($ReportGUID) {
             # Fetch specific report
+            $ReportGUID = ConvertTo-CIPPODataFilterValue -Value $ReportGUID -Type 'Guid'
             $Filter = "RowKey eq '$ReportGUID'"
             $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         } elseif ($TenantFilter) {
             # Fetch all reports for tenant
-            $Filter = "PartitionKey eq '$TenantFilter'"
-            $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type 'String'
+            if ($TenantFilter -ne 'AllTenants') {
+                $Filter = "PartitionKey eq '$TenantFilter'"
+                $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            } else {
+                $Tenants = Get-Tenants -IncludeErrors
+                $AllReports = Get-CIPPAzDataTableEntity @Table
+                $Entities = foreach ($Tenant in $Tenants) {
+                    $AllReports | Where-Object { $_.PartitionKey -eq $Tenant.defaultDomainName }
+                }
+            }
         } else {
             # Fetch all reports
             $Entities = @(Get-CIPPAzDataTableEntity @Table)
