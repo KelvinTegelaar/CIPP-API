@@ -28,31 +28,29 @@ function Push-AuditLogProcessingBatch {
 
     do {
         # Fetch only the properties needed to determine claim status and build the batch
-        $WebhookCache = Get-CIPPAzDataTableEntity @WebhookCacheTable -First $PageSize -Skip $Skip -Property @('PartitionKey', 'RowKey', 'ETag', 'CippProcessing', 'CippProcessingStarted')
+        $WebhookCache = Get-CIPPAzDataTableEntity @WebhookCacheTable -First $PageSize -Skip $Skip -Property @('PartitionKey', 'RowKey', 'ETag', 'Timestamp', 'CippProcessing')
         $PageCount = $WebhookCache.Count
 
         # Filter client-side: skip rows actively claimed unless the claim is stale (> 4 hours old)
         $TenantGroups = $WebhookCache | Where-Object {
             -not $_.CippProcessing -or
-            (-not $_.CippProcessingStarted) -or
-            ([datetime]$_.CippProcessingStarted -lt $StaleThreshold)
+            ($_.Timestamp -and $_.Timestamp.UtcDateTime -lt $StaleThreshold)
         } | Group-Object -Property PartitionKey
         $WebhookCache = $null
 
         if ($TenantGroups) {
-            $ProcessingTimestamp = $NowUtc.ToString('yyyy-MM-ddTHH:mm:ssZ')
             foreach ($TenantGroup in $TenantGroups) {
                 $TenantFilter = $TenantGroup.Name
                 $Rows = @($TenantGroup.Group)
                 $RowIds = @($Rows.RowKey)
 
                 # Claim these rows so subsequent timer runs skip them (UpsertMerge preserves JSON and other fields)
+                # The entity Timestamp is updated automatically on write and used for stale detection.
                 foreach ($Row in $Rows) {
                     $ClaimEntity = [PSCustomObject]@{
-                        PartitionKey          = $Row.PartitionKey
-                        RowKey                = $Row.RowKey
-                        CippProcessing        = $true
-                        CippProcessingStarted = $ProcessingTimestamp
+                        PartitionKey   = $Row.PartitionKey
+                        RowKey         = $Row.RowKey
+                        CippProcessing = $true
                     }
                     Add-CIPPAzDataTableEntity @WebhookCacheTable -Entity $ClaimEntity -OperationType UpsertMerge
                 }
