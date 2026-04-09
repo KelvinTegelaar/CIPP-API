@@ -38,7 +38,10 @@ function Invoke-AddAPDevice {
             Write-Host $Body
             $GraphRequest = (New-GraphPOSTRequest -returnHeaders $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter/deviceBatches/$GroupName/devices" -body $Body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
         } else {
-            $Body = '{"batchId":"' + $($GroupName) + '","devices":' + $Devices + '}'
+            # Unknown if PartnerCenter accepts/ignores unsupported properties in the device batch POST request, so we'll exclude groupTag here. We already know we have to overwrite the groupTags afterwards via Graph API, so this won't cause any issues and will keep the request cleaner.
+            # This file arguably needs a refactor and the groupTag should be batched separately at the end instead of looping through devices one by one, but we'll keep it like this for now since we're just testing for release. - Rvd
+            $DevicesWithoutGroupTags = $Devices | Select-Object -Property * -ExcludeProperty groupTag
+            $Body = '{"batchId":"' + $($GroupName) + '","devices":' + $DevicesWithoutGroupTags + '}'
             $GraphRequest = (New-GraphPOSTRequest -returnHeaders $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter/DeviceBatches" -body $Body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
         }
         $Amount = 0
