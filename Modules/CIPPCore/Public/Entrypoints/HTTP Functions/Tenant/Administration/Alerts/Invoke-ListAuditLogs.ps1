@@ -9,7 +9,10 @@ function Invoke-ListAuditLogs {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $Request.Query.tenantFilter -Type 'String'
-    $LogID = ConvertTo-CIPPODataFilterValue -Value $Request.Query.LogId -Type 'Guid'
+
+    if ($Request.Query.LogId) {
+        $LogID = ConvertTo-CIPPODataFilterValue -Value $Request.Query.LogId -Type 'Guid'
+    }
     $StartDate = $Request.Query.StartDate
     $EndDate = $Request.Query.EndDate
     $RelativeTime = $Request.Query.RelativeTime
