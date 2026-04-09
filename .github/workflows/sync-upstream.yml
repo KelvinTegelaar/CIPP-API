@@ -20,9 +20,9 @@ jobs:
       - name: Check for upstream changes
         id: check
         run: |
-          git remote add upstream https://github.com/CyberDrain/CIPP-API.git
+          git remote add upstream https://github.com/KelvinTegelaar/CIPP-API.git
           git fetch upstream
-          NEW_COMMITS=$(git rev-list HEAD..upstream/main --count)
+          NEW_COMMITS=$(git rev-list HEAD..upstream/master --count)
           echo "new_commits=$NEW_COMMITS" >> $GITHUB_OUTPUT
 
       - name: Create sync branch
@@ -30,7 +30,7 @@ jobs:
         run: |
           BRANCH="upstream-sync/$(date +%Y-%m-%d)"
           git checkout -b "$BRANCH"
-          git merge upstream/main --ff-only
+          git merge upstream/master --ff-only
           git push origin "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
