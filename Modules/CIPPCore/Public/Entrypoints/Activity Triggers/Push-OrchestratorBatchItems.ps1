@@ -14,7 +14,6 @@ function Push-OrchestratorBatchItems {
             $Item = $_.BatchItem | ConvertFrom-Json
             $BatchItems.Add($Item)
         }
-        Remove-AzDataTableEntity @Table -Entity $Entities -Force
         Write-Information "Retrieved $($BatchItems.Count) batch items for BatchId: $($Item.Parameters.BatchId)"
     } else {
         $BatchItems = [system.Collections.Generic.List[object]]::new()
