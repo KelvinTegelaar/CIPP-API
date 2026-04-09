@@ -335,7 +335,7 @@ function Push-ExecOnboardTenantQueue {
                             Recurrence    = ''
                             ScheduledTime = $RetryEpoch
                         }
-                        $null = Add-CIPPScheduledTask -Task $RetryTask -Hidden $true -DesiredStartTime ([string]$RetryEpoch)
+                        $null = Add-CIPPScheduledTask -Task $RetryTask -DesiredStartTime ([string]$RetryEpoch)
                         $RetryMessage = 'Rescheduled: GDAP relationship was activated {0:N1} minutes ago. Retrying in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
                         $OnboardingSteps.Step4.Status = 'pending'
                         $OnboardingSteps.Step4.Message = $RetryMessage
