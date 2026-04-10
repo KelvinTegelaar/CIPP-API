@@ -30,6 +30,7 @@ function Get-CIPPAlertSecDefaultsDisabled {
             }
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Security Defaults Disabled Alert: Error occurred: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Security Defaults Disabled Alert: Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }
