@@ -7,7 +7,6 @@ function Test-CIPPAccess {
     # Initialize per-call profiling
     $AccessTimings = @{}
     $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
-    if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
 
     # Get function help
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint

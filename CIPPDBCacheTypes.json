@@ -280,6 +280,16 @@
     "description": "OneDrive usage statistics"
   },
   {
+    "type": "OfficeActivations",
+    "friendlyName": "Office Activations",
+    "description": "Microsoft 365 app activation counts per user per platform (Windows, Mac, Mobile)"
+  },
+  {
+    "type": "CopilotReadinessActivity",
+    "friendlyName": "Copilot Readiness Activity",
+    "description": "Per-user Copilot readiness signals (update channel, Teams, Outlook, Office docs) over 30 days"
+  },
+  {
     "type": "ConditionalAccessPolicies",
     "friendlyName": "Conditional Access Policies",
     "description": "Azure AD Conditional Access policies"
@@ -328,5 +338,30 @@
     "type": "DetectedApps",
     "friendlyName": "Detected Apps",
     "description": "All detected applications with devices where each app is installed"
+  },
+  {
+    "type": "SensitivityLabels",
+    "friendlyName": "Sensitivity Labels",
+    "description": "Microsoft Purview sensitivity labels configured in the tenant"
+  },
+  {
+    "type": "DlpCompliancePolicies",
+    "friendlyName": "DLP Compliance Policies",
+    "description": "Data Loss Prevention compliance policies from the Purview compliance portal"
+  },
+  {
+    "type": "CopilotUsageUserDetail",
+    "friendlyName": "Copilot Usage User Detail",
+    "description": "Per-user Microsoft 365 Copilot usage details across apps (30-day period)"
+  },
+  {
+    "type": "CopilotUserCountSummary",
+    "friendlyName": "Copilot User Count Summary",
+    "description": "Aggregate active Copilot user counts by app (30-day period)"
+  },
+  {
+    "type": "CopilotUserCountTrend",
+    "friendlyName": "Copilot User Count Trend",
+    "description": "Daily Copilot active user count trend (7-day period)"
   }
 ]

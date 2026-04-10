@@ -2,6 +2,27 @@ Write-Information '#### CIPP-API Start ####'
 
 $Timings = @{}
 $TotalStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+# Test Proxyman CA certificate into trusted store if present (for local dev HTTPS inspection)
+$ProxymanCert = Join-Path $PSScriptRoot 'proxyman.pem'
+if (Test-Path $ProxymanCert) {
+    # Verify the cert is trusted in the system store
+    try {
+        $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($ProxymanCert)
+        $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+        $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        $trusted = $chain.Build($cert)
+        if ($trusted) {
+            Write-Information 'Proxyman CA certificate is trusted.'
+        } else {
+            $chainStatus = $chain.ChainStatus | ForEach-Object { $_.StatusInformation.Trim() }
+            Write-Warning "Proxyman CA certificate is NOT trusted: $($chainStatus -join '; ')"
+        }
+    } catch {
+        Write-Warning "Failed to verify Proxyman CA certificate trust: $($_.Exception.Message)"
+    }
+}
+
 # Only load Application Insights SDK for telemetry if a connection string or instrumentation key is set
 $hasAppInsights = $false
 if ($env:APPLICATIONINSIGHTS_CONNECTION_STRING -or $env:APPINSIGHTS_INSTRUMENTATIONKEY) {
@@ -119,9 +140,13 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
         Write-LogMessage -message 'Failed to clear durables after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
     }
 
-    $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
-    Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
-    Write-Debug 'Cleared GitHub release notes cache to force refresh on version update.'
+    try {
+        $ReleaseTable = Get-CippTable -tablename 'cacheGitHubReleaseNotes'
+        Remove-AzDataTableEntity @ReleaseTable -Entity @{ PartitionKey = 'GitHubReleaseNotes'; RowKey = 'GitHubReleaseNotes' } -ErrorAction SilentlyContinue
+        Write-Debug 'Cleared GitHub release notes cache to force refresh on version update.'
+    } catch {
+        Write-Debug -Message 'Failed to clear GitHub release notes cache after update' -LogData (Get-CippException -Exception $_) -Sev 'Error'
+    }
 }
 $SwVersion.Stop()
 $Timings['VersionCheck'] = $SwVersion.Elapsed.TotalMilliseconds
@@ -130,6 +155,26 @@ if ($env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:NonLocal
     Set-CIPPEnvVarBackup
     Set-CIPPOffloadFunctionTriggers
 }
+
+$SwTimezone = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $TimeSettingsTable = Get-CIPPTable -tablename Config
+    $TimeSettings = Get-CIPPAzDataTableEntity @TimeSettingsTable -Filter "PartitionKey eq 'TimeSettings' and RowKey eq 'TimeSettings'"
+    if ($TimeSettings.Timezone) {
+        # Validate before storing
+        $null = [TimeZoneInfo]::FindSystemTimeZoneById($TimeSettings.Timezone)
+        $env:CIPP_TIMEZONE = $TimeSettings.Timezone
+        Write-Information "Timezone: $($TimeSettings.Timezone)"
+    } else {
+        $env:CIPP_TIMEZONE = 'UTC'
+        Write-Information 'Timezone: UTC (default)'
+    }
+} catch {
+    $env:CIPP_TIMEZONE = 'UTC'
+    Write-Warning "Failed to load timezone from config, defaulting to UTC: $($_.Exception.Message)"
+}
+$SwTimezone.Stop()
+$Timings['Timezone'] = $SwTimezone.Elapsed.TotalMilliseconds
 
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds

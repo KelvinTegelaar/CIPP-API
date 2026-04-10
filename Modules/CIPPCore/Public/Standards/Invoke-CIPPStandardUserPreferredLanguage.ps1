@@ -77,6 +77,8 @@ function Invoke-CIPPStandardUserPreferredLanguage {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
                 }
             }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "All users already have the preferred language set to $preferredLanguage." -sev Info
         }
     }
 

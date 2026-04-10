@@ -24,7 +24,7 @@ function Invoke-CippTestZTNA21955 {
             $TestParams = @{
                 TestId               = 'ZTNA21955'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve device registration policy from cache.'
                 Risk                 = 'Medium'
@@ -53,7 +53,7 @@ function Invoke-CippTestZTNA21955 {
         $TestParams = @{
             TestId               = 'ZTNA21955'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'Medium'
@@ -68,7 +68,7 @@ function Invoke-CippTestZTNA21955 {
         $TestParams = @{
             TestId               = 'ZTNA21955'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'Medium'

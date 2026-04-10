@@ -52,11 +52,11 @@ function Remove-CIPPLicense {
                 Write-Information 'Removing user from groups with licenses'
                 $RemoveResults = New-GraphBulkRequest -tenantid $tenantFilter -requests @($RemoveRequests)
                 Write-Information ($RemoveResults | ConvertTo-Json -Depth 5)
-                $RemoveResults | ForEach-Object {
-                    $Group = $GroupMemberships | Where-Object { $_.id -eq $_.id }
-                    $GroupName = $Group | Select-Object -ExpandProperty displayName
+                foreach ($Result in $RemoveResults) {
+                    $Group = $LicenseGroups | Where-Object { $_.id -eq $Result.id }
+                    $GroupName = $Group.displayName
 
-                    if ($_.status -eq 204) {
+                    if ($Result.status -eq 204) {
                         Write-LogMessage -headers $Headers -API $APIName -message "Removed $($User.displayName) from license group $GroupName" -Sev 'Info' -tenant $TenantFilter
                         "Removed $($User.displayName) from license group $GroupName"
                     } else {
@@ -67,7 +67,20 @@ function Remove-CIPPLicense {
             }
 
             if (!$username) { $username = $User.userPrincipalName }
-            $CurrentLicenses = $User.assignedlicenses.skuid
+
+            # Re-fetch user to get current license state after group removals
+            $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$select=id,displayName,userPrincipalName,assignedLicenses,licenseAssignmentStates" -tenantid $tenantFilter
+
+            # Separate directly-assigned vs group-inherited licenses
+            $DirectLicenseSkuIds = @(($User.licenseAssignmentStates | Where-Object { $null -eq $_.assignedByGroup -and $_.state -eq 'Active' }).skuId | Select-Object -Unique)
+            $GroupLicenseSkuIds = @(($User.licenseAssignmentStates | Where-Object { $null -ne $_.assignedByGroup -and $_.state -eq 'Active' }).skuId | Select-Object -Unique)
+
+            if ($GroupLicenseSkuIds) {
+                $GroupLicenseNames = $(($ConvertTable | Where-Object { $_.guid -in $GroupLicenseSkuIds }).'Product_Display_Name' | Sort-Object -Unique) -join ', '
+                Write-LogMessage -headers $Headers -API $APIName -message "Licenses inherited from groups for $($username) will be removed when group membership changes are processed: $GroupLicenseNames" -Sev 'Info' -tenant $TenantFilter
+            }
+
+            $CurrentLicenses = $DirectLicenseSkuIds
             $ConvertedLicense = $(($ConvertTable | Where-Object { $_.guid -in $CurrentLicenses }).'Product_Display_Name' | Sort-Object -Unique) -join ', '
             if ($CurrentLicenses) {
                 $LicensePayload = [PSCustomObject]@{
@@ -76,10 +89,17 @@ function Remove-CIPPLicense {
                 }
                 if ($PSCmdlet.ShouldProcess($userid, "Remove licenses: $ConvertedLicense")) {
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/assignlicense" -tenantid $tenantFilter -type POST -body (ConvertTo-Json -InputObject $LicensePayload -Compress -Depth 5) -verbose
-                    Write-LogMessage -headers $Headers -API $APIName -message "Removed licenses for $($username): $ConvertedLicense" -Sev 'Info' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message "Removed directly assigned licenses for $($username): $ConvertedLicense" -Sev 'Info' -tenant $TenantFilter
                 }
-                return "Removed licenses for $($Username): $ConvertedLicense"
+                $ResultMessage = "Removed directly assigned licenses for $($Username): $ConvertedLicense"
+                if ($GroupLicenseSkuIds) {
+                    $ResultMessage = '{0}. Group-inherited licenses ({1}) will be removed automatically when group membership changes are processed.' -f $ResultMessage, $GroupLicenseNames
+                }
+                return $ResultMessage
             } else {
+                if ($GroupLicenseSkuIds) {
+                    return "No directly assigned licenses to remove for $username. Group-inherited licenses ($GroupLicenseNames) will be removed automatically when group membership changes are processed."
+                }
                 Write-LogMessage -headers $Headers -API $APIName -message "No licenses to remove for $username" -Sev 'Info' -tenant $TenantFilter
                 return "No licenses to remove for $username"
             }
