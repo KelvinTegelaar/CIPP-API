@@ -61,7 +61,8 @@ function New-CIPPCAPolicy {
                         $GroupIds.Add($NewGroup.GroupId)
                     }
                 } else {
-                    Write-Warning "Group $_ not found in the tenant"
+                    Write-Warning "Group $_ not found in the tenant and CreateGroups is disabled"
+                    throw "Group '$_' not found in tenant $TenantFilter. Enable 'Create groups if they do not exist' or create the group manually before deploying this policy."
                 }
             }
         }
