@@ -19,7 +19,8 @@ function Invoke-RemoveJITAdminTemplate {
         }
 
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'JITAdminTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'JITAdminTemplate' and RowKey eq '$SafeID'"
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if ($Template) {

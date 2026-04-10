@@ -14,7 +14,7 @@ function Invoke-ListExConnectorTemplates {
     $Filter = "PartitionKey eq 'ExConnectorTemplate'"
 
     if ($Request.Query.ID) {
-        $Filter += " and RowKey eq '$($Request.Query.ID)'"
+        $Filter += " and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Query.ID -Type Guid)'"
     }
 
     $TemplateRows = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)

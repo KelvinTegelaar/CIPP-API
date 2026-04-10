@@ -18,7 +18,8 @@ function Get-CIPPSPOTenant {
     }
 
     $Table = Get-CIPPTable -tablename 'cachespotenant'
-    $Filter = "PartitionKey eq 'Tenant' and RowKey eq '$TenantFilter' and Timestamp gt datetime'$( (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
+    $SafeTenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+    $Filter = "PartitionKey eq 'Tenant' and RowKey eq '$SafeTenantFilter' and Timestamp gt datetime'$( (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
     if (!$SkipCache.IsPresent) {
         $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {

@@ -31,6 +31,14 @@ function Invoke-AddUserDefaults {
             $Request.Body.usernameFormat.value
         }
 
+        $UsernameSpaceHandling = if ($Request.Body.usernameSpaceHandling -is [string]) {
+            $Request.Body.usernameSpaceHandling
+        } else {
+            $Request.Body.usernameSpaceHandling.value
+        }
+
+        $UsernameSpaceReplacement = $Request.Body.usernameSpaceReplacement
+
         $PrimDomain = if ($Request.Body.primDomain -is [string]) {
             $Request.Body.primDomain
         } else {
@@ -65,7 +73,13 @@ function Invoke-AddUserDefaults {
 
         # Contact fields
         $MobilePhone = $Request.Body.mobilePhone
-        $BusinessPhones = $Request.Body.'businessPhones[0]'
+        $BusinessPhones = if ($null -ne $Request.Body.businessPhones) {
+            if ($Request.Body.businessPhones -is [array]) { $Request.Body.businessPhones[0] } else { $Request.Body.businessPhones }
+        } elseif ($null -ne $Request.Body.'businessPhones[0]') {
+            $Request.Body.'businessPhones[0]'
+        } else {
+            $null
+        }
         $OtherMails = $Request.Body.otherMails
 
         # User relations
@@ -73,37 +87,43 @@ function Invoke-AddUserDefaults {
         $SetSponsor = $Request.Body.setSponsor
         $CopyFrom = $Request.Body.copyFrom
 
+        # Groups
+        $GroupMemberships = if ($Request.Body.addToGroups) { $Request.Body.addToGroups } else { $Request.Body.groupMemberships }
+
         # Create template object with all fields from CippAddEditUser
         $TemplateObject = @{
-            tenantFilter     = $TenantFilter
-            templateName     = $TemplateName
-            defaultForTenant = [bool]$DefaultForTenant
-            givenName        = $GivenName
-            surname          = $Surname
-            displayName      = $DisplayName
-            usernameFormat   = $UsernameFormat
-            primDomain       = $PrimDomain
-            addedAliases     = $AddedAliases
-            Autopassword     = $Autopassword
-            password         = $Password
-            MustChangePass   = $MustChangePass
-            usageLocation    = $UsageLocation
-            licenses         = $Licenses
-            removeLicenses   = $RemoveLicenses
-            jobTitle         = $JobTitle
-            streetAddress    = $StreetAddress
-            city             = $City
-            state            = $State
-            postalCode       = $PostalCode
-            country          = $Country
-            companyName      = $CompanyName
-            department       = $Department
-            mobilePhone      = $MobilePhone
-            businessPhones   = $BusinessPhones
-            otherMails       = $OtherMails
-            setManager       = $SetManager
-            setSponsor       = $SetSponsor
-            copyFrom         = $CopyFrom
+            tenantFilter             = $TenantFilter
+            templateName             = $TemplateName
+            defaultForTenant         = [bool]$DefaultForTenant
+            givenName                = $GivenName
+            surname                  = $Surname
+            displayName              = $DisplayName
+            usernameFormat           = $UsernameFormat
+            usernameSpaceHandling    = $UsernameSpaceHandling
+            usernameSpaceReplacement = $UsernameSpaceReplacement
+            primDomain               = $PrimDomain
+            addedAliases             = $AddedAliases
+            Autopassword             = $Autopassword
+            password                 = $Password
+            MustChangePass           = $MustChangePass
+            usageLocation            = $UsageLocation
+            licenses                 = $Licenses
+            removeLicenses           = $RemoveLicenses
+            jobTitle                 = $JobTitle
+            streetAddress            = $StreetAddress
+            city                     = $City
+            state                    = $State
+            postalCode               = $PostalCode
+            country                  = $Country
+            companyName              = $CompanyName
+            department               = $Department
+            mobilePhone              = $MobilePhone
+            businessPhones           = $BusinessPhones
+            otherMails               = $OtherMails
+            setManager               = $SetManager
+            setSponsor               = $SetSponsor
+            copyFrom                 = $CopyFrom
+            groupMemberships         = $GroupMemberships
         }
 
         # Use existing GUID if editing, otherwise generate new one
@@ -124,7 +144,7 @@ function Invoke-AddUserDefaults {
 
         $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
         $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
