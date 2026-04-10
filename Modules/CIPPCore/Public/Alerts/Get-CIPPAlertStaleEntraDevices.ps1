@@ -64,7 +64,7 @@ function Get-CIPPAlertStaleEntraDevices {
                         enrollmentType        = if ($device.enrollmentType) { $device.enrollmentType } else { 'N/A' }
                         Enabled               = if ($device.accountEnabled) { $device.accountEnabled } else { 'N/A' }
                         Managed               = if ($device.isManaged) { $device.isManaged } else { 'N/A' }
-                        Complaint             = if ($device.isCompliant) { $device.isCompliant } else { 'N/A' }
+                        Compliant             = if ($device.isCompliant) { $device.isCompliant } else { 'N/A' }
                         JoinType              = $TrustType
                         lastActivity          = if ($lastActivity) { $lastActivity } else { 'N/A' }
                         DaysSinceLastActivity = if ($daysSinceLastActivity) { $daysSinceLastActivity } else { 'N/A' }
@@ -75,9 +75,12 @@ function Get-CIPPAlertStaleEntraDevices {
                 }
             }
 
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            if ($AlertData) {
+                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            }
         } catch {}
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Failed to check inactive guest users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check stale Entra devices for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

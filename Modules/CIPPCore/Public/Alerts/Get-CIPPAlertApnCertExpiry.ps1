@@ -16,10 +16,13 @@ function Get-CIPPAlertApnCertExpiry {
         $AlertData = if ($Apn.expirationDateTime -lt (Get-Date).AddDays(30) -and $Apn.expirationDateTime -gt (Get-Date).AddDays(-7)) {
             $Apn | Select-Object -Property appleIdentifier, expirationDateTime
         }
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
 
     } catch {
         #no error because if a tenant does not have an APN, it'll error anyway.
-        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check APN certificate expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        #$ErrorMessage = Get-CippException -Exception $_
+        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check APN certificate expiry for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

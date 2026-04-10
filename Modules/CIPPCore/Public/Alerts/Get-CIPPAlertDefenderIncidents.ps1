@@ -36,10 +36,13 @@ function Get-CIPPAlertDefenderIncidents {
                 Tenant         = $TenantFilter
             }
         }
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
 
     } catch {
         # Pretty sure this one is gonna be spammy cause of licensing issues, so it's commented out -Bobby
-        # Write-AlertMessage -tenant $($TenantFilter) -message "Could not get Defender incident data for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        # $ErrorMessage = Get-CippException -Exception $_
+        # Write-AlertMessage -tenant $($TenantFilter) -message "Could not get Defender incident data for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

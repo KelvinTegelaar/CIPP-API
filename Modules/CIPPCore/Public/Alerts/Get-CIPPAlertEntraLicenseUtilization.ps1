@@ -66,6 +66,6 @@ function Get-CIPPAlertEntraLicenseUtilization {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -message "Failed to check license utilization: $($ErrorMessage.NormalizedError)" -API 'License Utilization Alert' -tenant $TenantFilter -sev Info -LogData $ErrorMessage
+        Write-LogMessage -message "Failed to check license utilization: $($ErrorMessage.NormalizedError)" -API 'License Utilization Alert' -tenant $TenantFilter -sev Error -LogData $ErrorMessage
     }
 }
