@@ -213,7 +213,8 @@ function Invoke-AddCustomScript {
             Write-LogMessage -API $APIName -headers $Headers -message "Created custom script: $ScriptName (Version: $Version)" -sev 'Info'
 
             $Body = @{
-                Results = "Successfully created custom script '$ScriptName'"
+                Results    = "Successfully saved custom script '$ScriptName'"
+                ScriptGuid = $ScriptGuid
             }
 
             $StatusCode = [HttpStatusCode]::OK
