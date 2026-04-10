@@ -79,7 +79,7 @@ function Push-CIPPStandardsList {
                 $BulkRequests = $TypeMap.GetEnumerator() | ForEach-Object {
                     @{
                         id     = $_.Key
-                        url    = "$($_.Value)?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime&`$top=999"
+                        url    = "$($_.Value)?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName,name&`$top=999"
                         method = 'GET'
                     }
                 }
@@ -88,6 +88,7 @@ function Push-CIPPStandardsList {
                     $TrackingTable = Get-CippTable -tablename 'IntunePolicyTypeTracking'
                     $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -NoPaginateIds @($BulkRequests.id)
                     $PolicyTimestamps = @{}
+                    $PolicyNamesByType = @{}
 
                     foreach ($Result in $BulkResults) {
                         $FirstPolicy = if ($Result.body.value) { $Result.body.value[0] } else { $null }
@@ -143,6 +144,7 @@ function Push-CIPPStandardsList {
                         }
 
                         $PolicyTimestamps[$Result.id] = $Changed
+                        $PolicyNamesByType[$Result.id] = @($Result.body.value | ForEach-Object { $_.displayName; $_.name } | Where-Object { $_ })
                         Write-Host "POLICY TYPE CHANGE CHECK: $($Result.id) -> Changed=$Changed (GraphCount=$GraphCount, CachedCount=$($Cached.PolicyCount), IdChanged=$IdChanged)"
                     }
 
@@ -222,9 +224,20 @@ function Push-CIPPStandardsList {
                             Write-Host "COMPLIANCE CHECK: $AlignmentKey | InLookup=$IsDeployed | Compliant=$IsCompliant | LookupValue=$($IntuneComplianceLookup[$AlignmentKey])"
 
                             if ($IsCompliant) {
-                                # Policy unchanged and compliant - no action needed
-                                Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
-                                [void]$ComputedStandards.Remove($Key)
+                                # Verify the policy still exists in Graph before trusting compliance
+                                $TemplateDisplayName = $ParsedTemplate.Displayname
+                                $TypeNames = if ($PolicyType -eq 'AppProtection') {
+                                    @($PolicyNamesByType['AppProtection_Android']) + @($PolicyNamesByType['AppProtection_iOS'])
+                                } else {
+                                    @($PolicyNamesByType[$PolicyType])
+                                }
+                                if ($TypeNames -contains $TemplateDisplayName) {
+                                    # Policy unchanged, exists in Graph, and compliant - safe to skip
+                                    Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
+                                    [void]$ComputedStandards.Remove($Key)
+                                } else {
+                                    Write-Host "KEEPING: $Key - policy '$TemplateDisplayName' not found in Graph for type $PolicyType (deleted?)"
+                                }
                             } else {
                                 Write-Host "KEEPING: $Key - not compliant or not in lookup (InLookup=$IsDeployed, Compliant=$IsCompliant)"
                             }

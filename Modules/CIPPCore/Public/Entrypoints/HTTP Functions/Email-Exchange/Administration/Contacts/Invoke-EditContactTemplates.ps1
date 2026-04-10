@@ -1,4 +1,4 @@
-Function Invoke-EditContactTemplates {
+function Invoke-EditContactTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -17,12 +17,13 @@ Function Invoke-EditContactTemplates {
         $ContactTemplateID = $Request.body.ContactTemplateID
 
         if (-not $ContactTemplateID) {
-            throw "ContactTemplateID is required for editing a template"
+            throw 'ContactTemplateID is required for editing a template'
         }
 
         # Check if the template exists
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$ContactTemplateID'"
+        $SafeContactTemplateID = ConvertTo-CIPPODataFilterValue -Value $ContactTemplateID -Type Guid
+        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$SafeContactTemplateID'"
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingTemplate) {
@@ -35,13 +36,13 @@ Function Invoke-EditContactTemplates {
         $contactObject = [ordered]@{}
 
         # Set name and comments
-        $contactObject["name"] = $Request.body.displayName
-        $contactObject["comments"] = "Contact template updated $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        $contactObject['name'] = $Request.body.displayName
+        $contactObject['comments'] = "Contact template updated $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 
         # Copy specific properties we want to keep
         $propertiesToKeep = @(
-            "displayName", "firstName", "lastName", "email", "hidefromGAL", "streetAddress", "postalCode",
-            "city", "state", "country", "companyName", "mobilePhone", "businessPhone", "jobTitle", "website", "mailTip"
+            'displayName', 'firstName', 'lastName', 'email', 'hidefromGAL', 'streetAddress', 'postalCode',
+            'city', 'state', 'country', 'companyName', 'mobilePhone', 'businessPhone', 'jobTitle', 'website', 'mailTip'
         )
 
         # Copy each property from the request

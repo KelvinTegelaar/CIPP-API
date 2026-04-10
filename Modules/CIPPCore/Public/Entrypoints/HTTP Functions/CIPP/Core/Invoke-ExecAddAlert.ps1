@@ -8,32 +8,18 @@ function Invoke-ExecAddAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers
-
+    $TenantFilter = $Request.Body.tenantFilter ?? $env:TenantID
 
     $Severity = 'Alert'
 
     $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true -or $Request.Body.sendPsaNow -eq $true) {
-        $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
-        if ($Request.body.email -or $Request.body.webhook) {
-            Write-Host 'found config, setting'
-            $config = @{
-                email             = $Request.body.email
-                webhook           = $Request.body.webhook
-                onepertenant      = $Request.body.onePerTenant
-                logsToInclude     = $Request.body.logsToInclude
-                sendtoIntegration = $true
-                sev               = $sev
-            }
-            Write-Host "setting notification config to $($config | ConvertTo-Json)"
-            $Results = Set-cippNotificationConfig @Config
-            Write-Host $Results
-        }
         $Title = 'CIPP Notification Test'
         if ($Request.Body.sendEmailNow -eq $true) {
             $CIPPAlert = @{
-                Type        = 'email'
-                Title       = $Title
-                HTMLContent = $Request.Body.text
+                Type         = 'email'
+                Title        = $Title
+                HTMLContent  = $Request.Body.text
+                TenantFilter = $TenantFilter
             }
             Send-CIPPAlert @CIPPAlert
         }
@@ -43,17 +29,20 @@ function Invoke-ExecAddAlert {
                 Text  = $Request.Body.text
             } | ConvertTo-Json -Compress
             $CIPPAlert = @{
-                Type        = 'webhook'
-                Title       = $Title
-                JSONContent = $JSONContent
+                Type            = 'webhook'
+                Title           = $Title
+                JSONContent     = $JSONContent
+                TenantFilter    = $TenantFilter
+                InvokingCommand = 'Invoke-ExecAddAlert'
             }
             Send-CIPPAlert @CIPPAlert
         }
         if ($Request.Body.sendPsaNow -eq $true) {
             $CIPPAlert = @{
-                Type        = 'psa'
-                Title       = $Title
-                HTMLContent = $Request.Body.text
+                Type         = 'psa'
+                Title        = $Title
+                HTMLContent  = $Request.Body.text
+                TenantFilter = $TenantFilter
             }
             Send-CIPPAlert @CIPPAlert
         }

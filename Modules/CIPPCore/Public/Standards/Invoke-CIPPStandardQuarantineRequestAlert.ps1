@@ -50,7 +50,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is configured correctly' -sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is already configured correctly.' -sev Info
         } else {
             $cmdParams = @{
                 'NotifyUser'      = $Settings.NotifyUser

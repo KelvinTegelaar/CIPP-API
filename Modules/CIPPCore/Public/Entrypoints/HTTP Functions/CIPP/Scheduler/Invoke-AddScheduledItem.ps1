@@ -33,6 +33,12 @@ function Invoke-AddScheduledItem {
             Clear        = $true
         }
         $null = Test-CIPPRerun @RerunParams
+        # Clear ExecutedTime so the one-time task rerun guard in Push-ExecScheduledCommand does not block re-execution
+        $null = Update-AzDataTableEntity -Force @Table -Entity @{
+            PartitionKey = $ExistingTask.PartitionKey
+            RowKey       = $ExistingTask.RowKey
+            ExecutedTime = ''
+        }
         $Result = Add-CIPPScheduledTask -RowKey $Request.Body.RowKey -RunNow -Headers $Headers
     } else {
         $ScheduledTask = @{

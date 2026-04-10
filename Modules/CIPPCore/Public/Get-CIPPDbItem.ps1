@@ -36,6 +36,14 @@ function Get-CIPPDbItem {
     try {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
+        if ($TenantFilter -ne 'allTenants') {
+            $Tenant = Get-Tenants -TenantFilter $TenantFilter
+            if (-not $Tenant) {
+                throw "Tenant '$TenantFilter' not found"
+            }
+            $TenantFilter = $Tenant.defaultDomainName
+        }
+
         if ($CountsOnly) {
             $Conditions = [System.Collections.Generic.List[string]]::new()
             if ($TenantFilter -ne 'allTenants') {

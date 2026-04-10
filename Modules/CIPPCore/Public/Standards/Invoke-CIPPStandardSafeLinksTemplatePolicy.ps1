@@ -98,12 +98,12 @@ function Get-NormalizedTemplateList {
     param($Settings)
 
     if ($Settings.'standards.SafeLinksTemplatePolicy.TemplateIds') {
-        return $Settings.'standards.SafeLinksTemplatePolicy.TemplateIds'
+        return @($Settings.'standards.SafeLinksTemplatePolicy.TemplateIds')
     } elseif ($Settings.TemplateIds) {
-        return $Settings.TemplateIds
+        return @($Settings.TemplateIds)
     }
 
-    return $null
+    return @()
 }
 
 function Get-SafeLinksTemplateFromStorage {
@@ -285,8 +285,8 @@ function Invoke-SafeLinksRemediation {
     $OverallSuccess = $true
     $TemplateResults = @{}
 
-    foreach ($TemplateItem in $TemplateList) {
-        $TemplateId = $TemplateItem.value
+    foreach ($TemplateItem in @($TemplateList)) {
+        $TemplateId = if ($TemplateItem -is [string]) { $TemplateItem } else { $TemplateItem.value }
 
         try {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Processing SafeLinks template with ID: $TemplateId" -sev Info
@@ -371,7 +371,7 @@ function Invoke-SafeLinksRemediation {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Successfully applied all SafeLinks templates' -sev Info
     } else {
         $SuccessCount = ($TemplateResults.Values | Where-Object { $_.Success -eq $true }).Count
-        $TotalCount = $TemplateList.Count
+        $TotalCount = @($TemplateList).Count
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Applied $SuccessCount out of $TotalCount SafeLinks templates" -sev Info
     }
 }
@@ -382,8 +382,8 @@ function Invoke-SafeLinksAlert {
     $AllTemplatesApplied = $true
     $AlertMessages = [System.Collections.Generic.List[string]]::new()
 
-    foreach ($TemplateItem in $TemplateList) {
-        $TemplateId = $TemplateItem.value
+    foreach ($TemplateItem in @($TemplateList)) {
+        $TemplateId = if ($TemplateItem -is [string]) { $TemplateItem } else { $TemplateItem.value }
 
         try {
             $Template = Get-SafeLinksTemplateFromStorage -TemplateId $TemplateId
@@ -432,8 +432,8 @@ function Invoke-SafeLinksReport {
     $AllTemplatesApplied = $true
     $ReportResults = @{}
 
-    foreach ($TemplateItem in $TemplateList) {
-        $TemplateId = $TemplateItem.value
+    foreach ($TemplateItem in @($TemplateList)) {
+        $TemplateId = if ($TemplateItem -is [string]) { $TemplateItem } else { $TemplateItem.value }
 
         try {
             $Template = Get-SafeLinksTemplateFromStorage -TemplateId $TemplateId
@@ -468,14 +468,14 @@ function Invoke-SafeLinksReport {
 
     $CurrentValue = @{
         TemplateResults     = $ReportResults
-        ProcessedTemplates  = $TemplateList.Count
-        SuccessfulTemplates = ($ReportResults.Values | Where-Object { $_.Success -eq $true }).Count
+        ProcessedTemplates  = @($TemplateList).Count
+        SuccessfulTemplates = @($ReportResults.Values | Where-Object { $_.Success -eq $true }).Count
         AllTemplatesApplied = $AllTemplatesApplied
     }
     $ExpectedValue = @{
         TemplateResults     = $ReportResults
-        ProcessedTemplates  = $TemplateList.Count
-        SuccessfulTemplates = $TemplateList.Count
+        ProcessedTemplates  = @($TemplateList).Count
+        SuccessfulTemplates = @($TemplateList).Count
         AllTemplatesApplied = $true
     }
 

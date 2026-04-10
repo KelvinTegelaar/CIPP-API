@@ -106,35 +106,33 @@ function Test-DeltaQueryConditions {
             $conditions = $Trigger.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' -and $_.Input.value -ne $null }
 
             if ($conditions) {
-                # Initialize collections for condition strings
-                $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                # Build human-readable clause for logging
                 $CIPPClause = [System.Collections.Generic.List[string]]::new()
-
                 foreach ($condition in $conditions) {
-                    # Handle array vs single values
-                    $value = if ($condition.Input.value -is [array]) {
-                        $arrayAsString = $condition.Input.value | ForEach-Object {
-                            "'$_'"
-                        }
-                        "@($($arrayAsString -join ', '))"
-                    } else {
-                        "'$($condition.Input.value)'"
-                    }
+                    $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $($condition.Input.value)")
+                }
+                Write-Information "Testing delta query conditions: $($CIPPClause -join ' and ')"
 
-                    # Build PowerShell condition string
-                    $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
-                    $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
+                # Build sanitized condition strings instead of direct evaluation
+                $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                $validConditions = $true
+                foreach ($condition in $conditions) {
+                    $sanitized = Test-CIPPConditionFilter -Condition $condition
+                    if ($null -eq $sanitized) {
+                        Write-Warning "Skipping due to invalid condition for property '$($condition.Property.label)'"
+                        $validConditions = $false
+                        break
+                    }
+                    $conditionStrings.Add($sanitized)
                 }
 
-                # Join all conditions with AND
-                $finalCondition = $conditionStrings -join ' -AND '
-
-                Write-Information "Testing delta query conditions: $finalCondition"
-                Write-Information "Human readable: $($CIPPClause -join ' and ')"
-
-                # Apply conditions to filter the data using a script block instead of Invoke-Expression
-                $scriptBlock = [scriptblock]::Create("param(`$_) $finalCondition")
-                $MatchedData = $Data | Where-Object $scriptBlock
+                if ($validConditions -and $conditionStrings.Count -gt 0) {
+                    $WhereString = $conditionStrings -join ' -and '
+                    $WhereBlock = [ScriptBlock]::Create($WhereString)
+                    $MatchedData = $Data | Where-Object $WhereBlock
+                } else {
+                    $MatchedData = @()
+                }
             } else {
                 Write-Information 'No valid conditions found in trigger configuration.'
                 $MatchedData = $Data

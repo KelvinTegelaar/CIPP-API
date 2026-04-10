@@ -144,6 +144,7 @@ function Get-TenantGroups {
                             Id          = $Group.RowKey
                             Name        = $Group.Name
                             Description = $Group.Description
+                            GroupType   = $Group.GroupType ?? 'static'
                         })
                 }
             }

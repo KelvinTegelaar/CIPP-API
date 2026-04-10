@@ -1,7 +1,7 @@
 Function Invoke-ExecExtensionMapping {
   <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.ReadWrite
     #>

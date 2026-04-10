@@ -58,7 +58,7 @@ function Invoke-CIPPStandardPerUserMFA {
         $UpdateDB = $false
         if (($UsersWithoutMFA | Measure-Object).Count -gt 0) {
             try {
-                $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -userId @($UsersWithoutMFA.userPrincipalName) -State 'enforced'
+                $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -UserId @($UsersWithoutMFA.userPrincipalName) -State 'enforced'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $MFAMessage -sev Info
                 $UpdateDB = $true
             } catch {
@@ -74,6 +74,8 @@ function Invoke-CIPPStandardPerUserMFA {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
                 }
             }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'All users already have Legacy MFA enforced.' -sev Info
         }
     }
     if ($Settings.alert -eq $true) {

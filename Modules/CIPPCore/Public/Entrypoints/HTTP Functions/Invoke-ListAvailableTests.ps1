@@ -14,6 +14,16 @@ function Invoke-ListAvailableTests {
     try {
         # Get all test folders
         $TestFolders = Get-ChildItem 'Modules\CIPPCore\Public\Tests' -Directory
+        $CustomTestsTable = Get-CippTable -tablename 'CustomPowershellScripts'
+        $Filter = "PartitionKey eq 'CustomScript'"
+        $AllScripts = Get-CIPPAzDataTableEntity @CustomTestsTable -Filter $Filter
+        # Group by ScriptGuid and get latest version of each
+        $LatestCustomScripts = $AllScripts |
+            Group-Object -Property ScriptGuid |
+            ForEach-Object {
+                $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
+            }
+
 
         # Build identity tests array
         $IdentityTests = foreach ($TestFolder in $TestFolders) {
@@ -66,9 +76,34 @@ function Invoke-ListAvailableTests {
             }
         }
 
+        # Build custom tests array from latest custom scripts
+        $CustomTestsList = foreach ($CustomTest in @($LatestCustomScripts)) {
+            $ScriptGuid = $CustomTest.ScriptGuid
+            if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+                continue
+            }
+
+            $TestId = "CustomScript-$ScriptGuid"
+            $TestName = if ([string]::IsNullOrWhiteSpace($CustomTest.ScriptName)) { $TestId } else { $CustomTest.ScriptName }
+
+            [PSCustomObject]@{
+                id             = $TestId
+                name           = $TestName
+                category       = 'Custom'
+                testFolder     = 'Custom'
+                scriptGuid     = $ScriptGuid
+                description    = $CustomTest.Description ?? ''
+                risk           = $CustomTest.Risk ?? 'Medium'
+                enabled        = [bool]$CustomTest.Enabled
+                alertOnFailure = [bool]$CustomTest.AlertOnFailure
+                version        = $CustomTest.Version
+            }
+        }
+
         $Body = [PSCustomObject]@{
             IdentityTests = $IdentityTests
             DevicesTests  = $DevicesTests
+            CustomTests   = @($CustomTestsList)
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

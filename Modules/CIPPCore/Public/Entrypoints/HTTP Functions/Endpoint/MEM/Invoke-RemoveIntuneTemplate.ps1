@@ -16,7 +16,8 @@ function Invoke-RemoveIntuneTemplate {
     try {
         $Table = Get-CippTable -tablename 'templates'
 
-        $Filter = "PartitionKey eq 'IntuneTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
+        $Filter = "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         if ($ClearRow) {
             Remove-AzDataTableEntity @Table -Entity $clearRow -Force

@@ -161,6 +161,22 @@ function Push-ExecScheduledCommand {
         }
     }
 
+    if ($Item.Command -in (Get-CIPPSchedulerBlockedCommands)) {
+        $Results = "Task blocked: '$($Item.Command)' is not permitted to run as a scheduled task."
+        $State = 'Failed'
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Blocked execution of restricted command '$($Item.Command)' in task $($task.Name)" -sev Warning
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey = $task.PartitionKey
+                RowKey       = $task.RowKey
+                Results      = "$Results"
+                TaskState    = $State
+            }
+        }
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+        return
+    }
+
     $Function = Get-Command -Name $Item.Command
     if ($null -eq $Function) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
@@ -258,7 +274,7 @@ function Push-ExecScheduledCommand {
                     $commandParameters['TaskInfo'] = $task
                 }
 
-                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json)"
+                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json -Depth 10)"
                 $results = & $Item.Command @commandParameters
             } catch {
                 $results = "Task Failed: $($_.Exception.Message)"
@@ -266,6 +282,17 @@ function Push-ExecScheduledCommand {
             }
             Write-Information 'Ran the command. Processing results'
         }
+
+        # Extract TaskAttachments from structured output before general result processing
+        $TaskAttachments = $null
+        if ($results -is [hashtable] -and $results.ContainsKey('TaskAttachments')) {
+            $TaskAttachments = $results.TaskAttachments
+            $results = $results.Results
+        } elseif ($results -is [PSCustomObject] -and $null -ne $results.TaskAttachments) {
+            $TaskAttachments = $results.TaskAttachments
+            $results = $results.Results
+        }
+
         Write-Information "Results: $($results | ConvertTo-Json -Depth 10)"
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
@@ -347,7 +374,16 @@ function Push-ExecScheduledCommand {
     # For orchestrator-based commands, skip post-execution alerts as they will be handled by the orchestrator's post-execution function
     if ($Results -and $Item.Command -notin $OrchestratorBasedCommands -and -not [string]::IsNullOrWhiteSpace($Task.PostExecution)) {
         Write-Information "Sending task results to post execution target(s): $($Task.PostExecution -join ', ')."
-        Send-CIPPScheduledTaskAlert -Results $Results -TaskInfo $task -TenantFilter $Tenant -TaskType $TaskType
+        $AlertParams = @{
+            Results      = $Results
+            TaskInfo     = $task
+            TenantFilter = $Tenant
+            TaskType     = $TaskType
+        }
+        if ($TaskAttachments) {
+            $AlertParams.Attachments = $TaskAttachments
+        }
+        Send-CIPPScheduledTaskAlert @AlertParams
     }
 
     try {

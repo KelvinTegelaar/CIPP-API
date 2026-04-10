@@ -1,4 +1,4 @@
-Function Invoke-EditSafeLinksPolicyTemplate {
+function Invoke-EditSafeLinksPolicyTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -18,12 +18,13 @@ Function Invoke-EditSafeLinksPolicyTemplate {
         $ID = $Request.Body.ID
 
         if (-not $ID) {
-            throw "Template ID is required"
+            throw 'Template ID is required'
         }
 
         # Check if template exists
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
+        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingTemplate) {
@@ -34,21 +35,21 @@ Function Invoke-EditSafeLinksPolicyTemplate {
         $policyObject = [ordered]@{}
 
         # Set name and comments
-        $policyObject["TemplateName"] = $Request.body.TemplateName
-        $policyObject["TemplateDescription"] = $Request.body.TemplateDescription
+        $policyObject['TemplateName'] = $Request.body.TemplateName
+        $policyObject['TemplateDescription'] = $Request.body.TemplateDescription
 
         # Copy specific properties we want to keep
         $propertiesToKeep = @(
             # Policy properties
-            "PolicyName", "EnableSafeLinksForEmail", "EnableSafeLinksForTeams", "EnableSafeLinksForOffice",
-            "TrackClicks", "AllowClickThrough", "ScanUrls", "EnableForInternalSenders",
-            "DeliverMessageAfterScan", "DisableUrlRewrite", "DoNotRewriteUrls",
-            "AdminDisplayName", "CustomNotificationText", "EnableOrganizationBranding",
+            'PolicyName', 'EnableSafeLinksForEmail', 'EnableSafeLinksForTeams', 'EnableSafeLinksForOffice',
+            'TrackClicks', 'AllowClickThrough', 'ScanUrls', 'EnableForInternalSenders',
+            'DeliverMessageAfterScan', 'DisableUrlRewrite', 'DoNotRewriteUrls',
+            'AdminDisplayName', 'CustomNotificationText', 'EnableOrganizationBranding',
 
             # Rule properties
-            "RuleName", "Priority", "State", "Comments",
-            "SentTo", "SentToMemberOf", "RecipientDomainIs",
-            "ExceptIfSentTo", "ExceptIfSentToMemberOf", "ExceptIfRecipientDomainIs"
+            'RuleName', 'Priority', 'State', 'Comments',
+            'SentTo', 'SentToMemberOf', 'RecipientDomainIs',
+            'ExceptIfSentTo', 'ExceptIfSentToMemberOf', 'ExceptIfRecipientDomainIs'
         )
 
         # Copy each property if it exists

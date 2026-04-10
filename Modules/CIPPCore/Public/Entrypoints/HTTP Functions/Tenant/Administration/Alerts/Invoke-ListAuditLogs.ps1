@@ -8,15 +8,18 @@ function Invoke-ListAuditLogs {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.tenantFilter
-    $LogID = $Request.Query.LogId
+    $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $Request.Query.tenantFilter -Type 'String'
+
+    if ($Request.Query.LogId) {
+        $LogID = ConvertTo-CIPPODataFilterValue -Value $Request.Query.LogId -Type 'Guid'
+    }
     $StartDate = $Request.Query.StartDate
     $EndDate = $Request.Query.EndDate
     $RelativeTime = $Request.Query.RelativeTime
     $FilterConditions = [System.Collections.Generic.List[string]]::new()
 
     if ($LogID) {
-        $FilterConditions.Add("RowKey eq '$($LogID)'")
+        $FilterConditions.Add("RowKey eq '$($LogID)' or OriginalEntityId eq '$($LogID)'")
     } else {
         if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
             $FilterConditions.Add("Tenant eq '$TenantFilter'")

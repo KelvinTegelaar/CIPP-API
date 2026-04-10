@@ -48,30 +48,34 @@ function Invoke-CIPPStandardNudgeMFA {
 
     if ($Settings.remediate -eq $true) {
         $StateName = $State.Substring(0, 1).ToUpper() + $State.Substring(1)
-        try {
-            $GraphRequest = @{
-                tenantid    = $Tenant
-                uri         = 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy'
-                AsApp       = $false
-                Type        = 'PATCH'
-                ContentType = 'application/json'
-                Body        = @{
-                    registrationEnforcement = @{
-                        authenticationMethodsRegistrationCampaign = @{
-                            state                                  = $State
-                            snoozeDurationInDays                   = $Settings.snoozeDurationInDays
-                            enforceRegistrationAfterAllowedSnoozes = $true
-                            includeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.includeTargets
-                            excludeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.excludeTargets
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Authenticator App Nudge is already set to $State with a snooze duration of $($Settings.snoozeDurationInDays)." -sev Info
+        } else {
+            try {
+                $GraphRequest = @{
+                    tenantid    = $Tenant
+                    uri         = 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy'
+                    AsApp       = $false
+                    Type        = 'PATCH'
+                    ContentType = 'application/json'
+                    Body        = @{
+                        registrationEnforcement = @{
+                            authenticationMethodsRegistrationCampaign = @{
+                                state                                  = $State
+                                snoozeDurationInDays                   = $Settings.snoozeDurationInDays
+                                enforceRegistrationAfterAllowedSnoozes = $true
+                                includeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.includeTargets
+                                excludeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.excludeTargets
+                            }
                         }
-                    }
-                } | ConvertTo-Json -Depth 10 -Compress
+                    } | ConvertTo-Json -Depth 10 -Compress
+                }
+                New-GraphPostRequest @GraphRequest
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "$StateName Authenticator App Nudge with a snooze duration of $($Settings.snoozeDurationInDays)" -sev Info
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Authenticator App Nudge to $State. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
-            New-GraphPostRequest @GraphRequest
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$StateName Authenticator App Nudge with a snooze duration of $($Settings.snoozeDurationInDays)" -sev Info
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Authenticator App Nudge to $State. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 

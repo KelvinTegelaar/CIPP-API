@@ -23,10 +23,11 @@ function Set-CIPPDBCacheAuthenticationFlowsPolicy {
 
         if ($AuthFlowPolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationFlowsPolicy' -Data @($AuthFlowPolicy)
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationFlowsPolicy' -Data @($AuthFlowPolicy) -Count
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached authentication flows policy successfully' -sev Debug
         }
 
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter   -message "Failed to cache authentication flows policy: $($_.Exception.Message)"  -sev Warning   -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache authentication flows policy: $($_.Exception.Message)" -sev Warning -LogData (Get-CippException -Exception $_)
     }
 }
