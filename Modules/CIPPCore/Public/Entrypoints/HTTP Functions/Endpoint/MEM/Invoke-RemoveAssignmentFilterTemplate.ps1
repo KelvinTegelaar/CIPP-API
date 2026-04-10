@@ -17,7 +17,8 @@ Function Invoke-RemoveAssignmentFilterTemplate {
         $Table = Get-CippTable -tablename 'templates'
         Write-Host $ID
 
-        $Filter = "PartitionKey eq 'AssignmentFilterTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'AssignmentFilterTemplate' and RowKey eq '$SafeID'"
         Write-Host $Filter
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow

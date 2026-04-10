@@ -67,7 +67,7 @@ function Invoke-HuduExtensionSync {
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
                 if ($PeopleLayout.id) {
                     $PeopleArray = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
-                    $People = [System.Collections.Generic.List[object]]::new($PeopleArray)
+                    $People = [System.Collections.Generic.List[object]]::new([object[]]@($PeopleArray))
                 } else {
                     $CreateUsers = $false
                     $People = [System.Collections.Generic.List[object]]::new()
@@ -92,7 +92,7 @@ function Invoke-HuduExtensionSync {
                 $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
                 if ($DesktopsLayout.id) {
                     $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
-                    $HuduDevices = [System.Collections.Generic.List[object]]::new($HuduDesktopDevices)
+                    $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@($HuduDesktopDevices))
                 } else {
                     $CreateDevices = $false
                     $HuduDevices = [System.Collections.Generic.List[object]]::new()

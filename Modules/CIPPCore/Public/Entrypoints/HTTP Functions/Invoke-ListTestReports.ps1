@@ -40,6 +40,34 @@ function Invoke-ListTestReports {
         $CustomReports = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
 
         $DatabaseReports = foreach ($Report in $CustomReports) {
+            $IdentityTests = @()
+            $DevicesTests = @()
+            $CustomTests = @()
+
+            if ($Report.IdentityTests) {
+                try {
+                    $IdentityTests = @($Report.IdentityTests | ConvertFrom-Json)
+                } catch {
+                    $IdentityTests = @()
+                }
+            }
+
+            if ($Report.DevicesTests) {
+                try {
+                    $DevicesTests = @($Report.DevicesTests | ConvertFrom-Json)
+                } catch {
+                    $DevicesTests = @()
+                }
+            }
+
+            if ($Report.CustomTests) {
+                try {
+                    $CustomTests = @($Report.CustomTests | ConvertFrom-Json)
+                } catch {
+                    $CustomTests = @()
+                }
+            }
+
             [PSCustomObject]@{
                 id          = $Report.RowKey
                 name        = $Report.Name ?? 'Custom Report'
@@ -47,6 +75,9 @@ function Invoke-ListTestReports {
                 version     = $Report.Version ?? '1.0'
                 source      = 'database'
                 type        = 'custom'
+                IdentityTests = $IdentityTests
+                DevicesTests  = $DevicesTests
+                CustomTests   = $CustomTests
             }
         }
 

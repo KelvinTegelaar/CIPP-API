@@ -23,6 +23,7 @@ function Set-CIPPDBCacheDeviceRegistrationPolicy {
 
         if ($DeviceRegistrationPolicy) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DeviceRegistrationPolicy' -Data @($DeviceRegistrationPolicy)
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DeviceRegistrationPolicy' -Data @($DeviceRegistrationPolicy) -Count
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached device registration policy successfully' -sev Debug
         }
 

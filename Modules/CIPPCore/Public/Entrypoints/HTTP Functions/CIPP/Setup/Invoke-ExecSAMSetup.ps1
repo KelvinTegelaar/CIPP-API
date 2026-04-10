@@ -11,6 +11,10 @@ function Invoke-ExecSAMSetup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    return ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{ message = 'This endpoint is no longer used. Please use the CreateSAMApp endpoint instead.' }
+        })
 
     if ($Request.Query.error) {
         Add-Type -AssemblyName System.Web

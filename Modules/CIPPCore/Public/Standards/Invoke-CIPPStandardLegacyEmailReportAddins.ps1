@@ -46,7 +46,7 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
     )
 
     try {
-        $CurrentApps = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications&select=addins" -TenantID $Tenant
+        $CurrentApps = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=id,addIns" -TenantID $Tenant
 
         # Filter to only applications that have the legacy add-ins we're looking for
         $LegacyProductIds = $LegacyAddins | ForEach-Object { $_.ProductId }
@@ -108,7 +108,7 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
     # If we performed remediation and need to report/alert, get fresh state
     if ($RemediationPerformed -and ($Settings.alert -eq $true -or $Settings.report -eq $true)) {
         try {
-            $FreshApps = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications&select=addins" -TenantID $Tenant
+            $FreshApps = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=addIns" -TenantID $Tenant
             $LegacyProductIds = $LegacyAddins | ForEach-Object { $_.ProductId }
             $FreshInstalledApps = $FreshApps | Where-Object {
                 $app = $_

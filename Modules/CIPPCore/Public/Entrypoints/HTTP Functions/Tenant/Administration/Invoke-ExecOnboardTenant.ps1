@@ -16,9 +16,9 @@ function Invoke-ExecOnboardTenant {
     if ($Id) {
         try {
             $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
-
+            $SafeId = ConvertTo-CIPPODataFilterValue -Value $Id -Type String
             if ($Request.Body.Cancel -eq $true) {
-                $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id'"
+                $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId'"
                 if ($TenantOnboarding) {
                     Remove-AzDataTableEntity -Force @OnboardTable -Entity $TenantOnboarding
                     $Results = @{'Results' = 'Onboarding job canceled' }
@@ -29,7 +29,7 @@ function Invoke-ExecOnboardTenant {
                 }
             } else {
                 $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id' and Timestamp ge datetime'$TenMinutesAgo'"
+                $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$SafeId' and Timestamp ge datetime'$TenMinutesAgo'"
                 if (!$TenantOnboarding -or [bool]$Request.Body.Retry) {
                     $OnboardingSteps = [PSCustomObject]@{
                         'Step1' = @{
@@ -60,7 +60,7 @@ function Invoke-ExecOnboardTenant {
                     }
                     $TenantOnboarding = [PSCustomObject]@{
                         PartitionKey    = 'Onboarding'
-                        RowKey          = [string]$Id
+                        RowKey          = [string]$SafeId
                         CustomerId      = ''
                         Status          = 'queued'
                         OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
@@ -72,7 +72,7 @@ function Invoke-ExecOnboardTenant {
 
                     $Item = [pscustomobject]@{
                         FunctionName               = 'ExecOnboardTenantQueue'
-                        id                         = $Id
+                        id                         = $SafeId
                         Roles                      = $Request.Body.gdapRoles
                         AddMissingGroups           = $Request.Body.addMissingGroups
                         IgnoreMissingRoles         = $Request.Body.ignoreMissingRoles

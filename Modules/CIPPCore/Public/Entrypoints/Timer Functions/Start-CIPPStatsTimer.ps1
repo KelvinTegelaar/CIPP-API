@@ -25,19 +25,26 @@ function Start-CIPPStatsTimer {
         } catch {
             $RawExt = @{}
         }
+
+        # Get counts of various entities across all tenants
         $counts = Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly
         $userCount = ($counts | Where-Object { $_.RowKey -eq 'Users-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $deviceCount = ($counts | Where-Object { $_.RowKey -eq 'Devices-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $groupsCount = ($counts | Where-Object { $_.RowKey -eq 'Groups-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $managedDevicesCount = ($counts | Where-Object { $_.RowKey -eq 'ManagedDevices-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $policyCount = ($counts | Where-Object { $_.RowKey -match 'Intune' -and $_.RowKey -match 'Policies|Policy' } | Measure-Object -Property DataCount -Sum).Sum
+
         $SendingObject = [PSCustomObject]@{
             rgid                = $env:WEBSITE_SITE_NAME
             SetupComplete       = $SetupComplete
             RunningVersionAPI   = $APIVersion.trim()
-            CountOfTotalTenants = $tenantcount
+            CountOfTotalTenants = $TenantCount
             uid                 = $env:TenantID
             UserCount           = $userCount
             DeviceCount         = $deviceCount
             GroupsCount         = $groupsCount
+            ManagedDevicesCount = $managedDevicesCount
+            PolicyCount         = $policyCount
             CIPPAPI             = $RawExt.CIPPAPI.Enabled
             Hudu                = $RawExt.Hudu.Enabled
             Sherweb             = $RawExt.Sherweb.Enabled

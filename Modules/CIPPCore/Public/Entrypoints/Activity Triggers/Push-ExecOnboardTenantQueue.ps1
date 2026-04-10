@@ -307,6 +307,50 @@ function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step3.Status -eq 'succeeded') {
+            # Check if the relationship was recently activated — Microsoft propagation may not have settled yet
+            if ($Relationship.activatedDateTime) {
+                try {
+                    $ActivatedTime = [datetime]::Parse($Relationship.activatedDateTime)
+                    $MinutesSinceActivation = ([datetime]::UtcNow - $ActivatedTime).TotalMinutes
+                    if ($MinutesSinceActivation -lt 15) {
+                        $Logs.Add([PSCustomObject]@{
+                                Date = (Get-Date).ToUniversalTime()
+                                Log  = 'GDAP relationship was activated {0:N1} minutes ago. Rescheduling onboarding in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                            })
+                        $RetryEpoch = [int64](([datetime]::UtcNow.AddMinutes(15)) - (Get-Date '1/1/1970')).TotalSeconds
+                        $RetryParams = [PSCustomObject]@{
+                            Item = [PSCustomObject]@{
+                                id                         = $Item.id
+                                Roles                      = $Item.Roles
+                                AutoMapRoles               = $Item.AutoMapRoles
+                                IgnoreMissingRoles         = $Item.IgnoreMissingRoles
+                                StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                            }
+                        }
+                        $RetryTask = [PSCustomObject]@{
+                            Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
+                            Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
+                            Parameters    = $RetryParams
+                            TenantFilter  = $env:TenantID
+                            Recurrence    = ''
+                            ScheduledTime = $RetryEpoch
+                        }
+                        $null = Add-CIPPScheduledTask -Task $RetryTask -DesiredStartTime ([string]$RetryEpoch)
+                        $RetryMessage = 'Rescheduled: GDAP relationship was activated {0:N1} minutes ago. Retrying in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                        $OnboardingSteps.Step4.Status = 'pending'
+                        $OnboardingSteps.Step4.Message = $RetryMessage
+                        $TenantOnboarding.Status = 'running'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        Write-LogMessage -API 'Onboarding' -message $RetryMessage -Sev 'Info'
+                        return
+                    }
+                } catch {
+                    Write-Warning "Failed to check activatedDateTime for relationship ${Id}: $($_.Exception.Message)"
+                }
+            }
+
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Setting up CPV consent' })
             $OnboardingSteps.Step4.Status = 'running'
             $OnboardingSteps.Step4.Message = 'Setting up CPV consent'
@@ -399,38 +443,75 @@ function Push-ExecOnboardTenantQueue {
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
             if ($Item.StandardsExcludeAllTenants -eq $true) {
-                $AddExclusionObj = [PSCustomObject]@{
-                    label       = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
-                    value       = $Tenant.defaultDomainName
-                    addedFields = @{
-                        customerId        = $Tenant.customerId
-                        defaultDomainName = $Tenant.defaultDomainName
+                $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
+                $MembersTable = Get-CIPPTable -tablename 'TenantGroupMembers'
+                $ExclusionGroupName = 'Excluded onboarded tenants'
+
+                # Find existing exclusion group
+                $ExclusionGroup = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'" | Where-Object { $_.Name -eq $ExclusionGroupName }
+                if (-not $ExclusionGroup) {
+                    $ExclusionGroupId = [guid]::NewGuid().ToString()
+                    $ExclusionGroup = @{
+                        PartitionKey = 'TenantGroup'
+                        RowKey       = $ExclusionGroupId
+                        Name         = $ExclusionGroupName
+                        Description  = 'Tenants excluded from top-level standards during onboarding'
+                        GroupType    = 'static'
                     }
+                    Add-CIPPAzDataTableEntity @GroupTable -Entity $ExclusionGroup -Force
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Created tenant group '$ExclusionGroupName'" })
+                } else {
+                    $ExclusionGroupId = $ExclusionGroup.RowKey
                 }
-                $Table = Get-CIPPTable -tablename 'templates'
-                $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
+
+                # Add tenant to the exclusion group if not already a member
+                $MemberRowKey = '{0}-{1}' -f $ExclusionGroupId, $Tenant.customerId
+                $ExistingMember = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and RowKey eq '$MemberRowKey'"
+                if (-not $ExistingMember) {
+                    Add-CIPPAzDataTableEntity @MembersTable -Entity @{
+                        PartitionKey = 'Member'
+                        RowKey       = $MemberRowKey
+                        GroupId      = $ExclusionGroupId
+                        customerId   = $Tenant.customerId
+                    } -Force
+                }
+
+                # Ensure the group is in excludedTenants of all AllTenants templates
+                $GroupExclusionObj = [PSCustomObject]@{
+                    label = $ExclusionGroupName
+                    value = $ExclusionGroupId
+                    type  = 'Group'
+                }
+                $TemplatesTable = Get-CIPPTable -tablename 'templates'
+                $ExistingTemplates = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
                 foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantsTemplate.JSON | ConvertFrom-Json
-                    $NewExcludedTenants = [System.Collections.Generic.List[object]]::new()
-                    if (!$object.excludedTenants) {
+                    if (-not $object.excludedTenants) {
                         $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
                     }
-                    foreach ($ExcludedStandardsTenant in $object.excludedTenants) {
-                        $NewExcludedTenants.Add($ExcludedStandardsTenant)
-                    }
-                    $NewExcludedTenants.Add($AddExclusionObj)
-                    $object.excludedTenants = $NewExcludedTenants
-                    $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
-                    $Table.Force = $true
-                    Add-CIPPAzDataTableEntity @Table -Entity @{
-                        JSON         = "$JSON"
-                        RowKey       = $AllTenantsTemplate.RowKey
-                        GUID         = $AllTenantsTemplate.GUID
-                        PartitionKey = 'StandardsTemplateV2'
+                    $AlreadyHasGroup = $object.excludedTenants | Where-Object { $_.value -eq $ExclusionGroupId -and $_.type -eq 'Group' }
+                    if (-not $AlreadyHasGroup) {
+                        $NewExcludedTenants = [System.Collections.Generic.List[object]]::new()
+                        foreach ($ExcludedEntry in $object.excludedTenants) {
+                            $NewExcludedTenants.Add($ExcludedEntry)
+                        }
+                        $NewExcludedTenants.Add($GroupExclusionObj)
+                        $object.excludedTenants = $NewExcludedTenants
+                        $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
+                        $TemplatesTable.Force = $true
+                        Add-CIPPAzDataTableEntity @TemplatesTable -Entity @{
+                            JSON         = "$JSON"
+                            RowKey       = $AllTenantsTemplate.RowKey
+                            GUID         = $AllTenantsTemplate.GUID
+                            PartitionKey = 'StandardsTemplateV2'
+                        }
                     }
                 }
 
-                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Set All Tenant Standards Exclusion' })
+                # Bust the tenant groups cache so standards pick up the new member
+                $null = Get-TenantGroups -SkipCache
+
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Set All Tenant Standards Exclusion via group' })
             }
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Testing API access for $($Tenant.defaultDomainName)" })
             $OnboardingSteps.Step5.Status = 'running'

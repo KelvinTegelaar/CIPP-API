@@ -1,7 +1,7 @@
 function Invoke-ExecAccessChecks {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.Read
     #>
