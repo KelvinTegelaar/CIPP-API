@@ -25,7 +25,7 @@ function Invoke-CippTestZTNA21941 {
             $TestParams = @{
                 TestId               = 'ZTNA21941'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve Conditional Access policies from cache.'
                 Risk                 = 'High'
@@ -162,7 +162,7 @@ function Invoke-CippTestZTNA21941 {
         $TestParams = @{
             TestId               = 'ZTNA21941'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'High'
@@ -177,7 +177,7 @@ function Invoke-CippTestZTNA21941 {
         $TestParams = @{
             TestId               = 'ZTNA21941'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'High'

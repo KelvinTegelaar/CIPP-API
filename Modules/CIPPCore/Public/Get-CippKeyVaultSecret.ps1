@@ -66,7 +66,7 @@ function Get-CippKeyVaultSecret {
                     $retryDelay *= 2  # Exponential backoff
                 } else {
                     Write-Error "Failed to retrieve secret '$Name' from vault '$VaultName' after $maxRetries attempts: $($_.Exception.Message)"
-                    throw
+                    throw "Failed to retrieve secret '$Name' from vault '$VaultName' after $maxRetries attempts: $($_.Exception.Message)"
                 }
             }
         }
@@ -84,6 +84,7 @@ function Get-CippKeyVaultSecret {
         }
     } catch {
         # Error already handled in retry loop, just rethrow
-        throw
+        Write-Error "CRITICAL: Key Vault secret retrieval failed: $($_.Exception.Message)"
+        throw "Key Vault secret retrieval failed: $($_.Exception.Message)"
     }
 }

@@ -97,6 +97,19 @@ function Get-GraphRequestList {
     }
 
     $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+
+    # Resolve variable placeholders in Parameters before building the query string.
+    # Supported: {DaysAgo:N} → ISO 8601 date N days in the past (UTC)
+    $Keys = @($Parameters.Keys)
+    foreach ($Key in $Keys) {
+        if ($Parameters[$Key] -is [string]) {
+            $Parameters[$Key] = [regex]::Replace($Parameters[$Key], '\{DaysAgo:(\d+)\}', {
+                param($m)
+                (Get-Date).ToUniversalTime().AddDays(-[int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
+            })
+        }
+    }
+
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
     foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
         if ($Item.Value -is [System.Boolean]) {

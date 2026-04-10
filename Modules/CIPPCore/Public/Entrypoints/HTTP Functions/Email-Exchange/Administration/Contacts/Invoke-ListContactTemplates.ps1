@@ -28,7 +28,8 @@ function Invoke-ListContactTemplates {
         Write-LogMessage -headers $Headers -API $APIName -message "Retrieving specific template with ID: $RequestedID" -Sev 'Debug'
 
         # Query directly for the specific template by RowKey for efficiency
-        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$RequestedID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $RequestedID -Type String
+        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$SafeID'"
         $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
             $GUID = $_.RowKey
             $data = $_.JSON | ConvertFrom-Json

@@ -40,7 +40,7 @@ function Test-CIPPAccessTenant {
             OrchestratorName = 'CippAccessTenantTest'
             SkipLog          = $true
         }
-        $null = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
+        $null = Start-CIPPOrchestrator -InputObject $InputObject
         $Results = "Queued $($TenantList.Count) tenants for access checks"
 
     } else {

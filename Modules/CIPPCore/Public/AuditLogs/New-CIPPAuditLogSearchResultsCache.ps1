@@ -62,10 +62,12 @@ function New-CIPPAuditLogSearchResultsCache {
             $searchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
             foreach ($searchResult in $searchResults) {
                 $cacheEntity = @{
-                    RowKey       = $searchResult.id
-                    PartitionKey = $TenantFilter
-                    SearchId     = $SearchId
-                    JSON         = [string]($searchResult | ConvertTo-Json -Depth 10)
+                    RowKey                = $searchResult.id
+                    PartitionKey          = $TenantFilter
+                    SearchId              = $SearchId
+                    JSON                  = [string]($searchResult | ConvertTo-Json -Depth 10)
+                    CippProcessing        = $false
+                    CippProcessingStarted = ''
                 }
                 Add-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $cacheEntity -Force
             }

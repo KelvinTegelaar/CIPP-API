@@ -44,6 +44,7 @@ function Invoke-AddPolicy {
                 }
                 if ($templateEntity) {
                     $templateObj = $templateEntity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    $templateObj = Repair-CIPPIntuneTemplateNesting -Template $templateObj -Table $templatesTable
                     if ($templateObj.ReusableSettings) { $reusableSettings = $templateObj.ReusableSettings }
                     if ($templateObj.RAWJson) { $RawJSON = $templateObj.RAWJson }
                 }

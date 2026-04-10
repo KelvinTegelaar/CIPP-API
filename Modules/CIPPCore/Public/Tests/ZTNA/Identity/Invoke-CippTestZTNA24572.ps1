@@ -11,7 +11,7 @@ function Invoke-CippTestZTNA24572 {
         $EnrollmentConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceEnrollmentConfigurations'
 
         if (-not $EnrollmentConfigs) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
             return
         }
 
@@ -41,11 +41,11 @@ function Invoke-CippTestZTNA24572 {
         }
 
         $Status = if ($Passed) { 'Passed' } else { 'Failed' }
-        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Device enrollment notifications are enforced to ensure user awareness and secure onboarding' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'
     }
 }

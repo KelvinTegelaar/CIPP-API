@@ -107,7 +107,7 @@ function Push-CIPPOffboardingComplete {
 
             # Send post-execution alerts if configured
             if ($TaskInfo.PostExecution -and $ProcessedResults) {
-                Send-CIPPScheduledTaskAlert -Results $ProcessedResults -TaskInfo $TaskInfo -TenantFilter $TenantFilter
+                Send-CIPPScheduledTaskAlert -Results $ProcessedResults -TaskInfo $TaskInfo -TenantFilter $TenantFilter -TaskType 'User Offboarding'
             }
         }
         Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Offboarding completed for $Username" -sev Info -headers $Headers

@@ -121,6 +121,12 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         } else {
             $templateResult = New-CIPPCATemplate -TenantFilter $tenant -JSON $CheckExististing -preloadedLocations $preloadedLocations
             $CompareObj = ConvertFrom-Json -ErrorAction SilentlyContinue -InputObject $templateResult
+            if ($null -eq $Policy -or $null -eq $CompareObj) {
+                $nullSide = if ($null -eq $Policy) { 'template policy' } else { 'tenant policy conversion' }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Cannot compare CA policy: $nullSide returned null for $($Settings.TemplateList.label)" -sev Error
+                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue "Error comparing policy: $nullSide returned null" -Tenant $Tenant
+                return
+            }
             try {
                 $Compare = Compare-CIPPIntuneObject -ReferenceObject $Policy -DifferenceObject $CompareObj -CompareType 'ca'
             } catch {

@@ -42,5 +42,7 @@ function Get-CIPPAlertQuotaUsed {
             }
         }
     }
-    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
+    if ($OverQuota) {
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
+    }
 }

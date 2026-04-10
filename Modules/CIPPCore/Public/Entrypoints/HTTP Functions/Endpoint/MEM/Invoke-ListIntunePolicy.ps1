@@ -12,7 +12,24 @@ function Invoke-ListIntunePolicy {
     $TenantFilter = $Request.Query.TenantFilter
     $id = $Request.Query.ID
     $URLName = $Request.Query.URLName
+    $UseReportDB = $Request.Query.UseReportDB
+
     try {
+        # Return cached report data when AllTenants is requested or UseReportDB is set
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+            try {
+                $GraphRequest = Get-CIPPIntunePolicyReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
         if ($ID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
         } else {

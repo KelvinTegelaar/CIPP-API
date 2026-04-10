@@ -49,6 +49,7 @@ function Invoke-AddWin32ScriptApp {
                 uninstallScript       = $Win32ScriptApp.uninstallScript
                 detectionPath         = $Win32ScriptApp.detectionPath
                 detectionFile         = $Win32ScriptApp.detectionFile
+                detectionScript       = $Win32ScriptApp.detectionScript
                 runAsAccount          = if ($Win32ScriptApp.InstallAsSystem) { 'system' } else { 'user' }
                 deviceRestartBehavior = if ($Win32ScriptApp.DisableRestart) { 'suppress' } else { 'allow' }
                 runAs32Bit            = [bool]$Win32ScriptApp.runAs32Bit

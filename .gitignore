@@ -21,3 +21,4 @@ yarn.lock
 /*.ps1
 !/profile.ps1
 .DS_Store
+proxyman.pem

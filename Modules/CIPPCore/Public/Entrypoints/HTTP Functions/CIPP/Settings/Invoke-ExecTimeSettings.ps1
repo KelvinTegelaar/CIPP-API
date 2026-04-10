@@ -9,82 +9,36 @@ function Invoke-ExecTimeSettings {
     param($Request, $TriggerMetadata)
 
     try {
-        $Subscription = Get-CIPPAzFunctionAppSubId
-        if ($env:WEBSITE_RESOURCE_GROUP) {
-            $RGName = $env:WEBSITE_RESOURCE_GROUP
-        } else {
-            $Owner = $env:WEBSITE_OWNER_NAME
-            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            } else {
-                Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
-                $RGName = $null
-            }
-        }
-
-        $FunctionName = $env:WEBSITE_SITE_NAME
         $Timezone = $Request.Body.Timezone.value ?? $Request.Body.Timezone
-        $BusinessHoursStart = $Request.Body.BusinessHoursStart.value ?? $Request.Body.BusinessHoursStart
 
-        # Validate timezone format
         if (-not $Timezone) {
             throw 'Timezone is required'
         }
 
-        if (!$IsLinux) {
-            # Get Timezone standard name for Windows
-            $Timezone = Get-TimeZone -Id $Timezone | Select-Object -ExpandProperty StandardName
+        # Validate the IANA timezone ID is recognised by .NET
+        try {
+            $null = [TimeZoneInfo]::FindSystemTimeZoneById($Timezone)
+        } catch {
+            throw "Invalid timezone: '$Timezone' is not a recognised IANA timezone ID"
         }
 
-        # Calculate business hours end time (10 hours after start)
-        $BusinessHoursEnd = $null
-        if ($env:WEBSITE_SKU -eq 'FlexConsumption') {
-            if (-not $BusinessHoursStart) {
-                throw 'Business hours start time is required for Flex Consumption plans'
-            }
-
-            # Validate time format (HH:mm)
-            if ($BusinessHoursStart -notmatch '^\d{2}:\d{2}$') {
-                throw 'Business hours start time must be in HH:mm format'
-            }
-
-            # Calculate end time (start + 10 hours)
-            $StartTime = [DateTime]::ParseExact($BusinessHoursStart, 'HH:mm', $null)
-            $EndTime = $StartTime.AddHours(10)
-            $BusinessHoursEnd = $EndTime.ToString('HH:mm')
+        $Config = @{
+            PartitionKey = 'TimeSettings'
+            RowKey       = 'TimeSettings'
+            Timezone     = $Timezone
         }
 
-        Write-Information "Updating function app time settings: Timezone=$Timezone, BusinessHoursStart=$BusinessHoursStart, BusinessHoursEnd=$BusinessHoursEnd"
+        $ConfigTable = Get-CIPPTable -tablename Config
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force | Out-Null
 
-        # Build app settings hashtable
-        $AppSettings = @{
-            'WEBSITE_TIME_ZONE' = $Timezone
-        }
-
-        if ($env:WEBSITE_SKU -eq 'FlexConsumption') {
-            $AppSettings['CIPP_BUSINESS_HOURS_START'] = $BusinessHoursStart
-            $AppSettings['CIPP_BUSINESS_HOURS_END'] = $BusinessHoursEnd
-        }
-
-        # Update app settings using ARM REST via managed identity
-        Update-CIPPAzFunctionAppSetting -Name $FunctionName -ResourceGroupName $RGName -AppSetting $AppSettings | Out-Null
-
-        Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Updated time settings: Timezone=$Timezone, BusinessHours=$BusinessHoursStart-$BusinessHoursEnd" -Sev 'Info'
-
-        $Results = @{
-            Results  = 'Time settings updated successfully. Please note that timezone changes may require a function app restart to take effect.'
-            Timezone = $Timezone
-            SKU      = $env:WEBSITE_SKU
-        }
-
-        if ($env:WEBSITE_SKU -eq 'FlexConsumption') {
-            $Results.BusinessHoursStart = $BusinessHoursStart
-            $Results.BusinessHoursEnd = $BusinessHoursEnd
-        }
+        Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Updated time settings: Timezone=$Timezone" -Sev 'Info'
 
         return ([HttpResponseContext]@{
                 StatusCode = [httpstatusCode]::OK
-                Body       = $Results
+                Body       = @{
+                    Results  = 'Time settings updated successfully.'
+                    Timezone = $Timezone
+                }
             })
 
     } catch {

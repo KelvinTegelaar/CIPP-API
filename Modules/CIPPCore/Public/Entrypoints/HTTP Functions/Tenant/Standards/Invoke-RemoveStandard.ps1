@@ -16,7 +16,8 @@ Function Invoke-RemoveStandard {
     $ID = $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'standards'
-        $Filter = "PartitionKey eq 'standards' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
+        $Filter = "PartitionKey eq 'standards' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
         Write-LogMessage -Headers $Headers -API $APIName -message "Removed standards for $ID." -Sev 'Info'
