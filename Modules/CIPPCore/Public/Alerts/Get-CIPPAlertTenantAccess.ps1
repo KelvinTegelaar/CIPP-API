@@ -129,7 +129,9 @@ function Get-CIPPAlertTenantAccess {
                 })
         }
 
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
     } catch {
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Tenant access alert error for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
     }

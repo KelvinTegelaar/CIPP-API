@@ -61,5 +61,7 @@ function Get-CIPPAlertAppCertificateExpiry {
         @($AppAlertData)
         @($SamlAlertData)
     ) | Where-Object { $null -ne $_ }
-    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    if ($AlertData) {
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    }
 }
