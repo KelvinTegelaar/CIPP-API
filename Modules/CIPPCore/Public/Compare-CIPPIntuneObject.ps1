@@ -290,10 +290,10 @@ function Compare-CIPPIntuneObject {
                             } elseif (-not $val1IsEmpty -or -not $val2IsEmpty) {
                                 # One side is null/empty, the other is not - report as difference
                                 $result.Add([PSCustomObject]@{
-                                    Property      = $newPath
-                                    ExpectedValue = if ($null -eq $val1) { '' } else { $val1 }
-                                    ReceivedValue = if ($null -eq $val2) { '' } else { $val2 }
-                                })
+                                        Property      = $newPath
+                                        ExpectedValue = if ($null -eq $val1) { '' } else { $val1 }
+                                        ReceivedValue = if ($null -eq $val2) { '' } else { $val2 }
+                                    })
                             }
                         } catch {
                             throw
@@ -304,10 +304,10 @@ function Compare-CIPPIntuneObject {
                             $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
                             if (-not $valIsEmpty) {
                                 $result.Add([PSCustomObject]@{
-                                    Property      = $newPath
-                                    ExpectedValue = $val
-                                    ReceivedValue = ''
-                                })
+                                        Property      = $newPath
+                                        ExpectedValue = $val
+                                        ReceivedValue = ''
+                                    })
                             }
                         } catch {
                             throw
@@ -318,10 +318,10 @@ function Compare-CIPPIntuneObject {
                             $valIsEmpty = ($null -eq $val -or $val -eq '' -or ($val -is [Array] -and $val.Count -eq 0))
                             if (-not $valIsEmpty) {
                                 $result.Add([PSCustomObject]@{
-                                    Property      = $newPath
-                                    ExpectedValue = ''
-                                    ReceivedValue = $val
-                                })
+                                        Property      = $newPath
+                                        ExpectedValue = ''
+                                        ReceivedValue = $val
+                                    })
                             }
                         } catch {
                             throw
