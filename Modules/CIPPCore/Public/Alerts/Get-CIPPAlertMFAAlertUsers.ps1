@@ -35,7 +35,7 @@ function Get-CIPPAlertMFAAlertUsers {
         }
 
     } catch {
-        Write-LogMessage -message "Failed to check MFA status for all users: $($_.exception.message)" -API 'MFA Alerts - Informational' -tenant $TenantFilter -sev Info
+        Write-LogMessage -message "Failed to check MFA status for all users: $($_.exception.message)" -API 'MFA Alerts - Informational' -tenant $TenantFilter -sev Error
     }
 
 }
