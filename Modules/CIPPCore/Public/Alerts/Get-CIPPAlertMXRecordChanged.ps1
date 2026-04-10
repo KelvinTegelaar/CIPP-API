@@ -41,7 +41,13 @@ function Get-CIPPAlertMXRecordChanged {
                 }
 
                 if ($Differences) {
-                    "$($Domain.Domain): MX records changed from [$($PreviousRecords -join ', ')] to [$($CurrentRecords -join ', ')]"
+                    [PSCustomObject]@{
+                        Message         = "$($Domain.Domain): MX records changed from [$($PreviousRecords -join ', ')] to [$($CurrentRecords -join ', ')]"
+                        Domain          = $Domain.Domain
+                        PreviousRecords = $PreviousRecords -join ', '
+                        CurrentRecords  = $CurrentRecords -join ', '
+                        Tenant          = $TenantFilter
+                    }
                 }
             } catch {
                 Write-Information "Error checking domain $($Domain.Domain): $($_.Exception.Message)"

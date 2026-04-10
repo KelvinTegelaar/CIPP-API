@@ -20,7 +20,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
     )
 
     try {
-        if ($Language -in @('user-select', 'os-default')) { $Language = '' }
+        if ($Language -in @('user-select', 'os-default')) { $Language = "$null" }
 
         # userType in outOfBoxExperienceSetting is only valid for user-driven (singleUser) mode.
         # The Intune API rejects it for self-deploying (shared) mode.

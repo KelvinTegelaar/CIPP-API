@@ -35,7 +35,8 @@ function Invoke-EditJITAdminTemplate {
 
         # Get the existing template
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'JITAdminTemplate' and RowKey eq '$GUID'"
+        $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+        $Filter = "PartitionKey eq 'JITAdminTemplate' and RowKey eq '$SafeGUID'"
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (!$ExistingTemplate) {

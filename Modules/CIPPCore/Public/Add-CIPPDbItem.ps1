@@ -71,6 +71,14 @@ function Add-CIPPDbItem {
             BatchNumber    = 0
         }
 
+        if ($TenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            try {
+                $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter -IncludeErrors | Select-Object -First 1).defaultDomainName
+            } catch {
+                Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Failed to resolve tenant GUID to default domain: $($_.Exception.Message)" -sev Warning
+            }
+        }
+
         # Helper function to format RowKey values by removing disallowed characters
         function Format-RowKey {
             param([string]$RowKey)
@@ -154,7 +162,7 @@ function Add-CIPPDbItem {
             if ($null -eq $Item) { continue }
 
             # Convert to entity
-            $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId
+            $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [Guid]::NewGuid().ToString()
             $Entity = @{
                 PartitionKey = $TenantFilter
                 RowKey       = Format-RowKey "$Type-$ItemId"
