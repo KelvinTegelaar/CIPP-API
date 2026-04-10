@@ -25,8 +25,14 @@ function New-CIPPCAPolicy {
                 Write-LogMessage -Headers $Headers -API $APIName -message "Already GUID, no need to replace: $_" -Sev 'Debug'
                 $GroupIds.Add($_) # it's a GUID, so we keep it
             } else {
-                $groupId = ($groups | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the group ID
+                $matchedGroups = @($groups | Where-Object -Property displayName -EQ $_)
+                $groupId = $matchedGroups.id # it's a display name, so we get the group ID
                 if ($groupId) {
+                    if ($matchedGroups.Count -gt 1) {
+                        Write-Warning "Multiple groups found with display name '$_'. Using the first match: $($matchedGroups[0].id). IDs found: $($groupId -join ', ')"
+                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple groups found with display name '$_'. Using first match: $($matchedGroups[0].id)" -Sev 'Warn'
+                        $groupId = @($matchedGroups[0].id)
+                    }
                     foreach ($gid in $groupId) {
                         Write-Warning "Replaced group name $_ with ID $gid"
                         $null = Write-LogMessage -Headers $Headers -API $APIName -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
@@ -55,7 +61,8 @@ function New-CIPPCAPolicy {
                         $GroupIds.Add($NewGroup.GroupId)
                     }
                 } else {
-                    Write-Warning "Group $_ not found in the tenant"
+                    Write-Warning "Group $_ not found in the tenant and CreateGroups is disabled"
+                    throw "Group '$_' not found in tenant $TenantFilter. Enable 'Create groups if they do not exist' or create the group manually before deploying this policy."
                 }
             }
         }
@@ -218,7 +225,12 @@ function New-CIPPCAPolicy {
             if (!$location.displayName) { continue }
             # Use cached named locations instead of fetching each time
             if ($Location.displayName -in $AllNamedLocations.displayName) {
-                $ExistingLocation = $AllNamedLocations | Where-Object -Property displayName -EQ $Location.displayName
+                $ExistingLocation = @($AllNamedLocations | Where-Object -Property displayName -EQ $Location.displayName)
+                if ($ExistingLocation.Count -gt 1) {
+                    Write-Warning "Multiple named locations found with display name '$($Location.displayName)'. Using the first match: $($ExistingLocation[0].id). IDs found: $($ExistingLocation.id -join ', ')"
+                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Multiple named locations found with display name '$($Location.displayName)'. Using first match: $($ExistingLocation[0].id)" -Sev 'Warn'
+                }
+                $ExistingLocation = $ExistingLocation[0]
                 if ($Overwrite) {
                     $LocationUpdate = $location | Select-Object * -ExcludeProperty id
                     Remove-ODataProperties -Object $LocationUpdate
@@ -275,8 +287,9 @@ function New-CIPPCAPolicy {
                     throw "Failed to create named location $($location.displayName): $($ErrorMessage.NormalizedError)"
                 }
                 [pscustomobject]@{
-                    id   = $GraphRequest.id
-                    name = $GraphRequest.displayName
+                    id         = $GraphRequest.id
+                    name       = $GraphRequest.displayName
+                    templateId = $location.id
                 }
             }
         }
@@ -287,7 +300,7 @@ function New-CIPPCAPolicy {
     if ($LocationLookupTable -and $JSONobj.conditions.locations) {
         foreach ($location in $JSONobj.conditions.locations.includeLocations) {
             if ($null -eq $location) { continue }
-            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location } | Select-Object -First 1
             if (!$lookup) { continue }
             Write-Information "Replacing named location - $location"
             $index = [array]::IndexOf($JSONobj.conditions.locations.includeLocations, $location)
@@ -298,7 +311,7 @@ function New-CIPPCAPolicy {
 
         foreach ($location in $JSONobj.conditions.locations.excludeLocations) {
             if ($null -eq $location) { continue }
-            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location }
+            $lookup = $LocationLookupTable | Where-Object { $_.name -eq $location -or $_.displayName -eq $location -or $_.templateId -eq $location } | Select-Object -First 1
             if (!$lookup) { continue }
             Write-Information "Replacing named location - $location"
             $index = [array]::IndexOf($JSONobj.conditions.locations.excludeLocations, $location)
@@ -471,6 +484,7 @@ function New-CIPPCAPolicy {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
+        $ErrorMessage | Add-Member -NotePropertyName 'PolicyJSON' -NotePropertyValue $RawJSON -Force
         $Result = "Failed to create or update conditional access rule $($JSONobj.displayName): $($ErrorMessage.NormalizedError)"
 
         # Full error details for debugging

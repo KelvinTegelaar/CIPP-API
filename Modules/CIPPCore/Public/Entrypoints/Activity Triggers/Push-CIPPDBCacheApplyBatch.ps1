@@ -51,7 +51,7 @@ function Push-CIPPDBCacheApplyBatch {
             }
         }
 
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started flat cache execution orchestrator with ID = '$InstanceId' for $($AllTasks.Count) tasks"
 
         return @{

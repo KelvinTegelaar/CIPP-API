@@ -14,7 +14,8 @@ function Invoke-RemoveQueuedApp {
     $ID = $request.body.ID
     try {
         $Table = Get-CippTable -tablename 'apps'
-        $Filter = "PartitionKey eq 'apps' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'apps' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
         $Message = "Removed application queue for $ID."
