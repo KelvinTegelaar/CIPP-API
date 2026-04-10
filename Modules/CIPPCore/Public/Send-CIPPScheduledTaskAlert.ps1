@@ -30,11 +30,26 @@ function Send-CIPPScheduledTaskAlert {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
-        [string]$TaskType = 'Scheduled Task'
+        [string]$TaskType = 'Scheduled Task',
+
+        [Parameter(Mandatory = $false)]
+        $Attachments
     )
 
     try {
         Write-Information "Sending post-execution alerts for task $($TaskInfo.Name)"
+
+        # Use attachments from parameter, or extract from structured results as fallback
+        $TaskAttachments = $Attachments
+        if (-not $TaskAttachments) {
+            if ($Results -is [hashtable] -and $Results.ContainsKey('TaskAttachments')) {
+                $TaskAttachments = $Results.TaskAttachments
+                $Results = $Results.Results
+            } elseif ($Results -is [PSCustomObject] -and $null -ne $Results.TaskAttachments) {
+                $TaskAttachments = $Results.TaskAttachments
+                $Results = $Results.Results
+            }
+        }
 
         # Get tenant information
         $TenantInfo = Get-Tenants -TenantFilter $TenantFilter
@@ -47,6 +62,49 @@ function Send-CIPPScheduledTaskAlert {
             $Results | ConvertTo-Html -Fragment
         }
         $HTML = $FinalResults -replace '<table>', "This alert is for tenant $TenantFilter. <br /><br /> $TableDesign<table class=adaptiveTable>" | Out-String
+
+        # For alert tasks, add per-row snooze links to the email
+        if ($TaskType -eq 'Alert' -and $Results -is [array] -and $Results.Count -gt 0 -and $Results[0] -isnot [string]) {
+            try {
+                $CippConfigTable = Get-CippTable -tablename Config
+                $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+                $CIPPURL = if ($CippConfig.Value) { 'https://{0}' -f $CippConfig.Value } else { $null }
+
+                if ($CIPPURL) {
+                    $CmdletName = $TaskInfo.Command
+                    $SnoozeLinksHtml = @'
+<div style="margin:20px 0;padding:20px;border-left:4px solid #ff9800;">
+<h4 style="margin-top:0;color:#ff9800;">Snooze Individual Alerts</h4>
+<p style="margin:0 0 12px;font-size:13px;">Click a button to snooze that specific alert item. You will need to be signed in to CIPP.</p>
+'@
+                    foreach ($ResultItem in $Results) {
+                        $HashResult = Get-AlertContentHash -AlertItem $ResultItem
+                        $ItemPreview = [System.Web.HttpUtility]::HtmlEncode($HashResult.ContentPreview)
+                        $EncodedData = [System.Web.HttpUtility]::UrlEncode(($ResultItem | ConvertTo-Json -Compress -Depth 5))
+                        $EncodedCmdlet = [System.Web.HttpUtility]::UrlEncode($CmdletName)
+                        $EncodedTenant = [System.Web.HttpUtility]::UrlEncode($TenantFilter)
+                        $BaseLink = "${CIPPURL}/cipp/snooze-alert?cmdlet=${EncodedCmdlet}&tenant=${EncodedTenant}&data=${EncodedData}"
+                        $SnoozeLinksHtml += @"
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:12px;border-bottom:1px solid #e0e0e0;padding-bottom:12px;">
+<tr><td style="font-size:13px;padding:0 0 8px 0;font-weight:600;">$ItemPreview</td></tr>
+<tr><td>
+<table cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=7" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">7 Days</a></td></tr></table></td>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#0078d4;padding:6px 14px;"><a href="${BaseLink}&duration=14" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">14 Days</a></td></tr></table></td>
+<td style="padding:0 6px 0 0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#ff9800;padding:6px 14px;"><a href="${BaseLink}&duration=30" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">30 Days</a></td></tr></table></td>
+<td style="padding:0;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#d32f2f;padding:6px 14px;"><a href="${BaseLink}&duration=90" style="color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">90 Days</a></td></tr></table></td>
+</tr></table>
+</td></tr>
+</table>
+"@
+                    }
+                    $SnoozeLinksHtml += '</div>'
+                    $HTML += $SnoozeLinksHtml
+                }
+            } catch {
+                Write-Information "Failed to generate snooze links for email: $($_.Exception.Message)"
+            }
+        }
 
         # Add alert comment if available
         if ($TaskInfo.AlertComment) {
@@ -71,23 +129,84 @@ function Send-CIPPScheduledTaskAlert {
 
         Write-Information 'Scheduler: Sending the results to configured targets.'
 
+        $NotificationTable = Get-CIPPTable -TableName SchedulerConfig
+        $NotificationFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
+        $NotificationConfig = [pscustomobject](Get-CIPPAzDataTableEntity @NotificationTable -Filter $NotificationFilter)
+        $UseStandardizedSchema = [boolean]$NotificationConfig.UseStandardizedSchema
+
         # Send to configured alert targets
         switch -wildcard ($TaskInfo.PostExecution) {
             '*psa*' {
                 Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
             }
             '*email*' {
-                Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
+                $EmailParams = @{
+                    Type         = 'email'
+                    Title        = $title
+                    HTMLContent  = $HTML
+                    TenantFilter = $TenantFilter
+                }
+                if ($TaskAttachments) {
+                    $EmailParams.Attachments = $TaskAttachments
+                }
+                Send-CIPPAlert @EmailParams
             }
             '*webhook*' {
-                $Webhook = [PSCustomObject]@{
-                    'tenantId'     = $TenantInfo.customerId
-                    'Tenant'       = $TenantFilter
-                    'TaskInfo'     = $TaskInfo
-                    'Results'      = $Results
-                    'AlertComment' = $TaskInfo.AlertComment
+                # Build per-item snooze metadata for alert tasks
+                $SnoozeInfo = $null
+                if ($TaskType -eq 'Alert' -and $Results -is [array] -and $Results.Count -gt 0 -and $Results[0] -isnot [string]) {
+                    try {
+                        $SnoozeInfo = [PSCustomObject]@{
+                            apiEndpoint = '/api/ExecSnoozeAlert'
+                            cmdletName  = $TaskInfo.Command
+                            tenant      = $TenantFilter
+                            durations   = @(7, 14, 30, -1)
+                            items       = @($Results | ForEach-Object {
+                                    $HashResult = Get-AlertContentHash -AlertItem $_
+                                    [PSCustomObject]@{
+                                        contentHash    = $HashResult.ContentHash
+                                        contentPreview = $HashResult.ContentPreview
+                                        alertItem      = $_
+                                    }
+                                })
+                        }
+                    } catch {
+                        Write-Information "Failed to generate snooze metadata for webhook: $($_.Exception.Message)"
+                    }
                 }
-                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $TenantFilter -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
+
+                $Webhook = if ($UseStandardizedSchema) {
+                    $obj = [PSCustomObject]@{
+                        tenantId     = $TenantInfo.customerId
+                        tenant       = $TenantFilter
+                        taskType     = $TaskType
+                        task         = [PSCustomObject]@{
+                            id        = $TaskInfo.RowKey
+                            name      = $TaskInfo.Name
+                            command   = $TaskInfo.Command
+                            state     = $TaskInfo.TaskState
+                            reference = $TaskInfo.Reference
+                            scheduled = $TaskInfo.ScheduledTime
+                            executed  = $TaskInfo.ExecutedTime
+                            partition = $TaskInfo.PartitionKey
+                        }
+                        results      = $Results
+                        alertComment = $TaskInfo.AlertComment
+                    }
+                    if ($SnoozeInfo) { $obj | Add-Member -NotePropertyName 'snooze' -NotePropertyValue $SnoozeInfo }
+                    $obj
+                } else {
+                    $obj = [PSCustomObject]@{
+                        tenantId     = $TenantInfo.customerId
+                        Tenant       = $TenantFilter
+                        TaskInfo     = $TaskInfo
+                        Results      = $Results
+                        AlertComment = $TaskInfo.AlertComment
+                    }
+                    if ($SnoozeInfo) { $obj | Add-Member -NotePropertyName 'Snooze' -NotePropertyValue $SnoozeInfo }
+                    $obj
+                }
+                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $TenantFilter -JSONContent $($Webhook | ConvertTo-Json -Depth 20) -APIName 'Scheduled Task Alerts' -SchemaSource $TaskType -InvokingCommand $TaskInfo.Command -UseStandardizedSchema:$UseStandardizedSchema
             }
         }
 
