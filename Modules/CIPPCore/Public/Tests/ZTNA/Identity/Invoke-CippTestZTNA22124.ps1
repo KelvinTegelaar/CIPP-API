@@ -24,7 +24,7 @@ function Invoke-CippTestZTNA22124 {
             $TestParams = @{
                 TestId               = 'ZTNA22124'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve directory recommendations from cache.'
                 Risk                 = 'High'
@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA22124 {
         $TestParams = @{
             TestId               = 'ZTNA22124'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'High'
@@ -84,7 +84,7 @@ function Invoke-CippTestZTNA22124 {
         $TestParams = @{
             TestId               = 'ZTNA22124'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'High'

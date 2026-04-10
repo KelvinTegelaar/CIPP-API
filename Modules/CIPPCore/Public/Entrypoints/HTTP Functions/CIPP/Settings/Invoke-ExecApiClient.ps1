@@ -32,13 +32,15 @@ function Invoke-ExecApiClient {
             if ($Request.Body.ClientId -or $Request.Body.AppName) {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 $AddUpdateSuccess = $false
+                $RetryClientId = $null
+                $RetryObjectId = $null
                 try {
                     $ApiConfig = @{
                         Headers = $Request.Headers
                     }
                     if ($ClientId) {
                         $ApiConfig.ClientId = $ClientId
-                        $ApiConfig.ResetSecret = $Request.Body.CIPPAPI.ResetSecret
+                        $ApiConfig.ResetSecret = [bool]$Request.Body.CIPPAPI.ResetSecret
                     }
                     if ($Request.Body.AppName) {
                         $ApiConfig.AppName = $Request.Body.AppName
@@ -49,7 +51,27 @@ function Invoke-ExecApiClient {
                     $AddedText = $APIConfig.Results
                     $AddUpdateSuccess = $true
                 } catch {
-                    $AddedText = "Could not modify App Registrations. Check the CIPP documentation for API requirements. Error: $($_.Exception.Message)"
+                    $RetryClientId = [string]$_.Exception.Data['ApplicationID']
+                    $RetryObjectId = [string]$_.Exception.Data['ApplicationObjectID']
+
+                    $AddedText = @{
+                        resultText = "Could not modify App Registrations. Check the CIPP documentation for API requirements. Error: $($_.Exception.Message)"
+                        state      = 'error'
+                    }
+
+                    if ($RetryClientId) {
+                        $AddedText.retryAvailable = $true
+                        $AddedText.retryPayload = @{
+                            RetrySetup = $true
+                            ClientId   = $RetryClientId
+                            CIPPAPI    = @{
+                                ResetSecret = $true
+                            }
+                        }
+                        if ($RetryObjectId) {
+                            $AddedText.retryPayload.ApplicationObjectID = $RetryObjectId
+                        }
+                    }
                 }
             }
 
@@ -65,9 +87,9 @@ function Invoke-ExecApiClient {
                 $IpRange = @()
             }
 
-            if (!$AddUpdateSuccess -and !$ClientId) {
+            if (!$AddUpdateSuccess) {
                 $Body = @{
-                    Results = $AddedText
+                    Results = @($AddedText)
                 }
             } else {
                 $ExistingClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
@@ -77,7 +99,15 @@ function Invoke-ExecApiClient {
                     $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                     $Client.Enabled = $Request.Body.Enabled ?? $false
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
-                    $Results = 'API client updated'
+                    if ($APIConfig.ApplicationSecret) {
+                        $Results = @{
+                            resultText = "API client updated and application secret reset for '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the new secret."
+                            copyField  = $APIConfig.ApplicationSecret
+                            state      = 'success'
+                        }
+                    } else {
+                        $Results = 'API client updated'
+                    }
                 } else {
                     $Client = @{
                         'PartitionKey' = 'ApiClients'

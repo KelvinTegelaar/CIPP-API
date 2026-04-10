@@ -25,7 +25,7 @@ function Invoke-CippTestZTNA24570 {
             $TestParams = @{
                 TestId               = 'ZTNA24570'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve organization information from cache.'
                 Risk                 = 'High'
@@ -45,7 +45,7 @@ function Invoke-CippTestZTNA24570 {
             $TestParams = @{
                 TestId               = 'ZTNA24570'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = '✅ **N/A**: Hybrid identity synchronization is not enabled in this tenant.'
                 Risk                 = 'High'
@@ -65,7 +65,7 @@ function Invoke-CippTestZTNA24570 {
             $TestParams = @{
                 TestId               = 'ZTNA24570'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve roles from cache.'
                 Risk                 = 'High'
@@ -91,7 +91,7 @@ function Invoke-CippTestZTNA24570 {
             $TestParams = @{
                 TestId               = 'ZTNA24570'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Failed'
                 ResultMarkdown       = '❌ **Error**: Unable to find Directory Synchronization Accounts role in cache.'
                 Risk                 = 'High'
@@ -157,7 +157,7 @@ function Invoke-CippTestZTNA24570 {
         $TestParams = @{
             TestId               = 'ZTNA24570'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'High'
@@ -172,7 +172,7 @@ function Invoke-CippTestZTNA24570 {
         $TestParams = @{
             TestId               = 'ZTNA24570'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'High'

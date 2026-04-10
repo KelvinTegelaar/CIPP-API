@@ -57,6 +57,9 @@ function Add-CippTestResult {
         [string]$ResultMarkdown,
 
         [Parameter(Mandatory = $false)]
+        [string]$ResultDataJson,
+
+        [Parameter(Mandatory = $false)]
         [string]$Risk,
 
         [Parameter(Mandatory = $false)]
@@ -83,6 +86,7 @@ function Add-CippTestResult {
             RowKey               = $TestId
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown ?? ''
+            ResultDataJson       = $ResultDataJson ?? ''
             Risk                 = $Risk ?? ''
             Name                 = $Name ?? ''
             Pillar               = $Pillar ?? ''

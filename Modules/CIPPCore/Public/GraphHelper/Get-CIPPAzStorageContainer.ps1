@@ -147,7 +147,7 @@ function Get-CIPPAzStorageContainer {
 
         # Optional banner for UX parity when displayed directly
         if ($results.Count -gt 0 -and $baseInfo.Account) {
-            Write-Host "\n   Storage Account Name: $($baseInfo.Account)\n" -ForegroundColor DarkGray
+            Write-Host "Storage Account Name: $($baseInfo.Account)" -ForegroundColor DarkGray
         }
 
         $results

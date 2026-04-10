@@ -32,9 +32,21 @@ function Set-CIPPSAMAdminRoles {
     }
 
     if (($SAMRoles | Measure-Object).count -gt 0 -and $Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants') {
-        $AppMemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationID)')/memberOf/#microsoft.graph.directoryRole" -tenantid $TenantFilter -AsApp $true
-
-        $sp = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationID)')?`$select=id,displayName" -tenantid $TenantFilter -AsApp $true)
+        $InitialRequests = @(
+            [PSCustomObject]@{
+                id     = 'memberOf'
+                method = 'GET'
+                url    = "servicePrincipals(appId='$($env:ApplicationID)')/memberOf/#microsoft.graph.directoryRole"
+            }
+            [PSCustomObject]@{
+                id     = 'sp'
+                method = 'GET'
+                url    = "servicePrincipals(appId='$($env:ApplicationID)')?`$select=id,displayName"
+            }
+        )
+        $InitialResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $InitialRequests -AsApp $true -NoAuthCheck $true
+        $AppMemberOf = ($InitialResults | Where-Object { $_.id -eq 'memberOf' }).body.value
+        $sp = ($InitialResults | Where-Object { $_.id -eq 'sp' }).body
         $id = $sp.id
 
         $Requests = $SAMRoles | Where-Object { $AppMemberOf.roleTemplateId -notcontains $_.value } | ForEach-Object {

@@ -1,4 +1,4 @@
-Function Invoke-ListSafeLinksPolicyTemplateDetails {
+function Invoke-ListSafeLinksPolicyTemplateDetails {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -21,12 +21,13 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
 
     try {
         if (-not $ID) {
-            throw "Template ID is required"
+            throw 'Template ID is required'
         }
 
         # Get the specific template from Azure Table Storage
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String
+        $Filter = "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeID'"
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Template) {
@@ -40,8 +41,7 @@ Function Invoke-ListSafeLinksPolicyTemplateDetails {
         $Result = $TemplateData
         $StatusCode = [HttpStatusCode]::OK
         Write-LogMessage -headers $Headers -API $APIName -message "Successfully retrieved template details for ID '$ID'" -Sev 'Info'
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to retrieve template details for ID '$ID'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'

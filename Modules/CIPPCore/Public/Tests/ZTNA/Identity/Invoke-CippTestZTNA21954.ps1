@@ -24,7 +24,7 @@ function Invoke-CippTestZTNA21954 {
             $TestParams = @{
                 TestId               = 'ZTNA21954'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve authorization policy from cache.'
                 Risk                 = 'Low'
@@ -53,7 +53,7 @@ function Invoke-CippTestZTNA21954 {
         $TestParams = @{
             TestId               = 'ZTNA21954'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'Low'
@@ -68,7 +68,7 @@ function Invoke-CippTestZTNA21954 {
         $TestParams = @{
             TestId               = 'ZTNA21954'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'Low'

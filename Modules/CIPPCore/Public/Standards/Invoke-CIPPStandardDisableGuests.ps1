@@ -121,7 +121,7 @@ function Invoke-CIPPStandardDisableGuests {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to process bulk disable guests request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago - all guest accounts are already compliant." -sev Info
         }
     }
     if ($Settings.alert -eq $true) {

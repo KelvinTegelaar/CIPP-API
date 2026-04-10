@@ -144,6 +144,17 @@ function Get-CIPPDrift {
                                 Write-Verbose "No valid GUID found in: $($ComparisonItem.StandardName)"
                             }
                         }
+                        # Handle QuarantineTemplate — suffix is hex-encoded display name, decode it
+                        if ($ComparisonItem.StandardName -like 'standards.QuarantineTemplate.*') {
+                            $HexEncodedName = $ComparisonItem.StandardName.Substring('standards.QuarantineTemplate.'.Length)
+                            if ($HexEncodedName) {
+                                $Chars = [System.Collections.Generic.List[char]]::new()
+                                for ($i = 0; $i -lt $HexEncodedName.Length; $i += 2) {
+                                    $Chars.Add([char][Convert]::ToInt32($HexEncodedName.Substring($i, 2), 16))
+                                }
+                                $displayName = "Quarantine Policy: $(-join $Chars)"
+                            }
+                        }
                         $reason = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].Reason }
                         $User = if ($ExistingDriftStates.ContainsKey($ComparisonItem.StandardName)) { $ExistingDriftStates[$ComparisonItem.StandardName].User }
                         $StandardsDeviations.Add([PSCustomObject]@{

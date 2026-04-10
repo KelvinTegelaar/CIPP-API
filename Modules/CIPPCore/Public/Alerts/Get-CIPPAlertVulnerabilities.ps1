@@ -18,6 +18,8 @@ function Get-CIPPAlertVulnerabilities {
         $AgeThresholdHours = if ($InputValue.VulnerabilityAgeHours) { [int]$InputValue.VulnerabilityAgeHours } else { 0 }
         # Autocomplete inputs store value in .value subproperty
         $CVSSSeverity = if ($InputValue.CVSSSeverity.value) { $InputValue.CVSSSeverity.value } else { 'low' }
+        # Switch inputs are stored as boolean
+        $NewerThanMode = [bool]($InputValue.NewerThanMode)
         # Multi-select autocomplete returns array of objects with .value
         if ($InputValue.ExploitabilityLevels) {
             foreach ($level in $InputValue.ExploitabilityLevels) {
@@ -25,6 +27,7 @@ function Get-CIPPAlertVulnerabilities {
             }
         }
     } else {
+        $NewerThanMode = $false
         # Backward compatibility: simple value = hours threshold
         $AgeThresholdHours = if ($InputValue) { [int]$InputValue } else { 0 }
         $CVSSSeverity = 'low'
@@ -52,9 +55,17 @@ function Get-CIPPAlertVulnerabilities {
                 $FirstVuln = $Group.Group | Sort-Object firstSeenTimestamp | Select-Object -First 1
                 $HoursOld = [math]::Round(((Get-Date) - [datetime]$FirstVuln.firstSeenTimestamp).TotalHours)
 
-                # Skip if vulnerability is not old enough
-                if ($HoursOld -lt $AgeThresholdHours) {
-                    continue
+                # Skip based on age threshold mode
+                if ($NewerThanMode) {
+                    # Newer-than mode: only alert on items newer than threshold
+                    if ($HoursOld -gt $AgeThresholdHours) {
+                        continue
+                    }
+                } else {
+                    # Older-than mode (default): only alert on items older than threshold
+                    if ($HoursOld -lt $AgeThresholdHours) {
+                        continue
+                    }
                 }
 
                 # Skip if CVSS score is below minimum threshold

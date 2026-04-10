@@ -31,7 +31,7 @@ function Start-TenantDynamicGroupOrchestrator {
                 SkipLog          = $true
             }
             if ($PSCmdlet.ShouldProcess('Start-TenantDynamicGroupOrchestrator', 'Starting Tenant Dynamic Group Orchestrator')) {
-                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                Start-CIPPOrchestrator -InputObject $InputObject
             }
         } else {
             Write-Information 'No tenants require permissions update'

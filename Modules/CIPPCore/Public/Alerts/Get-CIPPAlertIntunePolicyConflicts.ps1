@@ -140,5 +140,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
         $AlertData = $Issues
     }
 
-    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    if ($AlertData) {
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    }
 }

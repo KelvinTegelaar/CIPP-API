@@ -58,20 +58,24 @@ function Invoke-AddUser {
     } else {
         try {
             $CreationResults = New-CIPPUserTask -UserObj $UserObj -APIName $APIName -Headers $Headers
+            $ResultsList = [System.Collections.Generic.List[object]]::new()
+            $ResultsList.Add($CreationResults.Results[0])
+            $ResultsList.Add(@{
+                    'resultText' = $CreationResults.Results[1]
+                    'copyField'  = $CreationResults.Username
+                    'state'      = 'success'
+                })
+            $ResultsList.Add(@{
+                    'resultText' = $CreationResults.Results[2]
+                    'copyField'  = $CreationResults.password
+                    'state'      = 'success'
+                })
+            # Append any additional results (licenses, groups, aliases, manager, etc.)
+            foreach ($AdditionalResult in $CreationResults.Results | Select-Object -Skip 3) {
+                $ResultsList.Add($AdditionalResult)
+            }
             $body = [pscustomobject] @{
-                'Results'  = @(
-                    $CreationResults.Results[0],
-                    @{
-                        'resultText' = $CreationResults.Results[1]
-                        'copyField'  = $CreationResults.Username
-                        'state'      = 'success'
-                    },
-                    @{
-                        'resultText' = $CreationResults.Results[2]
-                        'copyField'  = $CreationResults.password
-                        'state'      = 'success'
-                    }
-                )
+                'Results'  = $ResultsList
                 'CopyFrom' = @{
                     'Success' = $CreationResults.CopyFrom.Success
                     'Error'   = $CreationResults.CopyFrom.Error

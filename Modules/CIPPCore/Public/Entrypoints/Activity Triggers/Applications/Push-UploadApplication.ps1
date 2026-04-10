@@ -139,6 +139,7 @@ function Push-UploadApplication {
                         if ($AppConfig.description) { $Properties['description'] = $AppConfig.description }
                         if ($AppConfig.publisher) { $Properties['publisher'] = $AppConfig.publisher }
                         if ($AppConfig.uninstallScript) { $Properties['uninstallScript'] = $AppConfig.uninstallScript }
+                        if ($AppConfig.detectionScript) { $Properties['detectionScript'] = $AppConfig.detectionScript }
                         if ($AppConfig.detectionPath) { $Properties['detectionPath'] = $AppConfig.detectionPath }
                         if ($AppConfig.detectionFile) { $Properties['detectionFile'] = $AppConfig.detectionFile }
                         if ($AppConfig.runAsAccount) { $Properties['runAsAccount'] = $AppConfig.runAsAccount }

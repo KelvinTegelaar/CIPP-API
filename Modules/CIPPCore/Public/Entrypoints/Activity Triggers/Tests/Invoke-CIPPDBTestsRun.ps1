@@ -8,7 +8,10 @@ function Invoke-CIPPDBTestsRun {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$TenantFilter = 'allTenants'
+        [string]$TenantFilter = 'allTenants',
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force
     )
 
     Write-Information "Starting tests run for tenant: $TenantFilter"
@@ -19,6 +22,12 @@ function Invoke-CIPPDBTestsRun {
         Type         = 'CippTests'
         API          = 'CippTests'
     }
+
+    if ($Force) {
+        Write-Information 'Force flag set — clearing rerun protection'
+        Test-CIPPRerun @RerunParams -Clear | Out-Null
+    }
+
     $Rerun = Test-CIPPRerun @RerunParams
     if ($Rerun -eq $true) {
         Write-Host "rerun is true for $($TenantFilter)"

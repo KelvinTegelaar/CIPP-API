@@ -17,7 +17,8 @@ function Invoke-RemoveIntuneReusableSettingTemplate {
         if (-not $ID) { throw 'You must supply an ID' }
 
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$SafeID'"
         $Row = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $Row
 

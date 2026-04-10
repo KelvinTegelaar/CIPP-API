@@ -12,8 +12,8 @@ function Push-CIPPDBTestsRun {
         Write-Information "PostExecution: Starting tests for tenant: $TenantFilter after data collection completed"
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message 'Starting test run after data collection' -sev Info
 
-        # Call the test run function
-        $Result = Invoke-CIPPDBTestsRun -TenantFilter $TenantFilter
+        # Call the test run function — Force clears rerun protection since this is a manual trigger
+        $Result = Invoke-CIPPDBTestsRun -TenantFilter $TenantFilter -Force
 
         Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Test run started. Instance ID: $($Result.InstanceId)" -sev Info
         Write-Information "PostExecution: Tests started with Instance ID: $($Result.InstanceId)"

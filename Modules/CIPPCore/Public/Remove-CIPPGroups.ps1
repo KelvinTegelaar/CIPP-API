@@ -67,8 +67,8 @@ function Remove-CIPPGroups {
             $IsDynamic = -not [string]::IsNullOrWhiteSpace($GroupInfo.membershipRule)
 
             if ($IsLicensed) {
-                $Results.Add("Could not remove $Username from group '$GroupName' because it has assigned licenses. These groups are removed during the license removal step.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it has assigned licenses. These groups are removed during the license removal step." -sev 'Warn' -tenant $TenantFilter
+                $Results.Add("Skipping removal of $Username from group '$GroupName' because it has assigned licenses. This group will be handled during the license removal step.")
+                Write-LogMessage -headers $Headers -API $APIName -message "Skipping removal of $Username from group '$GroupName' because it has assigned licenses. This group will be handled during the license removal step." -sev 'Info' -tenant $TenantFilter
             } elseif ($IsDynamic) {
                 $Results.Add("Error: Could not remove $Username from group '$GroupName' because it is a Dynamic Group.")
                 Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is a Dynamic Group." -sev 'Warn' -tenant $TenantFilter
