@@ -25,7 +25,7 @@ function Invoke-CippTestZTNA24827 {
             $TestParams = @{
                 TestId               = 'ZTNA24827'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve Conditional Access policies from cache.'
                 Risk                 = 'Medium'
@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA24827 {
             $TestParams = @{
                 TestId               = 'ZTNA24827'
                 TenantFilter         = $Tenant
-                TestType             = 'ZeroTrustNetworkAccess'
+                TestType             = 'Identity'
                 Status               = 'Failed'
                 ResultMarkdown       = "❌ **Fail**: No Conditional Access policies found that block unmanaged mobile apps.`n`n[Create policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
                 Risk                 = 'Medium'
@@ -156,7 +156,7 @@ function Invoke-CippTestZTNA24827 {
         $TestParams = @{
             TestId               = 'ZTNA24827'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
             Risk                 = 'Medium'
@@ -171,7 +171,7 @@ function Invoke-CippTestZTNA24827 {
         $TestParams = @{
             TestId               = 'ZTNA24827'
             TenantFilter         = $Tenant
-            TestType             = 'ZeroTrustNetworkAccess'
+            TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
             Risk                 = 'Medium'

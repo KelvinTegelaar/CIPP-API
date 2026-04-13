@@ -65,7 +65,9 @@ function Get-CIPPAlertExpiringLicenses {
             }
         )
 
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
 
     } catch {
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -error $_

@@ -39,7 +39,7 @@ function Get-CIPPAlertInactiveGuestUsers {
                 "https://graph.microsoft.com/beta/users?`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses"
             }
 
-            $GraphRequest = New-GraphGetRequest -uri $Uri-tenantid $TenantFilter | Where-Object { $_.userType -eq 'Guest' }
+            $GraphRequest = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter | Where-Object { $_.userType -eq 'Guest' }
 
             $AlertData = foreach ($user in $GraphRequest) {
                 $lastInteractive = $user.signInActivity.lastSignInDateTime
@@ -81,7 +81,9 @@ function Get-CIPPAlertInactiveGuestUsers {
                 }
             }
 
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            if ($AlertData) {
+                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            }
         } catch {}
     } catch {
         Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Failed to check inactive guest users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
