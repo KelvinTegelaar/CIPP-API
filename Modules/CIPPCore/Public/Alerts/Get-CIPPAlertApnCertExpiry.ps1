@@ -22,6 +22,7 @@ function Get-CIPPAlertApnCertExpiry {
 
     } catch {
         #no error because if a tenant does not have an APN, it'll error anyway.
-        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check APN certificate expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        #$ErrorMessage = Get-CippException -Exception $_
+        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check APN certificate expiry for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

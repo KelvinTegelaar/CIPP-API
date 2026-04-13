@@ -16,6 +16,7 @@ function Get-CippAlertBreachAlert {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $Search -PartitionKey BreachAlert
         }
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Could not get New Breaches for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-AlertMessage -tenant $($TenantFilter) -message "Could not get New Breaches for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

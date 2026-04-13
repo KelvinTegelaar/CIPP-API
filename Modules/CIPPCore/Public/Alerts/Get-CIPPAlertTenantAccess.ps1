@@ -70,8 +70,8 @@ function Get-CIPPAlertTenantAccess {
                     })
             }
         } catch {
-            $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
-            $GraphMessage = "Failed to connect to Graph API: $ErrorMessage"
+            $ErrorMessage = Get-CippException -Exception $_
+            $GraphMessage = "Failed to connect to Graph API: $($ErrorMessage.NormalizedError)"
             $Issues.Add([PSCustomObject]@{
                     Issue   = 'GraphFailure'
                     Message = $GraphMessage
@@ -85,10 +85,10 @@ function Get-CIPPAlertTenantAccess {
             $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
             $ExchangeStatus = $true
         } catch {
-            $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
+            $ErrorMessage = Get-CippException -Exception $_
             $Issues.Add([PSCustomObject]@{
                     Issue   = 'ExchangeFailure'
-                    Message = "Failed to connect to Exchange Online: $ErrorMessage"
+                    Message = "Failed to connect to Exchange Online: $($ErrorMessage.NormalizedError)"
                     Tenant  = $TenantFilter
                 })
         }
@@ -133,6 +133,7 @@ function Get-CIPPAlertTenantAccess {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Tenant access alert error for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Tenant access alert error for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }
