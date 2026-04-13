@@ -37,6 +37,7 @@ function Get-CIPPAlertSmtpAuthSuccess {
     } catch {
         # Suppress errors if no data returned
         # Uncomment if you want explicit error logging
-        # Write-AlertMessage -tenant $($TenantFilter) -message "Failed to query SMTP AUTH sign-ins for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        # $ErrorMessage = Get-CippException -Exception $_
+        # Write-AlertMessage -tenant $($TenantFilter) -message "Failed to query SMTP AUTH sign-ins for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

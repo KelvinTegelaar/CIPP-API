@@ -69,6 +69,7 @@ function Get-CIPPAlertNewRiskyUsers {
             }
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not get risky users for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get risky users for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

@@ -52,7 +52,7 @@ function Get-CIPPAlertLongLivedAppCredentials {
             }
         }
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Excessive secret validity alert failed: $ErrorMessage" -sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Excessive secret validity alert failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
     }
 }

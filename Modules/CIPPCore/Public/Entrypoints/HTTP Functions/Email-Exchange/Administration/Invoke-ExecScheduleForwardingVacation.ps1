@@ -43,14 +43,14 @@ function Invoke-ExecScheduleForwardingVacation {
                 if ([string]::IsNullOrWhiteSpace($ForwardInternal)) {
                     throw 'Forwarding target is required for internal forwarding.'
                 }
-                $SharedParams.ForwardInternal = $ForwardInternal
+                $SharedParams | Add-Member -NotePropertyName 'ForwardInternal' -NotePropertyValue $ForwardInternal -Force
                 $TargetValue = $ForwardInternal
             }
             'ExternalAddress' {
                 if ([string]::IsNullOrWhiteSpace($ForwardExternal)) {
                     throw 'Forwarding target is required for external forwarding.'
                 }
-                $SharedParams.ForwardExternal = $ForwardExternal
+                $SharedParams | Add-Member -NotePropertyName 'ForwardExternal' -NotePropertyValue $ForwardExternal -Force
                 $TargetValue = $ForwardExternal
             }
             default {
