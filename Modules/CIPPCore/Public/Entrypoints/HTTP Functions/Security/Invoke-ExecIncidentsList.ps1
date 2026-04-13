@@ -10,7 +10,7 @@ function Invoke-ExecIncidentsList {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $StartDate = $Request.Query.StartDate   # YYYYMMDD or null
-    $EndDate   = $Request.Query.EndDate     # YYYYMMDD or null
+    $EndDate = $Request.Query.EndDate     # YYYYMMDD or null
 
     # Build OData $filter parts for Graph API (single-tenant path)
     $GraphFilterParts = [System.Collections.Generic.List[string]]::new()
@@ -88,11 +88,18 @@ function Invoke-ExecIncidentsList {
                 }
                 $Incidents = $Rows
                 foreach ($incident in $Incidents) {
-                    $IncidentObj = $incident.Incident | ConvertFrom-Json
-                    # In-memory date filter for cached AllTenants data
-                    $created = [datetime]::Parse($IncidentObj.createdDateTime)
-                    if ($StartDate -and $created -lt [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null)) { continue }
-                    if ($EndDate   -and $created -ge [datetime]::ParseExact($EndDate,   'yyyyMMdd', $null).AddDays(1)) { continue }
+                    if ($incident.Incident -and (Test-Json -Json $incident.Incident)) {
+                        $IncidentObj = $incident.Incident | ConvertFrom-Json
+                    } else {
+                        continue
+                    }
+                    try {
+                        $created = [datetime]::Parse($IncidentObj.createdDateTime)
+                        if ($StartDate -and $created -lt [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null)) { continue }
+                        if ($EndDate -and $created -ge [datetime]::ParseExact($EndDate, 'yyyyMMdd', $null).AddDays(1)) { continue }
+                    } catch {
+                        continue
+                    }
                     [PSCustomObject]@{
                         Tenant         = $incident.Tenant
                         Id             = $IncidentObj.id

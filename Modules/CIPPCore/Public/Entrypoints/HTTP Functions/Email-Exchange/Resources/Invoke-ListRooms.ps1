@@ -1,4 +1,4 @@
-Function Invoke-ListRooms {
+function Invoke-ListRooms {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -14,26 +14,20 @@ Function Invoke-ListRooms {
     # I dont like that i had to change it to EXO commands, but the waiting time for the Rooms to sync to Graph is too long :(  -Bobby
     try {
         if ($RoomId) {
-            # Get specific room mailbox
-            $RoomMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{
-                Identity             = $RoomId
-                RecipientTypeDetails = 'RoomMailbox'
-            } | Select-Object -ExcludeProperty *@odata.type*
+            # Batch mailbox, place, and calendar processing together
+            $BulkBatch = @(
+                @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{ Identity = $RoomId; RecipientTypeDetails = 'RoomMailbox' } } }
+                @{ CmdletInput = @{ CmdletName = 'Get-Place'; Parameters = @{ Identity = $RoomId } } }
+                @{ CmdletInput = @{ CmdletName = 'Get-CalendarProcessing'; Parameters = @{ Identity = $RoomId } } }
+            )
+            $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkBatch -ReturnWithCommand $true
 
-            # Get place details
-            $PlaceDetails = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Place' -cmdParams @{
-                Identity = $RoomId
-            } | Select-Object -ExcludeProperty *@odata.type*
+            $RoomMailbox = $BulkResults['Get-Mailbox'] | Select-Object -ExcludeProperty *@odata.type* | Select-Object -First 1
+            $PlaceDetails = $BulkResults['Get-Place'] | Select-Object -ExcludeProperty *@odata.type* | Select-Object -First 1
+            $CalendarProperties = $BulkResults['Get-CalendarProcessing'] | Select-Object -ExcludeProperty *@odata.type* | Select-Object -First 1
 
-            # Get calendar properties
-            $CalendarProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CalendarProcessing' -cmdParams @{
-                Identity = $RoomId
-            } | Select-Object -ExcludeProperty *@odata.type*
-
-            # Get calendar properties
-            $CalendarConfigurationProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxCalendarConfiguration' -cmdParams @{
-                Identity = $RoomId
-            } | Select-Object -ExcludeProperty *@odata.type*
+            # Get-MailboxCalendarConfiguration requires anchor to the room mailbox
+            $CalendarConfigurationProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxCalendarConfiguration' -cmdParams @{ Identity = $RoomId } -Anchor $RoomId | Select-Object -ExcludeProperty *@odata.type*
 
             if ($RoomMailbox -and $PlaceDetails -and $CalendarProperties -and $CalendarConfigurationProperties) {
                 $GraphRequest = @(
@@ -97,16 +91,15 @@ Function Invoke-ListRooms {
                 )
             }
         } else {
-            # Get all room mailboxes in one call
-            $RoomMailboxes = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{
-                RecipientTypeDetails = 'RoomMailbox'
-                ResultSize           = 'Unlimited'
-            } | Select-Object -ExcludeProperty *@odata.type*
+            # Batch Get-Mailbox and Get-Place into one request
+            $CmdletArray = @(
+                @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{ RecipientTypeDetails = 'RoomMailbox'; ResultSize = 'Unlimited' } } }
+                @{ CmdletInput = @{ CmdletName = 'Get-Place'; Parameters = @{ ResultSize = 'Unlimited' } } }
+            )
+            $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $CmdletArray -ReturnWithCommand $true
 
-            # Get all places in one call
-            $Places = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Place' -cmdParams @{
-                ResultSize = 'Unlimited'
-            } | Select-Object -ExcludeProperty *@odata.type*
+            $RoomMailboxes = $BulkResults['Get-Mailbox'] | Select-Object -ExcludeProperty *@odata.type*
+            $Places = $BulkResults['Get-Place'] | Select-Object -ExcludeProperty *@odata.type*
 
             # Create hashtable for quick place lookups
             $PlacesLookup = @{}
