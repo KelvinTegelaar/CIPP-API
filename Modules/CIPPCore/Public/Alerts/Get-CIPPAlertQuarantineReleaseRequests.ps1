@@ -62,6 +62,7 @@
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

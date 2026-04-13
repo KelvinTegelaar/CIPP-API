@@ -87,6 +87,7 @@ function Get-CIPPAlertInactiveLicensedUsers {
             }
         } catch {}
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Failed to check inactive users with licenses for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check inactive users with licenses for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

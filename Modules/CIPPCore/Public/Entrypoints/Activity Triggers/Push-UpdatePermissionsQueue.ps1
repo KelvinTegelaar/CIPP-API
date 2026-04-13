@@ -30,8 +30,8 @@ function Push-UpdatePermissionsQueue {
 
         # Check for permission failures (excluding service principal creation failures)
         $AllResults = @($AppResults) + @($DelegatedResults)
-        $PermissionFailures = $AllResults | Where-Object { 
-            $_ -like '*Failed*' -and 
+        $PermissionFailures = $AllResults | Where-Object {
+            $_ -like '*Failed*' -and
             $_ -notlike '*Failed to create service principal*'
         }
 
@@ -71,7 +71,8 @@ function Push-UpdatePermissionsQueue {
             }
         }
     } catch {
-        Write-Information "Error updating permissions for $($Item.displayName)"
-        Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Error updating permissions for $($Item.displayName) - $($_.Exception.Message)" -Sev 'Error' -API 'UpdatePermissionsQueue'
+        Write-Information "Error updating permissions for $($Item.displayName): $($_.Exception.Message)"
+        Write-Information $_.InvocationInfo.PositionMessage
+        Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Error updating permissions for $($Item.displayName) - $($_.Exception.Message)" -Sev 'Error' -API 'UpdatePermissionsQueue' -LogData (Get-CippException -Exception $_)
     }
 }
