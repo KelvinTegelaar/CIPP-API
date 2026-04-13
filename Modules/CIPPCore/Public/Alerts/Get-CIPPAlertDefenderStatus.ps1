@@ -31,6 +31,7 @@ function Get-CIPPAlertDefenderStatus {
         }
 
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not get defender status for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get defender status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }
