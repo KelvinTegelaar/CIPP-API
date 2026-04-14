@@ -28,10 +28,10 @@ jobs:
       - name: Create sync branch
         if: steps.check.outputs.new_commits != '0'
         run: |
-          BRANCH="upstream-sync/$(date +%Y-%m-%d)"
-          git checkout -b "$BRANCH"
-          git merge upstream/master --ff-only
-          git push origin "$BRANCH"
+          BRANCH="upstream-sync/pending"
+          git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
+          git merge upstream/master --no-ff -m "chore: sync upstream CIPP-API $(date +%Y-%m-%d)"
+          git push origin "$BRANCH" --force
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
       - name: Send email notification
