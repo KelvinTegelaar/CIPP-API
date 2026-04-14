@@ -35,7 +35,21 @@ jobs:
         run: |
           BRANCH="upstream-sync/pending"
           git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
-          git merge upstream/master --no-ff -m "chore: sync upstream CIPP-API $(date +%Y-%m-%d)"
+          git merge upstream/master --no-ff -m "chore: sync upstream CIPP-API $(date +%Y-%m-%d)" || {
+            # Resolve modify/delete conflicts by keeping our deletions
+            git diff --name-only --diff-filter=U | while read -r file; do
+              if ! git cat-file -e HEAD:"$file" 2>/dev/null; then
+                git rm "$file"
+              fi
+            done
+            # Fail if unresolved conflicts remain
+            if git diff --name-only --diff-filter=U | grep -q .; then
+              echo "Unresolved conflicts remain after auto-resolution:"
+              git diff --name-only --diff-filter=U
+              exit 1
+            fi
+            git commit -m "chore: sync upstream CIPP-API $(date +%Y-%m-%d)"
+          }
           git push origin "$BRANCH" --force
 
       - name: Send email notification
