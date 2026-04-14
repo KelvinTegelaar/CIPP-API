@@ -79,6 +79,7 @@ function Get-CIPPAlertGlobalAdminAllowList {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check approved Global Admins: $(Get-NormalizedError -message $_.Exception.Message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check approved Global Admins: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

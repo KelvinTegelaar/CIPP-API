@@ -9,6 +9,11 @@ function Invoke-ExecRestoreBackup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+
+    # Types natively supported by Azure Table Storage — preserve these as-is
+    $AzureTableTypes = @(
+        [string], [int], [long], [double], [bool], [datetime], [guid], [byte[]]
+    )
     $RestrictedTables = @('AccessRoleGroups', 'CustomRoles') # tables that require superadmin to restore
 
     # Resolve the calling user's roles, including Entra group-based roles
@@ -60,7 +65,10 @@ function Invoke-ExecRestoreBackup {
                     }
                     $Table = Get-CippTable -tablename $_.table
                     $ht2 = @{}
-                    $_.psobject.properties | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
+                    $_.psobject.properties | Where-Object { $_.Name -ne 'table' } | ForEach-Object {
+                        $val = $_.Value
+                        $ht2[$_.Name] = if ($null -ne $val -and $AzureTableTypes -contains $val.GetType()) { $val } else { [string]$val }
+                    }
                     $Table.Entity = $ht2
                     Add-AzDataTableEntity @Table -Force
                     $RestoredCount++
@@ -86,7 +94,10 @@ function Invoke-ExecRestoreBackup {
                 }
                 $Table = Get-CippTable -tablename $line.table
                 $ht2 = @{}
-                $line.psobject.properties | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
+                $line.psobject.properties | Where-Object { $_.Name -ne 'table' } | ForEach-Object {
+                    $val = $_.Value
+                    $ht2[$_.Name] = if ($null -ne $val -and $AzureTableTypes -contains $val.GetType()) { $val } else { [string]$val }
+                }
                 $Table.Entity = $ht2
                 Add-AzDataTableEntity @Table -Force
                 $RestoredCount++

@@ -53,6 +53,7 @@ function Get-CIPPAlertNewMFADevice {
         }
 
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Could not check for new MFA devices for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not check for new MFA devices for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

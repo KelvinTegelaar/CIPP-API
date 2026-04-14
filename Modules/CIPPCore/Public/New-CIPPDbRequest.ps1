@@ -32,6 +32,9 @@ function New-CIPPDbRequest {
 
         $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -ExpandProperty defaultDomainName
         if (-not $Tenant) {
+            if ($TenantFilter -eq $env:TenantID) {
+                return $false
+            }
             throw "Tenant '$TenantFilter' not found"
         }
         $SafeTenantFilter = ConvertTo-CIPPODataFilterValue -Value $Tenant -Type String
