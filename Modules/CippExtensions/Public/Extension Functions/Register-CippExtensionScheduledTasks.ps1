@@ -77,7 +77,7 @@ function Register-CIPPExtensionScheduledTasks {
                     continue
                 }
                 $MappedTenants.Add($Tenant.defaultDomainName)
-                
+
                 # Legacy Sync-CippExtensionData tasks are no longer needed - extensions now use CippReportingDB
                 # All cache data is now collected by Push-CIPPDBCacheData scheduled tasks
 
@@ -129,6 +129,34 @@ function Register-CIPPExtensionScheduledTasks {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
+        }
+    }
+
+    # ============================
+    # NINJAONE CVE SYNC TASK
+    # ============================
+    $NinjaConfig      = $Config.NinjaOne
+    $NinjaCveSyncTask = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -eq 'Invoke-CIPPScheduledNinjaCveSync' } | Select-Object -First 1
+
+    if ($NinjaConfig.Enabled -eq $true -and $NinjaConfig.CveSyncEnabled -eq $true) {
+        if (-not $NinjaCveSyncTask) {
+            $CveSyncHours = [int]$NinjaConfig.CveSyncHours
+            if ($CveSyncHours -le 0) { $CveSyncHours = 24 }
+
+            $Task = [pscustomobject]@{
+                Name          = 'CIPP NinjaCveSync - All Tenants'
+                Command       = @{ value = 'Invoke-CIPPScheduledNinjaCveSync'; label = 'Invoke-CIPPScheduledNinjaCveSync' }
+                Recurrence    = "${CveSyncHours}h"
+                ScheduledTime = $NextSync
+                TenantFilter  = 'AllTenants'
+            }
+            $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType 'NinjaCveSync'
+            Write-Information "NinjaCveSync: Created task (recurrence: ${CveSyncHours}h)"
+        }
+    } else {
+        if ($NinjaCveSyncTask) {
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity ($NinjaCveSyncTask | Select-Object PartitionKey, RowKey)
+            Write-Information "NinjaCveSync: Removed task (sync disabled)"
         }
     }
 }
