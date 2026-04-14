@@ -6,7 +6,10 @@ function Start-BackupRetentionCleanup {
     This function cleans up old CIPP and Tenant backups based on the retention policy
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$ConnectionString = $env:AzureWebJobsStorage
+    )
 
     try {
         # Get retention settings

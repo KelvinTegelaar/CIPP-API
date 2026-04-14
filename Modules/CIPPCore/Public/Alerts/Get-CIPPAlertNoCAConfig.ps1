@@ -30,7 +30,8 @@ function Get-CIPPAlertNoCAConfig {
             }
         }
     } catch {
-        Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message "Conditional Access Config Alert: Error occurred: $(Get-NormalizedError -message $_.Exception.message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Conditional Access Config Alert: Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 
 }

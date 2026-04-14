@@ -55,6 +55,7 @@ function Get-CIPPAlertDefenderAlerts {
 
     } catch {
         # Commented out due to potential licensing spam
-        # Write-AlertMessage -tenant $($TenantFilter) -message "Could not get Defender alerts for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        # $ErrorMessage = Get-CippException -Exception $_
+        # Write-AlertMessage -tenant $($TenantFilter) -message "Could not get Defender alerts for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }
