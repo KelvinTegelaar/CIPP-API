@@ -17,6 +17,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure git identity
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
       - name: Check for upstream changes
         id: check
         run: |
@@ -32,7 +37,6 @@ jobs:
           git checkout -b "$BRANCH" 2>/dev/null || git checkout "$BRANCH"
           git merge upstream/master --no-ff -m "chore: sync upstream CIPP-API $(date +%Y-%m-%d)"
           git push origin "$BRANCH" --force
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
       - name: Send email notification
         if: steps.check.outputs.new_commits != '0' && env.ENABLE_EMAIL_NOTIFICATION == 'true'
@@ -45,12 +49,12 @@ jobs:
           password: ${{ secrets.SMTP_PASSWORD }}
           to: dereki@venture.ca,jonathan.smith@venture.ca
           from: ${{ secrets.SMTP_USERNAME }}
-          subject: "CIPP-API update available — ${{ env.BRANCH }}"
+          subject: "CIPP-API update available — upstream-sync/pending"
           body: |
             A new upstream update is available for your CIPP-API fork.
 
-            Branch: ${{ env.BRANCH }}
+            Branch: upstream-sync/pending
             New commits: ${{ steps.check.outputs.new_commits }}
 
             Review the changes and merge when ready:
-            https://github.com/${{ github.repository }}/compare/main...${{ env.BRANCH }}
+            https://github.com/${{ github.repository }}/compare/main...upstream-sync/pending
