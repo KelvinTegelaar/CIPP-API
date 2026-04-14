@@ -10,25 +10,25 @@ function Invoke-ExecTravelCAPolicy {
     $Headers = $Request.Headers
 
     try {
-        $TenantFilter  = $Request.Body.tenantFilter
-        $Users         = $Request.Body.Users
-        $StartDate     = $Request.Body.StartDate
-        $EndDate       = $Request.Body.EndDate
-        $BlockPolicies = $Request.Body.BlockPolicies  # Array av { value: guid, label: navn }
-        $NamedLocations = $Request.Body.NamedLocations # Array av { value: guid, label: navn }
-        $CountryCodes  = $Request.Body.CountryCodes    # Array av ISO-koder f.eks. ["SE","PL"]
-        $IncludeTrusted = $Request.Body.IncludeTrusted # bool
+        $TenantFilter   = $Request.Body.tenantFilter
+        $Users          = $Request.Body.Users
+        $StartDate      = $Request.Body.StartDate
+        $EndDate        = $Request.Body.EndDate
+        $BlockPolicies  = $Request.Body.BlockPolicies
+        $NamedLocations = $Request.Body.NamedLocations
+        $CountryCodes   = $Request.Body.CountryCodes
+        $IncludeTrusted = $Request.Body.IncludeTrusted
 
-        # Bygg brukerliste
+        # Build user lists
         $UserUPNs = $Users.addedFields.userPrincipalName
         $UserIds  = $Users.value
 
-        # Datostrenger for policy-navn
-        $StartStr = [datetimeoffset]::FromUnixTimeSeconds($StartDate).ToString('yyyyMMdd')
-        $EndStr   = [datetimeoffset]::FromUnixTimeSeconds($EndDate).ToString('yyyyMMdd')
+        # Build date strings for policy name
+        $StartStr   = [datetimeoffset]::FromUnixTimeSeconds($StartDate).ToString('yyyyMMdd')
+        $EndStr     = [datetimeoffset]::FromUnixTimeSeconds($EndDate).ToString('yyyyMMdd')
         $PolicyName = "CIPP_TravelPolicy_${StartStr}_${EndStr}"
 
-        #region --- 1. Sjekk/opprett CIPP_TravelingUsers-gruppen ---
+        #region --- 1. Check/create CIPP_TravelingUsers group ---
         $ExistingGroups = New-GraphGetRequest `
             -uri "https://graph.microsoft.com/beta/groups?`$filter=displayName eq 'CIPP_TravelingUsers'&`$select=id,displayName&`$count=true" `
             -tenantid $TenantFilter -asApp $true -ComplexFilter
@@ -50,12 +50,12 @@ function Invoke-ExecTravelCAPolicy {
             }
             $TravelGroupId = $NewGroup.GroupId
             Write-Information "Created CIPP_TravelingUsers group: $TravelGroupId"
-            # Vent litt så gruppen propageres
+            # Wait for group to propagate before use
             Start-Sleep -Seconds 5
         }
         #endregion
 
-        #region --- 2. Sjekk/legg til gruppeekskludering på blokkerings-policies ---
+        #region --- 2. Check/add group exclusion to blocking CA policies ---
         foreach ($BlockPolicy in $BlockPolicies) {
             $PolicyId = $BlockPolicy.value ?? $BlockPolicy
             $CurrentPolicy = New-GraphGetRequest `
@@ -85,10 +85,10 @@ function Invoke-ExecTravelCAPolicy {
         }
         #endregion
 
-        #region --- 3. Bygg includeLocations for travel-policyen ---
+        #region --- 3. Build includeLocations for travel CA policy ---
         $IncludeLocationIds = [System.Collections.Generic.List[string]]::new()
 
-        # Legg til valgte Named Locations fra tenanten
+        # Add selected Named Locations from tenant
         foreach ($Loc in $NamedLocations) {
             $LocId = $Loc.value ?? $Loc
             if (-not [string]::IsNullOrWhiteSpace($LocId)) {
@@ -96,10 +96,10 @@ function Invoke-ExecTravelCAPolicy {
             }
         }
 
-        # Legg til Trusted Locations om valgt
+        # Add all Trusted Locations if requested
         if ($IncludeTrusted) {
             $AllLocations = New-GraphGetRequest `
-                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?`$top=999" `
+                -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' `
                 -tenantid $TenantFilter -asApp $true
             $TrustedLocations = $AllLocations | Where-Object { $_.isTrusted -eq $true }
             foreach ($TrustedLoc in $TrustedLocations) {
@@ -109,13 +109,13 @@ function Invoke-ExecTravelCAPolicy {
             }
         }
 
-        # Opprett Named Location for landkoder om valgt
+        # Create a country-based Named Location if country codes were provided
         if ($CountryCodes -and $CountryCodes.Count -gt 0) {
             $CountryLocationName = "CIPP_Travel_${StartStr}_${EndStr}_Countries"
             $CountryLocationBody = @{
-                '@odata.type'        = '#microsoft.graph.countriesAndRegionsDefinition'
-                displayName          = $CountryLocationName
-                countriesAndRegions  = @($CountryCodes)
+                '@odata.type'                     = '#microsoft.graph.countriesAndRegionsDefinition'
+                displayName                       = $CountryLocationName
+                countriesAndRegions               = @($CountryCodes)
                 includeUnknownCountriesAndRegions = $false
             } | ConvertTo-Json -Compress
 
@@ -126,25 +126,26 @@ function Invoke-ExecTravelCAPolicy {
             Write-LogMessage -headers $Headers -API 'Invoke-ExecTravelCAPolicy' `
                 -message "Created country Named Location: $CountryLocationName ($($CountryCodes -join ', '))" `
                 -Sev 'Info' -tenant $TenantFilter
+            # Wait for Named Location to propagate
             Start-Sleep -Seconds 3
         }
         #endregion
 
-        #region --- 4. Bygg og opprett travel CA-policy ---
+        #region --- 4. Build and create travel CA policy ---
         $TravelPolicyBody = @{
             displayName   = $PolicyName
             state         = 'enabled'
             conditions    = @{
-                users         = @{
+                users        = @{
                     includeUsers  = @($UserIds)
                     excludeUsers  = @()
                     includeGroups = @()
                     excludeGroups = @()
                 }
-                applications  = @{
+                applications = @{
                     includeApplications = @('All')
                 }
-                locations     = @{
+                locations    = @{
                     includeLocations = @($IncludeLocationIds)
                     excludeLocations = @()
                 }
@@ -166,7 +167,7 @@ function Invoke-ExecTravelCAPolicy {
         #region --- 5. Schedule tasks ---
         $UserMembers = $UserUPNs ?? $UserIds
 
-        # StartDate: Legg brukere til i CIPP_TravelingUsers
+        # StartDate: Add users to CIPP_TravelingUsers group
         $AddMemberTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
             Name          = "Travel Mode - Add to group: $PolicyName"
@@ -182,7 +183,7 @@ function Invoke-ExecTravelCAPolicy {
         }
         Add-CIPPScheduledTask -Task $AddMemberTask -hidden $false
 
-        # EndDate: Fjern brukere fra CIPP_TravelingUsers
+        # EndDate: Remove users from CIPP_TravelingUsers group
         $RemoveMemberTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
             Name          = "Travel Mode - Remove from group: $PolicyName"
@@ -198,7 +199,7 @@ function Invoke-ExecTravelCAPolicy {
         }
         Add-CIPPScheduledTask -Task $RemoveMemberTask -hidden $false
 
-        # EndDate: Slett travel CA-policy
+        # EndDate: Delete travel CA policy and country Named Location
         $DeletePolicyTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
             Name          = "Travel Mode - Delete policy: $PolicyName"
@@ -214,7 +215,9 @@ function Invoke-ExecTravelCAPolicy {
         Add-CIPPScheduledTask -Task $DeletePolicyTask -hidden $false
         #endregion
 
-        $body = @{ Results = "Successfully scheduled travel mode for $($UserUPNs -join ', '). Policy '$PolicyName' will be active from $(([datetimeoffset]::FromUnixTimeSeconds($StartDate)).ToString('dd.MM.yyyy')) to $(([datetimeoffset]::FromUnixTimeSeconds($EndDate)).ToString('dd.MM.yyyy'))." }
+        $body = @{
+            Results = "Successfully scheduled travel mode for $($UserUPNs -join ', '). Policy '$PolicyName' will be active from $(([datetimeoffset]::FromUnixTimeSeconds($StartDate)).ToString('dd.MM.yyyy')) to $(([datetimeoffset]::FromUnixTimeSeconds($EndDate)).ToString('dd.MM.yyyy'))."
+        }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
