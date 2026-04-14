@@ -646,6 +646,7 @@ function Test-CIPPAuditLogRules {
                             $item.CIPPAction = $clause.expectedAction
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
                             $item | Add-Member -NotePropertyName 'CIPPAlertComment' -NotePropertyValue $clause.AlertComment -Force -ErrorAction SilentlyContinue
+                            $item | Add-Member -NotePropertyName 'CIPPCustomSubject' -NotePropertyValue $clause.CustomSubject -Force -ErrorAction SilentlyContinue
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
