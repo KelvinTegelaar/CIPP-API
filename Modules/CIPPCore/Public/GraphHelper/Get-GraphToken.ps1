@@ -98,7 +98,21 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
             $AccessToken = $script:AccessTokens.$TokenKey
         } else {
             #Write-Host 'Graph: new token'
-            $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+            $TokenRequest = @{
+                Method      = 'POST'
+                Uri         = "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token"
+                Body        = $Authbody
+                ErrorAction = 'Stop'
+            }
+            if ($script:LoginWebSession) {
+                $TokenRequest.WebSession = $script:LoginWebSession
+            } else {
+                $TokenRequest.SessionVariable = 'NewLoginSession'
+            }
+            $AccessToken = (Invoke-RestMethod @TokenRequest)
+            if (!$script:LoginWebSession -and $NewLoginSession) {
+                $script:LoginWebSession = $NewLoginSession
+            }
             $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
             Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
             if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }

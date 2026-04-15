@@ -71,6 +71,13 @@ function New-GraphGetRequest {
                         ContentType = 'application/json; charset=utf-8'
                     }
 
+                    # Reuse WebSession for TCP/TLS connection pooling (PS 7.4+)
+                    if ($script:GraphWebSession) {
+                        $GraphRequest.WebSession = $script:GraphWebSession
+                    } else {
+                        $GraphRequest.SessionVariable = 'NewGraphSession'
+                    }
+
                     if ($ReturnRawResponse) {
                         $GraphRequest.SkipHttpErrorCheck = $true
                         $Data = Invoke-WebRequest @GraphRequest
@@ -78,6 +85,11 @@ function New-GraphGetRequest {
                         $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-RestMethod @GraphRequest)
                         $script:LastGraphResponseHeaders = $ResponseHeaders
+                    }
+
+                    # Store the WebSession for future calls in this runspace
+                    if (!$script:GraphWebSession -and $NewGraphSession) {
+                        $script:GraphWebSession = $NewGraphSession
                     }
 
                     # If we reach here, the request was successful
