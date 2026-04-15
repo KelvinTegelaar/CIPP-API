@@ -33,6 +33,10 @@ jobs:
           tenant-id: ${{ secrets.DEV_TENANTID }}
           subscription-id: ${{ secrets.DEV_SUBSCRIPTIONID }}
 
+      - name: Build and stage modules
+        shell: pwsh
+        run: ./Tools/Build-DevApiModules.ps1
+
       - name: "Run Azure Functions Action"
         uses: Azure/functions-action@v1
         id: fa

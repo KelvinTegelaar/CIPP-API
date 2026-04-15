@@ -1,5 +1,5 @@
 param(
-    [string]$ModulePath = (Join-Path $PSScriptRoot '..' 'Modules' 'CIPPCore'),
+    [string]$ModulePath = (Join-Path $PSScriptRoot '..' 'Modules' 'CIPPHTTP'),
     [string]$OutputPath,
     [string]$ModuleName
 )
@@ -32,19 +32,60 @@ function Get-HelpProperty {
     return ''
 }
 
-# Resolve defaults
-if (-not (Test-Path -Path $ModulePath)) {
-    throw "ModulePath '$ModulePath' not found. Provide -ModulePath to the module root."
-}
-$ModulePath = (Resolve-Path -Path $ModulePath).ProviderPath
-if (-not $ModuleName) { $ModuleName = (Split-Path -Path $ModulePath -Leaf) }
-if (-not $OutputPath) {
-    $defaultLibData = Join-Path $ModulePath 'lib' 'data' 'function-permissions.json'
-    $OutputPath = if (Test-Path (Split-Path -Parent $defaultLibData)) { $defaultLibData } else { Join-Path $ModulePath 'function-permissions.json' }
+function Get-HelpDescription {
+    param(
+        [Parameter(Mandatory = $true)]$HelpObject
+    )
+
+    $synopsis = (Get-HelpProperty -HelpObject $HelpObject -PropertyName 'Synopsis')
+    if ($synopsis) {
+        return ([string]$synopsis).Trim()
+    }
+
+    $description = Get-HelpProperty -HelpObject $HelpObject -PropertyName 'Description'
+    if ($null -eq $description) {
+        return ''
+    }
+
+    if ($description -is [string]) {
+        return $description.Trim()
+    }
+
+    if ($description.PSObject.Properties['Text']) {
+        return ([string]$description.Text).Trim()
+    }
+
+    if ($description.PSObject.Properties['para']) {
+        $paragraphs = @($description.para | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+        if ($paragraphs.Count -gt 0) {
+            return ($paragraphs -join ' ').Trim()
+        }
+    }
+
+    return ''
 }
 
+# Resolve defaults to CIPPCore where the cache file will live
+$CIPPCorePath = (Join-Path $PSScriptRoot '..' 'Modules' 'CIPPCore')
+if (-not (Test-Path -Path $CIPPCorePath)) {
+    throw "CIPPCore '$CIPPCorePath' not found."
+}
+$CIPPCorePath = (Resolve-Path -Path $CIPPCorePath).ProviderPath
+
+if (-not (Test-Path -Path $ModulePath)) {
+    throw "ModulePath '$ModulePath' not found."
+}
+$ModulePath = (Resolve-Path -Path $ModulePath).ProviderPath
+
+if (-not $ModuleName) { $ModuleName = (Split-Path -Path $ModulePath -Leaf) }
+if (-not $OutputPath) {
+    $OutputPath = Join-Path $PSScriptRoot '..' 'Config' 'function-permissions.json'
+}
+$OutputPath = [System.IO.Path]::ChangeExtension($OutputPath, '.json')
+$OutputDirectory = Split-Path -Parent $OutputPath
+
 # Ensure destination directory exists
-$null = New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force
+$null = New-Item -ItemType Directory -Path $OutputDirectory -Force
 
 # Import target module so Get-Help can read Role/Functionality metadata
 $ModuleImportPath = Resolve-ModuleImportPath -Root $ModulePath -Name $ModuleName
@@ -65,23 +106,29 @@ foreach ($command in $commands | Sort-Object -Property Name | Select-Object -Uni
     if ($help) {
         $role = Get-HelpProperty -HelpObject $help -PropertyName 'Role'
         $functionality = Get-HelpProperty -HelpObject $help -PropertyName 'Functionality'
+        $description = Get-HelpDescription -HelpObject $help
     } else {
         $role = ''
         $functionality = ''
+        $description = ''
     }
 
     if ($role -and $functionality) {
         $permissions[$command.Name] = @{
             Role          = $role
             Functionality = $functionality
+            Description   = $description
         }
     } else {
         Write-Host "Skipping $($command.Name): no Role or Functionality metadata found."
     }
 }
 
-# Depth 3 is sufficient for the flat hashtable of functions -> (Role, Functionality)
-$json = $permissions | ConvertTo-Json -Depth 3
-Set-Content -Path $OutputPath -Value $json -Encoding UTF8
+$permissionsCaseInsensitive = [System.Collections.Hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($key in $permissions.Keys) {
+    $permissionsCaseInsensitive[$key] = $permissions[$key]
+}
+$permissionsJson = $permissionsCaseInsensitive | ConvertTo-Json -Depth 5 -Compress
+Set-Content -Path $OutputPath -Value $permissionsJson -Encoding UTF8
 
-Write-Host "Wrote permissions for $($permissions.Count) functions to $OutputPath"
+Write-Host "Wrote permissions JSON cache for $($permissions.Count) functions to $OutputPath"
