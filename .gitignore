@@ -1,4 +1,3 @@
-.github/workflows/
 .github/pull.yml
 local.settings.json
 tenants.cache.json
