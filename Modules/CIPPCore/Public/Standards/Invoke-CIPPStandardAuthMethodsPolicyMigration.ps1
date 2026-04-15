@@ -43,7 +43,10 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
         throw 'Failed to retrieve current authentication methods policy information'
     }
 
-    $CurrentValue = $CurrentInfo | Select-Object policyMigrationState
+    $StateValue = if ($null -eq $CurrentInfo.policyMigrationState) { 'migrationComplete' } else { $CurrentInfo.policyMigrationState }
+    $CurrentValue = [PSCustomObject]@{
+        policyMigrationState = $StateValue
+    }
     $ExpectedValue = [PSCustomObject]@{
         policyMigrationState = 'migrationComplete'
     }
