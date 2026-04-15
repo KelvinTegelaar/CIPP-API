@@ -123,9 +123,9 @@ function Test-CIPPAccessTenant {
             $RoleDefinitions = New-GraphGetRequest -tenantid $Tenant.customerId -uri 'https://graph.microsoft.com/beta/roleManagement/exchange/roleDefinitions'
             Write-Information "Found $($RoleDefinitions.Count) Exchange role definitions"
 
-            $BasePath = Get-Module -Name 'CIPPCore' | Select-Object -ExpandProperty ModuleBase
-            $AllOrgManagementRoles = Get-Content -Path "$BasePath\lib\data\OrganizationManagementRoles.json" -ErrorAction Stop | ConvertFrom-Json
-            Write-Information "Loaded all Organization Management roles from $BasePath\lib\data\OrganizationManagementRoles.json"
+            $OrgRolePath = Join-Path $env:CIPPRootPath 'Config\OrganizationManagementRoles.json'
+            $AllOrgManagementRoles = Get-Content -Path $OrgRolePath -ErrorAction Stop | ConvertFrom-Json
+            Write-Information "Loaded all Organization Management roles from $OrgRolePath"
 
             $AvailableRoles = $RoleDefinitions | Where-Object -Property displayName -In $AllOrgManagementRoles | Select-Object -Property displayName, id, description
             Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
