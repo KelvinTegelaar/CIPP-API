@@ -60,9 +60,9 @@ function Invoke-CIPPStandardcalDefault {
     # Filter to only Default user permissions that don't match target level
     $DefaultPermissions = $CalendarPermissions | Where-Object { $_.User -eq 'Default' }
     $NeedsUpdate = @($DefaultPermissions | Where-Object {
-        $currentRights = if ($_.AccessRights -is [array]) { $_.AccessRights -join ',' } else { $_.AccessRights }
-        $currentRights -ne $permissionLevel
-    })
+            $currentRights = if ($_.AccessRights -is [array]) { $_.AccessRights -join ',' } else { $_.AccessRights }
+            $currentRights -ne $permissionLevel
+        })
 
     $CurrentValue = if ($NeedsUpdate.Count -eq 0) {
         [PSCustomObject]@{ state = 'Configured correctly' }
