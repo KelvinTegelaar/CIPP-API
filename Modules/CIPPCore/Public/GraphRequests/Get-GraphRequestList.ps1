@@ -104,9 +104,9 @@ function Get-GraphRequestList {
     foreach ($Key in $Keys) {
         if ($Parameters[$Key] -is [string]) {
             $Parameters[$Key] = [regex]::Replace($Parameters[$Key], '\{DaysAgo:(\d+)\}', {
-                param($m)
-                (Get-Date).ToUniversalTime().AddDays(-[int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
-            })
+                    param($m)
+                    (Get-Date).ToUniversalTime().AddDays( - [int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
+                })
         }
     }
 
@@ -179,7 +179,7 @@ function Get-GraphRequestList {
             $GraphRequest.uri = $GraphQuery.ToString()
         }
 
-        if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
+        if ($Parameters.'$count') {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
             if ($CountOnly.IsPresent) { return $Count }
             Write-Information "Total results (`$count): $Count"
