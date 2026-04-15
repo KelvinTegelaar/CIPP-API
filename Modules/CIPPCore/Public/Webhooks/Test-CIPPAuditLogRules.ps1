@@ -585,6 +585,7 @@ function Test-CIPPAuditLogRules {
                         expectedAction   = $actions
                         CIPPClause       = $CIPPClause
                         AlertComment     = $Config.AlertComment
+                        CustomSubject    = $Config.CustomSubject
                         HasGeoCondition  = $HasGeoCondition
                         ExcludedUserKeys = $LocationExcludedUserKeys
                     }
