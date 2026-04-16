@@ -32,10 +32,10 @@ jobs:
 
       - name: Resolve Function App name
         id: target
-        run: ./deploy-scripts/resolve-function-app.sh rg-cipp-prod
+        run: ./deploy-scripts/resolve-function-app.sh rg-cipp-comp-prod
 
       - name: Create deployment archive
         run: ./deploy-scripts/create-deploy-archive.sh "$RUNNER_TEMP/cipp-api.zip"
 
       - name: Deploy to Function App
-        run: ./deploy-scripts/deploy-function-app.sh rg-cipp-prod "${{ steps.target.outputs.function_app_name }}" "$RUNNER_TEMP/cipp-api.zip"
+        run: ./deploy-scripts/deploy-function-app.sh rg-cipp-comp-prod "${{ steps.target.outputs.function_app_name }}" "$RUNNER_TEMP/cipp-api.zip"
