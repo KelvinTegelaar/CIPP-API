@@ -179,10 +179,13 @@ function Get-GraphRequestList {
             $GraphRequest.uri = $GraphQuery.ToString()
         }
 
-        if ($Parameters.'$count') {
+        if ($Parameters.'$count' -and -not $ManualPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
             if ($CountOnly.IsPresent) { return $Count }
             Write-Information "Total results (`$count): $Count"
+        } elseif ($CountOnly.IsPresent) {
+            $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
+            return $Count
         }
     }
     #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
