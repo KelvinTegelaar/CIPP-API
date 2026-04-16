@@ -17,7 +17,9 @@ function Start-TokenWarmupTimer {
         $FailCount = 0
         foreach ($Tenant in $TenantList) {
             try {
-                $null = Get-GraphToken -tenantid $Tenant.customerId -scope 'https://graph.microsoft.com/.default'
+                # Use defaultDomainName — this is the same tenantid used by Graph/Exchange helpers,
+                # so the token cache key matches what subsequent API calls will look up.
+                $null = Get-GraphToken -tenantid $Tenant.defaultDomainName -scope 'https://graph.microsoft.com/.default'
                 $SuccessCount++
             } catch {
                 $FailCount++
