@@ -4,7 +4,10 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Private/Get-CIPPLevenshteinDistance.ps1'
+    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Get-CIPPLevenshteinDistance.ps1'
+    if (-not (Test-Path -Path $FunctionPath)) {
+        $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Private/Get-CIPPLevenshteinDistance.ps1'
+    }
     . $FunctionPath
 }
 
