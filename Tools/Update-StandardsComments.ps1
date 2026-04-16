@@ -57,7 +57,7 @@ foreach ($Standard in $StandardsInfo) {
 
     # Calculate the standards file name and path
     $StandardFileName = $Standard.name -replace 'standards.', 'Invoke-CIPPStandard'
-    $StandardsFilePath = Resolve-Path "$(Split-Path $PSScriptRoot)\Modules\CIPPCore\Public\Standards\$StandardFileName.ps1"
+    $StandardsFilePath = Resolve-Path "$(Split-Path $PSScriptRoot)\Modules\CIPPStandards\Public\Standards\$StandardFileName.ps1"
     if (-not (Test-Path $StandardsFilePath)) {
         Write-Host "No file found for standard $($Standard.name)" -ForegroundColor Yellow
         continue

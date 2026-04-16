@@ -4,7 +4,17 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
     Internal
     #>
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
+    if (!$tenantid) { $tenantid = $env:TenantID }
 
+    # ── Fast path: return cached token immediately, skip all table lookups ──
+    $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
+    if ($SkipCache -ne $true -and $script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+        $AccessToken = $script:AccessTokens.$TokenKey
+        if ($ReturnRefresh) { return $AccessToken }
+        return @{ Authorization = "Bearer $($AccessToken.access_token)" }
+    }
+
+    # ── Slow path: need a new token — do table lookups + token acquisition ──
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $ConfigTable = Get-CippTable -tablename 'Config'
     $Filter = "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
@@ -15,7 +25,6 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
         $CIPPAuth = Get-CIPPAuthentication
     }
     $refreshToken = $env:RefreshToken
-    if (!$tenantid) { $tenantid = $env:TenantID }
     #Get list of tenants that have 'directTenant' set to true
     #get directtenants directly from table, avoid get-tenants due to performance issues
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -90,20 +99,26 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
     }
 
 
-    $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
-
     try {
-        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on -and $SkipCache -ne $true) {
-            #Write-Host 'Graph: cached token'
-            $AccessToken = $script:AccessTokens.$TokenKey
-        } else {
-            #Write-Host 'Graph: new token'
-            $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
-            $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
-            Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
-            if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
-            $script:AccessTokens.$TokenKey = $AccessToken
+        $TokenRequest = @{
+            Method      = 'POST'
+            Uri         = "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token"
+            Body        = $Authbody
+            ErrorAction = 'Stop'
         }
+        if ($script:LoginWebSession) {
+            $TokenRequest.WebSession = $script:LoginWebSession
+        } else {
+            $TokenRequest.SessionVariable = 'NewLoginSession'
+        }
+        $AccessToken = (Invoke-RestMethod @TokenRequest)
+        if (!$script:LoginWebSession -and $NewLoginSession) {
+            $script:LoginWebSession = $NewLoginSession
+        }
+        $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
+        Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
+        if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
+        $script:AccessTokens.$TokenKey = $AccessToken
 
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header

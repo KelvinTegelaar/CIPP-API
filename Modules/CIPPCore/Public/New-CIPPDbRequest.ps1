@@ -30,10 +30,20 @@ function New-CIPPDbRequest {
     try {
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
+        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -ExpandProperty defaultDomainName
+        if (-not $Tenant) {
+            if ($TenantFilter -eq $env:TenantID) {
+                return $false
+            }
+            throw "Tenant '$TenantFilter' not found"
+        }
+        $SafeTenantFilter = ConvertTo-CIPPODataFilterValue -Value $Tenant -Type String
+        $SafeTypeFilter = if ($Type) { ConvertTo-CIPPODataFilterValue -Value $Type -Type String } else { $null }
+
         if ($Type) {
-            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}.'" -f $TenantFilter, $Type
+            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}.'" -f $SafeTenantFilter, $SafeTypeFilter
         } else {
-            $Filter = "PartitionKey eq '{0}'" -f $TenantFilter
+            $Filter = "PartitionKey eq '{0}'" -f $SafeTenantFilter
         }
 
         $Results = Get-CIPPAzDataTableEntity @Table -Filter $Filter

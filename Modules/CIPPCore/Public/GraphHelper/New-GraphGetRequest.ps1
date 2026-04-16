@@ -56,18 +56,6 @@ function New-GraphGetRequest {
             $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
         }
 
-        # Track consecutive Graph API failures
-        $TenantsTable = Get-CippTable -tablename Tenants
-        $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
-        if (!$Tenant) {
-            $Tenant = @{
-                GraphErrorCount = 0
-                LastGraphError  = ''
-                PartitionKey    = 'TenantFailed'
-                RowKey          = 'Failed'
-            }
-        }
 
         $ReturnedData = do {
             $RetryCount = 0
@@ -83,6 +71,13 @@ function New-GraphGetRequest {
                         ContentType = 'application/json; charset=utf-8'
                     }
 
+                    # Reuse WebSession for TCP/TLS connection pooling (PS 7.4+)
+                    if ($script:GraphWebSession) {
+                        $GraphRequest.WebSession = $script:GraphWebSession
+                    } else {
+                        $GraphRequest.SessionVariable = 'NewGraphSession'
+                    }
+
                     if ($ReturnRawResponse) {
                         $GraphRequest.SkipHttpErrorCheck = $true
                         $Data = Invoke-WebRequest @GraphRequest
@@ -90,6 +85,11 @@ function New-GraphGetRequest {
                         $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-RestMethod @GraphRequest)
                         $script:LastGraphResponseHeaders = $ResponseHeaders
+                    }
+
+                    # Store the WebSession for future calls in this runspace
+                    if (!$script:GraphWebSession -and $NewGraphSession) {
+                        $script:GraphWebSession = $NewGraphSession
                     }
 
                     # If we reach here, the request was successful
@@ -185,31 +185,11 @@ function New-GraphGetRequest {
                         $RetryCount++
                         Start-Sleep -Seconds $WaitTime
                     } else {
-                        # Final failure - update tenant error tracking and throw
-                        if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
-                            $Tenant.LastGraphError = [string]($MessageObj | ConvertTo-Json -Compress)
-                            if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
-                                $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
-                            }
-                            $Tenant.GraphErrorCount++
-                            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
-                        }
                         throw $Message
                     }
                 }
             } while (-not $RequestSuccessful -and $RetryCount -le $MaxRetries)
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
-            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
-        } else {
-            $Tenant.LastGraphError = ''
-        }
-        if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
-            $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
-        } else {
-            $Tenant.GraphErrorCount = 0
-        }
-        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

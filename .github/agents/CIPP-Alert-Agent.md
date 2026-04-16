@@ -26,6 +26,10 @@ Your job is to implement, update, and review **alert-related functionality** in 
 
 You **must follow all constraints in this file** exactly.
 
+## Secondary Reference
+
+For detailed scaffolding patterns, parameter conventions, API call examples, and output standards, refer to `.github/instructions/alerts.instructions.md`. That file provides comprehensive technical reference for alert development. **If anything in this agent file conflicts with the instructions file, this agent file takes precedence.**
+
 ---
 
 ## Scope of Work
