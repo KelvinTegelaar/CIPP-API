@@ -20,6 +20,11 @@ function Get-CIPPTextReplacement {
         return $Text
     }
 
+    # Without a tenant context, skip replacement lookups and return input as-is.
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        return $Text
+    }
+
     $ReservedVariables = @(
         '%serial%',
         '%systemroot%',

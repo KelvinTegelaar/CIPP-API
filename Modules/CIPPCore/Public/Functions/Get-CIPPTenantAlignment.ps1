@@ -27,6 +27,7 @@ function Get-CIPPTenantAlignment {
     $TemplateTable = Get-CippTable -tablename 'templates'
     $TemplateFilter = "PartitionKey eq 'StandardsTemplateV2'"
     $TenantGroups = Get-TenantGroups
+    $DriftTable = Get-CippTable -tablename 'tenantDrift'
 
     try {
         # Get all standard templates
@@ -101,6 +102,7 @@ function Get-CIPPTenantAlignment {
         $TenantStandards = $tenantData
 
         $Results = [System.Collections.Generic.List[object]]::new()
+        $TenantDriftStatusesCache = @{}
 
         # Process each template against all tenants
         foreach ($Template in $Templates) {
@@ -278,6 +280,28 @@ function Get-CIPPTenantAlignment {
                 $LatestDataCollection = $null
                 # Cache hashtable lookup
                 $CurrentTenantStandards = $TenantStandards[$TenantName]
+                $IsDriftTemplate = $Template.type -eq 'drift'
+
+                # Load tenant drift deviation statuses once per tenant (used for drift score normalization)
+                $TenantDriftStatuses = @{}
+                if ($IsDriftTemplate) {
+                    if (-not $TenantDriftStatusesCache.ContainsKey($TenantName)) {
+                        try {
+                            $DriftFilter = "PartitionKey eq '$TenantName'"
+                            $DriftEntities = Get-CIPPAzDataTableEntity @DriftTable -Filter $DriftFilter
+                            foreach ($DriftEntity in $DriftEntities) {
+                                if ($DriftEntity.StandardName) {
+                                    $TenantDriftStatuses[$DriftEntity.StandardName] = $DriftEntity.Status
+                                }
+                            }
+                        } catch {
+                            Write-Warning "Failed to get drift states for $TenantName $($_.Exception.Message)"
+                        }
+                        $TenantDriftStatusesCache[$TenantName] = $TenantDriftStatuses
+                    } else {
+                        $TenantDriftStatuses = $TenantDriftStatusesCache[$TenantName]
+                    }
+                }
 
                 # Pre-allocate list with capacity
                 $ComparisonResults = [System.Collections.Generic.List[object]]::new($AllStandardsArray.Count)
@@ -355,7 +379,13 @@ function Get-CIPPTenantAlignment {
                 $ReportingDisabledStandardsCount = 0
 
                 foreach ($item in $ComparisonResults) {
-                    if ($item.ComplianceStatus -eq 'Compliant') { $CompliantStandards++ }
+                    $IsAcceptedDeviation = $false
+                    if ($IsDriftTemplate -and $item.ComplianceStatus -eq 'Non-Compliant') {
+                        $DeviationStatus = $TenantDriftStatuses[$item.StandardName]
+                        $IsAcceptedDeviation = $DeviationStatus -in @('Accepted', 'CustomerSpecific')
+                    }
+
+                    if ($item.ComplianceStatus -eq 'Compliant' -or $IsAcceptedDeviation) { $CompliantStandards++ }
                     elseif ($item.ComplianceStatus -eq 'Non-Compliant') { $NonCompliantStandards++ }
                     elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
                     if ($item.ReportingDisabled) { $ReportingDisabledStandardsCount++ }

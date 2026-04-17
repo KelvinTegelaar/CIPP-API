@@ -38,6 +38,7 @@ function New-CIPPBackup {
                         'AccessRoleGroups'
                         'ApiClients'
                         'CippReplacemap'
+                        'CustomPowershellScripts'
                         'CustomData'
                         'CustomRoles'
                         'Config'
