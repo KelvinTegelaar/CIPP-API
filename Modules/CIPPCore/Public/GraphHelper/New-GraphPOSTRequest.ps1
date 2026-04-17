@@ -48,7 +48,7 @@ function New-GraphPOSTRequest {
         do {
             try {
                 Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $maxRetries"
-                $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
+                $ReturnedData = (Invoke-CIPPRestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
                 $RequestSuccessful = $true
             } catch {
                 $ShouldRetry = $false

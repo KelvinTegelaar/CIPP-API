@@ -88,10 +88,10 @@ function Invoke-ListExoRequest {
                         Results = @(@{ Error = $ErrorMessage })
                     }
                 }
-            } else {
-                $Body = [pscustomobject]@{
-                    Results = "Invalid tenant: $TenantFilter"
-                }
+            }
+        } else {
+            $Body = [pscustomobject]@{
+                Results = "Invalid tenant: $TenantFilter"
             }
         }
     } catch {

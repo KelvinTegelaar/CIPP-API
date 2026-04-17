@@ -263,6 +263,19 @@ if ($WorkerType -ne 'HttpOnly') {
     $Timings['CronosAssembly'] = $SwCronos.Elapsed.TotalMilliseconds
 }
 
+# Load CIPPHttpClient assembly once at startup for all worker types
+$SwCIPPHttp = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $CIPPHttpDllPath = Join-Path $env:CIPPRootPath 'Shared\CIPPHttp\bin\CIPPHttp.dll'
+    if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies().Location -contains $CIPPHttpDllPath)) {
+        $null = [Reflection.Assembly]::LoadFile($CIPPHttpDllPath)
+    }
+} catch {
+    Write-Warning "CIPPHttpClient failed to load: $($_.Exception.Message)"
+}
+$SwCIPPHttp.Stop()
+$Timings['CIPPHttpClient'] = $SwCIPPHttp.Elapsed.TotalMilliseconds
+
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds
 
