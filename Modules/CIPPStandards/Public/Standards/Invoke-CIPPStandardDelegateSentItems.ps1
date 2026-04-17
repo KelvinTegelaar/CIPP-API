@@ -73,8 +73,8 @@ function Invoke-CIPPStandardDelegateSentItems {
                 $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request)
                 foreach ($Result in $BatchResults) {
                     if ($Result.error) {
-                        $ErrorMessage = Get-CippException -Exception $Result.error
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Delegate Sent Items Style to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                        $ErrorMessage = Get-NormalizedError -Message $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Delegate Sent Items Style to $($Result.target) Error: $ErrorMessage" -sev Error
                     }
                 }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style applied for $($Mailboxes.Count - $BatchResults.Error.Count) mailboxes" -sev Info
