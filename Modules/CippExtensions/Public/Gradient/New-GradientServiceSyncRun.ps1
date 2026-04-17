@@ -26,17 +26,15 @@ function New-GradientServiceSyncRun {
         Write-LogMessage -API $APINAME -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
     }
 
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-    $ConvertTable = Import-Csv ConversionTable.csv
+    $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
     $Table = Get-CIPPTable -TableName cachelicenses
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
     $RawGraphRequest = $Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
-        Import-Module '.\Modules\AzBobbyTables'
-        Import-Module '.\Modules\CIPPCore'
+        Import-Module (Join-Path $env:CIPPRootPath 'Modules\AzBobbyTables')
+        Import-Module (Join-Path $env:CIPPRootPath 'Modules\CIPPCore')
         Write-Host "Doing $domainName"
         try {
             $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop | Where-Object -Property skuId -NotIn $ExcludedSkuList.RowKey

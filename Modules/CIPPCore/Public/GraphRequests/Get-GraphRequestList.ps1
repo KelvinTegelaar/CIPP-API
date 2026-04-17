@@ -104,9 +104,9 @@ function Get-GraphRequestList {
     foreach ($Key in $Keys) {
         if ($Parameters[$Key] -is [string]) {
             $Parameters[$Key] = [regex]::Replace($Parameters[$Key], '\{DaysAgo:(\d+)\}', {
-                param($m)
-                (Get-Date).ToUniversalTime().AddDays(-[int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
-            })
+                    param($m)
+                    (Get-Date).ToUniversalTime().AddDays( - [int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
+                })
         }
     }
 
@@ -179,10 +179,13 @@ function Get-GraphRequestList {
             $GraphRequest.uri = $GraphQuery.ToString()
         }
 
-        if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
+        if ($Parameters.'$count' -and -not $ManualPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
             if ($CountOnly.IsPresent) { return $Count }
             Write-Information "Total results (`$count): $Count"
+        } elseif ($CountOnly.IsPresent) {
+            $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
+            return $Count
         }
     }
     #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
@@ -195,7 +198,7 @@ function Get-GraphRequestList {
             $Type = 'Queue'
             Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+            $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
         } elseif (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent) {
             if ($TenantFilter -eq 'AllTenants' -or $Count -gt $SingleTenantThreshold) {
                 $Table = Get-CIPPTable -TableName $TableName
@@ -210,7 +213,7 @@ function Get-GraphRequestList {
                 $Type = 'Cache'
                 Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-                $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+                $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             }
         }
     } catch {
