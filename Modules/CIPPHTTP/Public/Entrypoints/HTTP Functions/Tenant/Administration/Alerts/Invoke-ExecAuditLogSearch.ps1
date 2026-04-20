@@ -45,16 +45,18 @@ function Invoke-ExecAuditLogSearch {
                 }
             } else {
                 $Existing.CippStatus = 'Pending'
+                $Entity = $Existing
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 
+            $DisplayName = $Entity.DisplayName
             Write-LogMessage -headers $Headers -API $APIName -message "Queued search for processing: $($Search.displayName)" -Sev 'Info' -tenant $TenantFilter
 
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
                     Body       = @{
-                        resultText = "Search '$($Search.displayName)' queued for processing."
+                        resultText = "Search '$DisplayName' queued for processing."
                         state      = 'success'
                     } | ConvertTo-Json -Depth 10 -Compress
                 })
