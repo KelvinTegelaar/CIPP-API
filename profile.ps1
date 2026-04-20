@@ -65,6 +65,19 @@ foreach ($Module in $Modules) {
 $SwCoreModules.Stop()
 $Timings['CoreModules'] = $SwCoreModules.Elapsed.TotalMilliseconds
 
+# Load CIPPHttpClient assembly once at startup for all worker types
+$SwCIPPHttp = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $CIPPHttpDllPath = Join-Path $env:CIPPRootPath 'Shared\CIPPHttp\bin\CIPPHttp.dll'
+    if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies().Location -contains $CIPPHttpDllPath)) {
+        $null = [Reflection.Assembly]::LoadFile($CIPPHttpDllPath)
+    }
+} catch {
+    Write-Warning "CIPPHttpClient failed to load: $($_.Exception.Message)"
+}
+$SwCIPPHttp.Stop()
+$Timings['CIPPHttpClient'] = $SwCIPPHttp.Elapsed.TotalMilliseconds
+
 # Pre-load function permissions cache once per worker startup (fallback remains in runtime code)
 $SwPermissionsPreload = [System.Diagnostics.Stopwatch]::StartNew()
 if (-not $global:CIPPFunctionPermissions) {
@@ -262,19 +275,6 @@ if ($WorkerType -ne 'HttpOnly') {
     $SwCronos.Stop()
     $Timings['CronosAssembly'] = $SwCronos.Elapsed.TotalMilliseconds
 }
-
-# Load CIPPHttpClient assembly once at startup for all worker types
-$SwCIPPHttp = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    $CIPPHttpDllPath = Join-Path $env:CIPPRootPath 'Shared\CIPPHttp\bin\CIPPHttp.dll'
-    if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies().Location -contains $CIPPHttpDllPath)) {
-        $null = [Reflection.Assembly]::LoadFile($CIPPHttpDllPath)
-    }
-} catch {
-    Write-Warning "CIPPHttpClient failed to load: $($_.Exception.Message)"
-}
-$SwCIPPHttp.Stop()
-$Timings['CIPPHttpClient'] = $SwCIPPHttp.Elapsed.TotalMilliseconds
 
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds
