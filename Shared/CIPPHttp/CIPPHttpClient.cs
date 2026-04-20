@@ -49,28 +49,39 @@ namespace CIPP
     // 3. Tune connection pool parameters independently per destination so
     //    high-volume endpoints (Graph) don't starve low-volume ones (Login).
     //
-    // PORT BUDGET (125 total, targeting ~119 allocated, ~6 buffer)
+    // PORT BUDGET (125 total, targeting ~75 allocated, ~50 buffer)
     // -------------------------------------------------------------
-    //   Graph          45   microsoft.com graph endpoints
-    //   EXO            25   Exchange Online / Outlook endpoints
-    //   Login          15   login.microsoftonline.com (token acquisition)
-    //   AdminPlane     10   admin.microsoft.com, reports, Defender, etc.
-    //   Compliance      8   compliance redirect discovery (no-redirect)
-    //   PartnerCenter   8   api.partnercenter.microsoft.com
-    //   Default         8   catch-all + absorbs legacy Invoke-RestMethod calls
+    //   Graph          30   microsoft.com graph endpoints
+    //   EXO            20   Exchange Online / Outlook endpoints
+    //   Login           5   login.microsoftonline.com (token acquisition)
+    //   AdminPlane      5   admin.microsoft.com, reports, Defender, etc.
+    //   Compliance      5   compliance redirect discovery (no-redirect)
+    //   PartnerCenter   5   api.partnercenter.microsoft.com
+    //   Default         5   catch-all + absorbs legacy Invoke-RestMethod calls
     //   ─────────────
-    //   Total         119   leaves a 6-port safety buffer
+    //   Total          75   leaves a 50-port buffer for the Functions host,
+    //                       Durable extension, AppInsights, Azure SDK clients,
+    //                       and any stragglers that bypass the pool.
     //
     // CONCURRENCY ASSUMPTIONS
     // -----------------------
-    // PSWorkerInProcConcurrencyUpperBound = 50
+    // PSWorkerInProcConcurrencyUpperBound = 10  (set as an App Setting; this
+    //   is the target steady-state value — the caps above are sized for this.)
     // FUNCTIONS_WORKER_PROCESS_COUNT      = 1
     // Traffic split: ~2/3 Graph, ~1/3 EXO
     //
-    // At peak (50 concurrent invocations):
-    //   ~33 Graph calls in flight  → 45-cap provides headroom
-    //   ~17 EXO calls in flight    → 25-cap provides headroom
-    //   Login bursts on cold start → 15-cap absorbs most of the surge
+    // At peak (10 concurrent invocations):
+    //   ~7 Graph calls in flight   → 30-cap absorbs pagination bursts
+    //                                 and fan-out activity workers
+    //   ~3 EXO calls in flight     → 20-cap absorbs bulk EXO batches
+    //   Login bursts on cold start → 5-cap, backed by aggressive token
+    //                                 caching so steady-state is 1-2 conns
+    //
+    // Graph and EXO caps are larger than the concurrency bound because a
+    // single runspace can legitimately have multiple requests in flight
+    // (pagination, $batch sub-requests, token + data pre-fetch, parallel
+    // retries). The smaller pools (Login/AdminPlane/Compliance/PartnerCenter/
+    // Default) are low-volume and can safely queue briefly if saturated.
     //
     // HTTP/2 NOTE
     // -----------
@@ -128,11 +139,12 @@ namespace CIPP
         // -----------------------------------------------------------------
         // Each method builds a SocketsHttpHandler tuned for its destination:
         //
-        //   PooledConnectionLifetime  15 min  — Azure-recommended value.
-        //     Connections are recycled after this age to respect DNS TTL
-        //     changes (e.g. Azure Traffic Manager failovers). Azure docs
-        //     previously recommended 5 min but 15 min is the current guidance
-        //     and reduces connection churn under steady load.
+        //   PooledConnectionLifetime  30 min  — upper bound recommended by the
+        //     Azure App Service / SocketsHttpHandler guidance. Connections are
+        //     recycled after this age to respect DNS TTL changes (e.g. Azure
+        //     Traffic Manager failovers). Raising from 15 min halves the
+        //     graceful-recycle churn and cuts the TIME_WAIT tail under steady
+        //     load — a small but measurable port saving.
         //
         //   PooledConnectionIdleTimeout  2 min — idle connections that have
         //     not been used for 2 minutes are closed and removed from the
@@ -152,56 +164,53 @@ namespace CIPP
         /// <summary>
         /// Graph client — highest throughput, HTTP/2 enabled.
         /// Covers graph.microsoft.com and any *.microsoft.com graph surface.
-        /// Cap: 45 connections (2/3 of 50 concurrency + headroom).
+        /// Cap: 30 connections.
         /// </summary>
         private static HttpClient BuildGraphClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = true,   // Graph supports HTTP/2; streams share connections
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 45,
+            MaxConnectionsPerServer        = 30,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// EXO client — Exchange Online and Outlook endpoints.
         /// Covers outlook.office365.com, outlook.office.com, outlook.com,
         /// and *.protection.outlook.com (mail protection / transport).
-        /// Cap: 25 connections (1/3 of 50 concurrency + headroom).
+        /// Cap: 20 connections.
         /// HTTP/2 enabled — EXO REST APIs support it.
         /// </summary>
         private static HttpClient BuildExoClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 25,
+            MaxConnectionsPerServer        = 20,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// Login client — token acquisition against login.microsoftonline.com.
-        /// Cap: 15 connections. This is deliberately generous relative to
-        /// normal steady-state usage (typically 1-2 connections) because a
-        /// cold start or token cache expiry can cause all 50 concurrent
-        /// invocations to hit the token endpoint simultaneously. 15 connections
-        /// absorbs most of that burst without queuing badly.
-        /// HTTP/2 disabled — login.microsoftonline.com does not benefit from
-        /// H2 multiplexing for short-lived token requests.
+        /// Cap: 5 connections. HTTP/2 disabled — login.microsoftonline.com
+        /// does not benefit from H2 multiplexing for short-lived token
+        /// requests, and tokens are cached aggressively so the steady-state
+        /// rate of requests is low.
         /// </summary>
         private static HttpClient BuildLoginClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
-            MaxConnectionsPerServer        = 15,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -210,71 +219,69 @@ namespace CIPP
         /// AllowAutoRedirect is false because the 3xx redirect response IS
         /// the expected result — the Location header contains the real EXO
         /// endpoint for the tenant.
-        /// Cap: 8 connections. Low volume but potentially parallel across
-        /// multiple tenant calls during a busy period.
+        /// Cap: 5 connections.
         /// HTTP/2 disabled — compliance endpoints are HTTP/1.1 only.
         /// </summary>
         private static HttpClient BuildComplianceClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = false,  // 3xx IS the expected response here
-            MaxConnectionsPerServer        = 8,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// Partner Center client — dedicated lane for high-frequency partner
         /// APIs so they do not compete with default traffic.
         /// Covers api.partnercenter.microsoft.com and related subdomains.
-        /// Cap: 8 connections.
+        /// Cap: 5 connections.
         /// </summary>
         private static HttpClient BuildPartnerCenterClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 8,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// Admin plane client — dedicated lane for Microsoft admin/reporting
         /// surfaces (Admin Center, Office reports, Defender APIs, etc.).
-        /// Cap: 10 connections.
+        /// Cap: 5 connections.
         /// </summary>
         private static HttpClient BuildAdminPlaneClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 10,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
         /// Default catch-all client — handles any hostname not matched by the
         /// routing switch, including unknown Microsoft endpoints and any
         /// third-party APIs called via this wrapper.
-        /// Cap: 8 connections. This also absorbs the small number of legacy
+        /// Cap: 5 connections. This also absorbs the small number of legacy
         /// Invoke-RestMethod calls that bypass the pool entirely, which consume
-        /// ports outside our accounting. The 8-connection cap gives those
-        /// calls somewhere to land without blowing the budget.
+        /// ports outside our accounting.
         /// </summary>
         private static HttpClient BuildDefaultClient() => new HttpClient(new SocketsHttpHandler
         {
             AutomaticDecompression         = DecompressionMethods.All,
-            PooledConnectionLifetime       = TimeSpan.FromMinutes(15),
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
             PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
-            MaxConnectionsPerServer        = 8,
+            MaxConnectionsPerServer        = 5,
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         // -----------------------------------------------------------------
@@ -688,27 +695,6 @@ namespace CIPP
             return JsonSerializer.Serialize(new
             {
                 Initialized = _graphClient is not null,
-                PortBudget = new
-                {
-                    TotalSnatLimit  = 125,
-                    AllocatedPorts  = 119,
-                    SafetyBuffer    = 6,
-                },
-                PoolLimits = new
-                {
-                    Graph       = 45,
-                    Exo         = 25,
-                    Login       = 15,
-                    Compliance  = 8,
-                    PartnerCenter = 8,
-                    AdminPlane  = 10,
-                    Default     = 8,
-                },
-                PoolSettings = new
-                {
-                    PooledConnectionLifetimeMinutes    = 15,
-                    PooledConnectionIdleTimeoutMinutes = 2,
-                },
                 PoolUsage = new
                 {
                     Selections = _poolSelections.OrderBy(kvp => kvp.Key)
@@ -727,16 +713,24 @@ namespace CIPP
                         .ToArray(),
                     StatusCodes = _statusCodes
                         .OrderBy(kvp => kvp.Key)
-                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-                },
-                ConcurrencyAssumptions = new
-                {
-                    PSWorkerInProcConcurrencyUpperBound = 50,
-                    FUNCTIONS_WORKER_PROCESS_COUNT      = 1,
-                    TrafficSplitGraph                   = "~67%",
-                    TrafficSplitEXO                     = "~33%",
+                        .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value),
                 },
             }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        /// <summary>
+        /// Resets the runtime pool telemetry counters. Intended for the
+        /// diagnostics profile endpoint so operators can clear the counts
+        /// between observation windows without restarting the worker.
+        /// </summary>
+        public static void ResetDiagnostics()
+        {
+            _poolSelections.Clear();
+            _poolSuccesses.Clear();
+            _poolFailures.Clear();
+            _poolTransportErrors.Clear();
+            _hostSelections.Clear();
+            _statusCodes.Clear();
         }
     }
 
