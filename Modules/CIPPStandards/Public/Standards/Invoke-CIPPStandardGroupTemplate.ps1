@@ -24,6 +24,10 @@ function Invoke-CIPPStandardGroupTemplate {
             Creates standardized groups with predefined settings, permissions, and membership rules. These templates ensure consistent group configurations across the organization, streamlining collaboration and access management while maintaining security standards.
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","altLabelField":"displayName","valueField":"GUID","queryKey":"ListGroupTemplates"}}
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

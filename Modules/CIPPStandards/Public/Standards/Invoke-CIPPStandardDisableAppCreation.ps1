@@ -18,6 +18,7 @@ function Invoke-CIPPStandardDisableAppCreation {
             "EIDSCA.AP10"
             "Essential 8 (1175)"
             "NIST CSF 2.0 (PR.AA-05)"
+            "EIDSCAAP10"
         EXECUTIVETEXT
             Prevents regular employees from creating application registrations that could be used to maintain unauthorized access to company systems. This security measure ensures that only authorized IT personnel can create applications, reducing the risk of persistent security breaches through malicious applications.
         ADDEDCOMPONENT

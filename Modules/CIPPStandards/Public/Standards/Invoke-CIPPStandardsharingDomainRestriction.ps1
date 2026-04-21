@@ -16,6 +16,8 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             "CIS M365 5.0 (7.2.6)"
             "CISA (MS.AAD.14.3v1)"
             "CISA (MS.SPO.1.3v1)"
+            "ZTNA21803"
+            "ZTNA21804"
         EXECUTIVETEXT
             Controls which external domains employees can share files with, enabling secure collaboration with trusted partners while blocking sharing with unauthorized organizations. This targeted approach maintains necessary business relationships while preventing data exposure to unknown entities.
         ADDEDCOMPONENT
@@ -28,6 +30,13 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         POWERSHELLEQUIVALENT
             Update-MgAdminSharePointSetting
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "SHAREPOINTWAC"
+            "SHAREPOINTSTANDARD"
+            "SHAREPOINTENTERPRISE"
+            "SHAREPOINTENTERPRISE_EDU"
+            "ONEDRIVE_BASIC"
+            "ONEDRIVE_ENTERPRISE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

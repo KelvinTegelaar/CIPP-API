@@ -13,6 +13,10 @@ function Invoke-CIPPStandardTAP {
         CAT
             Entra (AAD) Standards
         TAG
+            "ZTNA21845"
+            "ZTNA21846"
+            "EIDSCAAT01"
+            "EIDSCAAT02"
         EXECUTIVETEXT
             Enables temporary access passwords that IT administrators can generate for employees who are locked out or need emergency access to systems. These time-limited passwords provide a secure way to restore access without compromising long-term security policies.
         ADDEDCOMPONENT

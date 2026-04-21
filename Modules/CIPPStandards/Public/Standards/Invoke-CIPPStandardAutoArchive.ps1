@@ -16,7 +16,7 @@ function Invoke-CIPPStandardAutoArchive {
         EXECUTIVETEXT
             Configures automatic archiving of mailbox items when storage approaches capacity, preventing email delivery failures due to full mailboxes. This proactive storage management ensures business continuity and reduces helpdesk tickets related to mailbox quota issues.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.AutoArchive.AutoArchivingThresholdPercentage","label":"Auto-Archiving Threshold Percentage (80-100, default 96, 100 disables)","defaultValue":96}
+            {"type":"number","name":"standards.AutoArchive.AutoArchivingThresholdPercentage","label":"Auto-Archiving Threshold Percentage (80-100, default 96, 100 disables)","defaultValue":96,"validators":{"min":{"value":80,"message":"Minimum value is 80"},"max":{"value":100,"message":"Maximum value is 100"}}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -24,6 +24,12 @@ function Invoke-CIPPStandardAutoArchive {
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -AutoArchivingThresholdPercentage 80-100
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

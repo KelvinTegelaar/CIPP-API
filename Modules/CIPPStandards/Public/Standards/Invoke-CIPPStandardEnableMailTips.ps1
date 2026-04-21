@@ -28,6 +28,12 @@ function Invoke-CIPPStandardEnableMailTips {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

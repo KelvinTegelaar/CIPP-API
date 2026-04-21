@@ -22,9 +22,32 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_phishthresholdlevel"
             "CIS M365 5.0 (2.1.7)"
             "NIST CSF 2.0 (DE.CM-09)"
+            "ORCA104"
+            "ORCA115"
+            "ORCA180"
+            "ORCA220"
+            "ORCA221"
+            "ORCA222"
+            "ORCA223"
+            "ORCA228"
+            "ORCA229"
+            "ORCA230"
+            "ORCA233"
+            "ORCA234"
+            "ORCA235"
+            "ORCA239"
+            "ORCA242"
+            "ORCA243"
+            "ORCA244"
+            "ZTNA21784"
+            "ZTNA21817"
+            "ZTNA21819"
+            "CISAMSEXO111"
+            "CISAMSEXO112"
+            "CISAMSEXO113"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.AntiPhishPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Anti-Phishing Policy"}
-            {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1}
+            {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":4,"message":"Maximum value is 4"}}}
             {"type":"switch","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","defaultValue":true}
             {"type":"switch","label":"Show user impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarUsersSafetyTips","defaultValue":true}
             {"type":"switch","label":"Show domain impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarDomainsSafetyTips","defaultValue":true}
@@ -45,6 +68,12 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             Set-AntiPhishPolicy or New-AntiPhishPolicy
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

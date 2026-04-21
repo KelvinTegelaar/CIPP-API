@@ -5,31 +5,32 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     .COMPONENT
         (APIName) DeployCheckChromeExtension
     .SYNOPSIS
-        (Label) Deploy Check Chrome Extension
+        (Label) Deploy Check by CyberDrain Browser Extension
     .DESCRIPTION
-        (Helptext) Deploys the Check by CyberDrain extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
-        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check by CyberDrain extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
+        (Helptext) Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
+        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check by CyberDrain browser extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
     .NOTES
         CAT
             Intune Standards
         TAG
         EXECUTIVETEXT
-            Automatically deploys the Check by CyberDrain extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
+            Automatically deploys the Check by CyberDrain browser extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DeployCheckChromeExtension.showNotifications","label":"Show notifications","defaultValue":true}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableValidPageBadge","label":"Enable valid page badge","defaultValue":false}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enablePageBlocking","label":"Enable page blocking","defaultValue":true}
-            {"type":"switch","name":"standards.DeployCheckChromeExtension.forceToolbarPin","label":"Force pin extension to toolbar","defaultValue":true}
-            {"type":"switch","name":"standards.DeployCheckChromeExtension.enableCippReporting","label":"Enable CIPP reporting","defaultValue":false}
-            {"type":"textField","name":"standards.DeployCheckChromeExtension.customRulesUrl","label":"Custom Rules URL","placeholder":"https://YOUR-CIPP-SERVER-URL/rules.json","required":false}
+            {"type":"switch","name":"standards.DeployCheckChromeExtension.forceToolbarPin","label":"Force pin extension to toolbar","defaultValue":false}
+            {"type":"switch","name":"standards.DeployCheckChromeExtension.enableCippReporting","label":"Enable CIPP reporting","defaultValue":true}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.customRulesUrl","label":"Custom Rules URL","placeholder":"https://YOUR-CIPP-SERVER-URL/rules.json","helperText":"Enter the URL for custom rules if you have them. This should point to a JSON file with the same structure as the rules.json used for CIPP reporting.","required":false}
             {"type":"number","name":"standards.DeployCheckChromeExtension.updateInterval","label":"Update interval (hours)","defaultValue":24}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableDebugLogging","label":"Enable debug logging","defaultValue":false}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableGenericWebhook","label":"Enable generic webhook","defaultValue":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.webhookUrl","label":"Webhook URL","placeholder":"https://webhook.example.com/endpoint","required":false}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Webhook Events","name":"standards.DeployCheckChromeExtension.webhookEvents","placeholder":"e.g. pageBlocked, pageAllowed"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"URL Allowlist","name":"standards.DeployCheckChromeExtension.urlAllowlist","placeholder":"e.g. https://example.com/*"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.DeployCheckChromeExtension.webhookEvents","label":"Webhook Events","placeholder":"e.g. pageBlocked, pageAllowed"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"freeSolo":true,"name":"standards.DeployCheckChromeExtension.urlAllowlist","label":"URL Allowlist","placeholder":"e.g. https://example.com/*","helperText":"Enter URLs to allowlist in the extension. Press enter to add each URL. Wildcards are allowed. This should be used for sites that are being blocked by the extension but are known to be safe."}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.domainSquattingEnabled","label":"Enable domain squatting detection","defaultValue":true}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.companyName","label":"Company Name","placeholder":"YOUR-COMPANY","required":false}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.companyURL","label":"Company URL","placeholder":"https://yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.productName","label":"Product Name","placeholder":"YOUR-PRODUCT-NAME","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportEmail","label":"Support Email","placeholder":"support@yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportUrl","label":"Support URL","placeholder":"https://support.yourcompany.com","required":false}
@@ -47,6 +48,12 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             Add-CIPPW32ScriptApplication
         RECOMMENDEDBY
             "CIPP"
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

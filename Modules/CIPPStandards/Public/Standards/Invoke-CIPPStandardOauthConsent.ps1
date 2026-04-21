@@ -19,6 +19,14 @@ function Invoke-CIPPStandardOauthConsent {
             "EIDSCA.AP09"
             "Essential 8 (1175)"
             "NIST CSF 2.0 (PR.AA-05)"
+            "ZTNA21772"
+            "ZTNA21774"
+            "ZTNA21807"
+            "EIDSCAAP08"
+            "EIDSCAAP09"
+            "EIDSCACP01"
+            "EIDSCACP03"
+            "EIDSCACP04"
         EXECUTIVETEXT
             Requires administrative approval before employees can grant applications access to company data, preventing unauthorized data sharing and potential security breaches. This protects against malicious applications while allowing approved business tools to function normally.
         ADDEDCOMPONENT

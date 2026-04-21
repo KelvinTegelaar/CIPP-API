@@ -24,6 +24,12 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
             Deploys standardized URL protection policies that automatically scan and verify links in emails and documents before users click them. This template-based approach ensures consistent protection against malicious websites and phishing attacks across the organization.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":true,"creatable":false,"name":"standards.SafeLinksTemplatePolicy.TemplateIds","label":"Select SafeLinks Policy Templates","api":{"url":"/api/ListSafeLinksPolicyTemplates","labelField":"TemplateName","valueField":"GUID","queryKey":"ListSafeLinksPolicyTemplates"}}
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -16,7 +16,7 @@ function Invoke-CIPPStandardSendFromAlias {
         EXECUTIVETEXT
             Allows employees to send emails from their alternative email addresses (aliases) rather than just their primary address. This is useful for employees who manage multiple roles or departments, enabling them to send emails from the most appropriate address for the context.
         ADDEDCOMPONENT
-    {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.SendFromAlias.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.SendFromAlias.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -25,6 +25,12 @@ function Invoke-CIPPStandardSendFromAlias {
             Set-Mailbox
         RECOMMENDEDBY
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

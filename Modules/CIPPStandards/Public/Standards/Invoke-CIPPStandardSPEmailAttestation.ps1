@@ -15,10 +15,12 @@ function Invoke-CIPPStandardSPEmailAttestation {
         TAG
             "CIS M365 5.0 (7.2.10)"
             "CISA (MS.SPO.1.6v1)"
+            "ZTNA21803"
+            "ZTNA21804"
         EXECUTIVETEXT
             Requires external users to periodically re-verify their identity through email verification codes when accessing SharePoint resources, adding an extra security layer for external collaboration. This helps ensure continued legitimacy of external access over time.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.SPEmailAttestation.Days","label":"Require re-authentication every X Days (Default 15)"}
+            {"type":"number","name":"standards.SPEmailAttestation.Days","label":"Require re-authentication every X Days (Default 15)","defaultValue":15,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":365,"message":"Maximum value is 365"}}}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -28,6 +30,13 @@ function Invoke-CIPPStandardSPEmailAttestation {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "SHAREPOINTWAC"
+            "SHAREPOINTSTANDARD"
+            "SHAREPOINTENTERPRISE"
+            "SHAREPOINTENTERPRISE_EDU"
+            "ONEDRIVE_BASIC"
+            "ONEDRIVE_ENTERPRISE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

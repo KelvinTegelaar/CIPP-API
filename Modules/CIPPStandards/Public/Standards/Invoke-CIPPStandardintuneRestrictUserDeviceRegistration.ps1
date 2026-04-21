@@ -20,7 +20,7 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
         IMPACT
             High Impact
         ADDEDDATE
-            2026-03-05
+            2026-02-23
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyDeviceRegistrationPolicy
         RECOMMENDEDBY

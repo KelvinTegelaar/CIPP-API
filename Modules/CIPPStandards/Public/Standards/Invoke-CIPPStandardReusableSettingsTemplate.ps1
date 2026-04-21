@@ -7,8 +7,8 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     .SYNOPSIS
         (Label) Reusable Settings Template
     .DESCRIPTION
-        (Helptext) Deploy and manage Intune reusable settings templates for reuse across multiple policies.
-        (DocsDescription) Deploy and manage Intune reusable settings templates for reuse across multiple policies.
+        (Helptext) Deploy and maintain Intune reusable settings templates that can be referenced by multiple policies.
+        (DocsDescription) Deploy and maintain Intune reusable settings templates that can be referenced by multiple policies.
     .NOTES
         CAT
             Templates
@@ -17,13 +17,16 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
         DISABLEDFEATURES
             {"report":false,"warn":false,"remediate":false}
         IMPACT
-            Low Impact
+            High Impact
         ADDEDDATE
-            2026-01-11
+            2026-01-02
         EXECUTIVETEXT
-            Creates and maintains reusable Intune settings templates that can be referenced by multiple policies, ensuring consistent firewall and configuration rule blocks are centrally managed and updated.
+            Creates and keeps reusable Intune settings templates consistent so common firewall and configuration blocks can be reused across many policies.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":true,"creatable":false,"required":true,"name":"TemplateList","label":"Select Reusable Settings Template","api":{"queryKey":"ListIntuneReusableSettingTemplates","url":"/api/ListIntuneReusableSettingTemplates","labelField":"DisplayName","valueField":"GUID","showRefresh":true,"templateView":{"title":"Reusable Settings","property":"RawJSON","type":"intune"}}}
+            {"type":"autoComplete","multiple":true,"creatable":false,"required":true,"name":"TemplateList","label":"Select Reusable Settings Template","api":{"queryKey":"ListIntuneReusableSettingTemplates","url":"/api/ListIntuneReusableSettingTemplates","labelField":"displayName","valueField":"GUID","showRefresh":true,"templateView":{"title":"Reusable Settings","property":"RawJSON","type":"intune"}}}
+        POWERSHELLEQUIVALENT
+            
+        RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

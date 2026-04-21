@@ -14,6 +14,9 @@ function Invoke-CIPPStandardSpoofWarn {
             Exchange Standards
         TAG
             "CIS M365 5.0 (6.2.3)"
+            "ORCA111"
+            "ORCA240"
+            "CISAMSEXO71"
         EXECUTIVETEXT
             Displays visual warnings in Outlook when emails come from external senders, helping employees identify potentially suspicious messages and reducing the risk of phishing attacks. This security feature makes it easier for staff to distinguish between internal and external communications.
         ADDEDCOMPONENT
@@ -28,6 +31,12 @@ function Invoke-CIPPStandardSpoofWarn {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

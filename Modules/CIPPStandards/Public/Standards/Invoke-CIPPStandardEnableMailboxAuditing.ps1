@@ -20,6 +20,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
             "Essential 8 (1509)"
             "Essential 8 (1683)"
             "NIST CSF 2.0 (DE.CM-09)"
+            "CISAMSEXO131"
         EXECUTIVETEXT
             Enables comprehensive logging of all email access and modifications across all employee mailboxes, providing detailed audit trails for security investigations and compliance requirements. This helps detect unauthorized access, data breaches, and supports regulatory compliance efforts.
         ADDEDCOMPONENT
@@ -32,6 +33,12 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -25,11 +25,11 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode","label":"Default value of the `Who can present?`","options":[{"label":"Everyone","value":"EveryoneUserOverride"},{"label":"People in my organization","value":"EveryoneInCompanyUserOverride"},{"label":"People in my organization and trusted organizations","value":"EveryoneInSameAndFederatedCompanyUserOverride"},{"label":"Only organizer","value":"OrganizerOnlyUserOverride"}]}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToJoinMeeting","label":"Allow anonymous users to join meeting"}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowAnonymousUsersToStartMeeting","label":"Allow anonymous users to start meeting"}
-            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People who were invited","value":"InvitedUsers"}]}
-            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowPSTNUsersToBypassLobby","label":"Allow dial-in users to bypass the lobby"}
+            {"type":"autoComplete","required":false,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.AutoAdmittedUsers","label":"Who can bypass the lobby?","helperText":"If left blank, the current value will not be changed.","options":[{"label":"Only organizers and co-organizers","value":"OrganizerOnly"},{"label":"People in organization excluding guests","value":"EveryoneInCompanyExcludingGuests"},{"label":"People in same or federated organizations","value":"EveryoneInSameAndFederatedCompany"},{"label":"People who were invited","value":"InvitedUsers"},{"label":"Everyone","value":"Everyone"}]}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowPSTNUsersToBypassLobby","label":"Allow dial-in users to bypass lobby"}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsGlobalMeetingPolicy.MeetingChatEnabledType","label":"Meeting chat policy","options":[{"label":"On for everyone","value":"Enabled"},{"label":"On for everyone but anonymous users","value":"EnabledExceptAnonymous"},{"label":"Off for everyone","value":"Disabled"}]}
-            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
             {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowParticipantGiveRequestControl","label":"Participants can give or request control"}
+            {"type":"switch","name":"standards.TeamsGlobalMeetingPolicy.AllowExternalParticipantGiveRequestControl","label":"External participants can give or request control"}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -38,6 +38,12 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting \$false -AllowAnonymousUsersToStartMeeting \$false -AutoAdmittedUsers \$AutoAdmittedUsers -AllowPSTNUsersToBypassLobby \$false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode \$DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl \$false -AllowParticipantGiveRequestControl \$false
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -13,6 +13,7 @@ function Invoke-CIPPStandardDisableGuests {
         CAT
             Entra (AAD) Standards
         TAG
+            "ZTNA21858"
         EXECUTIVETEXT
             Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.
         ADDEDCOMPONENT
@@ -26,6 +27,9 @@ function Invoke-CIPPStandardDisableGuests {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
