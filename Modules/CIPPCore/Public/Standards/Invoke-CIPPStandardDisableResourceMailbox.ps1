@@ -36,37 +36,68 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableResourceMailbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableResourceMailbox'
 
     # Get all users that are able to be
     try {
-        $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$filter=accountEnabled eq true and onPremisesSyncEnabled ne true and assignedLicenses/$count eq 0&$count=true' -Tenantid $Tenant -ComplexFilter |
-        Where-Object { $_.userType -eq 'Member' }
+        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $UserList = $AllUsers | Where-Object {
+            $_.accountEnabled -eq $true -and
+            $_.onPremisesSyncEnabled -ne $true -and
+            ($null -eq $_.assignedLicenses -or $_.assignedLicenses.Count -eq 0) -and
+            $_.userType -eq 'Member'
+        }
         $ResourceMailboxList = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'RoomMailbox' -or RecipientTypeDetails -eq 'EquipmentMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
-        Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id }
-    }
-    catch {
+            Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id }
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableResourceMailbox state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
+    if ($Settings.remediate -eq $true) {
+        $UpdateDB = $false
+        if ($ResourceMailboxList.Count -gt 0) {
+            $int = 0
+            $BulkRequests = foreach ($Mailbox in $ResourceMailboxList) {
+                @{
+                    id        = $int++
+                    method    = 'PATCH'
+                    url       = "users/$($Mailbox.ExternalDirectoryObjectId)"
+                    body      = @{ accountEnabled = $false }
+                    'headers' = @{
+                        'Content-Type' = 'application/json'
+                    }
+                }
+            }
 
+            try {
+                $BulkResults = New-GraphBulkRequest -tenantid $Tenant -Requests @($BulkRequests)
 
-        if ($ResourceMailboxList) {
-            Write-Host "Resource Mailboxes to disable: $($ResourceMailboxList.Count)"
-            $ResourceMailboxList | ForEach-Object {
+                for ($i = 0; $i -lt $BulkResults.Count; $i++) {
+                    $result = $BulkResults[$i]
+                    $Mailbox = $ResourceMailboxList[$i]
+
+                    if ($result.status -eq 200 -or $result.status -eq 204) {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName) disabled." -sev Info
+                        $UpdateDB = $true
+                    } else {
+                        $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($Mailbox.RecipientTypeDetails), $($Mailbox.DisplayName), $($Mailbox.UserPrincipalName): $errorMsg" -sev Error
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable resource mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+
+            # Refresh user cache after remediation only if changes were made
+            if ($UpdateDB) {
                 try {
-                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($_.ExternalDirectoryObjectId)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for $($_.RecipientTypeDetails), $($_.DisplayName), $($_.UserPrincipalName) disabled." -sev Info
+                    Set-CIPPDBCacheUsers -TenantFilter $Tenant
                 } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for $($_.RecipientTypeDetails), $($_.DisplayName), $($_.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to refresh user cache after remediation: $($_.Exception.Message)" -sev Warning
                 }
             }
         } else {
@@ -85,9 +116,14 @@ function Invoke-CIPPStandardDisableResourceMailbox {
     }
 
     if ($Settings.report -eq $true) {
-        # If there are no resource mailboxes, we set the state to true, so that the standard reports as compliant.
-        $State = $ResourceMailboxList ? $ResourceMailboxList : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableResourceMailbox' -FieldValue $State -Tenant $Tenant
+        $CurrentValue = [PSCustomObject]@{
+            ResourceMailboxesToDisable = @($ResourceMailboxList)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            ResourceMailboxesToDisable = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableResourceMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableResourceMailbox' -FieldValue $ResourceMailboxList -StoreAs json -Tenant $Tenant
     }
 }

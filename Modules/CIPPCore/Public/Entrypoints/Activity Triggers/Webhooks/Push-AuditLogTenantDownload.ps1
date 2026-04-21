@@ -39,15 +39,19 @@ function Push-AuditLogTenantDownload {
         $LogSearchesTable = Get-CippTable -TableName 'AuditLogSearches'
 
         try {
-            $LogSearches = Get-CippAuditLogSearches -TenantFilter $TenantFilter -ReadyToProcess | Select-Object -First 10
-            Write-Information ('Audit Logs: Found {0} searches, begin downloading' -f $LogSearches.Count)
+            $LogSearches = Get-CippAuditLogSearches -TenantFilter $TenantFilter -ReadyToProcess | Sort-Object -Property filterStartDateTime | Select-Object -First 10
+            if ($LogSearches.Count -eq 0) {
+                Write-Information "Audit Logs: No searches ready to process for $TenantFilter"
+                return $true
+            }
+            Write-Information ('Audit Logs: Found {0} searches for {1}, begin downloading' -f $LogSearches.Count, $TenantFilter)
             foreach ($Search in $LogSearches) {
                 $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "Tenant eq '$($TenantFilter)' and RowKey eq '$($Search.id)'"
                 $SearchEntity.CippStatus = 'Processing'
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
                 try {
                     Write-Information "Audit Log search: Processing search ID: $($Search.id) for tenant: $TenantFilter"
-                    $Downloads = New-CIPPAuditLogSearchResultsCache -TenantFilter $TenantFilter -searchId $Search.id
+                    $null = New-CIPPAuditLogSearchResultsCache -TenantFilter $TenantFilter -searchId $Search.id
                     $SearchEntity.CippStatus = 'Downloaded'
                 } catch {
                     if ($_.Exception.Message -match 'Request rate is large. More Request Units may be needed, so no changes were made. Please retry this request later.') {
@@ -68,13 +72,14 @@ function Push-AuditLogTenantDownload {
                 }
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
             }
+            return $true
         } catch {
             Write-Information ('Audit Log search: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
-            exit 0
+            return $false
         }
 
     } catch {
         Write-Information ('Push-AuditLogTenant: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
-        exit 0
+        return $false
     }
 }

@@ -31,6 +31,8 @@ function Get-CIPPAlertAppSecretExpiry {
                         AppName    = $App.displayName
                         AppId      = $App.appId
                         Expires    = $Credential.endDateTime
+                        SecretName = $Credential.displayName
+                        SecretID   = $Credential.keyId
                         Tenant     = $TenantFilter
                     }
                     $AlertData.Add($Message)
@@ -38,5 +40,7 @@ function Get-CIPPAlertAppSecretExpiry {
             }
         }
     }
-    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    if ($AlertData) {
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    }
 }

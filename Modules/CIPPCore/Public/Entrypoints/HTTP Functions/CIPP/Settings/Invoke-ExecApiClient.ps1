@@ -32,13 +32,15 @@ function Invoke-ExecApiClient {
             if ($Request.Body.ClientId -or $Request.Body.AppName) {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 $AddUpdateSuccess = $false
+                $RetryClientId = $null
+                $RetryObjectId = $null
                 try {
                     $ApiConfig = @{
                         Headers = $Request.Headers
                     }
                     if ($ClientId) {
                         $ApiConfig.ClientId = $ClientId
-                        $ApiConfig.ResetSecret = $Request.Body.CIPPAPI.ResetSecret
+                        $ApiConfig.ResetSecret = [bool]$Request.Body.CIPPAPI.ResetSecret
                     }
                     if ($Request.Body.AppName) {
                         $ApiConfig.AppName = $Request.Body.AppName
@@ -49,7 +51,27 @@ function Invoke-ExecApiClient {
                     $AddedText = $APIConfig.Results
                     $AddUpdateSuccess = $true
                 } catch {
-                    $AddedText = "Could not modify App Registrations. Check the CIPP documentation for API requirements. Error: $($_.Exception.Message)"
+                    $RetryClientId = [string]$_.Exception.Data['ApplicationID']
+                    $RetryObjectId = [string]$_.Exception.Data['ApplicationObjectID']
+
+                    $AddedText = @{
+                        resultText = "Could not modify App Registrations. Check the CIPP documentation for API requirements. Error: $($_.Exception.Message)"
+                        state      = 'error'
+                    }
+
+                    if ($RetryClientId) {
+                        $AddedText.retryAvailable = $true
+                        $AddedText.retryPayload = @{
+                            RetrySetup = $true
+                            ClientId   = $RetryClientId
+                            CIPPAPI    = @{
+                                ResetSecret = $true
+                            }
+                        }
+                        if ($RetryObjectId) {
+                            $AddedText.retryPayload.ApplicationObjectID = $RetryObjectId
+                        }
+                    }
                 }
             }
 
@@ -65,9 +87,9 @@ function Invoke-ExecApiClient {
                 $IpRange = @()
             }
 
-            if (!$AddUpdateSuccess -and !$ClientId) {
+            if (!$AddUpdateSuccess) {
                 $Body = @{
-                    Results = $AddedText
+                    Results = @($AddedText)
                 }
             } else {
                 $ExistingClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
@@ -77,7 +99,15 @@ function Invoke-ExecApiClient {
                     $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                     $Client.Enabled = $Request.Body.Enabled ?? $false
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
-                    $Results = 'API client updated'
+                    if ($APIConfig.ApplicationSecret) {
+                        $Results = @{
+                            resultText = "API client updated and application secret reset for '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the new secret."
+                            copyField  = $APIConfig.ApplicationSecret
+                            state      = 'success'
+                        }
+                    } else {
+                        $Results = 'API client updated'
+                    }
                 } else {
                     $Client = @{
                         'PartitionKey' = 'ApiClients'
@@ -99,12 +129,16 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
-            $Owner = $env:WEBSITE_OWNER_NAME
-            Write-Information "Owner: $Owner"
-            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            } else {
+            if ($env:WEBSITE_RESOURCE_GROUP) {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
+            } else {
+                $Owner = $env:WEBSITE_OWNER_NAME
+                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+                    $RGName = $Matches.RGName
+                } else {
+                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
+                    $RGName = $null
+                }
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
@@ -122,11 +156,16 @@ function Invoke-ExecApiClient {
         }
         'SaveToAzure' {
             $TenantId = $env:TenantID
-            $Owner = $env:WEBSITE_OWNER_NAME
-            if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                $RGName = $Matches.RGName
-            } else {
+            if ($env:WEBSITE_RESOURCE_GROUP) {
                 $RGName = $env:WEBSITE_RESOURCE_GROUP
+            } else {
+                $Owner = $env:WEBSITE_OWNER_NAME
+                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+                    $RGName = $Matches.RGName
+                } else {
+                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
+                    $RGName = $null
+                }
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
@@ -148,7 +187,7 @@ function Invoke-ExecApiClient {
             if (!$Client) {
                 $Results = @{
                     resultText = 'API client not found'
-                    severity   = 'error'
+                    state      = 'error'
                 }
             } else {
                 $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId -Headers $Request.Headers
@@ -192,7 +231,7 @@ function Invoke-ExecApiClient {
                     $Body = @{ Results = "API client $ClientId not found or not a valid CIPP-API application" }
                 }
             } catch {
-                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -Sev 'Warning'
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -sev 'Warn'
             }
         }
         default {

@@ -73,7 +73,6 @@ function Invoke-ExecAppPermissionTemplate {
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
                 $filter = "PartitionKey eq 'Templates' and RowKey eq '$templateId'"
-                Write-LogMessage -headers $Headers -API 'ExecAppPermissionTemplate' -message "Retrieved specific template: $templateId" -Sev 'Info'
             }
 
             $Body = Get-CIPPAzDataTableEntity @Table -Filter $filter | ForEach-Object {

@@ -35,9 +35,8 @@ function Invoke-CIPPStandardOauthConsentLowSec {
         $State = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant)
 
         $PermissionState = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications" -tenantid $tenant) |
-        Select-Object -Property permissionName
-    }
-    catch {
+            Select-Object -Property permissionName
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the OauthConsentLowSec state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -50,7 +49,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     $ConflictingStandard = $Standards | Where-Object -Property Standard -EQ 'OauthConsent'
 
     if ($Settings.remediate -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -in @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
+        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -in @('ManagePermissionGrantsForSelf.microsoft-user-default-low')) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is already enabled.' -sev Info
         } elseif ($ConflictingStandard -and $State.permissionGrantPolicyIdsAssignedToDefaultUserRole -contains 'ManagePermissionGrantsForSelf.cipp-consent-policy') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'There is a conflicting OAuth Consent policy standard enabled for this tenant. Remove the Require admin consent for applications (Prevent OAuth phishing) standard from this tenant to apply the low security standard.' -sev Error
@@ -61,7 +60,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
                     Uri         = 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy'
                     Type        = 'PATCH'
                     Body        = @{
-                        permissionGrantPolicyIdsAssignedToDefaultUserRole = @('managePermissionGrantsForSelf.microsoft-user-default-low')
+                        permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.microsoft-user-default-low')
                     } | ConvertTo-Json
                     ContentType = 'application/json'
                 }
@@ -77,19 +76,19 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All permissions for Application Consent already assigned.' -sev Info
         } else {
             try {
-                $missingPermissions | ForEach-Object {
+                foreach ($Permission in $missingPermissions) {
                     $GraphParam = @{
                         tenantid    = $tenant
                         Uri         = "https://graph.microsoft.com/beta/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications"
                         Type        = 'POST'
                         Body        = @{
-                            permissionName = $_
+                            permissionName = $Permission
                             classification = 'low'
                         } | ConvertTo-Json
                         ContentType = 'application/json'
                     }
                     $null = New-GraphPostRequest @GraphParam
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $_ has been added to low Application Consent" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $Permission has been added to low Application Consent" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -99,7 +98,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
+        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('ManagePermissionGrantsForSelf.microsoft-user-default-low')) {
             Write-StandardsAlert -message 'Application Consent Mode(microsoft-user-default-low) is not enabled' -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Info
         } else {
@@ -108,23 +107,21 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     }
 
     if ($Settings.report -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
-            $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $false
-            $ValueField = @{
-                authorizationPolicy       = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
-                permissionClassifications = $PermissionState
+        $CurrentValue = @{
+            permissionGrantPolicyIdsAssignedToDefaultUserRole = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
+        }
+        # Add conflicting standard info if applicable
+        if ($ConflictingStandard) {
+            $CurrentValue.conflictingStandard = @{
+                name       = $ConflictingStandard.Standard
+                templateid = $ConflictingStandard.TemplateId
             }
-            if ($ConflictingStandard) {
-                $ValueField.conflictingStandard = @{
-                    name       = $ConflictingStandard.Standard
-                    templateid = $ConflictingStandard.TemplateId
-                }
-            }
-        } else {
-            $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $true
-            $ValueField = $true
+        }
+
+        $ExpectedValue = @{
+            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.microsoft-user-default-low')
         }
         Add-CIPPBPAField -FieldName 'OauthConsentLowSec' -FieldValue $State.permissionGrantPolicyIdsAssignedToDefaultUserRole -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsentLowSec' -FieldValue $ValueField -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsentLowSec' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
     }
 }

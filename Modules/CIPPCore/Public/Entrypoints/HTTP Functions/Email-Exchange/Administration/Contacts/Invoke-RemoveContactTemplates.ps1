@@ -3,7 +3,7 @@ function Invoke-RemoveContactTemplates {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Exchange.ReadWrite
+        Exchange.Contact.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +15,8 @@ function Invoke-RemoveContactTemplates {
 
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$id'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'ContactTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Contact Template with ID $ID."

@@ -30,24 +30,21 @@ function Invoke-CIPPStandarddisableMacSync {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'disableMacSync' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU','ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'disableMacSync'
+    $TestResult = Test-CIPPStandardLicense -StandardName 'disableMacSync' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableMacSync state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isMacSyncAppEnabled -eq $true) {
             try {
@@ -74,8 +71,16 @@ function Invoke-CIPPStandarddisableMacSync {
     }
 
     if ($Settings.report -eq $true) {
-        $CurrentInfo.isMacSyncAppEnabled = -not $CurrentInfo.isMacSyncAppEnabled
-        Set-CIPPStandardsCompareField -FieldName 'standards.disableMacSync' -FieldValue $CurrentInfo.isMacSyncAppEnabled -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue $CurrentInfo.isMacSyncAppEnabled -StoreAs bool -Tenant $tenant
+        $CurrentState = -not $CurrentInfo.isMacSyncAppEnabled
+
+        $CurrentValue = [PSCustomObject]@{
+            MacSyncDisabled = $CurrentState
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            MacSyncDisabled = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.disableMacSync' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

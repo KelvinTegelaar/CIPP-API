@@ -45,15 +45,13 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnrollmentWindowsHelloForBusinessConfiguration' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'WindowsHelloForBusiness'" -tenantID $Tenant -AsApp $true |
-        Select-Object -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState
-    }
-    catch {
+            Select-Object -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnrollmentWindowsHelloForBusinessConfiguration state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -87,11 +85,25 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         enhancedBiometricsState     = $CurrentState.enhancedBiometricsState
     }
 
-    If ($Settings.remediate -eq $true) {
+    $ExpectedValue = [PSCustomObject]@{
+        pinMinimumLength            = $Settings.pinMinimumLength
+        pinMaximumLength            = $Settings.pinMaximumLength
+        pinUppercaseCharactersUsage = $Settings.pinUppercaseCharactersUsage.value
+        pinLowercaseCharactersUsage = $Settings.pinLowercaseCharactersUsage.value
+        pinSpecialCharactersUsage   = $Settings.pinSpecialCharactersUsage.value
+        state                       = $Settings.state.value
+        securityDeviceRequired      = $Settings.securityDeviceRequired
+        unlockWithBiometricsEnabled = $Settings.unlockWithBiometricsEnabled
+        remotePassportEnabled       = $Settings.remotePassportEnabled
+        pinPreviousBlockCount       = $Settings.pinPreviousBlockCount
+        pinExpirationInDays         = $Settings.pinExpirationInDays
+        enhancedBiometricsState     = $Settings.enhancedBiometricsState.value
+    }
+
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'EnrollmentWindowsHelloForBusinessConfiguration is already applied correctly.' -Sev Info
-        }
-        else {
+        } else {
             $cmdParam = @{
                 tenantid    = $Tenant
                 uri         = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($CurrentState.id)"
@@ -99,9 +111,9 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
                 Type        = 'PATCH'
                 ContentType = 'application/json; charset=utf-8'
                 Body        = [PSCustomObject]@{
-                    "@odata.type"             = "#microsoft.graph.deviceEnrollmentWindowsHelloForBusinessConfiguration"
-                    pinMinimumLength          = $Settings.pinMinimumLength
-                    pinMaximumLength          = $Settings.pinMaximumLength
+                    '@odata.type'               = '#microsoft.graph.deviceEnrollmentWindowsHelloForBusinessConfiguration'
+                    pinMinimumLength            = $Settings.pinMinimumLength
+                    pinMaximumLength            = $Settings.pinMaximumLength
                     pinUppercaseCharactersUsage = $Settings.pinUppercaseCharactersUsage.value
                     pinLowercaseCharactersUsage = $Settings.pinLowercaseCharactersUsage.value
                     pinSpecialCharactersUsage   = $Settings.pinSpecialCharactersUsage.value
@@ -117,8 +129,7 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
             try {
                 $null = New-GraphPostRequest @cmdParam
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated EnrollmentWindowsHelloForBusinessConfiguration.' -Sev Info
-            }
-            catch {
+            } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update EnrollmentWindowsHelloForBusinessConfiguration. Error: $($ErrorMessage.NormalizedError)" -Sev Error
             }
@@ -126,18 +137,16 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
 
     }
 
-    If ($Settings.alert -eq $true) {
+    if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'EnrollmentWindowsHelloForBusinessConfiguration is correctly set.' -Sev Info
-        }
-        else {
+        } else {
             Write-StandardsAlert -message 'EnrollmentWindowsHelloForBusinessConfiguration is incorrectly set.' -object $CompareField -tenant $Tenant -standardName 'EnrollmentWindowsHelloForBusinessConfiguration' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'EnrollmentWindowsHelloForBusinessConfiguration is incorrectly set.' -Sev Info
         }
     }
 
-    If ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : $CompareField
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnrollmentWindowsHelloForBusinessConfiguration' -FieldValue $FieldValue -TenantFilter $Tenant
+    if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnrollmentWindowsHelloForBusinessConfiguration' -CurrentValue $CompareField -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 }

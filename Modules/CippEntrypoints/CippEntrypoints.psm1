@@ -21,6 +21,7 @@ function Receive-CippHttpTrigger {
     if ($Request.Headers.'x-ms-coldstart' -eq 1) {
         Write-Information '** Function app cold start detected **'
     }
+    Write-Debug "CIPP_ACTION=$($Request.Params.CIPPEndpoint)"
 
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
@@ -159,6 +160,48 @@ function Receive-CippHttpTrigger {
     return
 }
 
+function Receive-CippQueueTrigger {
+    <#
+    .SYNOPSIS
+        Execute a queue trigger function
+    .DESCRIPTION
+        Execute a queue trigger function from an Azure Function App.
+    .PARAMETER QueueItem
+        The item from the queue that triggered the function
+    .PARAMETER TriggerMetadata
+        Metadata about the trigger, such as function name and other context
+    .FUNCTIONALITY
+        Entrypoint for the queue trigger function
+    #>
+    param($QueueItem, $TriggerMetadata)
+
+    Write-Information '####### Starting CIPP Queue Trigger'
+    $QueueItem = $QueueItem | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+
+    if (Get-Command -Name $QueueItem.Cmdlet -Module CIPPCore -ErrorAction SilentlyContinue) {
+        Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
+    } else {
+        Write-Warning "Command not found: $($QueueItem.Cmdlet). Skipping execution."
+        return
+    }
+
+    $Cmdlet = $QueueItem.Cmdlet
+    $Parameters = $QueueItem.Parameters
+    if ($Parameters) {
+        $Parameters = $Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
+    } else {
+        $Parameters = @{}
+    }
+
+    try {
+        & $Cmdlet @Parameters
+    } catch {
+        $ErrorMsg = $_.Exception.Message
+        Write-Warning "Error in $($Cmdlet): $($ErrorMsg)"
+    }
+}
+
 function Receive-CippOrchestrationTrigger {
     <#
     .SYNOPSIS
@@ -171,7 +214,7 @@ function Receive-CippOrchestrationTrigger {
         Entrypoint
     #>
     param($Context)
-
+    Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -180,6 +223,7 @@ function Receive-CippOrchestrationTrigger {
         }
         Write-Information "Orchestrator started $($OrchestratorInput.OrchestratorName)"
         Write-Warning "Receive-CippOrchestrationTrigger - $($OrchestratorInput.OrchestratorName)"
+        Set-DurableCustomStatus -CustomStatus $OrchestratorInput.OrchestratorName
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
             MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
@@ -195,6 +239,10 @@ function Receive-CippOrchestrationTrigger {
                 $DurableMode = 'Sequence'
                 $NoWait = $false
             }
+            'NoScaling' {
+                $DurableMode = 'NoScaling'
+                $NoWait = $false
+            }
             default {
                 $DurableMode = 'FanOut (Default)'
                 $NoWait = $true
@@ -203,39 +251,87 @@ function Receive-CippOrchestrationTrigger {
         Write-Information "Durable Mode: $DurableMode"
 
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
-
-        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
-            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
-        }
-
-        if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
-            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+        if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0 -and $OrchestratorInput.QueueFunction) {
+            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop) | Where-Object { $null -ne $_.FunctionName }
+        } elseif ($OrchestratorInput.Batch) {
+            $Batch = $OrchestratorInput.Batch | Where-Object { $null -ne $_.FunctionName }
         } else {
-            $Batch = $OrchestratorInput.Batch
+            Write-Information 'No batch or queue function provided to orchestrator input'
+            $Batch = @()
         }
+
+        $Batch = @($Batch | Where-Object { $null -ne $_.FunctionName })
 
         if (($Batch | Measure-Object).Count -gt 0) {
             Write-Information "Batch Count: $($Batch.Count)"
-            $Tasks = foreach ($Item in $Batch) {
-                $DurableActivity = @{
-                    FunctionName = 'CIPPActivityFunction'
-                    Input        = $Item
-                    NoWait       = $NoWait
-                    RetryOptions = $RetryOptions
-                    ErrorAction  = 'Stop'
+            $Output = foreach ($Item in $Batch) {
+                if ($DurableMode -eq 'NoScaling') {
+                    $Activity = @{
+                        FunctionName = 'CIPPActivityFunction'
+                        Input        = $Item
+                        ErrorAction  = 'Stop'
+                    }
+                    Invoke-ActivityFunction @Activity
+                } else {
+                    $DurableActivity = @{
+                        FunctionName = 'CIPPActivityFunction'
+                        Input        = $Item
+                        NoWait       = $NoWait
+                        RetryOptions = $RetryOptions
+                        ErrorAction  = 'Stop'
+                    }
+                    Invoke-DurableActivity @DurableActivity
                 }
-                Invoke-DurableActivity @DurableActivity
             }
-            if ($NoWait -and $Tasks) {
-                $null = Wait-ActivityFunction -Task $Tasks
+
+            if ($NoWait -and $Output) {
+                $Output = $Output | Where-Object { $_.GetType().Name -eq 'ActivityInvocationTask' }
+                if (($Output | Measure-Object).Count -gt 0) {
+                    Write-Information "Waiting for ($($Output.Count)) activity functions to complete..."
+                    $Results = foreach ($Task in $Output) {
+                        try {
+                            Wait-ActivityFunction -Task $Task
+                        } catch {}
+                    }
+                } else {
+                    $Results = @()
+                }
+            } else {
+                $Results = $Output
             }
+        } else {
+            Write-Information 'No activities to execute in batch'
+            $Results = @()
         }
 
-        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
-            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
+        if ($Results -and $OrchestratorInput.PostExecution) {
+            Write-Information "Running post execution function $($OrchestratorInput.PostExecution.FunctionName)"
+            $PostExecParams = @{
+                FunctionName = $OrchestratorInput.PostExecution.FunctionName
+            }
+
+            if ($Results) {
+                $ResultsList = [System.Collections.Generic.List[object]]::new()
+                foreach ($Result in $Results) {
+                    $ResultsList.Add($Result)
+                }
+                $PostExecParams['Results'] = $ResultsList
+            }
+
+            if ($OrchestratorInput.PostExecution.Parameters) {
+                $PostExecParams['Parameters'] = $OrchestratorInput.PostExecution.Parameters
+            }
+            if ($null -ne $PostExecParams.FunctionName) {
+                $null = Invoke-ActivityFunction -FunctionName CIPPActivityFunction -Input $PostExecParams
+                Write-Information "Post execution function $($OrchestratorInput.PostExecution.FunctionName) completed"
+            } else {
+                Write-Information 'No post execution function name provided'
+                Write-Information ($PostExecParams | ConvertTo-Json -Depth 10)
+            }
         }
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
+        Write-Information $_.InvocationInfo.PositionMessage
     }
     return $true
 }
@@ -252,12 +348,20 @@ function Receive-CippActivityTrigger {
         Entrypoint
     #>
     param($Item)
+    Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
-        $Start = Get-Date
         $Output = $null
-        Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+        $metric = @{
+            Kind         = 'CIPPCommandStart'
+            InvocationId = "$($ExecutionContext.InvocationId)"
+            Command      = $Item.Command
+            Tenant       = $Item.TenantFilter.defaultDomainName
+            TaskName     = $Item.TaskName
+            JSONData     = ($Item | ConvertTo-Json -Depth 10 -Compress)
+        } | ConvertTo-Json -Depth 10 -Compress
 
+        Write-Information -MessageData $metric -Tag 'CIPPCommandStart'
         if ($Item.QueueId) {
             if ($Item.QueueName) {
                 $QueueName = $Item.QueueName
@@ -277,56 +381,89 @@ function Receive-CippActivityTrigger {
 
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
+
+            # Prepare telemetry metadata
+            $taskName = if ($Item.Command) { $Item.Command } else { $FunctionName }
+            $metadata = @{
+                Command      = if ($Item.Command) { $Item.Command } else { $FunctionName }
+                FunctionName = $FunctionName
+            }
+
+            # Add tenant information if available
+            if ($Item.TaskInfo) {
+                if ($Item.TaskInfo.Tenant) {
+                    $metadata['Tenant'] = $Item.TaskInfo.Tenant
+                }
+                if ($Item.TaskInfo.Name) {
+                    $metadata['JobName'] = $Item.TaskInfo.Name
+                }
+                if ($Item.TaskInfo.Recurrence) {
+                    $metadata['Recurrence'] = $Item.TaskInfo.Recurrence
+                }
+            }
+
+            # Add tenant from other common fields
+            if (-not $metadata['Tenant']) {
+                if ($Item.TenantFilter) {
+                    $metadata['Tenant'] = $Item.TenantFilter
+                } elseif ($Item.Tenant) {
+                    $metadata['Tenant'] = $Item.Tenant
+                }
+            }
+
+            # Add queue information
+            if ($Item.QueueId) {
+                $metadata['QueueId'] = $Item.QueueId
+            }
+            if ($Item.QueueName) {
+                $metadata['QueueName'] = $Item.QueueName
+            }
+
             try {
-                Write-Warning "Activity starting Function: $FunctionName."
+                Write-Verbose "Activity starting Function: $FunctionName."
                 $Output = Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
-                Write-Warning "Activity completed Function: $FunctionName."
+                $Status = 'Completed'
+
+                Write-Verbose "Activity completed Function: $FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
                     $null = Set-CippQueueTask @QueueTask
                 }
             } catch {
                 $ErrorMsg = $_.Exception.Message
+                Write-Information "Error in activity function $FunctionName : $ErrorMsg"
+                Write-Information $_.InvocationInfo.PositionMessage
+                $Status = 'Failed'
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Failed'
+                    $QueueTask.Message = $ErrorMsg
                     $null = Set-CippQueueTask @QueueTask
                 }
             }
         } else {
             $ErrorMsg = 'Function not provided'
+            $Status = 'Failed'
             if ($TaskStatus) {
                 $QueueTask.Status = 'Failed'
                 $null = Set-CippQueueTask @QueueTask
             }
         }
-
-        $End = Get-Date
-
-        try {
-            $Stats = @{
-                FunctionType = 'Durable'
-                Entity       = $Item
-                Start        = $Start
-                End          = $End
-                ErrorMsg     = $ErrorMsg
-            }
-            Write-CippFunctionStats @Stats
-        } catch {
-            Write-Information "Error adding activity stats: $($_.Exception.Message)"
-        }
     } catch {
-        Write-Information "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
+        Write-Error "Error in Receive-CippActivityTrigger: $($_.Exception.Message)"
+        Write-Error $_.InvocationInfo.PositionMessage
+        $Status = 'Failed'
+        $Output = $null
         if ($TaskStatus) {
             $QueueTask.Status = 'Failed'
             $null = Set-CippQueueTask @QueueTask
         }
     }
 
-    # Return the captured output if it exists and is not null, otherwise return $true
+    # Return the captured output if it exists and is not null
     if ($null -ne $Output -and $Output -ne '') {
         return $Output
     } else {
-        return $true
+        return "Activity function ended with status $($Status)."
     }
 }
 
@@ -372,7 +509,40 @@ function Receive-CIPPTimerTrigger {
                 $Parameters = $Function.Parameters | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             }
 
+            # Prepare telemetry metadata
+            $metadata = @{
+                Command     = $Function.Command
+                Cron        = $Function.Cron
+                FunctionId  = $Function.Id
+                TriggerType = 'Timer'
+            }
+
+            # Add parameters if available
+            if ($Parameters.Count -gt 0) {
+                $metadata['ParameterCount'] = $Parameters.Count
+                # Add specific known parameters
+                Write-Host "CIPP TIMER PARAMETERS: $($Parameters | ConvertTo-Json -Depth 10 -Compress)"
+                if ($Parameters.Tenant) {
+                    $metadata['Tenant'] = $Parameters.Tenant
+                }
+                if ($Parameters.TenantFilter) {
+                    $metadata['Tenant'] = $Parameters.TenantFilter
+                }
+                if ($Parameters.TenantFilter.value) {
+                    $metadata['Tenant'] = $Parameters.TenantFilter.value
+                }
+                if ($Parameters.Tenant.value) {
+                    $metadata['Tenant'] = $Parameters.Tenant.value
+                }
+                if ($Parameters.Tenant.defaultDomainName) {
+                    $metadata['Tenant'] = $Parameters.Tenant.defaultDomainName
+                }
+            }
+
+            # Wrap the timer function execution with telemetry
+
             $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
+
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results -join ','
                 $Status = 'Started'
@@ -397,5 +567,5 @@ function Receive-CIPPTimerTrigger {
     return $true
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
 

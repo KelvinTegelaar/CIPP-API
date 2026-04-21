@@ -17,7 +17,8 @@ function New-GraphGetRequest {
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders,
         [hashtable]$extraHeaders,
-        [switch]$ReturnRawResponse
+        [switch]$ReturnRawResponse,
+        $Headers
     )
 
     if ($NoAuthCheck -eq $false) {
@@ -27,12 +28,15 @@ function New-GraphGetRequest {
     }
 
     if ($NoAuthCheck -eq $true -or $IsAuthorised) {
-        if ($scope -eq 'ExchangeOnline') {
-            $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
+        if ($headers) {
+            $headers = $Headers
         } else {
-            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+            if ($scope -eq 'ExchangeOnline') {
+                $headers = Get-GraphToken -tenantid $tenantid -scope 'https://outlook.office365.com/.default' -AsApp $asapp -SkipCache $skipTokenCache
+            } else {
+                $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+            }
         }
-
         if ($ComplexFilter) {
             $headers['ConsistencyLevel'] = 'eventual'
         }
@@ -47,6 +51,11 @@ function New-GraphGetRequest {
                 $headers[$key] = $extraHeaders[$key]
             }
         }
+
+        if (!$headers['User-Agent']) {
+            $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
+        }
+
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
@@ -87,13 +96,22 @@ function New-GraphGetRequest {
                     $RequestSuccessful = $true
 
                     if ($ReturnRawResponse) {
-                        if (Test-Json -Json $Data.Content) {
-                            $Content = $Data.Content | ConvertFrom-Json
-                        } else {
+                        try {
+                            if ($Data.Content -and (Test-Json -Json $Data.Content -ErrorAction Stop)) {
+                                $Content = $Data.Content | ConvertFrom-Json
+                            } else {
+                                $Content = $Data.Content
+                            }
+                        } catch {
                             $Content = $Data.Content
                         }
 
-                        $Data | Select-Object -Property StatusCode, StatusDescription, @{Name = 'Content'; Expression = { $Content } }
+                        [PSCustomObject]@{
+                            StatusCode        = $Data.StatusCode
+                            StatusDescription = $Data.StatusDescription
+                            Content           = $Content
+                            Headers           = $Data.Headers
+                        }
                         $nextURL = $null
                     } elseif ($CountOnly) {
                         $Data.'@odata.count'
@@ -147,12 +165,17 @@ function New-GraphGetRequest {
                             $WaitTime = [int]$RetryAfterHeader
                             Write-Warning "Rate limited (429). Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
+                        } else {
+                            # If no Retry-After header, use exponential backoff with jitter
+                            $WaitTime = Get-Random -Minimum 1.1 -Maximum 4.1  # Random sleep between 1-4 seconds
+                            Write-Warning "Rate limited (429) with no Retry-After header. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries. Headers: $(($HttpResponseDetails.Headers | ConvertTo-Json -Compress))"
+                            $ShouldRetry = $true
                         }
                     }
                     # Check for "Resource temporarily unavailable"
-                    elseif ($Message -like '*Resource temporarily unavailable*') {
+                    elseif ($Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*') {
                         if ($RetryCount -lt $MaxRetries) {
-                            $WaitTime = Get-Random -Minimum 1 -Maximum 10  # Random sleep between 1-10 seconds
+                            $WaitTime = Get-Random -Minimum 1.1 -Maximum 3.1  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
                         }

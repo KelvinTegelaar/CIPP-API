@@ -26,9 +26,12 @@ function Get-CIPPAlertDefenderStatus {
                 TenantId                       = $_.tenantId
             }
         }
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        if ($AlertData) {
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+        }
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Could not get defender status for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get defender status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

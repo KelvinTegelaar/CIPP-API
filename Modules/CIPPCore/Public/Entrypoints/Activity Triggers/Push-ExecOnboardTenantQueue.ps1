@@ -47,7 +47,10 @@ function Push-ExecOnboardTenantQueue {
             @{ Name = 'SharePoint Administrator'; Id = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
             @{ Name = 'Authentication Policy Administrator'; Id = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
             @{ Name = 'Privileged Role Administrator'; Id = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
-            @{ Name = 'Privileged Authentication Administrator'; Id = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' }
+            @{ Name = 'Privileged Authentication Administrator'; Id = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' },
+            @{ Name = 'Billing Administrator'; Id = 'b0f54661-2d74-4c50-afa3-1ec803f12efe'; Optional = $true },
+            @{ Name = 'Global Reader'; Id = 'f2ef992c-3afb-46b9-b7cf-a126ee74c451'; Optional = $true },
+            @{ Name = 'Domain Name Administrator'; Id = '8329153b-31d0-4727-b945-745eb3bc5f31'; Optional = $true }
         )
 
         if ($OnboardingSteps.Step1.Status -ne 'succeeded') {
@@ -99,14 +102,16 @@ function Push-ExecOnboardTenantQueue {
             }
             if (($MissingRoles | Measure-Object).Count -gt 0) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Missing roles for relationship' })
-                if ($Item.IgnoreMissingRoles -ne $true) {
+                $RequiredMissingRoles = $ExpectedRoles | Where-Object { $_.Optional -ne $true -and $MissingRoles -contains $_.Name }
+                if ($Item.IgnoreMissingRoles -ne $true -and ($RequiredMissingRoles | Measure-Object).Count -gt 0) {
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Missing the following required roles: $($MissingRoles -join ', ')" })
                     $TenantOnboarding.Status = 'failed'
                     $OnboardingSteps.Step2.Status = 'failed'
                     $OnboardingSteps.Step2.Message = "Your GDAP relationship is missing the following roles: $($MissingRoles -join ', ')"
                 } else {
                     $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Ignoring missing roles' })
                     $OnboardingSteps.Step2.Status = 'succeeded'
-                    $OnboardingSteps.Step2.Message = 'Your GDAP relationship is missing some roles, but the onboarding will continue'
+                    $OnboardingSteps.Step2.Message = "Your GDAP relationship is missing some roles, but the onboarding will continue. Missing roles: $($MissingRoles -join ', ')"
                 }
             } else {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Required roles found' })
@@ -121,6 +126,7 @@ function Push-ExecOnboardTenantQueue {
         if ($OnboardingSteps.Step2.Status -eq 'succeeded') {
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking group mapping' })
             $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+            $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
             if ($AccessAssignments.id -and $Item.AutoMapRoles -ne $true) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Groups mapped' })
                 $OnboardingSteps.Step3.Status = 'succeeded'
@@ -223,6 +229,7 @@ function Push-ExecOnboardTenantQueue {
 
             do {
                 $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+                $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
                 Start-Sleep -Seconds 15
             } while ($AccessAssignments.status -contains 'pending' -and (Get-Date) -lt $Start.AddMinutes(8))
 
@@ -231,19 +238,58 @@ function Push-ExecOnboardTenantQueue {
                 $OnboardingSteps.Step3.Status = 'succeeded'
 
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
-                $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id" -NoAuthCheck $true).id
-                $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName" -NoAuthCheck $true
-                $ExpectedCippRoles = $Item.Roles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.roleDefinitionId }
+                $BulkRequests = @(
+                    @{
+                        id     = 'samUserId'
+                        method = 'GET'
+                        url    = "/me?`$select=id"
+                    },
+                    @{
+                        id     = 'currentMemberships'
+                        method = 'GET'
+                        url    = "/me/transitiveMemberOf?`$select=id,displayName"
+                    }
+                )
+                $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -NoAuthCheck $true
+                $SamUserId = ($BulkResults | Where-Object { $_.id -eq 'samUserId' }).body.id
+                $CurrentMemberships = ($BulkResults | Where-Object { $_.id -eq 'currentMemberships' }).body.value
+                $ExpectedCippRoles = $Item.Roles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.Id }
+
+                # Build bulk requests for missing group memberships
+                $GroupMembershipRequests = [System.Collections.Generic.List[object]]::new()
+                $GroupMembershipLogs = [System.Collections.Generic.List[object]]::new()
+
                 foreach ($Role in $ExpectedCippRoles) {
                     if ($CurrentMemberships.id -notcontains $Role.GroupId) {
-                        $PostBody = @{
-                            '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
-                        } | ConvertTo-Json -Compress
-                        try {
-                            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Role.GroupId)/members/`$ref" -body $PostBody -AsApp $true -NoAuthCheck $true
-                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($Role.GroupName)" })
-                        } catch {
-                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($Role.GroupName) - $($_.Exception.Message)" })
+                        $GroupMembershipRequests.Add(@{
+                                id      = "addSamUser-$($Role.GroupId)"
+                                method  = 'POST'
+                                url     = "groups/$($Role.GroupId)/members/`$ref"
+                                body    = @{
+                                    '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
+                                }
+                                headers = @{
+                                    'Content-Type' = 'application/json'
+                                }
+                            })
+                        $GroupMembershipLogs.Add(@{
+                                id        = "addSamUser-$($Role.GroupId)"
+                                GroupName = $Role.GroupName
+                            })
+                    }
+                }
+
+                # Execute bulk group membership additions if any are needed
+                if ($GroupMembershipRequests.Count -gt 0) {
+                    $GroupMembershipResults = New-GraphBulkRequest -Requests $GroupMembershipRequests -AsApp $true -NoAuthCheck $true
+
+                    foreach ($LogEntry in $GroupMembershipLogs) {
+                        $Result = $GroupMembershipResults | Where-Object { $_.id -eq $LogEntry.id }
+                        if ($Result.status -match '^2[0-9]+') {
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($LogEntry.GroupName)" })
+                        } else {
+                            $ErrorMessage = if ($Result.body.error.message) { $Result.body.error.message } else { 'Unknown error' }
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($LogEntry.GroupName) - $ErrorMessage" })
                         }
                     }
                 }
@@ -261,6 +307,50 @@ function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step3.Status -eq 'succeeded') {
+            # Check if the relationship was recently activated — Microsoft propagation may not have settled yet
+            if ($Relationship.activatedDateTime) {
+                try {
+                    $ActivatedTime = [datetime]::Parse($Relationship.activatedDateTime)
+                    $MinutesSinceActivation = ([datetime]::UtcNow - $ActivatedTime).TotalMinutes
+                    if ($MinutesSinceActivation -lt 15) {
+                        $Logs.Add([PSCustomObject]@{
+                                Date = (Get-Date).ToUniversalTime()
+                                Log  = 'GDAP relationship was activated {0:N1} minutes ago. Rescheduling onboarding in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                            })
+                        $RetryEpoch = [int64](([datetime]::UtcNow.AddMinutes(15)) - (Get-Date '1/1/1970')).TotalSeconds
+                        $RetryParams = [PSCustomObject]@{
+                            Item = [PSCustomObject]@{
+                                id                         = $Item.id
+                                Roles                      = $Item.Roles
+                                AutoMapRoles               = $Item.AutoMapRoles
+                                IgnoreMissingRoles         = $Item.IgnoreMissingRoles
+                                StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                            }
+                        }
+                        $RetryTask = [PSCustomObject]@{
+                            Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
+                            Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
+                            Parameters    = $RetryParams
+                            TenantFilter  = $env:TenantID
+                            Recurrence    = ''
+                            ScheduledTime = $RetryEpoch
+                        }
+                        $null = Add-CIPPScheduledTask -Task $RetryTask -DesiredStartTime ([string]$RetryEpoch)
+                        $RetryMessage = 'Rescheduled: GDAP relationship was activated {0:N1} minutes ago. Retrying in 15 minutes to allow Microsoft propagation to settle.' -f $MinutesSinceActivation
+                        $OnboardingSteps.Step4.Status = 'pending'
+                        $OnboardingSteps.Step4.Message = $RetryMessage
+                        $TenantOnboarding.Status = 'running'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        Write-LogMessage -API 'Onboarding' -message $RetryMessage -Sev 'Info'
+                        return
+                    }
+                } catch {
+                    Write-Warning "Failed to check activatedDateTime for relationship ${Id}: $($_.Exception.Message)"
+                }
+            }
+
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Setting up CPV consent' })
             $OnboardingSteps.Step4.Status = 'running'
             $OnboardingSteps.Step4.Message = 'Setting up CPV consent'
@@ -353,38 +443,75 @@ function Push-ExecOnboardTenantQueue {
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
             if ($Item.StandardsExcludeAllTenants -eq $true) {
-                $AddExclusionObj = [PSCustomObject]@{
-                    label       = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
-                    value       = $Tenant.defaultDomainName
-                    addedFields = @{
-                        customerId        = $Tenant.customerId
-                        defaultDomainName = $Tenant.defaultDomainName
+                $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
+                $MembersTable = Get-CIPPTable -tablename 'TenantGroupMembers'
+                $ExclusionGroupName = 'Excluded onboarded tenants'
+
+                # Find existing exclusion group
+                $ExclusionGroup = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'" | Where-Object { $_.Name -eq $ExclusionGroupName }
+                if (-not $ExclusionGroup) {
+                    $ExclusionGroupId = [guid]::NewGuid().ToString()
+                    $ExclusionGroup = @{
+                        PartitionKey = 'TenantGroup'
+                        RowKey       = $ExclusionGroupId
+                        Name         = $ExclusionGroupName
+                        Description  = 'Tenants excluded from top-level standards during onboarding'
+                        GroupType    = 'static'
                     }
+                    Add-CIPPAzDataTableEntity @GroupTable -Entity $ExclusionGroup -Force
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Created tenant group '$ExclusionGroupName'" })
+                } else {
+                    $ExclusionGroupId = $ExclusionGroup.RowKey
                 }
-                $Table = Get-CIPPTable -tablename 'templates'
-                $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
+
+                # Add tenant to the exclusion group if not already a member
+                $MemberRowKey = '{0}-{1}' -f $ExclusionGroupId, $Tenant.customerId
+                $ExistingMember = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and RowKey eq '$MemberRowKey'"
+                if (-not $ExistingMember) {
+                    Add-CIPPAzDataTableEntity @MembersTable -Entity @{
+                        PartitionKey = 'Member'
+                        RowKey       = $MemberRowKey
+                        GroupId      = $ExclusionGroupId
+                        customerId   = $Tenant.customerId
+                    } -Force
+                }
+
+                # Ensure the group is in excludedTenants of all AllTenants templates
+                $GroupExclusionObj = [PSCustomObject]@{
+                    label = $ExclusionGroupName
+                    value = $ExclusionGroupId
+                    type  = 'Group'
+                }
+                $TemplatesTable = Get-CIPPTable -tablename 'templates'
+                $ExistingTemplates = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
                 foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantsTemplate.JSON | ConvertFrom-Json
-                    $NewExcludedTenants = [System.Collections.Generic.List[object]]::new()
-                    if (!$object.excludedTenants) {
+                    if (-not $object.excludedTenants) {
                         $object | Add-Member -MemberType NoteProperty -Name 'excludedTenants' -Value @() -Force
                     }
-                    foreach ($ExcludedStandardsTenant in $object.excludedTenants) {
-                        $NewExcludedTenants.Add($ExcludedStandardsTenant)
-                    }
-                    $NewExcludedTenants.Add($AddExclusionObj)
-                    $object.excludedTenants = $NewExcludedTenants
-                    $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
-                    $Table.Force = $true
-                    Add-CIPPAzDataTableEntity @Table -Entity @{
-                        JSON         = "$JSON"
-                        RowKey       = $AllTenantsTemplate.RowKey
-                        GUID         = $AllTenantsTemplate.GUID
-                        PartitionKey = 'StandardsTemplateV2'
+                    $AlreadyHasGroup = $object.excludedTenants | Where-Object { $_.value -eq $ExclusionGroupId -and $_.type -eq 'Group' }
+                    if (-not $AlreadyHasGroup) {
+                        $NewExcludedTenants = [System.Collections.Generic.List[object]]::new()
+                        foreach ($ExcludedEntry in $object.excludedTenants) {
+                            $NewExcludedTenants.Add($ExcludedEntry)
+                        }
+                        $NewExcludedTenants.Add($GroupExclusionObj)
+                        $object.excludedTenants = $NewExcludedTenants
+                        $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
+                        $TemplatesTable.Force = $true
+                        Add-CIPPAzDataTableEntity @TemplatesTable -Entity @{
+                            JSON         = "$JSON"
+                            RowKey       = $AllTenantsTemplate.RowKey
+                            GUID         = $AllTenantsTemplate.GUID
+                            PartitionKey = 'StandardsTemplateV2'
+                        }
                     }
                 }
 
-                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Set All Tenant Standards Exclusion' })
+                # Bust the tenant groups cache so standards pick up the new member
+                $null = Get-TenantGroups -SkipCache
+
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Set All Tenant Standards Exclusion via group' })
             }
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Testing API access for $($Tenant.defaultDomainName)" })
             $OnboardingSteps.Step5.Status = 'running'
@@ -412,6 +539,7 @@ function Push-ExecOnboardTenantQueue {
                 $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                 Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
                 Write-LogMessage -API 'Onboarding' -message "Tenant onboarding succeeded for $($Relationship.customer.displayName)" -Sev 'Info'
+                Write-LogMessage -API 'NewTenant' -message "New tenant onboarded: $($Relationship.customer.displayName) ($($Relationship.customer.id))" -Sev 'Info'
             } else {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'API Test failed: {0}' -f $ApiError })
                 $OnboardingSteps.Step5.Status = 'failed'

@@ -27,25 +27,27 @@ function Start-AuditLogSearchCreation {
         $StartTime = ($Now.AddSeconds(-$Now.Seconds)).AddHours(-1)
         $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
-        Write-Information 'Audit Logs: Creating new searches'
+        # Pre-expand tenant groups once per config entry to avoid repeated calls per tenant
+        foreach ($ConfigEntry in $ConfigEntries) {
+            $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'ExpandedTenants' -Value (Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)).value -Force
+        }
+
+        Write-Information "Audit Logs: Building batch for $($TenantList.Count) tenants across $($ConfigEntries.Count) config entries"
 
         $Batch = foreach ($Tenant in $TenantList) {
-            Write-Information "Processing tenant $($Tenant.defaultDomainName) - $($Tenant.customerId)"
             $TenantInConfig = $false
             $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
             foreach ($ConfigEntry in $ConfigEntries) {
                 if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
                     continue
                 }
-                $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)
-                if ($TenantsList.value -contains $Tenant.defaultDomainName -or $TenantsList.value -contains 'AllTenants') {
+                if ($ConfigEntry.ExpandedTenants -contains $Tenant.defaultDomainName -or $ConfigEntry.ExpandedTenants -contains 'AllTenants') {
                     $TenantInConfig = $true
                     $MatchingConfigs.Add($ConfigEntry)
                 }
             }
 
             if (!$TenantInConfig) {
-                Write-Information "Tenant $($Tenant.defaultDomainName) has no configured audit log rules, skipping search creation."
                 continue
             }
 
@@ -66,8 +68,8 @@ function Start-AuditLogSearchCreation {
                 OrchestratorName = 'AuditLogSearchCreation'
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-            Write-Information "Started Audit Log search creation orchestratorwith $($Batch.Count) tenants"
+            Start-CIPPOrchestrator -InputObject $InputObject
+            Write-Information "Started Audit Log search creation orchestrator with $($Batch.Count) tenants"
         } else {
             Write-Information 'No tenants found for Audit Log search creation'
         }

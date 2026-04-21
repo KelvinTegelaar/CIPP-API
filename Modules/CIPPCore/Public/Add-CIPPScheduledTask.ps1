@@ -1,29 +1,28 @@
 function Add-CIPPScheduledTask {
-    [CmdletBinding(DefaultParameterSetName = 'Default')]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [pscustomobject]$Task,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [bool]$Hidden,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         $DisallowDuplicateName = $false,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [string]$SyncType = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'RunNow')]
+        [Parameter(Mandatory = $false)]
         [switch]$RunNow,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'RunNow')]
-        [string]$RowKey,
+        [Parameter(Mandatory = $false)]
+        [string]$RowKey = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
+        [Parameter(Mandatory = $false)]
         [string]$DesiredStartTime = $null,
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'Default')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'RunNow')]
+        [Parameter(Mandatory = $false)]
         $Headers
     )
 
@@ -39,6 +38,9 @@ function Add-CIPPScheduledTask {
                 $ExistingTask.TaskState = 'Planned'
                 Add-CIPPAzDataTableEntity @Table -Entity $ExistingTask -Force
                 Write-LogMessage -headers $Headers -API 'RunNow' -message "Task $($ExistingTask.Name) scheduled to run now" -Sev 'Info' -Tenant $ExistingTask.Tenant
+                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                    TaskId = $RowKey
+                }
                 return "Task $($ExistingTask.Name) scheduled to run now"
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -46,12 +48,24 @@ function Add-CIPPScheduledTask {
                 return "Could not run task: $ErrorMessage"
             }
         } else {
+            if (!$Task.RowKey) {
+                $RowKey = (New-Guid).Guid
+            } else {
+                $RowKey = $Task.RowKey
+            }
+
             if ($DisallowDuplicateName) {
-                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)'"
+                $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)' and TaskState ne 'Completed' and TaskState ne 'Failed'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
                 if ($ExistingTask) {
                     return "Task with name $($Task.Name) already exists"
                 }
+            }
+
+            $RequestedCommand = $task.Command.value ?? $task.Command
+            if ($RequestedCommand -in (Get-CIPPSchedulerBlockedCommands)) {
+                Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule restricted command: $RequestedCommand" -Sev 'Warning'
+                return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }
 
             $propertiesToCheck = @('Webhook', 'Email', 'PSA')
@@ -110,11 +124,7 @@ function Add-CIPPScheduledTask {
             }
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
             if ($Parameters -eq 'null') { $Parameters = '' }
-            if (!$Task.RowKey) {
-                $RowKey = (New-Guid).Guid
-            } else {
-                $RowKey = $Task.RowKey
-            }
+
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
                 $task.Recurrence
@@ -185,10 +195,12 @@ function Add-CIPPScheduledTask {
                 ScheduledTime        = [string]$task.ScheduledTime
                 Recurrence           = [string]$Recurrence
                 PostExecution        = [string]$PostExecution
+                Reference            = [string]$task.Reference
                 AdditionalProperties = [string]$AdditionalProperties
                 Hidden               = [bool]$Hidden
                 Results              = 'Planned'
                 AlertComment         = [string]$task.AlertComment
+                CustomSubject        = [string]$task.CustomSubject
             }
 
 
@@ -257,7 +269,53 @@ function Add-CIPPScheduledTask {
                 return "Error - Could not add task: $ErrorMessage"
             }
             Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Added task $($entity.Name) with ID $($entity.RowKey)" -Sev 'Info' -Tenant $tenantFilter
-            return "Successfully added task: $($entity.Name)"
+
+            # Calculate relative time for next run
+            $scheduledEpoch = [int64]$entity.ScheduledTime
+            $currentTime = [datetime]::UtcNow
+
+            if ($scheduledEpoch -eq 0 -or $scheduledEpoch -le ([int64](($currentTime) - (Get-Date '1/1/1970')).TotalSeconds)) {
+                # Task will run at next 15-minute interval - calculate efficiently
+                $minutesToAdd = 15 - ($currentTime.Minute % 15)
+                $nextRunTime = $currentTime.AddMinutes($minutesToAdd).AddSeconds(-$currentTime.Second).AddMilliseconds(-$currentTime.Millisecond)
+                $timeUntilRun = $nextRunTime - $currentTime
+            } else {
+                # Task is scheduled for a specific time in the future
+                $scheduledTime = [datetime]'1/1/1970' + [TimeSpan]::FromSeconds($scheduledEpoch)
+                $timeUntilRun = $scheduledTime - $currentTime
+            }
+
+            # Format relative time
+            $relativeTime = switch ($timeUntilRun.TotalMinutes) {
+                { $_ -ge 1440 } {
+                    $days = [Math]::Floor($timeUntilRun.TotalDays)
+                    $hours = $timeUntilRun.Hours
+                    $result = "$days day$(if ($days -ne 1) { 's' })"
+                    if ($hours -gt 0) { $result += " and $hours hour$(if ($hours -ne 1) { 's' })" }
+                    $result
+                    break
+                }
+                { $_ -ge 60 } {
+                    $hours = [Math]::Floor($timeUntilRun.TotalHours)
+                    $minutes = $timeUntilRun.Minutes
+                    $result = "$hours hour$(if ($hours -ne 1) { 's' })"
+                    if ($minutes -gt 0) { $result += " and $minutes minute$(if ($minutes -ne 1) { 's' })" }
+                    $result
+                    break
+                }
+                { $_ -ge 2 } { "about $([Math]::Round($_)) minutes"; break }
+                { $_ -ge 1 } { 'about 1 minute'; break }
+                default { 'less than a minute' }
+            }
+
+            if ($RunNow.IsPresent) {
+                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                    TaskId = $RowKey
+                }
+                return "Task $($entity.Name) scheduled to run now"
+            }
+
+            return "Successfully added task: $($entity.Name). It will run in $relativeTime."
         }
     } catch {
         Write-Warning "Failed to add scheduled task: $($_.Exception.Message)"

@@ -11,8 +11,6 @@ function Invoke-ExecGDAPInvite {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-
-
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Create'
     $InviteId = $Request.Body.InviteId
     $Reference = $Request.Body.Reference
@@ -23,8 +21,8 @@ function Invoke-ExecGDAPInvite {
         $user = $headers.'x-ms-client-principal'
         $Technician = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     } elseif ($Headers.'x-ms-client-principal-idp' -eq 'aad') {
-        $Table = Get-CIPPTable -TableName 'ApiClients'
-        $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($headers.'x-ms-client-principal-name')'"
+        $ApiClientTable = Get-CIPPTable -TableName 'ApiClients'
+        $Client = Get-CIPPAzDataTableEntity @ApiClientTable -Filter "RowKey eq '$($headers.'x-ms-client-principal-name')'"
         $Technician = $Client.AppName ?? 'CIPP-API'
     } else {
         try {

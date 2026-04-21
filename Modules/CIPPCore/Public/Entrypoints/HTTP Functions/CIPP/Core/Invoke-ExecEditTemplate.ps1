@@ -17,8 +17,12 @@ function Invoke-ExecEditTemplate {
 
         if ($Type -eq 'IntuneTemplate') {
             Write-Host 'Intune Template'
-            $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+            $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SafeGUID'"
             $OriginalJSON = $Template.JSON
+
+            $TemplateData = $Template.JSON | ConvertFrom-Json
+            $TemplateType = $TemplateData.Type
 
             if ($Template.SHA) {
                 $NewGuid = [guid]::NewGuid().ToString()
@@ -28,15 +32,32 @@ function Invoke-ExecEditTemplate {
             if ($Request.Body.parsedRAWJson) {
                 $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $Request.Body.parsedRAWJson
             } else {
-                $RawJSON = $OriginalJSON
+                $RawJSON = $TemplateData.RAWJson
+            }
+
+            # Extract display name — different policy types use different fields inside RAWJson
+            $ParsedRaw = $RawJSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $DisplayName = $Request.Body.displayName ?? $ParsedRaw.displayName ?? $ParsedRaw.name ?? $TemplateData.Displayname
+
+            # Sync the resolved display name back into the RAWJson so it stays consistent
+            if ($ParsedRaw -and $DisplayName) {
+                # Property casing varies by policy type (displayName vs name)
+                $rawProps = $ParsedRaw.PSObject.Properties.Name
+                if ($rawProps -contains 'displayName') {
+                    $ParsedRaw.displayName = $DisplayName
+                }
+                if ($rawProps -contains 'name') {
+                    $ParsedRaw.name = $DisplayName
+                }
+                $RawJSON = ConvertTo-Json -Compress -Depth 100 -InputObject $ParsedRaw
             }
 
             $IntuneTemplate = @{
                 GUID         = $NewGuid
                 RawJson      = $RawJSON
-                DisplayName  = $Request.Body.displayName
-                Description  = $Request.Body.description
-                templateType = $Template.Type
+                DisplayName  = $DisplayName
+                Description  = $Request.Body.description ?? $TemplateData.Description
+                templateType = $TemplateType
                 Package      = $Template.Package
                 Headers      = $Request.Headers
             }

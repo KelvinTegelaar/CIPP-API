@@ -1,0 +1,1412 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-DurableTaskResult</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>DurableTaskResult</command:noun>
+      <maml:description>
+        <maml:para>Gets the result value from a completed durable task.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Retrieves the result value from a completed durable task. This cmdlet blocks execution until the specified task completes and then returns the task's result value. The type and content of the returned result depend on what the underlying activity function or sub-orchestrator returned. This is typically used within orchestrator functions to obtain the output of previously scheduled durable tasks.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-DurableTaskResult</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Task</maml:name>
+          <maml:description>
+            <maml:para>The durable task object whose result you want to retrieve. This should be a task returned from cmdlets like Invoke-DurableActivity, Invoke-DurableSubOrchestrator, Start-DurableTimer, or Start-DurableExternalEventListener.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">DurableTask</command:parameterValue>
+          <dev:type>
+            <maml:name>DurableTask</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Task</maml:name>
+        <maml:description>
+          <maml:para>The durable task object whose result you want to retrieve. This should be a task returned from cmdlets like Invoke-DurableActivity, Invoke-DurableSubOrchestrator, Start-DurableTimer, or Start-DurableExternalEventListener.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">DurableTask</command:parameterValue>
+        <dev:type>
+          <maml:name>DurableTask</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns the result value from the completed durable task. The type and content depend on what the underlying activity function or sub-orchestrator returned.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is typically used within orchestrator functions to retrieve results from tasks created with the -NoWait parameter.</maml:para>
+        <maml:para>- The cmdlet blocks execution until the specified task completes, which maintains the deterministic nature of orchestrations.</maml:para>
+        <maml:para>- If a task fails, this cmdlet will throw an exception with details about the failure.</maml:para>
+        <maml:para>- Tasks should be created within the same orchestration context where this cmdlet is called.</maml:para>
+        <maml:para>- Use Wait-DurableTask when you need to wait for multiple tasks with timeout or any/all semantics.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>$task = Invoke-DurableActivity -FunctionName "GetUserData" -Input @{ UserId = 123 } -NoWait
+$result = Get-DurableTaskResult -Task $task
+Write-Host "User data: $result"</dev:code>
+        <dev:remarks>
+          <maml:para>This example demonstrates invoking a durable activity function asynchronously with -NoWait to get a task, then using Get-DurableTaskResult to retrieve the result from the task.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Invoke-DurableActivity</command:name>
+      <command:verb>Invoke</command:verb>
+      <command:noun>DurableActivity</command:noun>
+      <maml:description>
+        <maml:para>Invokes a durable activity function.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Schedules a durable activity function for execution. By default, this cmdlet blocks until the activity completes and returns the result directly. Use the -NoWait switch to return a task object immediately without waiting for completion, allowing the orchestrator to schedule multiple activities concurrently and retrieve their results later using Get-DurableTaskResult or Wait-DurableTask.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Invoke-DurableActivity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>FunctionName</maml:name>
+          <maml:description>
+            <maml:para>The name of the activity function to invoke. This should match the name of an activity function defined in your Azure Functions app.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Input</maml:name>
+          <maml:description>
+            <maml:para>The input data to pass to the activity function. This can be any object that will be serialized and passed as input to the activity function.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoWait</maml:name>
+          <maml:description>
+            <maml:para>When specified, the cmdlet returns a task object immediately without waiting for completion. By default, the cmdlet blocks and waits for the activity to complete before returning the result.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RetryOptions</maml:name>
+          <maml:description>
+            <maml:para>A retry policy object created with New-DurableRetryPolicy that defines how the activity should be retried if it fails. If not specified, the activity will not be retried on failure.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RetryPolicy</command:parameterValue>
+          <dev:type>
+            <maml:name>RetryPolicy</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>FunctionName</maml:name>
+        <maml:description>
+          <maml:para>The name of the activity function to invoke. This should match the name of an activity function defined in your Azure Functions app.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Input</maml:name>
+        <maml:description>
+          <maml:para>The input data to pass to the activity function. This can be any object that will be serialized and passed as input to the activity function.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoWait</maml:name>
+        <maml:description>
+          <maml:para>When specified, the cmdlet returns a task object immediately without waiting for completion. By default, the cmdlet blocks and waits for the activity to complete before returning the result.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RetryOptions</maml:name>
+        <maml:description>
+          <maml:para>A retry policy object created with New-DurableRetryPolicy that defines how the activity should be retried if it fails. If not specified, the activity will not be retried on failure.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RetryPolicy</command:parameterValue>
+        <dev:type>
+          <maml:name>RetryPolicy</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns the result of the activity function execution by default. If -NoWait is specified, returns a DurableTask object that can be used with Get-DurableTaskResult or Wait-DurableTask to retrieve the result later.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- The activity function name must match a function defined in your Azure Functions app.</maml:para>
+        <maml:para>- Activity functions are automatically retried on transient failures when a RetryOptions policy is specified.</maml:para>
+        <maml:para>- Activity functions should be stateless and idempotent.</maml:para>
+        <maml:para>- Use the -NoWait parameter when you need to invoke multiple activities concurrently (fan-out pattern).</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>----- Example 1 - Synchronous execution (default behavior) -----</maml:title>
+        <dev:code>$result = Invoke-DurableActivity -FunctionName "ProcessData" -Input @{ Data = "example"; ProcessType = "validation" }
+Write-Host "Processing result: $result"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows the default behavior where the cmdlet blocks until completion and returns the result directly.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>------- Example 2 - Asynchronous execution with -NoWait -------</maml:title>
+        <dev:code>$task = Invoke-DurableActivity -FunctionName "ProcessData" -Input @{ Data = "example"; ProcessType = "validation" } -NoWait
+$result = Get-DurableTaskResult -Task $task
+Write-Host "Processing result: $result"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows how to invoke a durable activity function asynchronously using -NoWait, which returns a task object that can be awaited later.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Invoke-DurableSubOrchestrator</command:name>
+      <command:verb>Invoke</command:verb>
+      <command:noun>DurableSubOrchestrator</command:noun>
+      <maml:description>
+        <maml:para>Invokes a sub-orchestrator function.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Invokes a sub-orchestrator function. By default, this cmdlet blocks until the sub-orchestrator completes and returns the result directly. Use the -NoWait switch to return a task object immediately without waiting for completion, allowing you to orchestrate multiple sub-orchestrators concurrently. Sub-orchestrators enable composition of orchestrations and help manage complexity in large workflow scenarios.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Invoke-DurableSubOrchestrator</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>FunctionName</maml:name>
+          <maml:description>
+            <maml:para>The name of the orchestrator function to invoke as a sub-orchestrator. This should match the name of an orchestrator function defined in your Azure Functions app.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Input</maml:name>
+          <maml:description>
+            <maml:para>The input data to pass to the sub-orchestrator function. This can be any object that will be serialized and passed as input to the sub-orchestrator.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>InstanceId</maml:name>
+          <maml:description>
+            <maml:para>An optional instance ID for the sub-orchestrator. If not specified, a unique instance ID will be automatically generated for the sub-orchestrator.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Version</maml:name>
+          <maml:description>
+            <maml:para>An optional version string for the sub-orchestrator function. When specified, this version overrides the default version configured in host.json for this specific sub-orchestrator invocation. This allows you to invoke specific versions of orchestrator functions.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoWait</maml:name>
+          <maml:description>
+            <maml:para>When specified, the cmdlet returns a task object immediately without waiting for completion. By default, the cmdlet blocks and waits for the sub-orchestrator to complete before returning the result.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RetryOptions</maml:name>
+          <maml:description>
+            <maml:para>A retry policy object created with New-DurableRetryPolicy that defines how the sub-orchestrator should be retried if it fails. If not specified, the sub-orchestrator will not be retried on failure.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RetryPolicy</command:parameterValue>
+          <dev:type>
+            <maml:name>RetryPolicy</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>FunctionName</maml:name>
+        <maml:description>
+          <maml:para>The name of the orchestrator function to invoke as a sub-orchestrator. This should match the name of an orchestrator function defined in your Azure Functions app.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Input</maml:name>
+        <maml:description>
+          <maml:para>The input data to pass to the sub-orchestrator function. This can be any object that will be serialized and passed as input to the sub-orchestrator.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>InstanceId</maml:name>
+        <maml:description>
+          <maml:para>An optional instance ID for the sub-orchestrator. If not specified, a unique instance ID will be automatically generated for the sub-orchestrator.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Version</maml:name>
+        <maml:description>
+          <maml:para>An optional version string for the sub-orchestrator function. When specified, this version overrides the default version configured in host.json for this specific sub-orchestrator invocation. This allows you to invoke specific versions of orchestrator functions.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoWait</maml:name>
+        <maml:description>
+          <maml:para>When specified, the cmdlet returns a task object immediately without waiting for completion. By default, the cmdlet blocks and waits for the sub-orchestrator to complete before returning the result.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RetryOptions</maml:name>
+        <maml:description>
+          <maml:para>A retry policy object created with New-DurableRetryPolicy that defines how the sub-orchestrator should be retried if it fails. If not specified, the sub-orchestrator will not be retried on failure.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RetryPolicy</command:parameterValue>
+        <dev:type>
+          <maml:name>RetryPolicy</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns the result of the sub-orchestrator execution by default. If -NoWait is specified, returns a DurableTask object that can be used with Get-DurableTaskResult or Wait-DurableTask to retrieve the result later.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- Sub-orchestrators enable composition and modularity in complex workflow scenarios.</maml:para>
+        <maml:para>- Each sub-orchestrator runs as an independent orchestration instance with its own instance ID.</maml:para>
+        <maml:para>- Use the -NoWait parameter when you need to invoke multiple sub-orchestrators concurrently.</maml:para>
+        <maml:para>- Sub-orchestrators inherit the fault-tolerance and replay characteristics of the parent orchestration.</maml:para>
+        <maml:para>- The sub-orchestrator function name must match a function defined in your Azure Functions app with an orchestration trigger.</maml:para>
+        <maml:para>- The -Version parameter allows you to invoke specific versions of orchestrator functions, overriding the default version from host.json.</maml:para>
+        <maml:para>- Consider using sub-orchestrators to break down complex workflows into manageable, reusable components.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>----- Example 1 - Synchronous execution (default behavior) -----</maml:title>
+        <dev:code>$batchResult = Invoke-DurableSubOrchestrator -FunctionName "ChildOrchestrator" -Input @{ BatchId = "batch123"; Items = @("item1", "item2", "item3") }
+Write-Host "Sub-orchestrator completed with result: $batchResult"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows the default behavior where the cmdlet blocks until completion and returns the result directly.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>------- Example 2 - Asynchronous execution with -NoWait -------</maml:title>
+        <dev:code>$subOrchestratorTask = Invoke-DurableSubOrchestrator -FunctionName "ChildOrchestrator" -Input @{ BatchId = "batch123"; Items = @("item1", "item2", "item3") } -NoWait
+$batchResult = Get-DurableTaskResult -Task $subOrchestratorTask
+Write-Host "Sub-orchestrator completed with result: $batchResult"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows how to invoke a sub-orchestrator function asynchronously using -NoWait, which returns a task object that can be awaited later.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>--------------- Example 3 - Specifying a version ---------------</maml:title>
+        <dev:code>$result = Invoke-DurableSubOrchestrator -FunctionName "ChildOrchestrator" -Version "2.0" -Input @{ ProcessId = "proc456" }
+Write-Host "Sub-orchestrator (version 2.0) completed with result: $result"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows how to invoke a sub-orchestrator with a specific version, overriding the default version configured in host.json.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-DurableRetryPolicy</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>DurableRetryPolicy</command:noun>
+      <maml:description>
+        <maml:para>Creates a new retry policy for durable activity functions and sub-orchestrators.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Creates a retry policy object that can be used with durable activity functions and sub-orchestrators to handle transient failures. The retry policy defines how many times an operation should be retried, the delay between retries, and optionally a maximum retry interval and backoff coefficient. This helps make orchestrations more resilient to temporary failures in downstream services or activities.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-DurableRetryPolicy</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>BackoffCoefficient</maml:name>
+          <maml:description>
+            <maml:para>The coefficient used to calculate exponential backoff between retry attempts. Must be greater than 1.0. Default is 2.0, which doubles the delay between each retry attempt.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Double</command:parameterValue>
+          <dev:type>
+            <maml:name>Double</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>FirstRetryInterval</maml:name>
+          <maml:description>
+            <maml:para>The initial retry interval in seconds. This is the delay before the first retry attempt.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+          <dev:type>
+            <maml:name>TimeSpan</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxNumberOfAttempts</maml:name>
+          <maml:description>
+            <maml:para>The maximum number of retry attempts. Must be a positive integer.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MaxRetryInterval</maml:name>
+          <maml:description>
+            <maml:para>The maximum retry interval in seconds. Retry intervals will not exceed this value regardless of the backoff coefficient.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+          <dev:type>
+            <maml:name>TimeSpan</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RetryTimeout</maml:name>
+          <maml:description>
+            <maml:para>The total timeout for all retry attempts as a TimeSpan. If this timeout is exceeded, no further retries will be attempted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+          <dev:type>
+            <maml:name>TimeSpan</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>BackoffCoefficient</maml:name>
+        <maml:description>
+          <maml:para>The coefficient used to calculate exponential backoff between retry attempts. Must be greater than 1.0. Default is 2.0, which doubles the delay between each retry attempt.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Double</command:parameterValue>
+        <dev:type>
+          <maml:name>Double</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>FirstRetryInterval</maml:name>
+        <maml:description>
+          <maml:para>The initial retry interval in seconds. This is the delay before the first retry attempt.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+        <dev:type>
+          <maml:name>TimeSpan</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MaxNumberOfAttempts</maml:name>
+        <maml:description>
+          <maml:para>The maximum number of retry attempts. Must be a positive integer.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MaxRetryInterval</maml:name>
+        <maml:description>
+          <maml:para>The maximum retry interval in seconds. Retry intervals will not exceed this value regardless of the backoff coefficient.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+        <dev:type>
+          <maml:name>TimeSpan</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RetryTimeout</maml:name>
+        <maml:description>
+          <maml:para>The total timeout for all retry attempts as a TimeSpan. If this timeout is exceeded, no further retries will be attempted.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+        <dev:type>
+          <maml:name>TimeSpan</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>RetryPolicy</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a RetryPolicy object that can be used with Invoke-DurableActivity or Invoke-DurableSubOrchestrator to specify retry behavior for failed operations.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- Retry policies help make orchestrations more resilient to transient failures in downstream services.</maml:para>
+        <maml:para>- Retry policies work with both Invoke-DurableActivity and Invoke-DurableSubOrchestrator cmdlets.</maml:para>
+        <maml:para>- Failed attempts will be logged in the orchestration history for debugging purposes.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>$retryPolicy = New-DurableRetryPolicy -MaxNumberOfAttempts 5 -FirstRetryInterval (New-TimeSpan -Seconds 30) -BackoffCoefficient 2.0
+$task = Invoke-DurableActivity -FunctionName "UnreliableOperation" -Input $data -RetryOptions $retryPolicy -NoWait
+$result = Get-DurableTaskResult -Task $task</dev:code>
+        <dev:remarks>
+          <maml:para>This example creates a retry policy with 5 maximum attempts, starting with a 30-second interval and doubling the delay with each retry, then uses it with a durable activity invoked asynchronously.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-DurableCustomStatus</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>DurableCustomStatus</command:noun>
+      <maml:description>
+        <maml:para>Sets a custom status value for the current durable orchestration instance.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Sets a custom status value for the current durable orchestration instance. This status can be retrieved by external clients using the orchestration management APIs to monitor the progress or state of the orchestration. The custom status is useful for providing meaningful progress updates or state information that can be queried from outside the orchestration function.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-DurableCustomStatus</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="0" aliases="none">
+          <maml:name>CustomStatus</maml:name>
+          <maml:description>
+            <maml:para>A custom object containing status information that will be available when querying the orchestration instance status. This can include progress indicators, current phase, error messages, or any other relevant status data.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="0" aliases="none">
+        <maml:name>CustomStatus</maml:name>
+        <maml:description>
+          <maml:para>A custom object containing status information that will be available when querying the orchestration instance status. This can include progress indicators, current phase, error messages, or any other relevant status data.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe objects directly to this cmdlet to set them as the custom status for the current orchestration instance.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It sets the custom status for the current orchestration instance.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- Custom status is visible when querying orchestration status with Get-DurableStatus.</maml:para>
+        <maml:para>- Status updates are useful for providing progress information to external monitoring systems.</maml:para>
+        <maml:para>- The status object will be JSON-serialized, so it should contain serializable data types.</maml:para>
+        <maml:para>- Custom status is preserved across orchestration replays and checkpoints.</maml:para>
+        <maml:para>- Keep status objects reasonably small to avoid performance impacts during serialization.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Set-DurableCustomStatus -CustomStatus @{ Phase = "Processing"; Progress = 45; ItemsProcessed = 90; TotalItems = 200 }
+# Continue with orchestration logic...
+Set-DurableCustomStatus -CustomStatus @{ Phase = "Finalizing"; Progress = 95; ItemsProcessed = 190; TotalItems = 200 }</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows how to set custom status information during an orchestration to track processing progress and phase.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-FunctionInvocationContext</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>FunctionInvocationContext</command:noun>
+      <maml:description>
+        <maml:para>INTERNAL USE ONLY - Sets the function invocation context for the current PowerShell function execution.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>WARNING: This cmdlet is for internal use by the Durable Functions runtime only. Do not call this cmdlet directly in your orchestrator or activity functions. This cmdlet is used internally by the Durable Functions runtime to establish the execution context that enables durable orchestration capabilities. It provides the necessary context for orchestrator functions to interact with the Durable Functions framework, including task scheduling and state management.</maml:para>
+      <maml:para>Calling this cmdlet directly in user code may interfere with the runtime's operation and could lead to unpredictable behavior or runtime errors.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-FunctionInvocationContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Clear</maml:name>
+          <maml:description>
+            <maml:para>A switch parameter that, when specified, clears the current function invocation context. For internal SDK use only.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Set-FunctionInvocationContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>DurableClient</maml:name>
+          <maml:description>
+            <maml:para>The durable client context object used for client operations. For internal SDK use only.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+          <dev:type>
+            <maml:name>Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Set-FunctionInvocationContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>OrchestrationContext</maml:name>
+          <maml:description>
+            <maml:para>The orchestration context object containing the current orchestration state and capabilities. For internal SDK use only.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Clear</maml:name>
+        <maml:description>
+          <maml:para>A switch parameter that, when specified, clears the current function invocation context. For internal SDK use only.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>DurableClient</maml:name>
+        <maml:description>
+          <maml:para>The durable client context object used for client operations. For internal SDK use only.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
+        <dev:type>
+          <maml:name>Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>OrchestrationContext</maml:name>
+        <maml:description>
+          <maml:para>The orchestration context object containing the current orchestration state and capabilities. For internal SDK use only.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It sets the function invocation context for use with durable function operations.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code># Internal use only - example for SDK development
+Set-FunctionInvocationContext -OrchestrationContext $durableOrchestrationContext</dev:code>
+        <dev:remarks>
+          <maml:para>This cmdlet is for internal SDK use only and should not be called directly in user orchestration functions.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Start-DurableExternalEventListener</command:name>
+      <command:verb>Start</command:verb>
+      <command:noun>DurableExternalEventListener</command:noun>
+      <maml:description>
+        <maml:para>Starts listening for an external event with a specified name and returns a task that will complete when the event is received.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Creates a task that waits for an external event with the specified name to be raised for the current orchestration instance. By default, this cmdlet blocks until the external event is received and returns the event data directly. Use the -NoWait switch to return a task object immediately that can be awaited later. External events enable building interactive workflows and human-in-the-loop scenarios.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Start-DurableExternalEventListener</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>EventName</maml:name>
+          <maml:description>
+            <maml:para>The name of the external event to listen for. This must match the event name used when sending the external event to the orchestration instance.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoWait</maml:name>
+          <maml:description>
+            <maml:para>A switch parameter that, when specified, starts the external event listener without waiting for the event. Returns a task that can be awaited later.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>EventName</maml:name>
+        <maml:description>
+          <maml:para>The name of the external event to listen for. This must match the event name used when sending the external event to the orchestration instance.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoWait</maml:name>
+        <maml:description>
+          <maml:para>A switch parameter that, when specified, starts the external event listener without waiting for the event. Returns a task that can be awaited later.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>DurableTask</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a DurableTask object that represents the external event listener. This task can be used with Wait-DurableTask to wait for the external event to be received.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- External events are sent to orchestrations using the Send-DurableExternalEvent cmdlet from client functions.</maml:para>
+        <maml:para>- Event listeners are fault-tolerant and will survive orchestration replays and Azure Functions host restarts.</maml:para>
+        <maml:para>- Multiple listeners can wait for the same event name within a single orchestration.</maml:para>
+        <maml:para>- Use the -NoWait parameter when implementing timeout patterns or waiting for multiple different events.</maml:para>
+        <maml:para>- Event data is preserved across orchestration replays, ensuring exactly-once delivery semantics.</maml:para>
+        <maml:para>- The event name is case-sensitive and must match exactly between the listener and sender.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>----- Example 1 - Synchronous execution (default behavior) -----</maml:title>
+        <dev:code>$approvalData = Start-DurableExternalEventListener -EventName "UserApproval"
+if ($approvalData.Approved) { /* proceed */ } else { /* handle rejection */ }</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows the default behavior where the cmdlet blocks until the external event is received and returns the event data directly.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>------- Example 2 - Asynchronous execution with -NoWait -------</maml:title>
+        <dev:code>$eventListener = Start-DurableExternalEventListener -EventName "UserApproval" -NoWait
+# Continue with other orchestration logic...
+$approvalData = Get-DurableTaskResult -Task $eventListener
+if ($approvalData.Approved) { /* proceed */ } else { /* handle rejection */ }</dev:code>
+        <dev:remarks>
+          <maml:para>This example starts listening for an external event asynchronously using -NoWait, allowing other orchestration logic to execute while waiting for the event.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Start-DurableTimer</command:name>
+      <command:verb>Start</command:verb>
+      <command:noun>DurableTimer</command:noun>
+      <maml:description>
+        <maml:para>Starts a durable timer that will complete after the specified duration.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Creates a durable timer that will complete after the specified duration. By default, this cmdlet blocks until the timer fires and returns completion status. Use the -NoWait switch to return a task object immediately that can be awaited later. Durable timers are fault-tolerant and will survive orchestration replays and restarts, making them the recommended way to implement delays in durable orchestrations.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Start-DurableTimer</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Duration</maml:name>
+          <maml:description>
+            <maml:para>The duration to wait before the timer fires, specified as a TimeSpan object. Alternative to using FireAt parameter.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+          <dev:type>
+            <maml:name>TimeSpan</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoWait</maml:name>
+          <maml:description>
+            <maml:para>A switch parameter that, when specified, starts the timer without waiting for it to complete. Returns a task that can be awaited or cancelled later.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Duration</maml:name>
+        <maml:description>
+          <maml:para>The duration to wait before the timer fires, specified as a TimeSpan object. Alternative to using FireAt parameter.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">TimeSpan</command:parameterValue>
+        <dev:type>
+          <maml:name>TimeSpan</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoWait</maml:name>
+        <maml:description>
+          <maml:para>A switch parameter that, when specified, starts the timer without waiting for it to complete. Returns a task that can be awaited or cancelled later.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>DurableTask</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a DurableTask object representing the timer. This task can be used with Wait-DurableTask to wait for the timer to complete or with Stop-DurableTimerTask to cancel it.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- Durable timers are fault-tolerant and will survive orchestration replays and Azure Functions host restarts.</maml:para>
+        <maml:para>- Use durable timers instead of Start-Sleep or similar delay mechanisms in orchestrator functions to maintain deterministic replay behavior.</maml:para>
+        <maml:para>- Timer tasks can be cancelled using Stop-DurableTimerTask if created with the -NoWait parameter.</maml:para>
+        <maml:para>- The maximum timer duration is limited by the orchestration timeout configuration of your Azure Functions app.</maml:para>
+        <maml:para>- Timers created with -NoWait return immediately and can be used in timeout patterns with Wait-DurableTask -Any.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>----- Example 1 - Synchronous execution (default behavior) -----</maml:title>
+        <dev:code>$duration = New-TimeSpan -Minutes 30
+Start-DurableTimer -Duration $duration
+Write-Host "Timer completed, continuing with scheduled operation"</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows the default behavior where the cmdlet blocks until the timer fires.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>------- Example 2 - Asynchronous execution with -NoWait -------</maml:title>
+        <dev:code>$duration = New-TimeSpan -Minutes 30
+$timerTask = Start-DurableTimer -Duration $duration -NoWait
+# Continue with other orchestration logic...
+Wait-DurableTask -Task $timerTask
+Write-Host "Timer completed, continuing with scheduled operation"</dev:code>
+        <dev:remarks>
+          <maml:para>This example creates a timer that will fire 30 minutes from now using -NoWait, allowing other logic to execute while the timer runs.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Stop-DurableTimerTask</command:name>
+      <command:verb>Stop</command:verb>
+      <command:noun>DurableTimerTask</command:noun>
+      <maml:description>
+        <maml:para>Stops (cancels) a running durable timer task.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Cancels a running durable timer task before it completes. This is useful for implementing timeout patterns or canceling scheduled delays when certain conditions are met. Once a timer task is stopped, it will not fire and any orchestration code waiting on the timer will need to handle the cancellation appropriately. This cmdlet is typically used in conjunction with Wait-DurableTask to implement race conditions between timers and other operations.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Stop-DurableTimerTask</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Task</maml:name>
+          <maml:description>
+            <maml:para>The timer task object returned from Start-DurableTimer that should be cancelled. The task must be in a running state to be successfully cancelled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">DurableTimerTask</command:parameterValue>
+          <dev:type>
+            <maml:name>DurableTimerTask</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Task</maml:name>
+        <maml:description>
+          <maml:para>The timer task object returned from Start-DurableTimer that should be cancelled. The task must be in a running state to be successfully cancelled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">DurableTimerTask</command:parameterValue>
+        <dev:type>
+          <maml:name>DurableTimerTask</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not return any output. It cancels the specified durable timer task.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet is used to implement timeout patterns and early cancellation scenarios in orchestrations.</maml:para>
+        <maml:para>- Once a timer task is stopped, any code waiting on it should handle the cancellation appropriately.</maml:para>
+        <maml:para>- Timer cancellation is commonly used in race conditions between timers and other operations.</maml:para>
+        <maml:para>- Only running timer tasks can be successfully cancelled; completed timers cannot be stopped.</maml:para>
+        <maml:para>- Use this cmdlet with Wait-DurableTask to implement sophisticated timeout and cancellation patterns.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>$timerTask = Start-DurableTimer -Duration (New-TimeSpan -Hours 1) -NoWait
+# Later, if condition is met, cancel the timer
+if ($conditionMet) {
+    Stop-DurableTimerTask -Task $timerTask
+    Write-Host "Timer cancelled due to early completion"
+}</dev:code>
+        <dev:remarks>
+          <maml:para>This example starts a timer for 1 hour using -NoWait to get a task object, then cancels it early if a certain condition is met, preventing unnecessary waiting.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Wait-DurableTask</command:name>
+      <command:verb>Wait</command:verb>
+      <command:noun>DurableTask</command:noun>
+      <maml:description>
+        <maml:para>Waits for one or more durable tasks to complete and returns their results.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Waits for one or more durable tasks to complete before continuing orchestration execution. By default, waits for all specified tasks to complete. When the -Any switch is used, waits for any one of the tasks to complete. This cmdlet is used within orchestrator functions to coordinate multiple asynchronous operations and retrieve their results.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Wait-DurableTask</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Any</maml:name>
+          <maml:description>
+            <maml:para>When specified, the cmdlet waits for any one of the provided tasks to complete. By default, the cmdlet waits for all tasks to complete before returning.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>NoWait</maml:name>
+          <maml:description>
+            <maml:para>When specified, the cmdlet returns immediately without waiting for the tasks to complete. This is useful for scheduling the wait operation itself as a task.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Task</maml:name>
+          <maml:description>
+            <maml:para>An array of durable task objects to wait for. These should be tasks returned from cmdlets like Invoke-DurableActivity, Invoke-DurableSubOrchestrator, Start-DurableTimer, or Start-DurableExternalEventListener.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">DurableTask[]</command:parameterValue>
+          <dev:type>
+            <maml:name>DurableTask[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Any</maml:name>
+        <maml:description>
+          <maml:para>When specified, the cmdlet waits for any one of the provided tasks to complete. By default, the cmdlet waits for all tasks to complete before returning.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>NoWait</maml:name>
+        <maml:description>
+          <maml:para>When specified, the cmdlet returns immediately without waiting for the tasks to complete. This is useful for scheduling the wait operation itself as a task.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Task</maml:name>
+        <maml:description>
+          <maml:para>An array of durable task objects to wait for. These should be tasks returned from cmdlets like Invoke-DurableActivity, Invoke-DurableSubOrchestrator, Start-DurableTimer, or Start-DurableExternalEventListener.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">DurableTask[]</command:parameterValue>
+        <dev:type>
+          <maml:name>DurableTask[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input. All parameters must be specified directly.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns the completed task object(s), not the task results. If waiting for a single task, returns the task object directly. If waiting for multiple tasks, returns an array of task objects in the same order as the input tasks. To get the actual results from the tasks, use Get-DurableTaskResult on the returned task objects.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>- This cmdlet can only be used within orchestrator functions, not in activity functions or client functions.</maml:para>
+        <maml:para>- When using the -Any parameter, only the first completed task object is returned. Other tasks continue running in the background.</maml:para>
+        <maml:para>- Tasks passed to this cmdlet must be created with the -NoWait parameter from other durable cmdlets.</maml:para>
+        <maml:para>- The cmdlet is fault-tolerant and will survive orchestration replays and restarts.</maml:para>
+        <maml:para>- When waiting for multiple tasks without -Any, task objects are returned in the same order as the input tasks, regardless of completion order.</maml:para>
+        <maml:para>- This cmdlet returns task objects, not task results. Use Get-DurableTaskResult to retrieve the actual results from completed tasks.</maml:para>
+        <maml:para>- Use this cmdlet to implement common patterns like fan-out/fan-in, timeouts, and race conditions in orchestrations.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>$task1 = Invoke-DurableActivity -FunctionName "Step1" -Input "data1" -NoWait
+$task2 = Invoke-DurableActivity -FunctionName "Step2" -Input "data2" -NoWait
+$completedTasks = Wait-DurableTask -Task @($task1, $task2)
+
+# Get the actual results from the completed tasks
+$results = @()
+foreach ($task in $completedTasks) {
+    $results += Get-DurableTaskResult -Task $task
+}
+Write-Host "Both tasks completed with results: $results"</dev:code>
+        <dev:remarks>
+          <maml:para>This example demonstrates waiting for multiple durable activity tasks to complete. Note that Wait-DurableTask returns the task objects themselves, not the results. To get the actual activity results, you need to use Get-DurableTaskResult on each completed task.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>$task1 = Invoke-DurableActivity -FunctionName "FastOperation" -Input $data1 -NoWait
+$task2 = Invoke-DurableActivity -FunctionName "SlowOperation" -Input $data2 -NoWait
+$firstCompletedTask = Wait-DurableTask -Task @($task1, $task2) -Any
+
+# Determine which task completed first and get its result
+if ($firstCompletedTask -eq $task1) {
+    $activityResult = Get-DurableTaskResult -Task $firstCompletedTask
+    Write-Host "FastOperation completed first with result: $activityResult"
+} elseif ($firstCompletedTask -eq $task2) {
+    $activityResult = Get-DurableTaskResult -Task $firstCompletedTask
+    Write-Host "SlowOperation completed first with result: $activityResult"
+} else {
+    # This block should never be hit
+    Write-Host "Unexpected task completion"
+}</dev:code>
+        <dev:remarks>
+          <maml:para>This example demonstrates waiting for any one of the tasks to complete using the -Any parameter. The cmdlet returns the first completed task object (not the result), which you can then compare to determine which task finished first and retrieve its actual result using Get-DurableTaskResult.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Durable Functions for PowerShell</maml:linkText>
+        <maml:uri>https://github.com/Azure/azure-functions-durable-powershell</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+</helpItems>

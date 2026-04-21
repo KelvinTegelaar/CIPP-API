@@ -34,7 +34,6 @@ function Invoke-CIPPStandardMailContacts {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MailContacts'
 
     try {
         $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
@@ -45,12 +44,13 @@ function Invoke-CIPPStandardMailContacts {
         return
     }
     $contacts = $settings
-    $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
+    $TechAndSecurityContacts = @(@($contacts.SecurityContact, $contacts.TechContact) | Where-Object { $_ } | Select-Object -Unique)
 
-    $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
-    ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
-        $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
-        $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact
+    $marketingMatch = @($CurrentInfo.marketingNotificationEmails) -contains $contacts.MarketingContact
+    $techMatch = -not (Compare-Object @($CurrentInfo.technicalNotificationMails) $TechAndSecurityContacts)
+    $generalMatch = $CurrentInfo.privacyProfile.contactEmail -eq $contacts.GeneralContact
+
+    $state = $marketingMatch -and $techMatch -and $generalMatch
 
     if ($Settings.remediate -eq $true) {
         if ($state) {
@@ -60,11 +60,9 @@ function Invoke-CIPPStandardMailContacts {
                 $Body = [pscustomobject]@{}
                 switch ($Contacts) {
                     { $Contacts.MarketingContact } { $body | Add-Member -NotePropertyName marketingNotificationEmails -NotePropertyValue @($Contacts.MarketingContact) }
-                    { $Contacts.SecurityContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.SecurityContact) }
-                    { $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.TechContact) -ErrorAction SilentlyContinue }
+                    { $Contacts.SecurityContact -or $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ } | Select-Object -Unique) }
                     { $Contacts.GeneralContact } { $body | Add-Member -NotePropertyName privacyProfile -NotePropertyValue @{contactEmail = $Contacts.GeneralContact } }
                 }
-                Write-Host (ConvertTo-Json -InputObject $body)
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/v1.0/organization/$($TenantID.id)" -asApp $true -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails set.' -sev Info
             } catch {
@@ -107,8 +105,17 @@ function Invoke-CIPPStandardMailContacts {
 
     }
     if ($Settings.report -eq $true) {
-        $ReportState = $state ? $true : ($CurrentInfo | Select-Object marketingNotificationEmails, technicalNotificationMails, privacyProfile)
-        Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -FieldValue $ReportState -Tenant $tenant
+        $CurrentValue = @{
+            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object)
+            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Sort-Object)
+            contactEmail                = $CurrentInfo.privacyProfile.contactEmail
+        }
+        $ExpectedValue = @{
+            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object)
+            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique | Sort-Object)
+            contactEmail                = $Contacts.GeneralContact
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

@@ -1,4 +1,4 @@
-Function Invoke-CIPPStandardTeamsMessagingPolicy {
+function Invoke-CIPPStandardTeamsMessagingPolicy {
     <#
     .FUNCTIONALITY
         Internal
@@ -37,20 +37,17 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMessagingPolicy'
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMessagingPolicy' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1','Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsMessagingPolicy' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
 
     try {
         $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMessagingPolicy' -CmdParams @{Identity = 'Global' }
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsMessagingPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -68,14 +65,14 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
     $ReadReceiptsEnabledType = $Settings.ReadReceiptsEnabledType.value ?? $Settings.ReadReceiptsEnabledType
 
     $StateIsCorrect = ($CurrentState.AllowOwnerDeleteMessage -eq $Settings.AllowOwnerDeleteMessage) -and
-                        ($CurrentState.AllowUserDeleteMessage -eq $Settings.AllowUserDeleteMessage) -and
-                        ($CurrentState.AllowUserEditMessage -eq $Settings.AllowUserEditMessage) -and
-                        ($CurrentState.AllowUserDeleteChat -eq $Settings.AllowUserDeleteChat) -and
-                        ($CurrentState.ReadReceiptsEnabledType -eq $ReadReceiptsEnabledType) -and
-                        ($CurrentState.CreateCustomEmojis -eq $Settings.CreateCustomEmojis) -and
-                        ($CurrentState.DeleteCustomEmojis -eq $Settings.DeleteCustomEmojis) -and
-                        ($CurrentState.AllowSecurityEndUserReporting -eq $Settings.AllowSecurityEndUserReporting) -and
-                        ($CurrentState.AllowCommunicationComplianceEndUserReporting -eq $Settings.AllowCommunicationComplianceEndUserReporting)
+    ($CurrentState.AllowUserDeleteMessage -eq $Settings.AllowUserDeleteMessage) -and
+    ($CurrentState.AllowUserEditMessage -eq $Settings.AllowUserEditMessage) -and
+    ($CurrentState.AllowUserDeleteChat -eq $Settings.AllowUserDeleteChat) -and
+    ($CurrentState.ReadReceiptsEnabledType -eq $ReadReceiptsEnabledType) -and
+    ($CurrentState.CreateCustomEmojis -eq $Settings.CreateCustomEmojis) -and
+    ($CurrentState.DeleteCustomEmojis -eq $Settings.DeleteCustomEmojis) -and
+    ($CurrentState.AllowSecurityEndUserReporting -eq $Settings.AllowSecurityEndUserReporting) -and
+    ($CurrentState.AllowCommunicationComplianceEndUserReporting -eq $Settings.AllowCommunicationComplianceEndUserReporting)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -108,7 +105,7 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Global Teams messaging policy is configured correctly.' -sev Info
         } else {
-            Write-StandardsAlert -message "Global Teams messaging policy is not configured correctly." -object $CurrentState -tenant $Tenant -standardName 'TeamsMessagingPolicy' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Global Teams messaging policy is not configured correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsMessagingPolicy' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Global Teams messaging policy is not configured correctly.' -sev Info
         }
     }
@@ -116,11 +113,28 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsMessagingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
+        $CurrentValue = @{
+            AllowOwnerDeleteMessage                      = $CurrentState.AllowOwnerDeleteMessage
+            AllowUserDeleteMessage                       = $CurrentState.AllowUserDeleteMessage
+            AllowUserEditMessage                         = $CurrentState.AllowUserEditMessage
+            AllowUserDeleteChat                          = $CurrentState.AllowUserDeleteChat
+            ReadReceiptsEnabledType                      = $CurrentState.ReadReceiptsEnabledType
+            CreateCustomEmojis                           = $CurrentState.CreateCustomEmojis
+            DeleteCustomEmojis                           = $CurrentState.DeleteCustomEmojis
+            AllowSecurityEndUserReporting                = $CurrentState.AllowSecurityEndUserReporting
+            AllowCommunicationComplianceEndUserReporting = $CurrentState.AllowCommunicationComplianceEndUserReporting
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMessagingPolicy' -FieldValue $FieldValue -Tenant $Tenant
+        $ExpectedValue = @{
+            AllowOwnerDeleteMessage                      = $Settings.AllowOwnerDeleteMessage
+            AllowUserDeleteMessage                       = $Settings.AllowUserDeleteMessage
+            AllowUserEditMessage                         = $Settings.AllowUserEditMessage
+            AllowUserDeleteChat                          = $Settings.AllowUserDeleteChat
+            ReadReceiptsEnabledType                      = $ReadReceiptsEnabledType
+            CreateCustomEmojis                           = $Settings.CreateCustomEmojis
+            DeleteCustomEmojis                           = $Settings.DeleteCustomEmojis
+            AllowSecurityEndUserReporting                = $Settings.AllowSecurityEndUserReporting
+            AllowCommunicationComplianceEndUserReporting = $Settings.AllowCommunicationComplianceEndUserReporting
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMessagingPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
 }

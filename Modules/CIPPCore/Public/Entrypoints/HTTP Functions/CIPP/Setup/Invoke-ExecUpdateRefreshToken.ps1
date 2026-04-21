@@ -1,4 +1,4 @@
-Function Invoke-ExecUpdateRefreshToken {
+function Invoke-ExecUpdateRefreshToken {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -15,33 +15,57 @@ Function Invoke-ExecUpdateRefreshToken {
         # Handle refresh token update
         #make sure we get the latest authentication:
         $auth = Get-CIPPAuthentication
+        $IsPartnerTenant = $env:TenantID -eq $Request.body.tenantId
+
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
-
-            if ($env:TenantID -eq $Request.body.tenantId) {
+            if ($IsPartnerTenant) {
                 $Secret | Add-Member -MemberType NoteProperty -Name 'RefreshToken' -Value $Request.body.refreshtoken -Force
+                Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
             } else {
-                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId)"
                 $name = $Request.body.tenantId -replace '-', '_'
-                $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
+                $Secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
+                Set-Item -Path env:$name -Value $Request.body.refreshtoken -Force
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
-            if ($env:TenantID -eq $Request.body.tenantId) {
-                Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+            if ($IsPartnerTenant) {
+                Set-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
             } else {
-                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
+                Write-Information "$($env:TenantID) does not match $($Request.body.tenantId) - adding a new secret for the tenant."
                 $name = $Request.body.tenantId
                 try {
-                    Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                    Set-CippKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                    Set-Item -Path env:$name -Value $Request.body.refreshtoken -Force
                 } catch {
-                    Write-Host "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
+                    Write-Information "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
                     throw $_
                 }
             }
         }
-        $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
+
+        if ($IsPartnerTenant) {
+            try {
+                $Queue = New-CippQueueEntry -Name 'Update Permissions - Partner Tenant' -TotalTasks 1
+                $TenantBatch = @([PSCustomObject]@{
+                        defaultDomainName = 'PartnerTenant'
+                        customerId        = $env:TenantID
+                        displayName       = '*Partner Tenant'
+                        FunctionName      = 'UpdatePermissionsQueue'
+                        QueueId           = $Queue.RowKey
+                    })
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'UpdatePermissionsOrchestrator'
+                    Batch            = @($TenantBatch)
+                }
+                Start-CIPPOrchestrator -InputObject $InputObject
+                Write-Information 'Started permissions update orchestrator for Partner Tenant'
+            } catch {
+                Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"
+            }
+        }
 
         if ($request.body.tenantId -eq $env:TenantID) {
             $TenantName = 'your partner tenant'
@@ -49,16 +73,21 @@ Function Invoke-ExecUpdateRefreshToken {
             $TenantName = $request.body.tenantId
         }
         $Results = @{
-            'message'  = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
-            'severity' = 'success'
+            'resultText' = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
+            'state'      = 'success'
         }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"; severity = 'failed' }
+        $Results = [pscustomobject]@{
+            'Results' = @{
+                resultText = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"
+                state      = 'failed'
+            }
+        }
+
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Results
+            })
+
     }
-
-    return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
-
 }

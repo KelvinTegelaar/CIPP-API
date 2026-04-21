@@ -41,18 +41,16 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableAppConsentRequests'
 
     try {
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnableAppConsentRequests state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             # Get current state
 
@@ -121,8 +119,22 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
     }
     if ($Settings.report -eq $true) {
-        $state = $CurrentInfo.isEnabled ? $true : $CurrentInfo
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -FieldValue $state -TenantFilter $Tenant
+        # Set default if no roles are selected, matches remediation logic
+        $RolesToAdd = $Settings.ReviewerRoles.value
+        if (!$RolesToAdd -or $RolesToAdd.Count -eq 0) {
+            $RolesToAdd = @('62e90394-69f5-4237-9190-012177145e10')
+        }
+
+        $CurrentValue = [PSCustomObject]@{
+            EnableAppConsentRequests = [bool]$CurrentInfo.isEnabled
+            ReviewerCount            = $CurrentInfo.reviewers.count
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            EnableAppConsentRequests = $true
+            ReviewerCount            = $RolesToAdd.Count
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

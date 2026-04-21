@@ -33,7 +33,6 @@ function Invoke-CIPPStandardAutoExpandArchive {
     $TestResult = Test-CIPPStandardLicense -StandardName 'AutoExpandArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AutoExpandArchive'
@@ -46,9 +45,14 @@ function Invoke-CIPPStandardAutoExpandArchive {
         return
     }
 
-    if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate'
+    $ExpectedValue = [PSCustomObject]@{
+        AutoExpandingArchive = $true
+    }
+    $CurrentValue = [PSCustomObject]@{
+        AutoExpandingArchive = $CurrentState
+    }
 
+    if ($Settings.remediate -eq $true) {
         if ($CurrentState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archive is already enabled.' -sev Info
         } else {
@@ -73,8 +77,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $CurrentState -eq $true ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

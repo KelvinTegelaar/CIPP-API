@@ -29,12 +29,34 @@
     $Table = Get-CIPPTable -TableName cacheGitHubReleaseNotes
     $PartitionKey = 'GitHubReleaseNotes'
     $Filter = "PartitionKey eq '$PartitionKey'"
-    $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-24)
+    $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter
 
     try {
+        $Latest = $false
         if ($Rows) {
             $Releases = ConvertFrom-Json -InputObject $Rows.GitHubReleases -Depth 10
-        } else {
+            $CurrentVersion = [semver]$global:CippVersion
+            $CurrentMajorMinor = "$($CurrentVersion.Major).$($CurrentVersion.Minor)"
+
+            foreach ($Release in $Releases) {
+                $Version = $Release.releaseTag -replace 'v', ''
+                try {
+                    $ReleaseVersion = [semver]$Version
+                    $ReleaseMajorMinor = "$($ReleaseVersion.Major).$($ReleaseVersion.Minor)"
+
+                    # Check if we have cached notes for the current major.minor version series
+                    if ($ReleaseMajorMinor -eq $CurrentMajorMinor) {
+                        $Latest = $true
+                        break
+                    }
+                } catch {
+                    # Skip invalid semver versions
+                    continue
+                }
+            }
+        }
+
+        if (-not $Latest) {
             $Releases = Invoke-GitHubApiRequest -Path $ReleasePath
             $Releases = $Releases | ForEach-Object {
                 [ordered]@{
@@ -48,7 +70,6 @@
                     commitish   = $_.target_commitish
                 }
             }
-
             $Results = @{
                 GitHubReleases = [string](ConvertTo-Json -Depth 10 -InputObject $Releases)
                 RowKey         = [string]'GitHubReleaseNotes'

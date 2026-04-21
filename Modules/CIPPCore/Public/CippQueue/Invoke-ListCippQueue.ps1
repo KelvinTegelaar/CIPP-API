@@ -20,9 +20,11 @@ function Invoke-ListCippQueue {
     $3HoursAgo = (Get-Date).ToUniversalTime().AddHours(-3).ToString('yyyy-MM-ddTHH:mm:ssZ')
 
     if ($QueueId) {
-        $Filter = "PartitionKey eq 'CippQueue' and RowKey eq '$QueueId'"
+        $SafeQueueId = ConvertTo-CIPPODataFilterValue -Value $QueueId -Type String
+        $Filter = "PartitionKey eq 'CippQueue' and RowKey eq '$SafeQueueId'"
     } elseif ($Reference) {
-        $Filter = "PartitionKey eq 'CippQueue' and Reference eq '$Reference' and Timestamp ge datetime'$3HoursAgo'"
+        $SafeReference = ConvertTo-CIPPODataFilterValue -Value $Reference -Type String
+        $Filter = "PartitionKey eq 'CippQueue' and Reference eq '$SafeReference' and Timestamp ge datetime'$3HoursAgo'"
     } else {
         $Filter = "PartitionKey eq 'CippQueue' and Timestamp ge datetime'$3HoursAgo'"
     }

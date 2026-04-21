@@ -22,7 +22,7 @@ function New-CIPPAuditLogSearchResultsCache {
             $message = "Skipping search ID: $SearchId for tenant: $TenantFilter - Previous attempt failed within the last 4 hours"
             Write-LogMessage -API 'AuditLog' -tenant $TenantFilter -message $message -Sev 'Info'
             Write-Information $message
-            exit 0
+            return $false
         }
     } catch {
         Write-Information "Error checking for failed downloads: $($_.Exception.Message)"
@@ -36,7 +36,7 @@ function New-CIPPAuditLogSearchResultsCache {
         $searchEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and SearchId eq '$SearchId'"
         if ($searchEntity) {
             Write-Information "Search ID: $SearchId already cached for tenant: $TenantFilter"
-            exit 0
+            return $false
         }
 
         # Record this attempt in the FailedAuditLogDownloads table BEFORE starting the download
@@ -62,10 +62,12 @@ function New-CIPPAuditLogSearchResultsCache {
             $searchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
             foreach ($searchResult in $searchResults) {
                 $cacheEntity = @{
-                    RowKey       = $searchResult.id
-                    PartitionKey = $TenantFilter
-                    SearchId     = $SearchId
-                    JSON         = [string]($searchResult | ConvertTo-Json -Depth 10)
+                    RowKey                = $searchResult.id
+                    PartitionKey          = $TenantFilter
+                    SearchId              = $SearchId
+                    JSON                  = [string]($searchResult | ConvertTo-Json -Depth 10)
+                    CippProcessing        = $false
+                    CippProcessingStarted = ''
                 }
                 Add-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $cacheEntity -Force
             }

@@ -14,15 +14,15 @@ function New-CIPPUserTask {
         $Results.Add("Username: $($CreationResults.Username)")
         $Results.Add("Password: $($CreationResults.Password)")
     } catch {
-        $Results.Add("Failed to create user. $($_.Exception.Message)" )
-        return @{'Results' = $Results }
+        $Results.Add("$($_.Exception.Message)" )
+        throw @{'Results' = $Results }
     }
 
     try {
         if ($UserObj.licenses.value) {
             if ($UserObj.sherwebLicense.value) {
-                $License = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $null = $results.Add('Added Sherweb License, scheduling assignment')
+                $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $null = $Results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"
@@ -66,6 +66,18 @@ function New-CIPPUserTask {
         $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter
         $CopyFrom.Success | ForEach-Object { $Results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
+    }
+
+    # Add to groups
+    if ($UserObj.AddToGroups) {
+        $UserObj.AddToGroups | ForEach-Object {
+            try {
+                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $_.addedFields.groupType -GroupId $_.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
+                $Results.Add($AddMemberResult)
+            } catch {
+                $Results.Add("Failed to add to group $($_.label): $_")
+            }
+        }
     }
 
     if ($UserObj.setManager) {

@@ -12,7 +12,13 @@ function Invoke-ListNewUserDefaults {
 
     # Get the TenantFilter from query parameters
     $TenantFilter = $Request.Query.TenantFilter
-    Write-Host "TenantFilter from request: $TenantFilter"
+
+    # Get the includeAllTenants flag from query or body parameters (defaults to true)
+    $IncludeAllTenants = if ($Request.Query.includeAllTenants -eq 'false' -or $Request.Body.includeAllTenants -eq 'false') {
+        $false
+    } else {
+        $true
+    }
 
     # Get the templates table
     $Table = Get-CippTable -tablename 'templates'
@@ -25,19 +31,27 @@ function Invoke-ListNewUserDefaults {
             $data = $row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop
             $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $row.GUID -Force
             $data | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $row.RowKey -Force
-            Write-Host "Template found: $($data.templateName), tenantFilter: $($data.tenantFilter)"
             $data
         } catch {
             Write-Warning "Failed to process User Default template: $($row.RowKey) - $($_.Exception.Message)"
         }
     }
 
-    Write-Host "Total templates before filtering: $($Templates.Count)"
-
     # Filter by tenant if TenantFilter is provided
     if ($TenantFilter) {
-        $Templates = $Templates | Where-Object -Property tenantFilter -EQ $TenantFilter
-        Write-Host "Templates after filtering: $($Templates.Count)"
+        if ($TenantFilter -eq 'AllTenants') {
+            # When requesting AllTenants, return only templates stored under AllTenants
+            $Templates = $Templates | Where-Object -Property tenantFilter -eq 'AllTenants'
+        } else {
+            # When requesting a specific tenant
+            if ($IncludeAllTenants) {
+                # Include both tenant-specific and AllTenants templates
+                $Templates = $Templates | Where-Object { $_.tenantFilter -eq $TenantFilter -or $_.tenantFilter -eq 'AllTenants' }
+            } else {
+                # Return only tenant-specific templates (exclude AllTenants)
+                $Templates = $Templates | Where-Object -Property tenantFilter -eq $TenantFilter
+            }
+        }
     }
 
     # Sort by template name
@@ -45,7 +59,7 @@ function Invoke-ListNewUserDefaults {
 
     # If a specific ID is requested, filter to that template
     if ($Request.query.ID) {
-        $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.ID
+        $Templates = $Templates | Where-Object -Property GUID -eq $Request.query.ID
     }
 
     $Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100

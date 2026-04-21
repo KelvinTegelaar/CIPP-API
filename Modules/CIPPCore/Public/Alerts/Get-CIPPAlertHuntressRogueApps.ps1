@@ -18,7 +18,7 @@ function Get-CIPPAlertHuntressRogueApps {
     )
 
     try {
-        $RogueApps = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/huntresslabs/rogueapps/main/public/rogueapps.json'
+        $RogueApps = Invoke-RestMethod -Uri 'https://huntresslabs.github.io/rogueapps/rogueapps.json'
         $RogueAppFilter = $RogueApps.appId -join "','"
         $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId in ('$RogueAppFilter')" -tenantid $TenantFilter
         # If IgnoreDisabledApps is true, filter out disabled service principals
@@ -43,6 +43,7 @@ function Get-CIPPAlertHuntressRogueApps {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
-        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check for rogue apps for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        #$ErrorMessage = Get-CippException -Exception $_
+        #Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check for rogue apps for $($TenantFilter): $($ErrorMessage.NormalizedError)"
     }
 }

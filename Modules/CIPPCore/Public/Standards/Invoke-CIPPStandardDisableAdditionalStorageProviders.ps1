@@ -36,7 +36,6 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     $TestResult = Test-CIPPStandardLicense -StandardName 'DisableAdditionalStorageProviders' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAdditionalStorageProviders'
@@ -48,6 +47,13 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAddShortcutsToOneDrive state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
+    }
+
+    $CurrentValue = [PSCustomObject]@{
+        AdditionalStorageProvidersAvailable = $AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable
+    }
+    $ExpectedValue = [PSCustomObject]@{
+        AdditionalStorageProvidersAvailable = $false
     }
 
     if ($Settings.remediate -eq $true) {
@@ -78,8 +84,8 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     }
 
     if ($Settings.report -eq $true) {
-        $State = $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled ? $false : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -FieldValue $State -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersEnabled' -FieldValue $State -StoreAs bool -Tenant $Tenant
+        $State = $AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable ? $false : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersAvailable' -FieldValue $State -StoreAs bool -Tenant $Tenant
     }
 }

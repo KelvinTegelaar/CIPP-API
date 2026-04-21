@@ -1,4 +1,4 @@
-Function Push-ListBasicAuthAllTenants {
+function Push-ListBasicAuthAllTenants {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -6,7 +6,9 @@ Function Push-ListBasicAuthAllTenants {
     [CmdletBinding()]
     param($Item)
 
-    $domainName = $Item.defaultDomainName
+
+    $Tenant = Get-Tenants -TenantFilter $Item.customerId
+    $domainName = $Tenant.defaultDomainName
 
     # XXX; This function seems to be unused in the frontend. -Bobby
 

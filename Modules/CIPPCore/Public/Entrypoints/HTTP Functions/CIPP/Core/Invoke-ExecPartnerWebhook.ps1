@@ -18,8 +18,13 @@ function Invoke-ExecPartnerWebhook {
 
                 $ConfigTable = Get-CIPPTable -TableName Config
                 $WebhookConfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq 'PartnerWebhookOnboarding'"
-                if ($WebhookConfig.StandardsExcludeAllTenants -eq $true) {
-                    $Results | Add-Member -MemberType NoteProperty -Name 'standardsExcludeAllTenants' -Value $true -Force
+                if ($WebhookConfig) {
+                    $Results | Add-Member -MemberType NoteProperty -Name 'enabled' -Value ([bool]$WebhookConfig.Enabled) -Force
+                    if ($WebhookConfig.StandardsExcludeAllTenants -eq $true) {
+                        $Results | Add-Member -MemberType NoteProperty -Name 'standardsExcludeAllTenants' -Value $true -Force
+                    }
+                } else {
+                    $Results | Add-Member -MemberType NoteProperty -Name 'enabled' -Value $false -Force
                 }
             } catch {}
             if (!$Results) {
@@ -27,6 +32,7 @@ function Invoke-ExecPartnerWebhook {
                     webhoookUrl           = 'None'
                     lastModifiedTimestamp = 'Never'
                     webhookEvents         = @()
+                    enabled               = $false
                 }
             }
         }
@@ -50,6 +56,7 @@ function Invoke-ExecPartnerWebhook {
             $PartnerWebhookOnboarding = [PSCustomObject]@{
                 PartitionKey               = 'Config'
                 RowKey                     = 'PartnerWebhookOnboarding'
+                Enabled                    = [bool]$Request.Body.enabled
                 StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
             }
             Add-CIPPAzDataTableEntity @ConfigTable -Entity $PartnerWebhookOnboarding -Force | Out-Null

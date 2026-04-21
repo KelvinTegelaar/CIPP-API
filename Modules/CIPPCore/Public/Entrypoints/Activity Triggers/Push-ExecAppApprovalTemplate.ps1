@@ -63,6 +63,9 @@ function Push-ExecAppApprovalTemplate {
                     Add-CIPPDelegatedPermission -RequiredResourceAccess $Application.requiredResourceAccess -ApplicationId $App -Tenantfilter $Item.Tenant
                     Add-CIPPApplicationPermission -RequiredResourceAccess $Application.requiredResourceAccess -ApplicationId $App -Tenantfilter $Item.Tenant
                 }
+                if ($TemplateData.IncludeInEnterpriseAppList -and $InstantiateResult.servicePrincipal.id) {
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($InstantiateResult.servicePrincipal.id)" -type PATCH -tenantid $Item.Tenant -body '{"tags":["WindowsAzureActiveDirectoryIntegratedApp"]}'
+                }
             } else {
                 Write-LogMessage -message "Gallery Template deployment completed but application ID not returned for $($TemplateData.AppName) in tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Gallery App' -sev Warning
             }
@@ -106,7 +109,7 @@ function Push-ExecAppApprovalTemplate {
                 return $true
             }
 
-            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
+            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
 
             # Strip tenant-specific data that might cause conflicts
             $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json
@@ -121,11 +124,11 @@ function Push-ExecAppApprovalTemplate {
 
                 if ($CreatedApp.appId) {
                     # Create service principal for the application
-                    $ServicePrincipalBody = @{
-                        appId = $CreatedApp.appId
-                    } | ConvertTo-Json
-
-                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body $ServicePrincipalBody
+                    $ServicePrincipalBody = @{ appId = $CreatedApp.appId }
+                    if ($TemplateData.IncludeInEnterpriseAppList) {
+                        $ServicePrincipalBody.tags = @('WindowsAzureActiveDirectoryIntegratedApp')
+                    }
+                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($ServicePrincipalBody | ConvertTo-Json)
 
                     Write-LogMessage -message "Successfully deployed Application Manifest $($TemplateData.AppName) to tenant $($Item.Tenant). Application ID: $($CreatedApp.appId)" -tenant $Item.Tenant -API 'Add App Manifest' -sev Info
 
@@ -143,13 +146,24 @@ function Push-ExecAppApprovalTemplate {
 
         } else {
             # Handle Enterprise Apps (existing logic)
-            $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Item.Tenant
+            $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName,tags&`$top=999" -tenantid $Item.Tenant
             if ($Item.AppId -notin $ServicePrincipalList.appId) {
                 Write-Information "Adding $($Item.AppId) to tenant $($Item.Tenant)."
-                $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body "{ `"appId`": `"$($Item.appId)`" }"
+                $SpBody = [ordered]@{ appId = $Item.appId }
+                if ($TemplateData.IncludeInEnterpriseAppList) {
+                    $SpBody.tags = @('WindowsAzureActiveDirectoryIntegratedApp')
+                }
+                $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($SpBody | ConvertTo-Json)
                 Write-LogMessage -message "Added $($Item.AppId) to tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
             } else {
                 Write-LogMessage -message "This app already exists in tenant $($Item.Tenant). We're adding the required permissions." -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
+                if ($TemplateData.IncludeInEnterpriseAppList) {
+                    $ExistingSP = $ServicePrincipalList | Where-Object { $_.appId -eq $Item.AppId }
+                    if ($ExistingSP -and 'WindowsAzureActiveDirectoryIntegratedApp' -notin $ExistingSP.tags) {
+                        $UpdatedTags = @($ExistingSP.tags) + 'WindowsAzureActiveDirectoryIntegratedApp'
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ExistingSP.id)" -type PATCH -tenantid $Item.Tenant -body (@{ tags = $UpdatedTags } | ConvertTo-Json)
+                    }
+                }
             }
             Add-CIPPApplicationPermission -TemplateId $TemplateId -Tenantfilter $Item.Tenant
             Add-CIPPDelegatedPermission -TemplateId $TemplateId -Tenantfilter $Item.Tenant

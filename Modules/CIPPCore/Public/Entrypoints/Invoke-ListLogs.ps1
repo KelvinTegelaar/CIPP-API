@@ -8,6 +8,7 @@ function Invoke-ListLogs {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Table = Get-CIPPTable
+    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
 
     $TemplatesTable = Get-CIPPTable -tablename 'templates'
     $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
@@ -21,7 +22,10 @@ function Invoke-ListLogs {
         }
     } elseif ($Request.Query.logentryid) {
         # Return single log entry by RowKey
-        $Filter = "RowKey eq '{0}'" -f $Request.Query.logentryid
+        $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+        $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? $LocalNow.ToString('yyyyMMdd')) -Type Date
+        $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type Guid
+        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $SafeLogEntryId, $DateFilter
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting single log entry for RowKey: $($Request.Query.logentryid)"
 
@@ -32,8 +36,7 @@ function Invoke-ListLogs {
                 $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
             }
 
-            if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
-
+            if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId -or $TenantList.initialDomainName -contains $Row.Tenant)) ) {
                 if ($Row.StandardTemplateId) {
                     $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
 
@@ -59,52 +62,50 @@ function Invoke-ListLogs {
                     $Row.LogData | ConvertFrom-Json
                 } else { $Row.LogData }
                 [PSCustomObject]@{
-                    DateTime = $Row.Timestamp
-                    Tenant   = $Row.Tenant
-                    API      = $Row.API
-                    Message  = $Row.Message
-                    User     = $Row.Username
-                    Severity = $Row.Severity
-                    LogData  = $LogData
-                    TenantID = if ($Row.TenantID -ne $null) {
+                    DateTime   = $Row.Timestamp
+                    Tenant     = $Row.Tenant
+                    API        = $Row.API
+                    Message    = $Row.Message
+                    User       = $Row.Username
+                    Severity   = $Row.Severity
+                    LogData    = $LogData
+                    TenantID   = if ($Row.TenantID -ne $null) {
                         $Row.TenantID
                     } else {
                         'None'
                     }
-                    AppId    = $Row.AppId
-                    IP       = $Row.IP
-                    RowKey   = $Row.RowKey
-                    Standard = $StandardInfo
+                    AppId      = $Row.AppId
+                    IP         = $Row.IP
+                    RowKey     = $Row.RowKey
+                    Standard   = $StandardInfo
+                    DateFilter = $Row.PartitionKey
                 }
             }
         }
     } else {
         if ($request.Query.Filter -eq 'True') {
-            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' }
+            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
             $PartitionKey = $Request.Query.DateFilter
             $username = $Request.Query.User ?? '*'
             $TenantFilter = $Request.Query.Tenant
             $ApiFilter = $Request.Query.API
             $StandardFilter = $Request.Query.StandardTemplateId
+            $ScheduledTaskFilter = $Request.Query.ScheduledTaskId
 
-            $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
-            $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
+            $StartDate = if ($Request.Query.StartDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.StartDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
+            $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
 
             if ($StartDate -and $EndDate) {
-                # Collect logs for each partition key date in range
-                $PartitionKeys = for ($Date = [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null); $Date -le [datetime]::ParseExact($EndDate, 'yyyyMMdd', $null); $Date = $Date.AddDays(1)) {
-                    $PartitionKey = $Date.ToString('yyyyMMdd')
-                    "PartitionKey eq '$PartitionKey'"
-                }
-                $Filter = $PartitionKeys -join ' or '
+                # Collect logs for date range
+                $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
             } elseif ($StartDate) {
                 $Filter = "PartitionKey eq '{0}'" -f $StartDate
             } else {
-                $Filter = "PartitionKey eq '{0}'" -f (Get-Date -UFormat '%Y%m%d')
+                $Filter = "PartitionKey eq '{0}'" -f [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
             }
         } else {
-            $LogLevel = 'Info', 'Warn', 'Error', 'Critical', 'Alert'
-            $PartitionKey = Get-Date -UFormat '%Y%m%d'
+            $LogLevel = 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert'
+            $PartitionKey = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
             $username = '*'
             $TenantFilter = $null
             $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
@@ -115,9 +116,10 @@ function Invoke-ListLogs {
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
             $_.Severity -in $LogLevel -and
             $_.Username -like $username -and
-            ($TenantFilter -eq $null -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
-            ($ApiFilter -eq $null -or $_.API -match "$ApiFilter") -and
-            ($StandardFilter -eq $null -or $_.StandardTemplateId -eq $StandardFilter)
+            ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ([string]::IsNullOrEmpty($ApiFilter) -or $_.API -match "$ApiFilter") -and
+            ([string]::IsNullOrEmpty($StandardFilter) -or $_.StandardTemplateId -eq $StandardFilter) -and
+            ([string]::IsNullOrEmpty($ScheduledTaskFilter) -or $_.ScheduledTaskId -eq $ScheduledTaskFilter)
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
@@ -126,7 +128,7 @@ function Invoke-ListLogs {
 
         foreach ($Row in $Rows) {
             if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
-                if ($Row.StandardTemplateId) {
+                if ($StandardTaskFilter -and $Row.StandardTemplateId) {
                     $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
 
                     $StandardInfo = @{
@@ -166,6 +168,7 @@ function Invoke-ListLogs {
                     IP           = $Row.IP
                     RowKey       = $Row.RowKey
                     StandardInfo = $StandardInfo
+                    DateFilter   = $Row.PartitionKey
                 }
             }
         }

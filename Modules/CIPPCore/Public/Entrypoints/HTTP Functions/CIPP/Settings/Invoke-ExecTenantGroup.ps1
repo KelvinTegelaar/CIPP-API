@@ -23,6 +23,26 @@ function Invoke-ExecTenantGroup {
     $dynamicRules = $Request.Body.dynamicRules
     $ruleLogic = $Request.Body.ruleLogic ?? 'and'
 
+    # Validate dynamic rules to prevent code injection
+    if ($groupType -eq 'dynamic' -and $dynamicRules) {
+        $AllowedDynamicOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains')
+        $AllowedDynamicProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable')
+        foreach ($rule in $dynamicRules) {
+            if ($rule.operator -and $rule.operator.ToLower() -notin $AllowedDynamicOperators) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = "Invalid operator in dynamic rule: $($rule.operator)" }
+                    })
+            }
+            if ($rule.property -and $rule.property -notin $AllowedDynamicProperties) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = "Invalid property in dynamic rule: $($rule.property)" }
+                    })
+            }
+        }
+    }
+
     $AllowedGroups = Test-CippAccess -Request $Request -GroupList
     if ($AllowedGroups -notcontains 'AllGroups') {
         return ([HttpResponseContext]@{
@@ -45,7 +65,7 @@ function Invoke-ExecTenantGroup {
                 }
                 $GroupEntity | Add-Member -NotePropertyName 'GroupType' -NotePropertyValue $groupType -Force
                 if ($groupType -eq 'dynamic' -and $dynamicRules) {
-                    $GroupEntity.DynamicRules = "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)"
+                    $GroupEntity | Add-Member -NotePropertyName 'DynamicRules' -NotePropertyValue "$($dynamicRules | ConvertTo-Json -Depth 100 -Compress)" -Force
                     $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $ruleLogic -Force
                 } else {
                     $GroupEntity | Add-Member -NotePropertyName 'RuleLogic' -NotePropertyValue $null -Force
@@ -92,7 +112,7 @@ function Invoke-ExecTenantGroup {
                     $Adds.Add('Added member {0}' -f $member.label)
                 }
 
-                if ($CurrentMembers) {
+                if ($CurrentMembers -and $members) {
                     foreach ($CurrentMember in $CurrentMembers) {
                         if ($members.value -notcontains $CurrentMember.customerId) {
                             Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force

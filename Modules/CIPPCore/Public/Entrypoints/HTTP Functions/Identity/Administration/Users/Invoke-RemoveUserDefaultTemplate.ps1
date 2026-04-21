@@ -14,7 +14,8 @@ function Invoke-RemoveUserDefaultTemplate {
     try {
         $ID = $Request.Query.ID ?? $Request.Body.ID
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'UserDefaultTemplate' and RowKey eq '$ID'"
+        $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+        $Filter = "PartitionKey eq 'UserDefaultTemplate' and RowKey eq '$SafeID'"
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if ($Template) {
@@ -24,7 +25,7 @@ function Invoke-RemoveUserDefaultTemplate {
             $StatusCode = [HttpStatusCode]::OK
         } else {
             $Result = "User Default Template with ID $ID not found"
-            Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Warning'
+            Write-LogMessage -headers $Headers -API $APIName -message $Result -sev 'Warn'
             $StatusCode = [HttpStatusCode]::NotFound
         }
 

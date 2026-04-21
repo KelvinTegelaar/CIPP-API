@@ -18,8 +18,8 @@ function Get-CIPPAlertOneDriveQuota {
             return
         }
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-AlertMessage -tenant $($TenantFilter) -message "OneDrive quota Alert: Unable to get OneDrive usage: Error occurred: $ErrorMessage"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "OneDrive quota Alert: Unable to get OneDrive usage: Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return
     }
 
@@ -33,15 +33,13 @@ function Get-CIPPAlertOneDriveQuota {
         if ($UsagePercent -gt $InputValue) {
             $GBLeft = [math]::Round(($_.storageAllocatedInBytes - $_.storageUsedInBytes) / 1GB)
             [PSCustomObject]@{
-                Details = @{
-                    Message                 = "$($_.ownerPrincipalName): OneDrive is $UsagePercent% full. OneDrive has $($GBLeft)GB storage left"
-                    Owner                   = $_.ownerPrincipalName
-                    UsagePercent            = $UsagePercent
-                    GBLeft                  = $GBLeft
-                    StorageUsedInBytes      = $_.storageUsedInBytes
-                    StorageAllocatedInBytes = $_.storageAllocatedInBytes
-                    Tenant                  = $TenantFilter
-                }
+                Message                 = "$($_.ownerPrincipalName): OneDrive is $UsagePercent% full. OneDrive has $($GBLeft)GB storage left"
+                Owner                   = $_.ownerPrincipalName
+                UsagePercent            = $UsagePercent
+                GBLeft                  = $GBLeft
+                StorageUsedInBytes      = $_.storageUsedInBytes
+                StorageAllocatedInBytes = $_.storageAllocatedInBytes
+                Tenant                  = $TenantFilter
             }
         }
 

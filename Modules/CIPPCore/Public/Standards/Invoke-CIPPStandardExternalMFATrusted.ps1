@@ -31,12 +31,10 @@ function Invoke-CIPPStandardExternalMFATrusted {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExternalMFATrusted'
 
     try {
         $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
-    }
-    catch {
+    } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ExternalMFATrusted state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
@@ -47,8 +45,6 @@ function Invoke-CIPPStandardExternalMFATrusted {
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }
 
-
-
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
@@ -56,8 +52,6 @@ function Invoke-CIPPStandardExternalMFATrusted {
     }
 
     if ($Settings.remediate -eq $true) {
-
-        Write-Host 'Remediate External MFA Trusted'
         if ($ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState ) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "External MFA Trusted is already $StateMessage." -sev Info
         } else {
@@ -73,10 +67,16 @@ function Invoke-CIPPStandardExternalMFATrusted {
             }
         }
     }
+
     if ($Settings.report -eq $true) {
-        $state = $ExternalMFATrusted.inboundTrust.isMfaAccepted ? $true : $ExternalMFATrusted.inboundTrust
-        $ReportState = $ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState
-        Set-CIPPStandardsCompareField -FieldName 'standards.ExternalMFATrusted' -FieldValue $ReportState -TenantFilter $Tenant
+        $CurrentValue = @{
+            isMfaAccepted = $ExternalMFATrusted.inboundTrust.isMfaAccepted
+        }
+        $ExpectedValue = @{
+            isMfaAccepted = $WantedState
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.ExternalMFATrusted' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $Tenant
     }
 

@@ -1,7 +1,7 @@
-Function Invoke-AddStoreApp {
+function Invoke-AddStoreApp {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.ReadWrite
     #>
@@ -13,7 +13,7 @@ Function Invoke-AddStoreApp {
 
 
     $WinGetApp = $Request.Body
-    $assignTo = $Request.body.AssignTo
+    $assignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
 
     if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $WinGetData = [ordered]@{
@@ -26,8 +26,8 @@ Function Invoke-AddStoreApp {
             'runAsAccount' = 'system'
         }
     }
-
-    $Tenants = $Request.body.selectedTenants.defaultDomainName
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{

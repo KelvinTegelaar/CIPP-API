@@ -44,12 +44,10 @@ function Invoke-CIPPStandardFormsPhishingProtection {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get current Forms settings. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Return
+        return
     }
 
     if ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate Forms phishing protection'
-
         # Check if phishing protection is already enabled
         if ($CurrentState -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Forms internal phishing protection is already enabled.' -sev Info
@@ -82,7 +80,14 @@ function Invoke-CIPPStandardFormsPhishingProtection {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.FormsPhishingProtection' -FieldValue $CurrentState -Tenant $Tenant
+        $CurrentValue = @{
+            isInOrgFormsPhishingScanEnabled = $CurrentState
+        }
+        $ExpectedValue = @{
+            isInOrgFormsPhishingScanEnabled = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.FormsPhishingProtection' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'FormsPhishingProtection' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 }

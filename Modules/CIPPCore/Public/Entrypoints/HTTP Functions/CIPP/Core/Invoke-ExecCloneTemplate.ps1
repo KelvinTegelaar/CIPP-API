@@ -15,14 +15,20 @@ function Invoke-ExecCloneTemplate {
 
     if ($GUID -and $Type) {
         $Table = Get-CIPPTable -tablename templates
-        $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$Type' and RowKey eq '$GUID'"
+        $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
+        $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
+        $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeType' and RowKey eq '$SafeGUID'"
 
         if ($Template) {
             $NewGuid = [guid]::NewGuid().ToString()
             $Template.RowKey = $NewGuid
             $Template.JSON = $Template.JSON -replace $GUID, $NewGuid
-            $Template.Package = $null
-            $Template.SHA = $null
+            if ($Template.Package) {
+                $Template.Package = $null
+            }
+            if ($Template.SHA) {
+                $Template.SHA = $null
+            }
             try {
                 Add-CIPPAzDataTableEntity @Table -Entity $Template
                 $body = @{

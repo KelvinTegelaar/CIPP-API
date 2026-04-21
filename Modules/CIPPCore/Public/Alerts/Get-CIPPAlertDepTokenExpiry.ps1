@@ -20,12 +20,15 @@ function Get-CIPPAlertDepTokenExpiry {
                     $Dep | Select-Object -Property tokenName, @{Name = 'Message'; Expression = { $Message } }
                 }
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            if ($AlertData) {
+                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+            }
 
         } catch {}
 
 
     } catch {
-        Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check Apple Device Enrollment Program token expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check Apple Device Enrollment Program token expiry for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

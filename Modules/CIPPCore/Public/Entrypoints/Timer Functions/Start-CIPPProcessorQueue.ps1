@@ -24,7 +24,29 @@ function Start-CIPPProcessorQueue {
             }
             if (Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) {
                 try {
+                    # Prepare telemetry metadata
+                    $metadata = @{
+                        FunctionName = $FunctionName
+                        TriggerType  = 'ProcessorQueue'
+                        QueueRowKey  = $QueueItem.RowKey
+                    }
+
+                    # Add parameters info if available
+                    if ($Parameters.Count -gt 0) {
+                        $metadata['ParameterCount'] = $Parameters.Count
+                        # Add common parameters
+                        if ($Parameters.Tenant) {
+                            $metadata['Tenant'] = $Parameters.Tenant
+                        }
+                        if ($Parameters.TenantFilter) {
+                            $metadata['Tenant'] = $Parameters.TenantFilter
+                        }
+                    }
+
+                    # Wrap function execution with telemetry
+
                     Invoke-Command -ScriptBlock { & $FunctionName @Parameters }
+
                 } catch {
                     Write-Warning "Failed to run function $($FunctionName). Error: $($_.Exception.Message)"
                 }

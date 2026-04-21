@@ -35,38 +35,34 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableOnlineArchiving' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
         return $true
     } #we're done.
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableOnlineArchiving'
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
-    $MailboxesNoArchive = $MailboxPlans | ForEach-Object {
-        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ MailboxPlan = $_; Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
-        Write-Host "Getting mailboxes without Online Archiving for plan $_"
+    $MailboxesNoArchive = foreach ($Plan in $MailboxPlans) {
+        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ MailboxPlan = $Plan; Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($null -eq $MailboxesNoArchive) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Online Archiving already enabled for all accounts' -sev Info
         } else {
             try {
-                $Request = $MailboxesNoArchive | ForEach-Object {
+                $Request = foreach ($Mailbox in $MailboxesNoArchive) {
                     @{
                         CmdletInput = @{
                             CmdletName = 'Enable-Mailbox'
-                            Parameters = @{ Identity = $_.UserPrincipalName; Archive = $true }
+                            Parameters = @{ Identity = $Mailbox.UserPrincipalName; Archive = $true }
                         }
                     }
                 }
 
                 $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
-                $BatchResults | ForEach-Object {
-                    if ($_.error) {
-                        $ErrorMessage = Get-NormalizedError -Message $_.error
-                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage"
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage" -sev Error
+                foreach ($Result in $BatchResults) {
+                    if ($Result.error) {
+                        $ErrorMessage = Get-NormalizedError -Message $Result.error
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($Result.Target). Error: $ErrorMessage" -sev Error
                     }
                 }
             } catch {
@@ -90,8 +86,16 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, ArchiveGuid
-        $stateReport = $filtered ? $filtered : $true
-        Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -FieldValue $stateReport -TenantFilter $Tenant
+        $stateReport = $filtered ? $filtered : @()
+
+        $CurrentValue = [PSCustomObject]@{
+            ArchiveNotEnabled = @($stateReport)
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            ArchiveNotEnabled = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

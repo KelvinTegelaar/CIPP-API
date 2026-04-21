@@ -47,16 +47,24 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
-        $Domains = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/admin/api/Domains/List' | Where-Object -Property Name -Like '*.onmicrosoft.com'
+        $DomainsResponse = New-GraphGetRequest -TenantID $Tenant -Uri 'https://graph.microsoft.com/beta/domains'
+        Write-Warning ($DomainsResponse | ConvertTo-Json -Depth 5)
+        $Domains = @($DomainsResponse | Where-Object { $_.id -like '*.onmicrosoft.com' } | ForEach-Object { $_.id })
+        Write-Information "Detected $($Domains.Count) MOERA domains: $($Domains -join ', ')"
 
-        $CurrentInfo = $Domains | ForEach-Object {
+        $CurrentInfo = foreach ($Domain in $Domains) {
             # Get current DNS records that matches _dmarc hostname and TXT type
-            $CurrentRecords = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri "https://admin.microsoft.com/admin/api/Domains/Records?domainName=$($_.Name)" | Select-Object -ExpandProperty DnsRecords | Where-Object { $_.HostName -eq $RecordModel.HostName -and $_.Type -eq $RecordModel.Type }
+            $RecordsResponse = New-GraphGetRequest -TenantID $Tenant -Uri "https://graph.microsoft.com/beta/domains/$($Domain)/serviceConfigurationRecords"
+            $AllRecords = @($RecordsResponse)
+            $CurrentRecords = $AllRecords | Where-Object {
+                $_.recordType -ieq 'Txt' -and ($_.label -ieq '_dmarc' -or $_.label -ieq "_dmarc.$($Domain)")
+            }
+            Write-Information "Found $($CurrentRecords.count) DMARC records for domain $($Domain)"
 
             if ($CurrentRecords.count -eq 0) {
                 #record not found, return a model with Match set to false
                 [PSCustomObject]@{
-                    DomainName    = $_.Name
+                    DomainName    = $Domain
                     Match         = $false
                     CurrentRecord = $null
                 }
@@ -64,31 +72,44 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
                 foreach ($CurrentRecord in $CurrentRecords) {
                     # Create variable matching the RecordModel used for comparison
                     $CurrentRecordModel = [PSCustomObject]@{
-                        HostName = $CurrentRecord.HostName
-                        TtlValue = $CurrentRecord.TtlValue
-                        Type     = $CurrentRecord.Type
-                        Value    = $CurrentRecord.Value
+                        HostName = '_dmarc'
+                        TtlValue = $CurrentRecord.ttl
+                        Type     = 'TXT'
+                        Value    = $CurrentRecord.text
                     }
 
                     # Compare the current record with the expected record model
                     if (!(Compare-Object -ReferenceObject $RecordModel -DifferenceObject $CurrentRecordModel -Property HostName, TtlValue, Type, Value)) {
                         [PSCustomObject]@{
-                            DomainName    = $_.Name
+                            DomainName    = $Domain
                             Match         = $true
-                            CurrentRecord = $CurrentRecord
+                            CurrentRecord = [PSCustomObject]@{
+                                HostName = '_dmarc'
+                                TtlValue = $CurrentRecord.ttl
+                                Type     = 'TXT'
+                                Value    = $CurrentRecord.text
+                            }
                         }
                     } else {
                         [PSCustomObject]@{
-                            DomainName    = $_.Name
+                            DomainName    = $Domain
                             Match         = $false
-                            CurrentRecord = $CurrentRecord
+                            CurrentRecord = [PSCustomObject]@{
+                                HostName = '_dmarc'
+                                TtlValue = $CurrentRecord.ttl
+                                Type     = 'TXT'
+                                Value    = $CurrentRecord.text
+                            }
                         }
                     }
                 }
             }
         }
-        # Check if match is true and there is only one DMARC record for the domain
-        $StateIsCorrect = $false -notin $CurrentInfo.Match -and $CurrentInfo.Count -eq 1
+        # Check if match is true and there is only one DMARC record for each domain
+        $StateIsCorrect = $false -notin $CurrentInfo.Match -and $CurrentInfo.Count -eq $Domains.Count
+
+        $CurrentValue = if ($StateIsCorrect) { [PSCustomObject]@{'state' = 'Configured correctly' } } else { [PSCustomObject]@{'MissingDMARC' = @($CurrentInfo | Where-Object -Property Match -EQ $false | Select-Object -ExpandProperty DomainName) } }
+        $ExpectedValue = [PSCustomObject]@{'state' = 'Configured correctly' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         if ($_.Exception.Message -like '*403*') {
@@ -98,29 +119,6 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
         }
         Write-LogMessage -API 'Standards' -tenant $tenant -message $Message -sev Error -LogData $ErrorMessage
         return $Message
-    }
-
-    if ($Settings.remediate -eq $true) {
-        if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DMARC record is already set for all MOERA (onmicrosoft.com) domains.' -sev Info
-        } else {
-            # Loop through each domain and set the DMARC record, existing misconfigured records and duplicates will be deleted
-            foreach ($Domain in ($CurrentInfo | Sort-Object -Property DomainName -Unique)) {
-                try {
-                    foreach ($Record in ($CurrentInfo | Where-Object -Property DomainName -EQ $Domain.DomainName)) {
-                        if ($Record.CurrentRecord) {
-                            New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body ($Record.CurrentRecord | ConvertTo-Json -Compress) -AddedHeaders @{'x-http-method-override' = 'Delete' }
-                            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted incorrect DMARC record for domain $($Domain.DomainName)" -sev Info
-                        }
-                        New-GraphPOSTRequest -tenantid $tenant -scope 'https://admin.microsoft.com/.default' -type 'PUT' -Uri "https://admin.microsoft.com/admin/api/Domains/Record?domainName=$($Domain.DomainName)" -Body (@{RecordModel = $RecordModel } | ConvertTo-Json -Compress)
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Set DMARC record for domain $($Domain.DomainName)" -sev Info
-                    }
-                } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DMARC record for domain $($Domain.DomainName): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-                }
-            }
-        }
     }
 
     if ($Settings.alert -eq $true) {
@@ -137,7 +135,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     }
 
     if ($Settings.report -eq $true) {
-        set-CIPPStandardsCompareField -FieldName 'standards.AddDMARCToMOERA' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AddDMARCToMOERA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AddDMARCToMOERA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
