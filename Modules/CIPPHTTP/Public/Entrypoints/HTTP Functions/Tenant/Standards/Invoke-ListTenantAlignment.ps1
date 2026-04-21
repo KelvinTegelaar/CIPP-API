@@ -67,6 +67,7 @@ function Invoke-ListTenantAlignment {
                         tenantFilter         = $Row.TenantFilter
                         templateName         = $TemplateName
                         templateId           = $TemplateId
+                        templateType         = $Row.standardType
                         standardType         = $FriendlyType
                         standardId           = $StandardId
                         standardName         = $ResolvedName
