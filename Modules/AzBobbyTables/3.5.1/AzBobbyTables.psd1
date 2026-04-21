@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.5.0'
+ModuleVersion = '3.5.1'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -110,7 +110,13 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = ''
+          ReleaseNotes = '## [3.5.1] - 2026-04-22
+
+### Changed
+
+- Share a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios
+
+'
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -132,4 +138,3 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
-
