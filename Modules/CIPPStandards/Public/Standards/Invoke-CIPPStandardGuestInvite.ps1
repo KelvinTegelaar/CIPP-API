@@ -16,6 +16,7 @@ function Invoke-CIPPStandardGuestInvite {
             "CISA (MS.AAD.18.1v1)"
             "EIDSCA.AP04"
             "EIDSCA.AP07"
+            "EIDSCAAP04"
         EXECUTIVETEXT
             Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.
         ADDEDCOMPONENT

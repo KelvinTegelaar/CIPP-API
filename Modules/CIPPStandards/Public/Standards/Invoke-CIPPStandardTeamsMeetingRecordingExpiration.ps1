@@ -16,7 +16,7 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
         EXECUTIVETEXT
             Automatically removes old Teams meeting recordings after a specified period to manage storage costs and comply with data retention policies. This helps organizations balance the need to preserve important meeting content with storage efficiency and regulatory compliance requirements.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.TeamsMeetingRecordingExpiration.ExpirationDays","label":"Recording Expiration Days (e.g., 365)","required":true}
+            {"type":"number","name":"standards.TeamsMeetingRecordingExpiration.ExpirationDays","label":"Recording Expiration Days (e.g., 365)","required":true,"defaultValue":120,"validators":{"min":{"value":-1,"message":"Minimum value is -1"},"max":{"value":99999,"message":"Maximum value is 99999"}}}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -24,6 +24,12 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
         POWERSHELLEQUIVALENT
             Set-CsTeamsMeetingPolicy -Identity Global -MeetingRecordingExpirationDays \<days\>
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -13,9 +13,26 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         CAT
             Defender Standards
         TAG
+            "ORCA100"
+            "ORCA101"
+            "ORCA102"
+            "ORCA103"
+            "ORCA104"
+            "ORCA123"
+            "ORCA139"
+            "ORCA140"
+            "ORCA141"
+            "ORCA142"
+            "ORCA143"
+            "ORCA224"
+            "ORCA231"
+            "ORCA241"
+            "CISAMSEXO141"
+            "CISAMSEXO142"
+            "CISAMSEXO143"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.SpamFilterPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Spam Filter Policy"}
-            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","defaultValue":7}
+            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","defaultValue":7,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":9,"message":"Maximum value is 9"}}}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":true,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
@@ -45,6 +62,12 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         POWERSHELLEQUIVALENT
             New-HostedContentFilterPolicy or Set-HostedContentFilterPolicy
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

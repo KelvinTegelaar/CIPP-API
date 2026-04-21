@@ -80,7 +80,8 @@ function Get-GraphRequestList {
         [string]$ReverseTenantLookupProperty = 'tenantId',
         [boolean]$AsApp = $false,
         [string]$Caller = 'Get-GraphRequestList',
-        [switch]$UseBatchExpand
+        [switch]$UseBatchExpand,
+        [switch]$RawJsonArray
     )
 
     $SingleTenantThreshold = 8000
@@ -423,6 +424,22 @@ function Get-GraphRequestList {
             }
         }
     } else {
+        if ($RawJsonArray.IsPresent) {
+            # Fast path: concatenate raw JSON strings without deserialization. This is much faster and uses less memory when no post-processing is needed, especially for large datasets.
+            $JsonParts = [System.Collections.Generic.List[string]]::new()
+            foreach ($Row in $Rows) {
+                if ($Row.Data) {
+                    $d = $Row.Data.Trim()
+                    if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {
+                        $JsonParts.Add($d.Substring(1, $d.Length - 2))
+                    } elseif ($d.Length -gt 0 -and $d -ne '[]') {
+                        $JsonParts.Add($d)
+                    }
+                }
+            }
+            return '[' + ($JsonParts -join ',') + ']'
+        }
+
         foreach ($Row in $Rows) {
             if ($Row.Data) {
                 try {

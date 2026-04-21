@@ -15,10 +15,13 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         TAG
             "CIS M365 5.0 (7.2.9)"
             "CISA (MS.SPO.1.5v1)"
+            "ZTNA21803"
+            "ZTNA21804"
+            "ZTNA21858"
         EXECUTIVETEXT
             Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
+            {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)","defaultValue":60,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":730,"message":"Maximum value is 730"}}}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -27,6 +30,13 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "SHAREPOINTWAC"
+            "SHAREPOINTSTANDARD"
+            "SHAREPOINTENTERPRISE"
+            "SHAREPOINTENTERPRISE_EDU"
+            "ONEDRIVE_BASIC"
+            "ONEDRIVE_ENTERPRISE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

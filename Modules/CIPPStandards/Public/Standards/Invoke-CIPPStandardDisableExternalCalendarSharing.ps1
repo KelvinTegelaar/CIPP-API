@@ -15,6 +15,8 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         TAG
             "CIS M365 5.0 (1.3.3)"
             "exo_individualsharing"
+            "ZTNA21803"
+            "CISAMSEXO62"
         EXECUTIVETEXT
             Prevents employees from sharing their calendars with external parties, protecting sensitive meeting information and internal schedules from unauthorized access. This security measure helps maintain confidentiality of business activities while still allowing internal collaboration.
         ADDEDCOMPONENT
@@ -26,6 +28,12 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
             Get-SharingPolicy \| Set-SharingPolicy -Enabled \$False
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

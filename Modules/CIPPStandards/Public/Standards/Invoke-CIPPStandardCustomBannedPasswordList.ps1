@@ -14,6 +14,14 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
             Entra (AAD) Standards
         TAG
             "CIS M365 5.0 (5.2.3.2)"
+            "ZTNA21848"
+            "ZTNA21849"
+            "ZTNA21850"
+            "EIDSCAPR01"
+            "EIDSCAPR02"
+            "EIDSCAPR03"
+            "EIDSCAPR05"
+            "EIDSCAPR06"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.CustomBannedPasswordList.BannedWords","label":"Banned Words","placeholder":"Banned words separated by commas or semicolons","required":true}
         IMPACT
@@ -24,6 +32,9 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
             Get-MgBetaDirectorySetting, New-MgBetaDirectorySetting, Update-MgBetaDirectorySetting
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -7,25 +7,33 @@ function Invoke-CIPPStandardGlobalQuarantineSettings {
     .SYNOPSIS
         (Label) Configure Global Quarantine Notification Settings
     .DESCRIPTION
-        (Helptext) Configures the Global Quarantine Policy settings including sender name, custom subject, disclaimer, from address, org branding, and notification frequency.
-        (DocsDescription) Configures the full set of Global Quarantine Policy settings for the tenant. This includes the quarantine notification sender display name, custom subject line, disclaimer text, the from address used for notifications, whether to use org branding, and how often notifications are sent to end users.
+        (Helptext) Configures the Global Quarantine Policy settings including sender name, custom subject, disclaimer, from address, and org branding.
+        (DocsDescription) Configures the Global Quarantine Policy branding and notification settings for the tenant. This includes the quarantine notification sender display name, custom subject line, disclaimer text, the from address used for notifications, and whether to use org branding. Notification frequency is managed separately by the GlobalQuarantineNotifications standard.
     .NOTES
         CAT
             Exchange Standards
         TAG
+        EXECUTIVETEXT
+            Ensures quarantine notification emails are branded and configured consistently, so end users receive clear, professional alerts about quarantined messages and know how to request release.
         ADDEDCOMPONENT
-            {"type":"textField","name":"standards.GlobalQuarantineSettings.SenderName","label":"Sender Display Name (e.g. Office365Alerts)","required":false}
+            {"type":"textField","name":"standards.GlobalQuarantineSettings.SenderName","label":"Sender Display Name (e.g. Contoso-Office365Alerts)","helperText":"Will be overridden if an active sender address with an existing display name is used.","required":false}
             {"type":"textField","name":"standards.GlobalQuarantineSettings.CustomSubject","label":"Subject","required":false}
-            {"type":"textField","name":"standards.GlobalQuarantineSettings.CustomDisclaimer","label":"Disclaimer (Max 200 characters)","required":false}
-            {"type":"textField","name":"standards.GlobalQuarantineSettings.FromAddress","label":"Specify Sender Address (must be an internal mailbox, e.g. security@contoso.com)","required":false}
-            {"type":"switch","name":"standards.GlobalQuarantineSettings.OrganizationBrandingEnabled","label":"Use Organization Branding (logo)"}
+            {"type":"textField","name":"standards.GlobalQuarantineSettings.CustomDisclaimer","label":"Disclaimer (max 200 characters)","required":false}
+            {"type":"textField","name":"standards.GlobalQuarantineSettings.FromAddress","label":"Specify Sender Address (must be an internal mailbox)","required":false}
+            {"type":"switch","name":"standards.GlobalQuarantineSettings.OrganizationBrandingEnabled","label":"Use Organization Branding (logo)","helperText":"Requires branding to be configured in the Microsoft 365 admin centre."}
         IMPACT
             Low Impact
         ADDEDDATE
-            2026-04-03
+            2026-04-02
         POWERSHELLEQUIVALENT
             Set-QuarantinePolicy (GlobalQuarantinePolicy)
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

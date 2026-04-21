@@ -10,6 +10,8 @@ function Invoke-CIPPStandardLegacyEmailReportAddins {
         (Helptext) Removes legacy Report Phishing and Report Message Outlook add-ins.
         (DocsDescription) Removes legacy Report Phishing and Report Message Outlook add-ins.
     .NOTES
+        DEPRECATED
+            False
         CAT
             Exchange Standards
         TAG

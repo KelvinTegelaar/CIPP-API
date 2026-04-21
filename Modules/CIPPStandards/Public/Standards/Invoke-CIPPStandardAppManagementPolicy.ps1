@@ -16,10 +16,10 @@ function Invoke-CIPPStandardAppManagementPolicy {
         EXECUTIVETEXT
             Enforces credential restrictions on application registrations and service principals to limit how secrets and certificates are created and how long they remain valid. This reduces the risk of long-lived or unmanaged credentials being used to access your tenant.
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Password Addition","name":"standards.AppManagementPolicy.passwordCredentialsPasswordAddition","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
-            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Custom Password","name":"standards.AppManagementPolicy.passwordCredentialsCustomPasswordAddition","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
-            {"type":"number","label":"Password Credentials Max Lifetime (Days)","name":"standards.AppManagementPolicy.passwordCredentialsMaxLifetime"}
-            {"type":"number","label":"Key Credentials Max Lifetime (Days)","name":"standards.AppManagementPolicy.keyCredentialsMaxLifetime"}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AppManagementPolicy.passwordCredentialsPasswordAddition","label":"Disable Password Addition","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AppManagementPolicy.passwordCredentialsCustomPasswordAddition","label":"Disable Custom Password","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"number","required":false,"name":"standards.AppManagementPolicy.passwordCredentialsMaxLifetime","label":"Password Credentials Max Lifetime (Days)"}
+            {"type":"number","required":false,"name":"standards.AppManagementPolicy.keyCredentialsMaxLifetime","label":"Key Credentials Max Lifetime (Days)"}
         IMPACT
             Medium Impact
         ADDEDDATE

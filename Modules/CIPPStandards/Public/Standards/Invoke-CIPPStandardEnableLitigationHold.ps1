@@ -16,7 +16,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
         EXECUTIVETEXT
             Preserves all email content for legal and compliance purposes by preventing permanent deletion of emails, even when users attempt to delete them. This is essential for organizations subject to legal discovery requirements or regulatory compliance mandates.
         ADDEDCOMPONENT
-            {"type":"textField","name":"standards.EnableLitigationHold.days","required":false,"label":"Days to apply for litigation hold"}
+            {"type":"textField","name":"standards.EnableLitigationHold.days","required":false,"label":"Days to apply for litigation hold","helperText":"Number of days to apply litigation hold for. If left blank or set to Unlimited, litigation hold will be applied indefinitely."}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -24,6 +24,12 @@ function Invoke-CIPPStandardEnableLitigationHold {
         POWERSHELLEQUIVALENT
             Set-Mailbox -LitigationHoldEnabled \$true
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

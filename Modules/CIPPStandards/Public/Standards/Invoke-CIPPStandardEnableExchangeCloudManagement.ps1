@@ -5,29 +5,32 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
     .COMPONENT
         (APIName) EnableExchangeCloudManagement
     .SYNOPSIS
-        (Label) Configure Exchange Cloud Management for Remote Mailboxes
+        (Label) Configure Exchange Cloud Management for Remote/On-Premises Mailboxes
     .DESCRIPTION
-        (Helptext) Configures cloud-based management of Exchange attributes for directory-synced users with remote mailboxes in Exchange Online. This allows you to enable or disable management of Exchange attributes directly in the cloud without requiring an on-premises Exchange server.
-        (DocsDescription) Configures the IsExchangeCloudManaged property for mailboxes, allowing Exchange attributes (aliases, mailbox flags, custom attributes, etc.) to be managed directly in Exchange Online or revert back to on-premises management. This feature helps organizations retire their last on-premises Exchange server in hybrid deployments while maintaining the ability to manage recipient attributes. Identity attributes (names, UPN) remain managed on-premises via Active Directory.
+        (Helptext) Configures cloud-based management of Exchange attributes for directory-synced users with remote mailboxes in Exchange Online. This allows you to enable or disable management of Exchange attributes directly in the cloud without requiring an on-premises Exchange server. More information can be found [here](https://learn.microsoft.com/da-dk/exchange/hybrid-deployment/enable-exchange-attributes-cloud-management).
+        (DocsDescription) Configures the IsExchangeCloudManaged property for mailboxes, allowing Exchange attributes (aliases, mailbox flags, custom attributes, etc.) to be managed directly in Exchange Online or revert back to on-premises management. This feature helps organizations retire their last on-premises Exchange server in hybrid deployments while maintaining the ability to manage recipient attributes. Identity attributes (names, UPN) remain managed on-premises via Active Directory. More information can be found [here](https://learn.microsoft.com/da-dk/exchange/hybrid-deployment/enable-exchange-attributes-cloud-management).
     .NOTES
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
-            "ExchangeOnline"
-            "HybridDeployment"
         EXECUTIVETEXT
             Configures cloud-based management of Exchange mailbox attributes for hybrid organizations. When enabled, eliminates the dependency on on-premises Exchange servers for attribute management. This modernizes email administration, reduces infrastructure complexity, and allows direct management of mailbox properties through cloud portals and PowerShell. When disabled, returns management to on-premises Exchange servers.
         ADDEDCOMPONENT
-            {"type": "select", "multiple": false, "name": "standards.EnableExchangeCloudManagement.state", "label": "Cloud Management State", "options": [{"label": "Enabled", "value": "enabled"}, {"label": "Disabled", "value": "disabled"}]}
+            {"type":"autoComplete","multiple":false,"name":"standards.EnableExchangeCloudManagement.state","label":"Cloud Management State","options":[{"label":"Cloud Management","value":true},{"label":"On-Premises Management","value":false}]}
         IMPACT
             Low Impact
         ADDEDDATE
-            2025-11-14
+            2026-03-28
         POWERSHELLEQUIVALENT
             Set-Mailbox -Identity user@domain.com -IsExchangeCloudManaged \$true or \$false
         RECOMMENDEDBY
             "Microsoft"
+            "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

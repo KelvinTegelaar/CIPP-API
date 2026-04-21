@@ -22,6 +22,11 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             "EIDSCA.CR04"
             "Essential 8 (1507)"
             "NIST CSF 2.0 (PR.AA-05)"
+            "ZTNA21869"
+            "EIDSCACR01"
+            "EIDSCACR02"
+            "EIDSCACR03"
+            "EIDSCACR04"
         EXECUTIVETEXT
             Establishes a formal approval process where employees can request access to business applications that require administrative review. This balances security with productivity by allowing controlled access to necessary tools while preventing unauthorized application installations.
         ADDEDCOMPONENT

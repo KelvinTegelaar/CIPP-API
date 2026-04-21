@@ -25,6 +25,12 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
             Set-CsTeamsMessagingPolicy -Identity Global -UseB2BInvitesToAddExternalUsers \$false/\$true
         RECOMMENDEDBY
             "CIPP"
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

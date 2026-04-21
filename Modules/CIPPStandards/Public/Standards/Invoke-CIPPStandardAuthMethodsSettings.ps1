@@ -16,6 +16,8 @@ function Invoke-CIPPStandardAuthMethodsSettings {
             "EIDSCA.AG01"
             "EIDSCA.AG02"
             "EIDSCA.AG03"
+            "EIDSCAAG02"
+            "EIDSCAAG03"
         EXECUTIVETEXT
             Configures security settings that allow users to report suspicious login attempts and manages how the system handles authentication credentials. This enhances overall security by enabling early detection of potential security threats and optimizing authentication processes.
         ADDEDCOMPONENT

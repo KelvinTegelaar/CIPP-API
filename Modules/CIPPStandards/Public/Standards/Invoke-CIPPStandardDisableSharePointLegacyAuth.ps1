@@ -18,6 +18,8 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
             "spo_legacy_auth"
             "CISA (MS.AAD.3.1v1)"
             "NIST CSF 2.0 (PR.IR-01)"
+            "ZTNA21776"
+            "ZTNA21797"
         EXECUTIVETEXT
             Disables outdated authentication methods for SharePoint access, forcing applications and users to use modern, more secure authentication protocols. This significantly improves security by eliminating vulnerable authentication pathways while requiring updates to older applications.
         ADDEDCOMPONENT
@@ -30,6 +32,13 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "SHAREPOINTWAC"
+            "SHAREPOINTSTANDARD"
+            "SHAREPOINTENTERPRISE"
+            "SHAREPOINTENTERPRISE_EDU"
+            "ONEDRIVE_BASIC"
+            "ONEDRIVE_ENTERPRISE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
