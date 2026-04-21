@@ -122,11 +122,36 @@ function Invoke-ListGraphRequest {
 
     $Metadata = $GraphRequestParams
 
+    # Use raw JSON passthrough for AllTenants cached results when no post-processing is needed.
+    $UseRawJson = $Request.Query.TenantFilter -eq 'AllTenants' -and
+                  -not $Request.Query.ListProperties -and
+                  -not $Request.Query.Sort -and
+                  -not $Request.Query.QueueId
+
     try {
+        if ($UseRawJson) {
+            $GraphRequestParams.RawJsonArray = $true
+        }
         $Results = Get-GraphRequestList @GraphRequestParams
 
         if ($script:LastGraphResponseHeaders) {
             $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        }
+
+        # RawJsonArray returns a JSON string directly — skip object-level processing
+        if ($UseRawJson -and $Results -is [string] -and $Results.StartsWith('[')) {
+            if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+                $Metadata.ColdStart = $true
+            }
+            $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+            $GraphRequestData = '{"Results":' + $Results + ',"Metadata":' + $MetadataJson + '}'
+            $StatusCode = [HttpStatusCode]::OK
+
+            return ([HttpResponseContext]@{
+                    StatusCode  = $StatusCode
+                    ContentType = 'application/json'
+                    Body        = $GraphRequestData
+                })
         }
 
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
