@@ -128,6 +128,8 @@ function Invoke-CIPPRestMethod {
             $BodyString = ''
         } elseif ($Body -is [string]) {
             $BodyString = $Body
+            # Match Invoke-RestMethod default: string POST body → form-encoded
+            if ($null -eq $ContentType) { $ContentType = 'application/x-www-form-urlencoded' }
         } elseif (
             ($Body -is [System.Collections.IDictionary]) -and
             ($null -eq $ContentType -or $ContentType -like 'application/x-www-form-urlencoded*')
