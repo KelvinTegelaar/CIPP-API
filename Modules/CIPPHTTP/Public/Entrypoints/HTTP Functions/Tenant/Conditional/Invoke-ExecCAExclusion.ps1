@@ -54,7 +54,7 @@ function Invoke-ExecCAExclusion {
         } else {
             $VacationGroup = $VacationGroups | Select-Object -First 1
             if ($VacationGroups.Count -gt 1) {
-                $DuplicateGroupWarning = "Failed to find a unique vacation group for this policy. Multiple groups found, using group $($VacationGroup.id)."
+                $DuplicateGroupWarning = "Failed to find a unique vacation group for policy '$($Policy.displayName)'. Multiple groups found, using group $($VacationGroup.id)."
                 Write-Warning "Multiple vacation groups found for policy '$($Policy.displayName)'. Using group $($VacationGroup.id)."
             }
             Write-Information "Using existing vacation group: $($VacationGroup.displayName)"
@@ -130,7 +130,7 @@ function Invoke-ExecCAExclusion {
                 }
                 Add-CIPPScheduledTask -Task $AuditRemoveTask -hidden $true
             }
-            $Results = @("Successfully added vacation mode schedule for $Username.")
+            $Results = @("Successfully added vacation mode schedule for $Username on policy '$PolicyName'.")
             if ($DuplicateGroupWarning) {
                 $Results += $DuplicateGroupWarning
             }
@@ -151,7 +151,8 @@ function Invoke-ExecCAExclusion {
     } catch {
         Write-Warning "Failed to perform exclusion for $Username : $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
-        $Results = @("Failed to perform exclusion for $Username : $($_.Exception.Message)")
+        $PolicyLabel = if ($PolicyName) { " on policy '$PolicyName'" } else { '' }
+        $Results = @("Failed to perform exclusion for $Username${PolicyLabel}: $($_.Exception.Message)")
         if ($DuplicateGroupWarning) {
             $Results += $DuplicateGroupWarning
         }
