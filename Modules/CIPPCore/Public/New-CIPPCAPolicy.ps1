@@ -61,7 +61,8 @@ function New-CIPPCAPolicy {
                         $GroupIds.Add($NewGroup.GroupId)
                     }
                 } else {
-                    Write-Warning "Group $_ not found in the tenant"
+                    Write-Warning "Group $_ not found in the tenant and CreateGroups is disabled"
+                    throw "Group '$_' not found in tenant $TenantFilter. Enable 'Create groups if they do not exist' or create the group manually before deploying this policy."
                 }
             }
         }
@@ -218,12 +219,14 @@ function New-CIPPCAPolicy {
     }
 
     #for each of the locations, check if they exist, if not create them. These are in $JSONobj.LocationInfo
+    $NewLocationsCreated = $false
     $LocationLookupTable = foreach ($locations in $JSONobj.LocationInfo) {
         if (!$locations) { continue }
         foreach ($location in $locations) {
             if (!$location.displayName) { continue }
             # Use cached named locations instead of fetching each time
-            if ($Location.displayName -in $AllNamedLocations.displayName) {
+            $locationExistsInCache = $Location.displayName -in $AllNamedLocations.displayName
+            if ($locationExistsInCache) {
                 $ExistingLocation = @($AllNamedLocations | Where-Object -Property displayName -EQ $Location.displayName)
                 if ($ExistingLocation.Count -gt 1) {
                     Write-Warning "Multiple named locations found with display name '$($Location.displayName)'. Using the first match: $($ExistingLocation[0].id). IDs found: $($ExistingLocation.id -join ', ')"
@@ -240,18 +243,21 @@ function New-CIPPCAPolicy {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-Information "Error updating named location: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
-                        Write-Warning "Failed to update location $($location.displayName): $($ErrorMessage.NormalizedError)"
-                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Failed to update existing Named Location: $($location.displayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$($location.displayName)' (id: $($ExistingLocation.id)) could not be updated — it may have been deleted. Will attempt to create it. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warn' -LogData $ErrorMessage
+                        $locationExistsInCache = $false
                     }
                 } else {
                     Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
                 }
-                [pscustomobject]@{
-                    id         = $ExistingLocation.id
-                    name       = $ExistingLocation.displayName
-                    templateId = $location.id
+                if ($locationExistsInCache) {
+                    [pscustomobject]@{
+                        id         = $ExistingLocation.id
+                        name       = $ExistingLocation.displayName
+                        templateId = $location.id
+                    }
                 }
-            } else {
+            }
+            if (-not $locationExistsInCache) {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $LocationBody = $location | Select-Object * -ExcludeProperty id
                 Remove-ODataProperties -Object $LocationBody
@@ -279,6 +285,7 @@ function New-CIPPCAPolicy {
                     if (!$LocationRequest -or !$LocationRequest.id) {
                         Write-Warning "Location created but could not verify availability after $MaxRetryCount attempts. Proceeding anyway."
                     }
+                    $NewLocationsCreated = $true
                     Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
@@ -474,10 +481,24 @@ function New-CIPPCAPolicy {
             }
         } else {
             Write-Information 'Creating new policy'
-            if ($JSOObj.GrantControls.authenticationStrength.policyType -or $JSONobj.$JSONobj.LocationInfo) {
-                Start-Sleep 3
-            }
-            $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -type POST -body $RawJSON -asApp $true -ScheduleRetry $true
+            $PolicyCreateAttempt = 0
+            $PolicyCreateMaxAttempts = 2
+            $PolicyCreated = $false
+            do {
+                $PolicyCreateAttempt++
+                try {
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -type POST -body $RawJSON -asApp $true -ScheduleRetry $true
+                    $PolicyCreated = $true
+                } catch {
+                    $PolicyCreateError = Get-CippException -Exception $_
+                    if ($PolicyCreateError.NormalizedError -match '1040' -and $NewLocationsCreated -and $PolicyCreateAttempt -lt $PolicyCreateMaxAttempts) {
+                        Write-Information "Named location not yet propagated (attempt $PolicyCreateAttempt/$PolicyCreateMaxAttempts), retrying in 5 seconds..."
+                        Start-Sleep -Seconds 5
+                    } else {
+                        throw $_
+                    }
+                }
+            } while (-not $PolicyCreated -and $PolicyCreateAttempt -lt $PolicyCreateMaxAttempts)
             Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Added Conditional Access Policy $($JSONobj.displayName)" -Sev 'Info'
             return "Created policy $($JSONobj.displayName) for $TenantFilter"
         }

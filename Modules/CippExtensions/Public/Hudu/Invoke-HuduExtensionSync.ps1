@@ -33,8 +33,7 @@ function Invoke-HuduExtensionSync {
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
 
         # Import license mapping
-        Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
-        $LicTable = Import-Csv ConversionTable.csv
+        $LicTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
 
         $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
 
@@ -67,7 +66,7 @@ function Invoke-HuduExtensionSync {
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
                 if ($PeopleLayout.id) {
                     $PeopleArray = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
-                    $People = [System.Collections.Generic.List[object]]::new($PeopleArray)
+                    $People = [System.Collections.Generic.List[object]]::new([object[]]@($PeopleArray))
                 } else {
                     $CreateUsers = $false
                     $People = [System.Collections.Generic.List[object]]::new()
@@ -92,7 +91,7 @@ function Invoke-HuduExtensionSync {
                 $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
                 if ($DesktopsLayout.id) {
                     $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
-                    $HuduDevices = [System.Collections.Generic.List[object]]::new($HuduDesktopDevices)
+                    $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@($HuduDesktopDevices))
                 } else {
                     $CreateDevices = $false
                     $HuduDevices = [System.Collections.Generic.List[object]]::new()

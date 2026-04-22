@@ -10,8 +10,6 @@ function Add-CIPPApplicationPermission {
         $RequiredResourceAccess = 'CIPPDefaults'
     }
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
-
-        Set-Location (Get-Item $PSScriptRoot).FullName
         $Permissions = Get-CippSamPermissions -NoDiff
         $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
 
@@ -60,8 +58,13 @@ function Add-CIPPApplicationPermission {
     Write-Information "Adding application permissions to application $ApplicationId in tenant $TenantFilter"
 
     $ServicePrincipalList = [System.Collections.Generic.List[object]]::new()
-    $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
-    foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
+    $CachedSPs = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals'
+    if ($CachedSPs) {
+        foreach ($SP in $CachedSPs) { $ServicePrincipalList.Add($SP) }
+    } else {
+        $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
+        foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
+    }
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     if (!$ourSVCPrincipal) {
         #Our Service Principal isn't available yet. We do a sleep and reexecute after 3 seconds.

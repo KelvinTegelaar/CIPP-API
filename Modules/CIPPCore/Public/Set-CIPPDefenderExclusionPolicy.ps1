@@ -8,7 +8,8 @@ function Set-CIPPDefenderExclusionPolicy {
         [string]$TenantFilter,
         $DefenderExclusions,
         $Headers,
-        [string]$APIName
+        [string]$APIName,
+        [switch]$TemplateOnly
     )
 
     $ExclusionAssignTo = $DefenderExclusions.AssignTo
@@ -64,7 +65,7 @@ function Set-CIPPDefenderExclusionPolicy {
     }
 
     if ($ExclusionSettings.Count -gt 0) {
-        $ExclusionBody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+        $ExclusionBodyObj = @{
             name              = 'Default AV Exclusion Policy'
             displayName       = 'Default AV Exclusion Policy'
             settings          = @($ExclusionSettings)
@@ -77,6 +78,8 @@ function Set-CIPPDefenderExclusionPolicy {
                 templateDisplayVersion = 'Version 1'
             }
         }
+        if ($TemplateOnly) { return $ExclusionBodyObj }
+        $ExclusionBody = ConvertTo-Json -Depth 15 -Compress -InputObject $ExclusionBodyObj
         $CheckExistingExclusion = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter
         if ('Default AV Exclusion Policy' -in $CheckExistingExclusion.Name) {
             "$($TenantFilter): Exclusion Policy already exists. Skipping"

@@ -77,9 +77,9 @@ function Set-CIPPVacationOOO {
             $result = Set-CIPPOutOfOffice @SplatParams
             $Results.Add($result)
         } catch {
-            $err = (Get-CippException -Exception $_).NormalizedError
-            $Results.Add("Failed to set OOO for ${upn}: $err")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed OOO for ${upn}: $err" -Sev Error
+            $err = Get-CippException -Exception $_
+            $Results.Add("Failed to set OOO for ${upn}: $($err.NormalizedError)")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed OOO for ${upn}: $($err.NormalizedError)" -Sev Error -LogData $err
         }
     }
     return $Results
