@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21874 {
     #Trusted
     try {
         # Get B2B Management Policy from cache
-        $B2BManagementPolicyObject = New-CIPPDbRequest -TenantFilter $Tenant -Type 'B2BManagementPolicy'
+        $B2BManagementPolicyObject = Get-CIPPTestData -TenantFilter $Tenant -Type 'B2BManagementPolicy'
 
         if (-not $B2BManagementPolicyObject) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Guest access is limited to approved tenants' -UserImpact 'Medium' -ImplementationEffort 'High' -Category 'External collaboration'

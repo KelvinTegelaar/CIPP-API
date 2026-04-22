@@ -6,7 +6,7 @@ function Invoke-CippTestGenericTest003 {
     param($Tenant)
 
     try {
-        $LicenseData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'LicenseOverview'
+        $LicenseData = Get-CIPPTestData -TenantFilter $Tenant -Type 'LicenseOverview'
 
         if (-not $LicenseData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest003' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No license data found in the reporting database. Please sync the License Overview cache first.' -Risk 'Informational' -Name 'License Renewal Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

@@ -6,7 +6,7 @@ function Invoke-CippTestORCA113 {
     param($Tenant)
 
     try {
-        $SafeLinksPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
+        $SafeLinksPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
 
         if (-not $SafeLinksPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA113' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'AllowClickThrough is disabled in Safe Links policies' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Links'

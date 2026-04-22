@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO61 {
     )
 
     try {
-        $SharingPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSharingPolicy'
+        $SharingPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSharingPolicy'
 
         if (-not $SharingPolicies) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSharingPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Contact folders SHALL NOT be shared with all domains' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Data Protection' -TestId 'CISAMSEXO61' -TenantFilter $Tenant

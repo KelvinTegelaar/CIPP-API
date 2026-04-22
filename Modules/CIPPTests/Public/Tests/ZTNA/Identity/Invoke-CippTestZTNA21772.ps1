@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21772 {
     param($Tenant)
     #tested
     try {
-        $Apps = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Apps'
-        $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
+        $Apps = Get-CIPPTestData -TenantFilter $Tenant -Type 'Apps'
+        $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
 
         if (-not $Apps -and -not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21772' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Applications do not have client secrets configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'

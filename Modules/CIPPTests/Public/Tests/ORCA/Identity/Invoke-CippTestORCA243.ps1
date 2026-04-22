@@ -6,7 +6,7 @@ function Invoke-CippTestORCA243 {
     param($Tenant)
 
     try {
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
 
         if (-not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA243' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'Medium' -Name 'Authenticated Receive Chain for non-EOP domains' -UserImpact 'Medium' -ImplementationEffort 'High' -Category 'Configuration'

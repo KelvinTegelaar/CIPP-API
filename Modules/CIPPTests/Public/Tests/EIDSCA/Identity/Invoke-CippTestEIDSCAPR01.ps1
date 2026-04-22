@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCAPR01 {
     param($Tenant)
 
     try {
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAPR01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Password Rule Settings - Password Protection Mode' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Password Policy'

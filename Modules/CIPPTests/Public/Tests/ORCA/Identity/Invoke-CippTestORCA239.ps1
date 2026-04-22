@@ -6,8 +6,8 @@ function Invoke-CippTestORCA239 {
     param($Tenant)
 
     try {
-        $AntiPhishPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
-        $ContentFilterPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
+        $AntiPhishPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
+        $ContentFilterPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $AntiPhishPolicies -and -not $ContentFilterPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA239' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No policies found in database.' -Risk 'High' -Name 'No exclusions for built-in protection' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Configuration'

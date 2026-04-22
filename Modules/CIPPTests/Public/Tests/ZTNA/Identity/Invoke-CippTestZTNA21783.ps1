@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21783 {
     param($Tenant)
     #tested
     try {
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
 
         if (-not $CAPolicies -or -not $Roles) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21783' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Privileged Microsoft Entra built-in roles are targeted with Conditional Access policies to enforce phishing-resistant methods' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'

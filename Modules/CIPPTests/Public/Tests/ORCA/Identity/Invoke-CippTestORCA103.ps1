@@ -6,7 +6,7 @@ function Invoke-CippTestORCA103 {
     param($Tenant)
 
     try {
-        $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedOutboundSpamFilterPolicy'
+        $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoHostedOutboundSpamFilterPolicy'
 
         if (-not $Policies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA103' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Outbound spam filter policy settings configured' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Anti-Spam'

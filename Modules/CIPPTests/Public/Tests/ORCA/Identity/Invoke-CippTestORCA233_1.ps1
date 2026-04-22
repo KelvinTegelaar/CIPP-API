@@ -6,7 +6,7 @@ function Invoke-CippTestORCA233_1 {
     param($Tenant)
 
     try {
-        $OrgConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
 
         if (-not $OrgConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA233_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No organization config found in database.' -Risk 'Medium' -Name 'Enhanced filtering on default connectors' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Configuration'

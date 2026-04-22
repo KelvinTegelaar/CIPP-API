@@ -6,7 +6,7 @@ function Invoke-CippTestGenericTest009 {
     param($Tenant)
 
     try {
-        $SecureScoreData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'SecureScore'
+        $SecureScoreData = Get-CIPPTestData -TenantFilter $Tenant -Type 'SecureScore'
 
         if (-not $SecureScoreData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest009' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Secure Score data found in the reporting database. Please sync the Secure Score cache first.' -Risk 'Informational' -Name 'Secure Score Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

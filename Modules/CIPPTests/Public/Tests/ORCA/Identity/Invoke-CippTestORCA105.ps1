@@ -6,7 +6,7 @@ function Invoke-CippTestORCA105 {
     param($Tenant)
 
     try {
-        $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
+        $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
 
         if (-not $Policies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA105' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Safe Links Synchronous URL detonation is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Links'

@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21809 {
     param($Tenant)
     #Tested
     try {
-        $result = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
+        $result = Get-CIPPTestData -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 
         if (-not $result) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21809' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Admin consent workflow is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application Management'

@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO121 {
     )
 
     try {
-        $AllowBlockList = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoTenantAllowBlockList'
+        $AllowBlockList = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoTenantAllowBlockList'
 
         if ($null -eq $AllowBlockList) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoTenantAllowBlockList cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Allowed sender lists SHOULD NOT be used' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO121' -TenantFilter $Tenant

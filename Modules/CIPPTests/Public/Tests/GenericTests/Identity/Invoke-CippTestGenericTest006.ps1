@@ -6,7 +6,7 @@ function Invoke-CippTestGenericTest006 {
     param($Tenant)
 
     try {
-        $MFAData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'MFAState'
+        $MFAData = Get-CIPPTestData -TenantFilter $Tenant -Type 'MFAState'
 
         if (-not $MFAData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest006' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No MFA state data found in the reporting database. Please sync the MFA State cache first.' -Risk 'Informational' -Name 'User MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

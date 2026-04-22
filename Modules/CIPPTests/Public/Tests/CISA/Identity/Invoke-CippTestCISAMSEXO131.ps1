@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO131 {
     )
 
     try {
-        $OrgConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
 
         if (-not $OrgConfig) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoOrganizationConfig cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Mailbox auditing SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO131' -TenantFilter $Tenant

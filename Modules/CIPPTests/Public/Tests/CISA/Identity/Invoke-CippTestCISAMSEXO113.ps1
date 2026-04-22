@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO113 {
     )
 
     try {
-        $PresetPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
+        $PresetPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
 
         if (-not $PresetPolicies) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Mailbox intelligence SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO113' -TenantFilter $Tenant

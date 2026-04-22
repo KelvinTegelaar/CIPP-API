@@ -116,7 +116,7 @@ Customer provides their own refresh token, stored in Key Vault per-tenant (keyed
 
 ## Token caching
 
-Tokens are cached in `[CIPP.CIPPTokenCache]` — a process-wide `ConcurrentDictionary` backed by a static .NET class in `Shared/CIPPHttp/CIPPHttpClient.cs`.
+Tokens are cached in `[CIPP.CIPPTokenCache]` — a process-wide `ConcurrentDictionary` backed by a static .NET class in `Shared/CIPPSharp/CIPPRestClient.cs`.
 
 - **Process-wide**: Shared across all runspaces in the worker process (unlike the old `$script:AccessTokens` which was per-runspace)
 - **Cache key**: Built via `[CIPP.CIPPTokenCache]::BuildKey($tenantid, $scope, $asApp, $clientId, $grantType)`

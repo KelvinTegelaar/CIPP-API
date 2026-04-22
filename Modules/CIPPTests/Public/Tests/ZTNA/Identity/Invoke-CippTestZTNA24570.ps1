@@ -19,7 +19,7 @@ function Invoke-CippTestZTNA24570 {
     #Tested
     try {
         # Get organization info to check if hybrid identity is enabled
-        $OrgInfo = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'
+        $OrgInfo = Get-CIPPTestData -TenantFilter $Tenant -Type 'Organization'
 
         if (-not $OrgInfo) {
             $TestParams = @{
@@ -59,7 +59,7 @@ function Invoke-CippTestZTNA24570 {
         }
 
         # Get roles to find Directory Synchronization Accounts role
-        $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
 
         if (-not $Roles) {
             $TestParams = @{

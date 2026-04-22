@@ -19,7 +19,7 @@ function Invoke-CippTestZTNA21941 {
     #Tested
     try {
         # Get CA policies from cache
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
             $TestParams = @{

@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21807 {
     param($Tenant)
     #Tested
     try {
-        $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
+        $AuthPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21807' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Creating new applications and service principals is restricted to privileged users' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application Management'

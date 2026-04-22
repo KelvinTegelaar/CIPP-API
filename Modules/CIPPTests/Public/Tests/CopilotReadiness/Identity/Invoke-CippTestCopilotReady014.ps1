@@ -11,7 +11,7 @@ function Invoke-CippTestCopilotReady014 {
     # Purview/AIP license is present (required to run compliance PS commands).
 
     try {
-        $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DlpCompliancePolicies'
+        $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'DlpCompliancePolicies'
 
         if ($null -eq $Policies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady014' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No DLP policy data found in database. The tenant may not have a Microsoft Purview/AIP license (M365 Business Premium, E3, or E5), or data collection may not yet have run.' -Risk 'Medium' -Name 'Tenant has enabled DLP policies configured' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

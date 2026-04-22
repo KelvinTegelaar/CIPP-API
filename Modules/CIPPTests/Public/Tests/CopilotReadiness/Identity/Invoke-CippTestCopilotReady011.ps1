@@ -11,7 +11,7 @@ function Invoke-CippTestCopilotReady011 {
     # Skipped if the tenant does not have Azure AD Premium (no CA capability).
 
     try {
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady011' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Conditional Access policy data found in database. The tenant may not have Azure AD Premium, or data collection may not yet have run.' -Risk 'High' -Name 'Tenant has enabled Conditional Access policies' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

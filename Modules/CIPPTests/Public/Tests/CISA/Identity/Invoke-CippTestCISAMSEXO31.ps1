@@ -16,8 +16,8 @@ function Invoke-CippTestCISAMSEXO31 {
     )
 
     try {
-        $DkimConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoDkimSigningConfig'
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $DkimConfigs = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoDkimSigningConfig'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
 
         if (-not $DkimConfigs -or -not $AcceptedDomains) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'Required cache (ExoDkimSigningConfig or ExoAcceptedDomains) not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'DKIM SHOULD be enabled for all domains' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Authentication' -TestId 'CISAMSEXO31' -TenantFilter $Tenant

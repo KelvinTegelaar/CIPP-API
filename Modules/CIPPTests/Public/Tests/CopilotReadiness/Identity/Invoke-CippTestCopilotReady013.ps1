@@ -11,7 +11,7 @@ function Invoke-CippTestCopilotReady013 {
     # classification framework in place. Skipped if no Purview/AIP license is present.
 
     try {
-        $Labels = New-CIPPDbRequest -TenantFilter $Tenant -Type 'SensitivityLabels'
+        $Labels = Get-CIPPTestData -TenantFilter $Tenant -Type 'SensitivityLabels'
 
         if ($null -eq $Labels) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady013' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No sensitivity label data found in database. The tenant may not have a Microsoft Purview/AIP license (M365 Business Premium, E3, or E5), or data collection may not yet have run.' -Risk 'Medium' -Name 'Tenant has sensitivity labels configured in Purview' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

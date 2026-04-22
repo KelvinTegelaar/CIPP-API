@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21847 {
     #Tested
     try {
         # Check if tenant has on-premises sync
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Organization'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Organization'
 
         if (-not $Settings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Password protection for on-premises is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

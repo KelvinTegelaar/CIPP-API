@@ -18,7 +18,7 @@ function Invoke-CippTestZTNA22124 {
     #Tested
     try {
         # Get directory recommendations from cache
-        $Recommendations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DirectoryRecommendations'
+        $Recommendations = Get-CIPPTestData -TenantFilter $Tenant -Type 'DirectoryRecommendations'
 
         if (-not $Recommendations) {
             $TestParams = @{

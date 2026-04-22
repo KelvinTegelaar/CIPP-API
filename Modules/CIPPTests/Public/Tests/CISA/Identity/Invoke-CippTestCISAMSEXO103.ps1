@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO103 {
     )
 
     try {
-        $MalwarePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
+        $MalwarePolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
 
         if (-not $MalwarePolicies) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoMalwareFilterPolicies cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Email scanning SHALL be capable of reviewing emails after delivery' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO103' -TenantFilter $Tenant

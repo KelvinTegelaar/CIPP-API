@@ -20,9 +20,9 @@ if ($IsWindows) {
     }
 }
 
-$CIPPHttpDllPath = Join-Path $CippRoot 'Shared\CIPPHttp\bin\CIPPHttp.dll'
-if ((Test-Path $CIPPHttpDllPath) -and !('CIPP.CIPPRestClient' -as [type])) {
-    [Reflection.Assembly]::LoadFile($CIPPHttpDllPath) | Out-Null
+$CIPPSharpDllPath = Join-Path $CippRoot 'Shared\CIPPSharp\bin\CIPPSharp.dll'
+if ((Test-Path $CIPPSharpDllPath) -and !('CIPP.CIPPRestClient' -as [type])) {
+    [Reflection.Assembly]::LoadFile($CIPPSharpDllPath) | Out-Null
 }
 
 # Remove previously loaded modules to force reloading if new code changes were made

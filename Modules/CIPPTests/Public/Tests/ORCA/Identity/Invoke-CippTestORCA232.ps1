@@ -6,8 +6,8 @@ function Invoke-CippTestORCA232 {
     param($Tenant)
 
     try {
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
-        $MalwarePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $MalwarePolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
 
         if (-not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA232' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'High' -Name 'Each domain has a malware filter policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Malware'

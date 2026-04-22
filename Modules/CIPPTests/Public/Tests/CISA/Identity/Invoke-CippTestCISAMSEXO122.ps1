@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO122 {
     )
 
     try {
-        $SpamPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
+        $SpamPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $SpamPolicies) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoHostedContentFilterPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Safe lists SHOULD NOT be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO122' -TenantFilter $Tenant

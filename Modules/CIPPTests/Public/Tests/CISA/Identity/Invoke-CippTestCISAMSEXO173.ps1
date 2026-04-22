@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO173 {
     )
 
     try {
-        $AuditConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
+        $AuditConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
 
         if (-not $AuditConfig) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Audit logs SHALL be maintained for at least 1 year' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO173' -TenantFilter $Tenant

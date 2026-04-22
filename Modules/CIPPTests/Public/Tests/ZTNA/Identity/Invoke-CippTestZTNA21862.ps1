@@ -9,8 +9,8 @@ function Invoke-CippTestZTNA21862 {
     #Tested
     try {
         # Get risky service principals and risk detections from cache
-        $UntriagedRiskyPrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskyServicePrincipals' | Where-Object { $_.riskState -eq 'atRisk' }
-        $ServicePrincipalRiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
+        $UntriagedRiskyPrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'RiskyServicePrincipals' | Where-Object { $_.riskState -eq 'atRisk' }
+        $ServicePrincipalRiskDetections = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
         $UntriagedRiskDetections = $ServicePrincipalRiskDetections | Where-Object { $_.riskState -eq 'atRisk' }
 
         if (-not $UntriagedRiskyPrincipals -and -not $ServicePrincipalRiskDetections) {

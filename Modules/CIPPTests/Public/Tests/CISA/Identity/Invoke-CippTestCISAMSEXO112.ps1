@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO112 {
     )
 
     try {
-        $PresetPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
+        $PresetPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoPresetSecurityPolicy'
 
         if (-not $PresetPolicies) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoPresetSecurityPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'User warnings comparable to EOP safety tips SHOULD be displayed' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Protection' -TestId 'CISAMSEXO112' -TenantFilter $Tenant

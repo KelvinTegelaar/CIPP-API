@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO11 {
     )
 
     try {
-        $RemoteDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoRemoteDomain'
+        $RemoteDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoRemoteDomain'
 
         if (-not $RemoteDomains) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoRemoteDomain cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Automatic forwarding to external domains SHALL be disabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO11' -TestType 'Identity' -TenantFilter $Tenant

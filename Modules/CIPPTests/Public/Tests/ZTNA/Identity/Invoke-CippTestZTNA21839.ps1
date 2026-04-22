@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21839 {
     #Tested
     try {
         # Get FIDO2 authentication method policy
-        $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
+        $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'

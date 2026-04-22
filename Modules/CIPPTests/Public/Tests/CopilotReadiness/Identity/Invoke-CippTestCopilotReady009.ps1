@@ -11,8 +11,8 @@ function Invoke-CippTestCopilotReady009 {
     $AdoptionThresholdPercent = 70
 
     try {
-        $ReadinessData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $ReadinessData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
+        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $ReadinessData -and -not $AllUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady009' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot readiness activity or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Majority of users are Copilot-ready (Medium or above)' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

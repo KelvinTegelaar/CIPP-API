@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCAST09 {
     param($Tenant)
 
     try {
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAST09' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Classification and M365 Groups - Allow Guests to have access to groups content' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Group Settings'

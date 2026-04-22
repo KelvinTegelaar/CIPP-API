@@ -11,7 +11,7 @@ function Invoke-ExecGraphRequestProfile {
     $Mode = $Request.Query.Mode
 
     # ── Diagnostics-only mode ───────────────────────────────────────────
-    # Returns a point-in-time snapshot of the CIPPHttp DLL runtime state —
+    # Returns a point-in-time snapshot of the CIPPSharp DLL runtime state —
     # pool usage counters, top hosts, status code distribution, and the
     # CIPPTokenCache entry count. No Graph/EXO calls, no tenant required.
     if ($Mode -eq 'Diagnostics') {

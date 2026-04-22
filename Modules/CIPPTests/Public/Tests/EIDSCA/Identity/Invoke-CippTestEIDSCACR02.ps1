@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCACR02 {
     param($Tenant)
 
     try {
-        $AdminConsentPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
+        $AdminConsentPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AdminConsentRequestPolicy'
 
         if (-not $AdminConsentPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACR02' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Admin Consent - Notify Reviewers' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Consent Policy'

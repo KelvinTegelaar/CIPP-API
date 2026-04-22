@@ -13,7 +13,7 @@ function Invoke-CippTestCopilotReady001 {
     $PrerequisiteServicePlans = @('TEAMS1', 'MCOSTANDARD')
 
     try {
-        $LicenseData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'LicenseOverview'
+        $LicenseData = Get-CIPPTestData -TenantFilter $Tenant -Type 'LicenseOverview'
 
         if (-not $LicenseData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady001' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No license data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Tenant has M365 Copilot prerequisite licenses' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

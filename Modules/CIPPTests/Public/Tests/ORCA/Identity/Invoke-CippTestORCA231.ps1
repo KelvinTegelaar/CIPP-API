@@ -6,8 +6,8 @@ function Invoke-CippTestORCA231 {
     param($Tenant)
 
     try {
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
-        $ContentFilterPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $ContentFilterPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoHostedContentFilterPolicy'
 
         if (-not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA231' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'High' -Name 'Each domain has an anti-spam policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Anti-Spam'

@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21790 {
     param($Tenant)
     #tested
     try {
-        $CrossTenantPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CrossTenantAccessPolicy'
+        $CrossTenantPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'CrossTenantAccessPolicy'
 
         if (-not $CrossTenantPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21790' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Outbound cross-tenant access settings are configured' -UserImpact 'Medium' -ImplementationEffort 'High' -Category 'Application Management'

@@ -6,7 +6,7 @@ function Invoke-CippTestORCA234 {
     param($Tenant)
 
     try {
-        $AtpPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAtpPolicyForO365'
+        $AtpPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAtpPolicyForO365'
 
         if (-not $AtpPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA234' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Click through is disabled for Safe Documents' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Attachments'

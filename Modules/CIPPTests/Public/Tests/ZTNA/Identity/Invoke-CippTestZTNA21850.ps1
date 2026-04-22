@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21850 {
     #Tested
     try {
         # Get password rule settings from Settings cache
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
         $PasswordRuleSettings = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' }
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'

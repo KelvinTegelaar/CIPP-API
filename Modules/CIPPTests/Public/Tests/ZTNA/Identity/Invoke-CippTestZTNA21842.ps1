@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21842 {
     #Tested
     try {
         # Get authorization policy
-        $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
+        $AuthorizationPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthorizationPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Block administrators from using SSPR' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

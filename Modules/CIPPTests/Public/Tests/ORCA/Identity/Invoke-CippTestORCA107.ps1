@@ -6,7 +6,7 @@ function Invoke-CippTestORCA107 {
     param($Tenant)
 
     try {
-        $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoQuarantinePolicy'
+        $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoQuarantinePolicy'
 
         if (-not $Policies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA107' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'End-user spam notification is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Quarantine'

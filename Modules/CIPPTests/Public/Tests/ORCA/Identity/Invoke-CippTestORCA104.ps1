@@ -6,7 +6,7 @@ function Invoke-CippTestORCA104 {
     param($Tenant)
 
     try {
-        $AntiPhishPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
+        $AntiPhishPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAntiPhishPolicies'
 
         if (-not $AntiPhishPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA104' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'High Confidence Phish action set to Quarantine message' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Anti-Phish'

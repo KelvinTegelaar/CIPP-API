@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21861 {
     #Tested
     try {
         # Get risky users from cache
-        $RiskyUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskyUsers'
+        $RiskyUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'RiskyUsers'
 
         if (-not $RiskyUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All high-risk users are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'

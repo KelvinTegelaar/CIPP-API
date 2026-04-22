@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21814 {
 
     try {
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $RoleData = [System.Collections.Generic.List[object]]::new()
 

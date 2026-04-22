@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21817 {
     param($Tenant)
 
     try {
-        $RoleManagementPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleManagementPolicies'
+        $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
 
         if (-not $RoleManagementPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'

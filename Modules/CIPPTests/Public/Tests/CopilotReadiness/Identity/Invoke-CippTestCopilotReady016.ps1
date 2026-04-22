@@ -10,7 +10,7 @@ function Invoke-CippTestCopilotReady016 {
     # and where engagement is low.
 
     try {
-        $SummaryData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotUserCountSummary'
+        $SummaryData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotUserCountSummary'
 
         if (-not $SummaryData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady016' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot user count summary data found in database. Data collection may not yet have run for this tenant.' -Risk 'Informational' -Name 'Copilot active user count by app' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
