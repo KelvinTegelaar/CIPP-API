@@ -42,7 +42,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.'$count') {
-        $Parameters.'$count' = ([string]([System.Boolean]$Request.Query.'$count')).ToLower()
+        $Parameters.'$count' = ([string]([System.Convert]::ToBoolean($Request.Query.'$count'))).ToLower()
     }
 
 
@@ -77,11 +77,11 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.NoPagination) {
-        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.NoPagination
+        $GraphRequestParams.NoPagination = [System.Convert]::ToBoolean($Request.Query.NoPagination)
     }
 
     if ($Request.Query.manualPagination) {
-        $GraphRequestParams.ManualPagination = [System.Boolean]$Request.Query.manualPagination
+        $GraphRequestParams.ManualPagination = [System.Convert]::ToBoolean($Request.Query.manualPagination)
     }
 
     if ($Request.Query.nextLink) {
@@ -89,7 +89,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.CountOnly) {
-        $GraphRequestParams.CountOnly = [System.Boolean]$Request.Query.CountOnly
+        $GraphRequestParams.CountOnly = [System.Convert]::ToBoolean($Request.Query.CountOnly)
     }
 
     if ($Request.Query.QueueNameOverride) {
@@ -97,7 +97,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.ReverseTenantLookup) {
-        $GraphRequestParams.ReverseTenantLookup = [System.Boolean]$Request.Query.ReverseTenantLookup
+        $GraphRequestParams.ReverseTenantLookup = [System.Convert]::ToBoolean($Request.Query.ReverseTenantLookup)
     }
 
     if ($Request.Query.ReverseTenantLookupProperty) {
@@ -105,7 +105,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.SkipCache) {
-        $GraphRequestParams.SkipCache = [System.Boolean]$Request.Query.SkipCache
+        $GraphRequestParams.SkipCache = [System.Convert]::ToBoolean($Request.Query.SkipCache)
     }
 
     if ($Request.Query.ListProperties) {
