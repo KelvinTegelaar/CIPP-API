@@ -27,20 +27,13 @@ function Add-CIPPDbItem {
     begin {
         $Table = Get-CippTable -tablename 'CippReportingDB'
         $Batch = [System.Collections.Generic.List[hashtable]]::new()
+        $NewRowKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         $TotalProcessed = 0
 
         if ($TenantFilter -match '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
             try {
                 $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter -IncludeErrors | Select-Object -First 1).defaultDomainName
             } catch {}
-        }
-
-        if (-not $Count.IsPresent -and -not $Append.IsPresent) {
-            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
-            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag
-            if ($Existing) {
-                $null = Remove-AzDataTableEntity @Table -Entity $Existing -Force
-            }
         }
     }
 
@@ -55,9 +48,11 @@ function Add-CIPPDbItem {
         foreach ($Item in @($InputObject)) {
             if ($null -eq $Item) { continue }
             $ItemId = $Item.ExternalDirectoryObjectId ?? $Item.id ?? $Item.Identity ?? $Item.skuId ?? $Item.userPrincipalName ?? [guid]::NewGuid().ToString()
+            $RowKey = "$Type-$ItemId" -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', ''
+            [void]$NewRowKeys.Add($RowKey)
             $Batch.Add(@{
                     PartitionKey = $TenantFilter
-                    RowKey       = ("$Type-$ItemId" -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', '')
+                    RowKey       = $RowKey
                     Data         = [string]($Item | ConvertTo-Json -Depth 10 -Compress)
                     Type         = $Type
                 })
@@ -75,7 +70,26 @@ function Add-CIPPDbItem {
             $TotalProcessed += $Batch.Count
         }
 
+        # Clean up orphaned rows (entities that no longer exist in the new dataset)
+        if (-not $Count.IsPresent -and -not $Append.IsPresent -and $TotalProcessed -gt 0) {
+            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId
+            if ($Existing) {
+                $Orphans = foreach ($Row in @($Existing)) {
+                    if ($Row.RowKey -eq "$Type-Count") { continue }
+                    $ParentKey = $Row.OriginalEntityId ?? $Row.RowKey
+                    if (-not $NewRowKeys.Contains($ParentKey)) {
+                        $Row
+                    }
+                }
+                if ($Orphans) {
+                    $null = Remove-AzDataTableEntity @Table -Entity @($Orphans) -Force
+                }
+            }
+        }
+
         if ($Count.IsPresent -or $AddCount.IsPresent) {
+            $CntStart = $Stopwatch.ElapsedMilliseconds
             $NewCount = $TotalProcessed
             if ($Append.IsPresent) {
                 $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f $TenantFilter, $Type
@@ -87,6 +101,7 @@ function Add-CIPPDbItem {
                 RowKey       = "$Type-Count"
                 DataCount    = [int]$NewCount
             } -Force
+            $CountMs = $Stopwatch.ElapsedMilliseconds - $CntStart
         }
 
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $TotalProcessed items of type $Type" -sev Debug

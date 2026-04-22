@@ -16,10 +16,10 @@ function Invoke-CippTestCISAMSEXO152 {
     )
 
     try {
-        $SafeLinksPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicy'
+        $SafeLinksPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
 
         if (-not $SafeLinksPolicies) {
-            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Real-time suspicious URL scanning SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
+            Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoSafeLinksPolicies cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Real-time suspicious URL scanning SHOULD be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection' -TestId 'CISAMSEXO152' -TenantFilter $Tenant
             return
         }
 
