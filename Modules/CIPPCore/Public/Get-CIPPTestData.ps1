@@ -27,14 +27,12 @@ function Get-CIPPTestData {
 
     $CachedValue = $null
     if ([CIPP.TestDataCache]::TryGet($CacheKey, [ref]$CachedValue)) {
-        Write-Information "  [DbCache] HIT $CacheKey"
         return $CachedValue
     }
 
     $Data = New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type
 
     [CIPP.TestDataCache]::Set($CacheKey, $Data)
-    Write-Information "  [DbCache] MISS $CacheKey — cached ($(@($Data).Count) items)"
 
     return $Data
 }
