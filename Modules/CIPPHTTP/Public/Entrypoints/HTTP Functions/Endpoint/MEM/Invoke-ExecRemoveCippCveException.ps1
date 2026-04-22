@@ -8,107 +8,104 @@ function Invoke-ExecRemoveCippCveException {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    $TenantFilter = $Request.Query.tenantFilter
+    $APIName      = $Request.Params.CIPPEndpoint
+    $Headers      = $Request.Headers
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
-try {
-    # Parse request
-    $cveId = $Request.Query.cveId
-    $TenantFilter = $Request.Query.TenantFilter
-    $removeScope = $Request.Query.removeScope  # "CurrentTenant", "AllAffected", "Global"
-    
-    if (-not $cveId) {
-        throw "cveId is required"
-    }
-    
-    # Get tables
-    $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
-    $CveCacheTable = Get-CIPPTable -TableName 'CveCache'
-    
-    # Determine which exceptions to remove
-    $ExceptionsToRemove = @()
-    
-    switch ($removeScope) {
-        "CurrentTenant" {
-            if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') {
-                throw "Current tenant must be selected"
-            }
-            $ExceptionsToRemove = @($TenantFilter)
-        }
-        "AllAffected" {
-            # Get all exceptions for this CVE
-            $AllExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$cveId'"
-            $ExceptionsToRemove = $AllExceptions | Where-Object { $_.RowKey -ne "ALL" } | Select-Object -ExpandProperty RowKey
-        }
-        "Global" {
-            $ExceptionsToRemove = @("ALL")
-        }
-        default {
-            # If no scope specified, just remove current tenant
-            if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
-                $ExceptionsToRemove = @($TenantFilter)
-            } else {
-                throw "removeScope must be specified when no tenant is selected"
+    try {
+        $CveId       = $Request.Query.cveId      ?? $Request.Body.cveId
+        $RemoveScope = $Request.Query.removeScope ?? $Request.Body.removeScope
+
+        if (-not $CveId) {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Error: cveId is required' }
             }
         }
-    }
-    
-    $RemovedCount = 0
-    
-    foreach ($TenantId in $ExceptionsToRemove) {
-        # Remove exception from CveExceptions table
-        $ExceptionEntity = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$cveId' and RowKey eq '$TenantId'"
-        
-        if ($ExceptionEntity) {
-            Remove-AzDataTableEntity @CveExceptionsTable -Entity $ExceptionEntity -Force
-            $RemovedCount++
-            
-            # Update CveCache entries
-            if ($TenantId -eq "ALL") {
-                $CacheFilter = "PartitionKey eq '$cveId'"
-            } else {
-                $CacheFilter = "PartitionKey eq '$cveId' and customerId eq '$TenantId'"
-            }
-            
-            $CacheEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter $CacheFilter
-            
-            foreach ($CacheEntry in $CacheEntries) {
-                # Check if there are any other exceptions still applying
-                $RemainingExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$cveId' and (RowKey eq 'ALL' or RowKey eq '$($CacheEntry.customerId)')"
-                
-                if (-not $RemainingExceptions) {
-                    $CacheEntry.hasException = $false
-                    $CacheEntry.exceptionSource = ""
-                } else {
-                    # Still has exceptions from other sources
-                    $sources = ($RemainingExceptions | Select-Object -ExpandProperty source -Unique) -join '/'
-                    $CacheEntry.exceptionSource = $sources
+
+        $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
+        $CveCacheTable      = Get-CIPPTable -TableName 'CveCache'
+
+        # Load all exceptions for this CVE once — reused throughout
+        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+
+        $ExceptionsToRemove = switch ($RemoveScope) {
+            'CurrentTenant' {
+                if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') {
+                    throw 'Current tenant must be selected'
                 }
-                
-                Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -Force
+                @($TenantFilter)
+            }
+            'AllAffected' {
+                @($AllCveExceptions | Where-Object { $_.RowKey -ne 'ALL' } | Select-Object -ExpandProperty RowKey)
+            }
+            'Global' {
+                @('ALL')
+            }
+            default {
+                if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+                    @($TenantFilter)
+                } else {
+                    throw 'removeScope must be specified when no tenant is selected'
+                }
             }
         }
-    }
-    
-    Write-LogMessage -headers $Headers -API $APIName -message "Removed $RemovedCount CVE exception(s) for $cveId" -Sev Info
-    
-    $StatusCode = [HttpStatusCode]::OK
-    $Body = [PSCustomObject]@{
-        Results = "Successfully removed $RemovedCount exception(s) for CVE $cveId"
-    }
-    
-} catch {
-    $ErrorMessage = Get-CippException -Exception $_
-    Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove CVE exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-    $StatusCode = [HttpStatusCode]::BadRequest
-    $Body = [PSCustomObject]@{
-        Results = "Failed to remove exception: $($ErrorMessage.NormalizedError)"
-    }
-}
 
-return ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = $Body
-    })
+        # Remove matched exception entities
+        $EntitiesToRemove = $AllCveExceptions | Where-Object { $_.RowKey -in $ExceptionsToRemove }
+        $RemovedCount     = 0
+
+        foreach ($Entity in $EntitiesToRemove) {
+            Remove-AzDataTableEntity @CveExceptionsTable -Entity $Entity -Force
+            $RemovedCount++
+        }
+
+        # Reload exceptions after removal to determine what remains
+        $RemainingCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+
+        # Load all cache entries for this CVE once
+        $AllCacheEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "PartitionKey eq '$CveId'"
+
+        # Filter to only cache entries affected by the removed tenants
+        $AffectedCacheEntries = if ($ExceptionsToRemove -contains 'ALL') {
+            $AllCacheEntries
+        } else {
+            $AllCacheEntries | Where-Object { $_.customerId -in $ExceptionsToRemove }
+        }
+
+        # Update affected cache entries in batch
+        $CacheUpdates = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($CacheEntry in $AffectedCacheEntries) {
+            $StillExcepted = $RemainingCveExceptions | Where-Object { $_.RowKey -eq 'ALL' -or $_.RowKey -eq $CacheEntry.customerId }
+
+            if (-not $StillExcepted) {
+                $CacheEntry.hasException    = $false
+                $CacheEntry.exceptionSource = ''
+            } else {
+                $CacheEntry.exceptionSource = ($StillExcepted | Select-Object -ExpandProperty source -Unique) -join '/'
+            }
+
+            [void]$CacheUpdates.Add($CacheEntry)
+        }
+
+        if ($CacheUpdates.Count -gt 0) {
+            Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheUpdates -Force
+        }
+
+        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Removed $RemovedCount CVE exception(s) for $CveId" -sev 'Info'
+
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{ Results = "Successfully removed $RemovedCount exception(s) for CVE $CveId" }
+        }
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Failed to remove CVE exception: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::InternalServerError
+            Body       = @{ Results = "Failed to remove exception: $($ErrorMessage.NormalizedError)" }
+        }
+    }
 }

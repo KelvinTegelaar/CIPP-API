@@ -6,20 +6,20 @@ function Register-CIPPExtensionScheduledTasks {
     )
 
     # get extension configuration and mappings table
-    $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Config = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop)
+    $Table         = Get-CIPPTable -TableName Extensionsconfig
+    $Config        = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction Stop)
     $MappingsTable = Get-CIPPTable -TableName CippMapping
 
-    # Get existing scheduled usertasks
+    # Get existing scheduled tasks
     $ScheduledTasksTable = Get-CIPPTable -TableName ScheduledTasks
-    $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Sync-CippExtensionData' }
-    $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
-    $Tenants = Get-Tenants -IncludeErrors
+    $ScheduledTasks      = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Sync-CippExtensionData' }
+    $PushTasks           = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
+    $Tenants             = Get-Tenants -IncludeErrors
 
     # Remove all legacy Sync-CippExtensionData tasks (now deprecated - extensions use CippReportingDB)
-    Write-Information "Removing $($ScheduledTasks.Count) legacy Sync-CippExtensionData scheduled tasks"
+    Write-LogMessage -API 'ExtensionScheduledTasks' -message "Removing $($ScheduledTasks.Count) legacy Sync-CippExtensionData scheduled tasks" -sev 'Info'
     foreach ($Task in $ScheduledTasks) {
-        Write-Information "Removing legacy task: $($Task.Name) for tenant $($Task.Tenant)"
+        Write-LogMessage -API 'ExtensionScheduledTasks' -message "Removing legacy task: $($Task.Name) for tenant $($Task.Tenant)" -sev 'Info'
         $Entity = $Task | Select-Object -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
     }
@@ -42,7 +42,7 @@ function Register-CIPPExtensionScheduledTasks {
                             }
                         }
                         foreach ($TenantMapping in $TenantMappings) {
-                            [pscustomobject]@{
+                            [PSCustomObject]@{
                                 RowKey = $TenantMapping.customerId
                             }
                         }
@@ -50,11 +50,11 @@ function Register-CIPPExtensionScheduledTasks {
                 } | Sort-Object -Property RowKey -Unique
 
                 if (($Mappings | Measure-Object).Count -eq 0) {
-                    Write-Warning 'No tenants found for CustomData extension'
+                    Write-LogMessage -API 'ExtensionScheduledTasks' -message 'No tenants found for CustomData extension' -sev 'Warning'
                     continue
                 }
             } else {
-                $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
+                $Mappings     = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
                 $FieldMapping = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)FieldMapping'"
             }
             $FieldSync = @{}
@@ -73,7 +73,7 @@ function Register-CIPPExtensionScheduledTasks {
             foreach ($Mapping in $Mappings) {
                 $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
                 if (!$Tenant) {
-                    Write-Warning "Tenant $($Mapping.RowKey) not found"
+                    Write-LogMessage -API 'ExtensionScheduledTasks' -message "Tenant $($Mapping.RowKey) not found" -sev 'Warning'
                     continue
                 }
                 $MappedTenants.Add($Tenant.defaultDomainName)
@@ -85,13 +85,13 @@ function Register-CIPPExtensionScheduledTasks {
                 if ((!$ExistingPushTask -or $Reschedule.IsPresent) -and $Extension -ne 'NinjaOne') {
                     # push cached data to extension
 
-                    $Task = [pscustomobject]@{
+                    $Task = [PSCustomObject]@{
                         Name          = "$Extension Extension Sync"
                         Command       = @{
                             value = 'Push-CippExtensionData'
                             label = 'Push-CippExtensionData'
                         }
-                        Parameters    = [pscustomobject]@{
+                        Parameters    = [PSCustomObject]@{
                             TenantFilter = $Tenant.defaultDomainName
                             Extension    = $Extension
                         }
@@ -100,16 +100,16 @@ function Register-CIPPExtensionScheduledTasks {
                         TenantFilter  = $Tenant.defaultDomainName
                     }
                     if ($ExistingPushTask) {
-                        $task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingPushTask.RowKey -Force
+                        $Task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingPushTask.RowKey -Force
                     }
-                    $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension
-                    Write-Information "Creating $Extension task for tenant $($Tenant.defaultDomainName)"
+                    Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension | Out-Null
+                    Write-LogMessage -API 'ExtensionScheduledTasks' -message "Creating $Extension task for tenant $($Tenant.defaultDomainName)" -sev 'Info'
                 }
             }
         } else {
             # remove existing scheduled tasks
             $PushTasks | Where-Object { $_.SyncType -eq $Extension } | ForEach-Object {
-                Write-Information "Extension Disabled: Cleaning up scheduled task $($_.Name) for tenant $($_.Tenant)"
+                Write-LogMessage -API 'ExtensionScheduledTasks' -message "Extension Disabled: Cleaning up scheduled task $($_.Name) for tenant $($_.Tenant)" -sev 'Info'
                 $Entity = $_ | Select-Object -Property PartitionKey, RowKey
                 Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
             }
@@ -119,44 +119,16 @@ function Register-CIPPExtensionScheduledTasks {
 
     foreach ($Task in $ScheduledTasks) {
         if ($Task.Tenant -notin $MappedTenants) {
-            Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
+            Write-LogMessage -API 'ExtensionScheduledTasks' -message "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)" -sev 'Info'
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
         }
     }
     foreach ($Task in $PushTasks) {
         if ($Task.Tenant -notin $MappedTenants) {
-            Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
+            Write-LogMessage -API 'ExtensionScheduledTasks' -message "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)" -sev 'Info'
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
-        }
-    }
-
-    # ============================
-    # NINJAONE CVE SYNC TASK
-    # ============================
-    $NinjaConfig      = $Config.NinjaOne
-    $NinjaCveSyncTask = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -eq 'Invoke-CIPPScheduledNinjaCveSync' } | Select-Object -First 1
-
-    if ($NinjaConfig.Enabled -eq $true -and $NinjaConfig.CveSyncEnabled -eq $true) {
-        if (-not $NinjaCveSyncTask) {
-            $CveSyncHours = [int]$NinjaConfig.CveSyncHours
-            if ($CveSyncHours -le 0) { $CveSyncHours = 24 }
-
-            $Task = [pscustomobject]@{
-                Name          = 'CIPP NinjaCveSync - All Tenants'
-                Command       = @{ value = 'Invoke-CIPPScheduledNinjaCveSync'; label = 'Invoke-CIPPScheduledNinjaCveSync' }
-                Recurrence    = "${CveSyncHours}h"
-                ScheduledTime = $NextSync
-                TenantFilter  = 'AllTenants'
-            }
-            $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType 'NinjaCveSync'
-            Write-Information "NinjaCveSync: Created task (recurrence: ${CveSyncHours}h)"
-        }
-    } else {
-        if ($NinjaCveSyncTask) {
-            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity ($NinjaCveSyncTask | Select-Object PartitionKey, RowKey)
-            Write-Information "NinjaCveSync: Removed task (sync disabled)"
         }
     }
 }

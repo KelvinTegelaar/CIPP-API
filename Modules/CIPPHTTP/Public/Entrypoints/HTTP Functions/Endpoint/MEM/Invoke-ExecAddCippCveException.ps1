@@ -8,133 +8,128 @@ function Invoke-ExecAddCippCveException {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.Headers
-    $TenantFilter = $Request.Query.tenantFilter
+    $APIName      = $Request.Params.CIPPEndpoint
+    $Headers      = $Request.Headers
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
-try {
-    # Parse request body
-    $Body = $Request.Body
-    
-    # Convert to strings explicitly to avoid type issues
-    $cveId = [string]$Body.cveId
-    $exceptionType = [string]$Body.exceptionType
-    $applyTo = [string]$Body.applyTo
-    $justification = [string]$Body.justification
-    $expiryDate = if ($Body.expiryDate) { [string]$Body.expiryDate } else { $null }
-    $TenantFilter = $Request.Query.TenantFilter
-    
-    # Validate required fields
-    if (-not $cveId -or -not $exceptionType -or -not $applyTo -or -not $justification) {
-        throw "Missing required fields: cveId, exceptionType, applyTo, and justification are required"
-    }
-    
-    # Get tables
-    $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
-    $CveCacheTable = Get-CIPPTable -TableName 'CveCache'
-    
-    # Determine which tenants to apply the exception to
-    $TenantsToUpdate = @()
-    
-    switch ($applyTo) {
-        "CurrentTenant" {
-            if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') {
-                throw "Current tenant must be selected to use 'Current Tenant Only' option"
+    try {
+        $CveId         = [string]$Request.Body.cveId
+        $ExceptionType = [string]$Request.Body.exceptionType
+        $ApplyTo       = [string]$Request.Body.applyTo
+        $Justification = [string]$Request.Body.justification
+        $ExpiryDate    = if ($Request.Body.expiryDate) { [string]$Request.Body.expiryDate } else { $null }
+
+        if (-not $CveId -or -not $ExceptionType -or -not $ApplyTo -or -not $Justification) {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Error: cveId, exceptionType, applyTo, and justification are required' }
             }
-            $TenantsToUpdate = @($TenantFilter)
         }
-        "AllAffected" {
-            # Get all affected tenants for this CVE
-            $AffectedEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "PartitionKey eq '$cveId'"
-            $TenantsToUpdate = $AffectedEntries | Select-Object -ExpandProperty customerId -Unique
-        }
-        "Global" {
-            # Global exception - use "ALL" as tenant identifier
-            $TenantsToUpdate = @("ALL")
-        }
-    }
-    
-    Write-Host "Applying exception to tenants: $($TenantsToUpdate -join ', ')"
-    
-    # Get current user from headers
-    $Username = $Headers.'x-ms-client-principal-name'
-    $CurrentDate = (Get-Date).ToUniversalTime().ToString('o')
-    $ReadableDate = (Get-Date).ToString()
-    
-    # Create exception entries
-    $ExceptionsAdded = @()
-    $ExceptionsUpdated = @()
-    
-    foreach ($TenantId in $TenantsToUpdate) {
-        # Check if exception already exists
-        $ExistingException = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$cveId' and RowKey eq '$TenantId'"
-        
-        $ExceptionEntity = @{
-            PartitionKey            = [string]$cveId
-            RowKey                  = [string]$TenantId
-            cveId                   = [string]$cveId
-            customerId              = [string]$TenantId
-            exceptionType           = [string]$exceptionType
-            exceptionComment        = [string]$justification
-            exceptionCreatedBy      = [string]$Username
-            exceptionCreatedDate    = [string]$CurrentDate
-            exceptionReadableDate   = [string]$ReadableDate
-            exceptionExpiry         = if ($expiryDate) { [string]$expiryDate } else { "" }
-            source                  = "CIPP"
-        }
-        
-        # Add or update exception
-        Add-CIPPAzDataTableEntity @CveExceptionsTable -Entity $ExceptionEntity -Force
-        
-        if ($ExistingException) {
-            $ExceptionsUpdated += $TenantId
-        } else {
-            $ExceptionsAdded += $TenantId
-        }
-    }
-    
-    # Now update the CveCache entries to reflect the exception
-    foreach ($TenantId in $TenantsToUpdate) {
-        if ($TenantId -eq "ALL") {
-            # Global exception - update all entries for this CVE
-            $CacheFilter = "PartitionKey eq '$cveId'"
-        } else {
-            # Specific tenant - update only entries for this tenant
-            $CacheFilter = "PartitionKey eq '$cveId' and customerId eq '$TenantId'"
-        }
-        
-        $CacheEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter $CacheFilter
-        
-        foreach ($CacheEntry in $CacheEntries) {
-            $CacheEntry.hasException = $true
-            $CacheEntry.exceptionSource = "CIPP"
-            
-            Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheEntry -Force
-        }
-    }
-    
-    Write-LogMessage -headers $Headers -API $APIName -message "Added/updated CVE exception for $cveId across $($TenantsToUpdate.Count) tenant(s)" -Sev Info
-    
-    $StatusCode = [HttpStatusCode]::OK
-    $Body = [PSCustomObject]@{
-        Results = "Successfully applied exception to CVE $cveId"
-        TenantsAffected = $TenantsToUpdate.Count
-        ExceptionsAdded = $ExceptionsAdded.Count
-        ExceptionsUpdated = $ExceptionsUpdated.Count
-        Details = "Added: $($ExceptionsAdded -join ', '), Updated: $($ExceptionsUpdated -join ', ')"
-    }
-    
-} catch {
-    $ErrorMessage = Get-CippException -Exception $_
-    Write-LogMessage -headers $Headers -API $APIName -message "Failed to add CVE exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-    $StatusCode = [HttpStatusCode]::BadRequest
-    $Body = [PSCustomObject]@{
-        Results = "Failed to add exception: $($ErrorMessage.NormalizedError)"
-    }
-}
 
-return ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = $Body
-    })
+        $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
+        $CveCacheTable      = Get-CIPPTable -TableName 'CveCache'
+
+        # Load all existing exceptions for this CVE once
+        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+
+        $TenantsToUpdate = switch ($ApplyTo) {
+            'CurrentTenant' {
+                if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') {
+                    throw "Current tenant must be selected to use 'Current Tenant Only' option"
+                }
+                @($TenantFilter)
+            }
+            'AllAffected' {
+                $AffectedEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "PartitionKey eq '$CveId'"
+                @($AffectedEntries | Select-Object -ExpandProperty customerId -Unique)
+            }
+            'Global' {
+                @('ALL')
+            }
+            default {
+                throw "Invalid applyTo value: $ApplyTo"
+            }
+        }
+
+        $Username     = $Headers.'x-ms-client-principal-name'
+        $CurrentDate  = (Get-Date).ToUniversalTime().ToString('o')
+        $ReadableDate = (Get-Date).ToString()
+
+        $ExceptionsAdded   = [System.Collections.Generic.List[string]]::new()
+        $ExceptionsUpdated = [System.Collections.Generic.List[string]]::new()
+
+        # Build all exception entities in memory, track add vs update
+        $ExceptionEntities = foreach ($TenantId in $TenantsToUpdate) {
+            $ExistingException = $AllCveExceptions | Where-Object { $_.RowKey -eq $TenantId }
+
+            if ($ExistingException) {
+                [void]$ExceptionsUpdated.Add($TenantId)
+            } else {
+                [void]$ExceptionsAdded.Add($TenantId)
+            }
+
+            @{
+                PartitionKey          = [string]$CveId
+                RowKey                = [string]$TenantId
+                cveId                 = [string]$CveId
+                customerId            = [string]$TenantId
+                exceptionType         = [string]$ExceptionType
+                exceptionComment      = [string]$Justification
+                exceptionCreatedBy    = [string]$Username
+                exceptionCreatedDate  = [string]$CurrentDate
+                exceptionReadableDate = [string]$ReadableDate
+                exceptionExpiry       = $ExpiryDate ?? ''
+                source                = 'CIPP'
+            }
+        }
+
+        # Write all exception entities in one batch
+        if (@($ExceptionEntities).Count -gt 0) {
+            Add-CIPPAzDataTableEntity @CveExceptionsTable -Entity @($ExceptionEntities) -Force
+        }
+
+        # Load all cache entries for this CVE once
+        $AllCacheEntries = Get-CIPPAzDataTableEntity @CveCacheTable -Filter "PartitionKey eq '$CveId'"
+
+        # Filter to affected cache entries
+        $AffectedCacheEntries = if ($TenantsToUpdate -contains 'ALL') {
+            $AllCacheEntries
+        } else {
+            $AllCacheEntries | Where-Object { $_.customerId -in $TenantsToUpdate }
+        }
+
+        # Update affected cache entries in memory then write as one batch
+        $CacheUpdates = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($CacheEntry in $AffectedCacheEntries) {
+            $CacheEntry.hasException    = $true
+            $CacheEntry.exceptionSource = 'CIPP'
+            [void]$CacheUpdates.Add($CacheEntry)
+        }
+
+        if ($CacheUpdates.Count -gt 0) {
+            Add-CIPPAzDataTableEntity @CveCacheTable -Entity $CacheUpdates -Force
+        }
+
+        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Added/updated CVE exception for $CveId across $($TenantsToUpdate.Count) tenant(s)" -sev 'Info'
+
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{
+                Results           = "Successfully applied exception to CVE $CveId"
+                TenantsAffected   = $TenantsToUpdate.Count
+                ExceptionsAdded   = $ExceptionsAdded.Count
+                ExceptionsUpdated = $ExceptionsUpdated.Count
+                Details           = "Added: $($ExceptionsAdded -join ', '), Updated: $($ExceptionsUpdated -join ', ')"
+            }
+        }
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Failed to add CVE exception: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::InternalServerError
+            Body       = @{ Results = "Failed to add exception: $($ErrorMessage.NormalizedError)" }
+        }
+    }
 }

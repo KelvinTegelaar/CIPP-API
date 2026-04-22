@@ -13,19 +13,19 @@ function New-VulnCsvBytes {
         [Parameter(Mandatory)][string[]]$Headers
     )
 
-    $sb = New-Object System.Text.StringBuilder
-    [void]$sb.AppendLine(($Headers -join ','))
+    $Sb = [System.Text.StringBuilder]::new()
+    [void]$Sb.AppendLine(($Headers -join ','))
 
-    foreach ($r in $Rows) {
-        $cells = foreach ($h in $Headers) {
-            $val = $r.$h
-            if ($null -ne $val) {
-                $s = [string]$val
-                if ($s -match '[,"\r\n]') { '"' + ($s -replace '"','""') + '"' } else { $s }
+    foreach ($Row in $Rows) {
+        $Cells = foreach ($Header in $Headers) {
+            $Val = $Row.$Header
+            if ($null -ne $Val) {
+                $S = [string]$Val
+                if ($S -match '[,"\r\n]') { '"' + ($S -replace '"', '""') + '"' } else { $S }
             } else { '' }
         }
-        [void]$sb.AppendLine(($cells -join ','))
+        [void]$Sb.AppendLine(($Cells -join ','))
     }
 
-    return [System.Text.Encoding]::UTF8.GetBytes($sb.ToString())
+    return [System.Text.Encoding]::UTF8.GetBytes($Sb.ToString())
 }
