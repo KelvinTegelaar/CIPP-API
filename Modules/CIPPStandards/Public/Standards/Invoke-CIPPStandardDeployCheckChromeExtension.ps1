@@ -406,36 +406,56 @@ exit 0
 
                 if ($ExistingHash -eq $SettingsHash) {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "$AppDisplayName settings unchanged — skipping redeploy" -sev Info
-                    return
+                } else {
+                    foreach ($App in @($ExistingApps)) {
+                        $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed existing $AppDisplayName app to redeploy with updated settings" -sev Info
+                    }
+                    Start-Sleep -Seconds 2
+
+                    # Deploy the Win32 script app
+                    $AppProperties = [PSCustomObject]@{
+                        displayName           = $AppDisplayName
+                        description           = $AppDescription
+                        publisher             = 'CIPP'
+                        installScript         = $InstallScript
+                        uninstallScript       = $UninstallScript
+                        detectionScript       = $DetectionScript
+                        runAsAccount          = 'system'
+                        deviceRestartBehavior = 'suppress'
+                    }
+
+                    $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
+
+                    if ($NewApp -and $AssignTo -ne 'On') {
+                        Start-Sleep -Milliseconds 500
+                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                    }
+
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
+                }
+            } else {
+                # App doesn't exist yet — deploy it
+                $AppProperties = [PSCustomObject]@{
+                    displayName           = $AppDisplayName
+                    description           = $AppDescription
+                    publisher             = 'CIPP'
+                    installScript         = $InstallScript
+                    uninstallScript       = $UninstallScript
+                    detectionScript       = $DetectionScript
+                    runAsAccount          = 'system'
+                    deviceRestartBehavior = 'suppress'
                 }
 
-                foreach ($App in @($ExistingApps)) {
-                    $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed existing $AppDisplayName app to redeploy with updated settings" -sev Info
+                $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
+
+                if ($NewApp -and $AssignTo -ne 'On') {
+                    Start-Sleep -Milliseconds 500
+                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                 }
-                Start-Sleep -Seconds 2
+
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
             }
-
-            # Deploy the Win32 script app
-            $AppProperties = [PSCustomObject]@{
-                displayName           = $AppDisplayName
-                description           = $AppDescription
-                publisher             = 'CIPP'
-                installScript         = $InstallScript
-                uninstallScript       = $UninstallScript
-                detectionScript       = $DetectionScript
-                runAsAccount          = 'system'
-                deviceRestartBehavior = 'suppress'
-            }
-
-            $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
-
-            if ($NewApp -and $AssignTo -ne 'On') {
-                Start-Sleep -Milliseconds 500
-                Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
-            }
-
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
         }
 
         if ($Settings.alert -eq $true) {
@@ -449,7 +469,6 @@ exit 0
 
         if ($Settings.report -eq $true) {
             $StateIsCorrect = $AppExists
-
             $ExpectedValue = [PSCustomObject]@{
                 AppDeployed = $true
             }

@@ -4,12 +4,9 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ## [Unreleased]
 
-## [3.5.0] - 2026-04-20
-
 ### Changed
 
-- Now shares a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios [#122](https://github.com/PalmEmanuel/AzBobbyTables/pull/122)
-- Bump System.Linq.Async from 7.0.0 to 7.0.1
+- Share a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios
 
 ## [3.4.2] - 2026-03-30
 
@@ -95,8 +92,7 @@ The format is based on and uses the types of changes according to [Keep a Change
 
 ## 3.1.1 - 2023-05-03
 
-[unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.5.0...HEAD
-[3.5.0]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.2...v3.5.0
+[unreleased]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.2...HEAD
 [3.4.2]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.1...v3.4.2
 [3.4.1]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/PalmEmanuel/AzBobbyTables/compare/v3.3.2...v3.4.0
