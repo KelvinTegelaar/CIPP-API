@@ -13,8 +13,8 @@ function Invoke-CippTestZTNA21815 {
 
     try {
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
-        $RoleAssignmentScheduleInstances = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $PermanentAssignments = [System.Collections.Generic.List[object]]::new()
 

@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21896 {
     param($Tenant)
     #tested
     try {
-        $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
+        $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
         if (-not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21896' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Service principals do not have certificates or credentials associated with them' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
             return

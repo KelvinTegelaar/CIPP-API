@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO51 {
     )
 
     try {
-        $CASMailboxes = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CASMailbox'
+        $CASMailboxes = Get-CIPPTestData -TenantFilter $Tenant -Type 'CASMailbox'
 
         if (-not $CASMailboxes) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'CASMailbox cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'SMTP AUTH SHALL be disabled in Exchange Online' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Email Authentication' -TestId 'CISAMSEXO51' -TenantFilter $Tenant

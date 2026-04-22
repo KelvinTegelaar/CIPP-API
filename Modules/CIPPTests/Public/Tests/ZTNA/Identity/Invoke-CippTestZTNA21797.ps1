@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21797 {
     param($Tenant)
     #tested
     try {
-        $allCAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $authMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
+        $allCAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $authMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $allCAPolicies -or -not $authMethodsPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21797' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Restrict access to high risk users' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Conditional Access'

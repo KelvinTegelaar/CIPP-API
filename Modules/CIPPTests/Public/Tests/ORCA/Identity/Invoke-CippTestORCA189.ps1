@@ -6,7 +6,7 @@ function Invoke-CippTestORCA189 {
     param($Tenant)
     
     try {
-        $Rules = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoTransportRules'
+        $Rules = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoTransportRules'
         
         if (-not $Rules) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA189' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Safe Attachments is not bypassed' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Safe Attachments'

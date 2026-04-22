@@ -13,8 +13,8 @@ function Invoke-CippTestCopilotReady004 {
     $ActivityThresholdPercent = 50
 
     try {
-        $ReadinessData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $ReadinessData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
+        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $ReadinessData -and -not $AllUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady004' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot readiness activity or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'Medium' -Name 'Users are actively using Exchange Online email' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

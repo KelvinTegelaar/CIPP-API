@@ -6,7 +6,7 @@ function Invoke-CippTestORCA240 {
     param($Tenant)
 
     try {
-        $OrgConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $OrgConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
 
         if (-not $OrgConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA240' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Outlook external tags are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Configuration'

@@ -6,8 +6,8 @@ function Invoke-CippTestORCA227 {
     param($Tenant)
 
     try {
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
-        $SafeAttachmentPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $SafeAttachmentPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
 
         if (-not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'

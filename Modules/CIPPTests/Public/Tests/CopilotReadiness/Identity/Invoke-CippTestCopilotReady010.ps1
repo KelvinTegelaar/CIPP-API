@@ -11,8 +11,8 @@ function Invoke-CippTestCopilotReady010 {
     # have isMfaRegistered = true in their registration details.
 
     try {
-        $UserRegistrationDetails = New-CIPPDbRequest -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
+        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $UserRegistrationDetails -or -not $AllUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady010' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No MFA registration or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'All licensed users have MFA registered' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

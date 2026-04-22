@@ -11,7 +11,7 @@ function Invoke-CippTestCopilotReady017 {
     # user disengagement with Copilot and may warrant an adoption campaign.
 
     try {
-        $TrendData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotUserCountTrend'
+        $TrendData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotUserCountTrend'
 
         if (-not $TrendData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady017' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot user count trend data found in database. Data collection may not yet have run for this tenant.' -Risk 'Informational' -Name 'Copilot adoption trend (7-day)' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

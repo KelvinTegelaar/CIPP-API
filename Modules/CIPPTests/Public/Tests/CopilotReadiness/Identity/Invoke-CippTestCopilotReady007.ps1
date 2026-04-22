@@ -15,8 +15,8 @@ function Invoke-CippTestCopilotReady007 {
     $ChannelThresholdPercent = 70
 
     try {
-        $ReadinessData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $ReadinessData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
+        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $ReadinessData -and -not $AllUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady007' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot readiness activity or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Users are on a qualified M365 Apps update channel' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

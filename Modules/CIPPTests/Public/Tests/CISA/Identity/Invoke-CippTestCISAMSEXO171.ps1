@@ -16,7 +16,7 @@ function Invoke-CippTestCISAMSEXO171 {
     )
 
     try {
-        $AuditConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
+        $AuditConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAdminAuditLogConfig'
 
         if (-not $AuditConfig) {
             Add-CippTestResult -Status 'Skipped' -ResultMarkdown 'ExoAdminAuditLogConfig cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Microsoft Purview Audit logging SHALL be enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance' -TestId 'CISAMSEXO171' -TenantFilter $Tenant

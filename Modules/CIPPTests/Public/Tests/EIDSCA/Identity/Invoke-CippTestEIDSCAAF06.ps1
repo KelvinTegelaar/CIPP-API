@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCAAF06 {
     param($Tenant)
 
     try {
-        $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
+        $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF06' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'FIDO2 - Specific Keys' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication Methods'

@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21823 {
     #Tested
     try {
         # Get authentication flows policy from cache
-        $AuthFlowPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationFlowsPolicy'
+        $AuthFlowPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationFlowsPolicy'
 
         if (-not $AuthFlowPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Guest self-service sign-up via user flow is disabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'External collaboration'

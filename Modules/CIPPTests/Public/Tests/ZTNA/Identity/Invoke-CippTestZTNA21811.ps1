@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21811 {
     param($Tenant)
     #Tested
     try {
-        $domains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Domains'
+        $domains = Get-CIPPTestData -TenantFilter $Tenant -Type 'Domains'
 
         if (-not $domains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21811' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Password expiration is disabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential Management'
@@ -15,7 +15,7 @@ function Invoke-CippTestZTNA21811 {
 
         $misconfiguredDomains = $domains | Where-Object { $_.passwordValidityPeriodInDays -ne 2147483647 }
 
-        $users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $misconfiguredUsers = @()
         if ($users) {

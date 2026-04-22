@@ -12,7 +12,7 @@ function Invoke-CippTestCopilotReady012 {
     # Pass if all four permissions are restricted (false).
 
     try {
-        $AuthPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
+        $AuthPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady012' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No authorization policy data found in database. Data collection may not yet have run for this tenant.' -Risk 'Medium' -Name 'User self-service creation is restricted (groups, tenants, apps)' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24553 {
     $TestId = 'ZTNA24553'
 
     try {
-        $IntunePolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceCompliancePolicies'
+        $IntunePolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneDeviceCompliancePolicies'
 
         if (-not $IntunePolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Windows Update policies are enforced to reduce risk from unpatched vulnerabilities' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Tenant'

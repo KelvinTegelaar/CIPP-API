@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21992 {
     param($Tenant)
 
     try {
-        $Apps = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Apps'
-        $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
+        $Apps = Get-CIPPTestData -TenantFilter $Tenant -Type 'Apps'
+        $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
         #Tested
         if (-not $Apps -and -not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21992' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Application certificates must be rotated on a regular basis' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'

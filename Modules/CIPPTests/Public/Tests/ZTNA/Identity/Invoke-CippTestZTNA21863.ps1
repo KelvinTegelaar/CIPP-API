@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21863 {
     #Tested
     try {
         # Get risk detections from cache and filter for high-risk untriaged sign-ins
-        $RiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RiskDetections'
+        $RiskDetections = Get-CIPPTestData -TenantFilter $Tenant -Type 'RiskDetections'
 
         if (-not $RiskDetections) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'All high-risk sign-ins are triaged' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Monitoring'

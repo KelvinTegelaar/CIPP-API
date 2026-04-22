@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21796 {
     param($Tenant)
     #tested
     try {
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21796' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Block legacy authentication policy is configured' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Access Control'
