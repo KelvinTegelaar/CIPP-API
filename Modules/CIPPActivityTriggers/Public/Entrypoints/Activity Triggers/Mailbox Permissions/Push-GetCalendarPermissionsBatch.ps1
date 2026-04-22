@@ -127,8 +127,9 @@ function Push-GetCalendarPermissionsBatch {
                     Write-Information "Failed to get calendar permissions for $($Perm.OperationGuid): $($Perm.error)"
                     continue
                 }
+                $AccessStr = if ($Perm.AccessRights -is [array]) { $Perm.AccessRights -join ',' } else { $Perm.AccessRights }
                 $AllCalendarPermissions.Add([PSCustomObject]@{
-                        id           = [guid]::NewGuid().ToString()
+                        id           = "CAL-$($Perm.Identity)-$($Perm.User)-$AccessStr"
                         Identity     = $Perm.Identity
                         User         = $Perm.User
                         AccessRights = $Perm.AccessRights

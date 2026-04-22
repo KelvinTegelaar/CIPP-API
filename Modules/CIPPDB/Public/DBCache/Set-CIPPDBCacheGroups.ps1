@@ -27,7 +27,7 @@ function Set-CIPPDBCacheGroups {
                 [PSCustomObject]@{
                     id     = $_.id
                     method = 'GET'
-                    url    = "/groups/$($_.id)/members?`$select=id,displayName,userPrincipalName"
+                    url    = "/groups/$($_.id)/members?`$top=999&`$select=id,displayName,userPrincipalName"
                 }
             }
         }

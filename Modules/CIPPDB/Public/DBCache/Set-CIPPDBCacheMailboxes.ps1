@@ -84,7 +84,7 @@ function Set-CIPPDBCacheMailboxes {
                 # Batch sizes per type:
                 # - Permissions & Rules use New-ExoBulkRequest (single POST), scales well → 100
                 # - Calendar uses 2 bulk phases (folder stats + permissions), handles 100 per activity
-                $PermissionBatchSize = 100
+                $PermissionBatchSize = 50
                 $CalendarBatchSize = 100
                 $RulesBatchSize = 100
 
