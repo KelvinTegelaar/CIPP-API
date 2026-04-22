@@ -39,6 +39,7 @@ function Add-CIPPAzDataTableEntity {
 
     $MaxRowSize = 500000 - 100
     $MaxSize = 30kb
+    $BatchQueue = [System.Collections.Generic.List[object]]::new()
 
     foreach ($SingleEnt in @($Entity)) {
         try {
@@ -83,6 +84,40 @@ function Add-CIPPAzDataTableEntity {
                 }
             } catch {
                 Write-Warning "Error during entity validation: $($_.Exception.Message)"
+            }
+
+            # Check entity size - if under MaxSize, batch it for bulk write
+            $entityBytes = [System.Text.Encoding]::UTF8.GetByteCount($($SingleEnt | ConvertTo-Json -Compress))
+
+            if ($entityBytes -lt $MaxSize) {
+                # Small entity - add to batch queue
+                $BatchQueue.Add($SingleEnt)
+                if ($BatchQueue.Count -ge 100) {
+                    try {
+                        Add-AzDataTableEntity @Parameters -Entity $BatchQueue.ToArray() -ErrorAction Stop
+                    } catch {
+                        # Batch failed - fall back to individual writes
+                        Write-Warning "Batch write failed, falling back to individual writes: $($_.Exception.Message)"
+                        foreach ($batchItem in $BatchQueue) {
+                            Add-AzDataTableEntity @Parameters -Entity $batchItem -ErrorAction Stop
+                        }
+                    }
+                    $BatchQueue.Clear()
+                }
+                continue
+            }
+
+            # Large entity - flush any pending batch first, then write individually
+            if ($BatchQueue.Count -gt 0) {
+                try {
+                    Add-AzDataTableEntity @Parameters -Entity $BatchQueue.ToArray() -ErrorAction Stop
+                } catch {
+                    Write-Warning "Batch write failed, falling back to individual writes: $($_.Exception.Message)"
+                    foreach ($batchItem in $BatchQueue) {
+                        Add-AzDataTableEntity @Parameters -Entity $batchItem -ErrorAction Stop
+                    }
+                }
+                $BatchQueue.Clear()
             }
 
             Add-AzDataTableEntity @Parameters -Entity $SingleEnt -ErrorAction Stop
@@ -236,5 +271,18 @@ function Add-CIPPAzDataTableEntity {
                 throw $_
             }
         }
+    }
+
+    # Flush any remaining batched entities
+    if ($BatchQueue.Count -gt 0) {
+        try {
+            Add-AzDataTableEntity @Parameters -Entity $BatchQueue.ToArray() -ErrorAction Stop
+        } catch {
+            Write-Warning "Final batch write failed, falling back to individual writes: $($_.Exception.Message)"
+            foreach ($batchItem in $BatchQueue) {
+                Add-AzDataTableEntity @Parameters -Entity $batchItem -ErrorAction Stop
+            }
+        }
+        $BatchQueue.Clear()
     }
 }
