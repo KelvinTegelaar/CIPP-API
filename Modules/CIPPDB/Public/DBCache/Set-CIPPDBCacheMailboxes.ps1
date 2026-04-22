@@ -82,11 +82,11 @@ function Set-CIPPDBCacheMailboxes {
                 Write-Information "Starting batch caching for types: $($Types -join ', ')"
 
                 # Batch sizes per type:
-                # - Permissions & Rules use New-ExoBulkRequest (single POST), scales well → 50
-                # - Calendar makes 2 serial Exchange calls per mailbox, needs smaller batches → 25
-                $PermissionBatchSize = 50
-                $CalendarBatchSize = 25
-                $RulesBatchSize = 50
+                # - Permissions & Rules use New-ExoBulkRequest (single POST), scales well → 100
+                # - Calendar uses 2 bulk phases (folder stats + permissions), handles 100 per activity
+                $PermissionBatchSize = 100
+                $CalendarBatchSize = 100
+                $RulesBatchSize = 100
 
                 # Separate batches for permissions and rules
                 $PermissionBatches = [System.Collections.Generic.List[object]]::new()
