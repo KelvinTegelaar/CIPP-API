@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21835 {
 
     try {
         # Get Global Administrator role (template ID: 62e90394-69f5-4237-9190-012177145e10)
-        $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
         $GlobalAdminRole = $Roles | Where-Object { $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' }
 
         if (-not $GlobalAdminRole) {
@@ -23,7 +23,7 @@ function Invoke-CippTestZTNA21835 {
         }
 
         # Get Users data to check sync status
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $EmergencyAccountCandidates = [System.Collections.Generic.List[object]]::new()
 
@@ -47,7 +47,7 @@ function Invoke-CippTestZTNA21835 {
         }
 
         # Get CA policies
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
         $EnabledCAPolicies = $CAPolicies | Where-Object { $_.state -eq 'enabled' }
 
         $EmergencyAccessAccounts = [System.Collections.Generic.List[object]]::new()

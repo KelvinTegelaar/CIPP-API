@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21845 {
     #Tested
     try {
         # Get Temporary Access Pass configuration
-        $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
+        $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
         $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'TemporaryAccessPass' }
 
         if (-not $TAPConfig) {
@@ -24,7 +24,7 @@ function Invoke-CippTestZTNA21845 {
         }
 
         # Get conditional access policies
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
         $SecurityInfoPolicies = $CAPolicies | Where-Object {
             $_.state -eq 'enabled' -and
             $_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo' -and

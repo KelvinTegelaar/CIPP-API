@@ -15,6 +15,8 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         TAG
             "CIS M365 5.0 (6.5.4)"
             "NIST CSF 2.0 (PR.IR-01)"
+            "ZTNA21799"
+            "CISAMSEXO51"
         EXECUTIVETEXT
             Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.
         ADDEDCOMPONENT
@@ -27,6 +29,12 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -11,11 +11,9 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
         (DocsDescription) Deploy tenant allow/block list entries from a saved template.
     .NOTES
         CAT
-            Templates
-        MULTI
-            True
+            Exchange Standards
         DISABLEDFEATURES
-            {"report":true,"warn":true,"remediate":false}
+            {"report":false,"warn":false,"remediate":false}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -23,7 +21,13 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
         EXECUTIVETEXT
             Deploys standardized tenant allow/block list entries across tenants. These templates ensure consistent email filtering rules are applied, managing which senders, URLs, file hashes, and IP addresses are allowed or blocked across the organization.
         ADDEDCOMPONENT
-            {"type":"autoComplete","name":"standards.TenantAllowBlockListTemplate.TemplateList","multiple":true,"label":"Select Tenant Allow/Block List Template","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
+            {"type":"autoComplete","name":"TenantAllowBlockListTemplate","required":false,"multiple":true,"label":"Select Tenant Allow/Block List Template","api":{"url":"/api/ListTenantAllowBlockListTemplates","labelField":"templateName","valueField":"GUID","queryKey":"ListTenantAllowBlockListTemplates","showRefresh":true}}
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -15,6 +15,8 @@ function Invoke-CIPPStandardDefenderCompliancePolicy {
         TAG
             "defender_mde_connector"
             "defender_intune_compliance"
+        EXECUTIVETEXT
+            Establishes the critical link between Microsoft Defender for Endpoint and Intune, enabling security risk data from MDE to be used in device compliance policies. This ensures that only devices meeting your organization's security standards can access corporate resources, providing a foundational layer of Zero Trust security across all platforms.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectAndroid","label":"Connect Android devices to MDE","defaultValue":false}
             {"type":"switch","name":"standards.DefenderCompliancePolicy.ConnectAndroidCompliance","label":"Connect Android 6.0.0+ (App-based MAM)","defaultValue":false}

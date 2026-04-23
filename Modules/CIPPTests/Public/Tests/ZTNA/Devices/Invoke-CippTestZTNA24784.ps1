@@ -7,7 +7,7 @@ function Invoke-CippTestZTNA24784 {
     #Tested - Device
 
     try {
-        $ConfigPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
+        $ConfigPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
         if (-not $ConfigPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24784' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Defender Antivirus policies protect macOS devices from malware' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return

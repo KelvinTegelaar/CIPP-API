@@ -30,6 +30,12 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
             Set-CsTeamsClientConfiguration -AllowGoogleDrive \$false -AllowShareFile \$false -AllowBox \$false -AllowDropBox \$false -AllowEgnyte \$false
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

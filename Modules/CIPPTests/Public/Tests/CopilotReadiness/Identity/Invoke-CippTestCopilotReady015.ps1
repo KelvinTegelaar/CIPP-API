@@ -10,7 +10,7 @@ function Invoke-CippTestCopilotReady015 {
     # and which apps are seeing the most engagement.
 
     try {
-        $UsageData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'CopilotUsageUserDetail'
+        $UsageData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotUsageUserDetail'
 
         if (-not $UsageData) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady015' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot usage data found in database. Data collection may not yet have run for this tenant.' -Risk 'Informational' -Name 'Microsoft 365 Copilot usage per user' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

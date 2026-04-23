@@ -13,6 +13,8 @@ function Invoke-CIPPStandardExternalMFATrusted {
         CAT
             Entra (AAD) Standards
         TAG
+            "ZTNA21803"
+            "ZTNA21804"
         EXECUTIVETEXT
             Allows external partners and vendors to use their own organization's multi-factor authentication when accessing company resources, streamlining collaboration while maintaining security standards. This reduces friction for external users while ensuring they still meet authentication requirements.
         ADDEDCOMPONENT

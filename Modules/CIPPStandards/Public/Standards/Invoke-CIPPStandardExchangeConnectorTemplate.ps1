@@ -22,6 +22,12 @@ function Invoke-CIPPStandardExchangeConnectorTemplate {
             Configures standardized Exchange connectors that control how email flows between your organization and external systems. These templates ensure secure and reliable email delivery while maintaining proper routing and security policies for business communications.
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"exConnectorTemplate","label":"Select Exchange Connector Template","api":{"url":"/api/ListExConnectorTemplates","labelField":"name","valueField":"GUID","queryKey":"ListExConnectorTemplates"}}
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

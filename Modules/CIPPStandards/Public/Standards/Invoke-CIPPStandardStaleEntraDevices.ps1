@@ -7,7 +7,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
     .SYNOPSIS
         (Label) Cleanup stale Entra devices
     .DESCRIPTION
-        (Helptext) Remediate is currently not available. Cleans up Entra devices that have not connected/signed in for the specified number of days.
+        (Helptext) **Remediate is currently not available**. Cleans up Entra devices that have not connected/signed in for the specified number of days.
         (DocsDescription) Remediate is currently not available. Cleans up Entra devices that have not connected/signed in for the specified number of days. First disables and later deletes the devices. More info can be found in the [Microsoft documentation](https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices)
     .NOTES
         CAT
@@ -19,9 +19,9 @@ function Invoke-CIPPStandardStaleEntraDevices {
         EXECUTIVETEXT
             Automatically identifies and removes inactive devices that haven't connected to company systems for a specified period, reducing security risks from abandoned or lost devices. This maintains a clean device inventory and prevents potential unauthorized access through dormant device registrations.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Do not set below 30)"}
+            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Do not set below 30)","validators":{"min":{"value":30,"message":"Minimum value is 30"}}}
         DISABLEDFEATURES
-            {"report":false,"warn":false,"remediate":false}
+            {"report":false,"warn":false,"remediate":true}
         IMPACT
             High Impact
         ADDEDDATE
@@ -29,6 +29,12 @@ function Invoke-CIPPStandardStaleEntraDevices {
         POWERSHELLEQUIVALENT
             Remove-MgDevice, Update-MgDevice or Graph API
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

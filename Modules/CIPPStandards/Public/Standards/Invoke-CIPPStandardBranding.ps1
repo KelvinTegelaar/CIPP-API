@@ -29,6 +29,10 @@ function Invoke-CIPPStandardBranding {
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
+            "OFFICE_BUSINESS"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

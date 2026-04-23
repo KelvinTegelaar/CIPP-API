@@ -18,6 +18,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             "mdo_commonattachmentsfilter"
             "mdo_safeattachmentpolicy"
             "NIST CSF 2.0 (DE.CM-09)"
+            "ORCA158"
+            "ORCA227"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.SafeAttachmentPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Safe Attachment Policy"}
             {"type":"select","multiple":false,"label":"Safe Attachment Action","name":"standards.SafeAttachmentPolicy.SafeAttachmentAction","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
@@ -32,6 +34,12 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

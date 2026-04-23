@@ -16,6 +16,7 @@ function Invoke-CIPPStandardDisableSMS {
             "CIS M365 5.0 (2.3.5)"
             "EIDSCA.AS04"
             "NIST CSF 2.0 (PR.AA-03)"
+            "EIDSCAAS04"
         EXECUTIVETEXT
             Disables SMS text messages as a multi-factor authentication method due to security vulnerabilities like SIM swapping attacks. This forces users to adopt more secure authentication methods like authenticator apps or hardware tokens, significantly improving account security.
         ADDEDCOMPONENT

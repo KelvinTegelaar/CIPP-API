@@ -19,10 +19,10 @@ function Invoke-CippTestZTNA21816 {
         $NonPIMPrivilegedGroups = [System.Collections.Generic.List[object]]::new()
 
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
-        $RoleEligibilitySchedules = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
-        $RoleAssignmentScheduleInstances = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
-        $Groups = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Groups'
+        $RoleEligibilitySchedules = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $Groups = Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups'
 
         $EligibleGAs = $RoleEligibilitySchedules | Where-Object { $_.roleDefinitionId -eq $GlobalAdminRoleId }
         $EligibleGAUsers = 0

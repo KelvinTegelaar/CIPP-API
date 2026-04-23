@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA21820 {
         }
 
         # Get all role management policies
-        $RoleManagementPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleManagementPolicies'
+        $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
 
         # Build hashtable for quick policy lookup by role ID
         $PolicyByRoleId = @{}

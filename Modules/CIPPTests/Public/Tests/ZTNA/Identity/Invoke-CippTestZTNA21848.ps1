@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21848 {
     #Tested
     try {
         # Get password protection settings from Settings cache
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
         $PasswordProtectionSettings = $Settings | Where-Object { $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }
 
         if (-not $PasswordProtectionSettings) {

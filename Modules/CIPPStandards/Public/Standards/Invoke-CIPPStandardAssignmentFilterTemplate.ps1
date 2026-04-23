@@ -24,6 +24,12 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
             Creates standardized assignment filters with predefined settings. These templates ensure consistent assignment filter configurations across the organization, streamlining assignment management.
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"assignmentFilterTemplate","label":"Select Assignment Filter Template","api":{"url":"/api/ListAssignmentFilterTemplates","labelField":"Displayname","altLabelField":"displayName","valueField":"GUID","queryKey":"ListAssignmentFilterTemplates"}}
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

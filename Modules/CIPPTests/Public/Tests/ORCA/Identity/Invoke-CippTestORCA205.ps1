@@ -6,7 +6,7 @@ function Invoke-CippTestORCA205 {
     param($Tenant)
 
     try {
-        $Policies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
+        $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoMalwareFilterPolicies'
 
         if (-not $Policies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA205' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Common attachment type filter is enabled' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Malware'

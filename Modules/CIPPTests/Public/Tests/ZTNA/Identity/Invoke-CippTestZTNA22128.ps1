@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA22128 {
     param($Tenant)
     #Tested
     try {
-        $Roles = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Roles'
-        $Guests = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Guests'
+        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $Guests = Get-CIPPTestData -TenantFilter $Tenant -Type 'Guests'
 
         if (-not $Roles -or -not $Guests) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'

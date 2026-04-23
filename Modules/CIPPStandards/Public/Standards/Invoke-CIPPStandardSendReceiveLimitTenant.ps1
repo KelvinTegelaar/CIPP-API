@@ -16,8 +16,8 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         EXECUTIVETEXT
             Establishes standard email attachment size limits for all new employees, balancing functionality with system performance and security. This prevents email system overload from large attachments while ensuring employees can share necessary files through appropriate channels.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","defaultValue":35}
-            {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","defaultValue":36}
+            {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","defaultValue":35,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":150,"message":"Maximum value is 150"}}}
+            {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","defaultValue":36,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":150,"message":"Maximum value is 150"}}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -25,6 +25,12 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         POWERSHELLEQUIVALENT
             Set-MailboxPlan
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

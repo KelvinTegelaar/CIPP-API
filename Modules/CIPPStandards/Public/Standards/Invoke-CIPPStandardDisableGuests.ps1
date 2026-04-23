@@ -13,6 +13,7 @@ function Invoke-CIPPStandardDisableGuests {
         CAT
             Entra (AAD) Standards
         TAG
+            "ZTNA21858"
         EXECUTIVETEXT
             Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.
         ADDEDCOMPONENT
@@ -26,6 +27,9 @@ function Invoke-CIPPStandardDisableGuests {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -51,25 +55,15 @@ function Invoke-CIPPStandardDisableGuests {
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
 
-        $EnrichedGuests = [System.Collections.Generic.List[object]]::new()
-        foreach ($guest in $GraphRequest) {
-            $lastSignIn = $null
+        $EnrichedGuests = foreach ($guest in $GraphRequest) {
             if ($guest.signInActivity -and $guest.signInActivity.lastSuccessfulSignInDateTime) {
                 $lastSignIn = [datetime]$guest.signInActivity.lastSuccessfulSignInDateTime
-            } else {
-                # signInActivity is null, try auditLogs/signIns
-                $SignInLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq '$($guest.id)' and status/errorCode eq 0&`$orderby=createdDateTime desc&`$top=1" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant -noPagination $true
-                if ($SignInLogs -and $SignInLogs.Count -gt 0) {
-                    $lastSignIn = [datetime]$SignInLogs[0].authenticationDetails.authenticationStepDateTime
+                if ($lastSignIn.ToUniversalTime() -le $Days) {
+                    $guest
                 }
             }
-            # Only add guests whose last sign-in is older than cutoff
-            if ($lastSignIn -and $lastSignIn.ToUniversalTime() -le $Days) {
-                $guest | Add-Member -MemberType NoteProperty -Name 'EnrichedLastSignInDateTime' -Value $lastSignIn -Force
-                $EnrichedGuests.Add($guest)
-            }
         }
-        $GraphRequest = $EnrichedGuests
+        $GraphRequest = @($EnrichedGuests)
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error

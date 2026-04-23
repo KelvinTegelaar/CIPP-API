@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21846 {
     #Tested
     try {
         # Get Temporary Access Pass configuration
-        $AuthMethodsPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
+        $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
         $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'TemporaryAccessPass' }
 
         if (-not $TAPConfig) {

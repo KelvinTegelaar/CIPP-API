@@ -18,7 +18,7 @@ function Invoke-CippTestZTNA21955 {
     #Tested
     try {
         # Get device registration policy from cache
-        $DeviceRegPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
+        $DeviceRegPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
 
         if (-not $DeviceRegPolicy) {
             $TestParams = @{

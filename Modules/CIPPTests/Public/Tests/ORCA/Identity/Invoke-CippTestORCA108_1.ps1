@@ -6,8 +6,8 @@ function Invoke-CippTestORCA108_1 {
     param($Tenant)
 
     try {
-        $DkimConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoDkimSigningConfig'
-        $AcceptedDomains = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $DkimConfig = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoDkimSigningConfig'
+        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
 
         if (-not $DkimConfig -or -not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA108_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'DNS Records have been set up to support DKIM' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'DKIM'

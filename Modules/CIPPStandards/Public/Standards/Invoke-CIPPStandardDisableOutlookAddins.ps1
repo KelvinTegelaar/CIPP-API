@@ -17,6 +17,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
             "exo_outlookaddins"
             "NIST CSF 2.0 (PR.AA-05)"
             "NIST CSF 2.0 (PR.PS-05)"
+            "ZTNA21817"
         EXECUTIVETEXT
             Prevents employees from installing third-party add-ins in Outlook without administrative approval, reducing security risks from potentially malicious extensions. This ensures only vetted and approved tools can access company email data while maintaining centralized control over email functionality.
         ADDEDCOMPONENT
@@ -28,6 +29,12 @@ function Invoke-CIPPStandardDisableOutlookAddins {
             Get-ManagementRoleAssignment \| Remove-ManagementRoleAssignment
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

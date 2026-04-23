@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21780 {
     param($Tenant)
     #tested
     try {
-        $Recommendations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DirectoryRecommendations'
+        $Recommendations = Get-CIPPTestData -TenantFilter $Tenant -Type 'DirectoryRecommendations'
 
         if (-not $Recommendations) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21780' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'No usage of ADAL in the tenant' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application Management'

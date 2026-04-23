@@ -42,7 +42,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.'$count') {
-        $Parameters.'$count' = ([string]([System.Boolean]$Request.Query.'$count')).ToLower()
+        $Parameters.'$count' = ([string]([System.Convert]::ToBoolean($Request.Query.'$count'))).ToLower()
     }
 
 
@@ -77,11 +77,11 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.NoPagination) {
-        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.NoPagination
+        $GraphRequestParams.NoPagination = [System.Convert]::ToBoolean($Request.Query.NoPagination)
     }
 
     if ($Request.Query.manualPagination) {
-        $GraphRequestParams.ManualPagination = [System.Boolean]$Request.Query.manualPagination
+        $GraphRequestParams.ManualPagination = [System.Convert]::ToBoolean($Request.Query.manualPagination)
     }
 
     if ($Request.Query.nextLink) {
@@ -89,7 +89,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.CountOnly) {
-        $GraphRequestParams.CountOnly = [System.Boolean]$Request.Query.CountOnly
+        $GraphRequestParams.CountOnly = [System.Convert]::ToBoolean($Request.Query.CountOnly)
     }
 
     if ($Request.Query.QueueNameOverride) {
@@ -97,7 +97,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.ReverseTenantLookup) {
-        $GraphRequestParams.ReverseTenantLookup = [System.Boolean]$Request.Query.ReverseTenantLookup
+        $GraphRequestParams.ReverseTenantLookup = [System.Convert]::ToBoolean($Request.Query.ReverseTenantLookup)
     }
 
     if ($Request.Query.ReverseTenantLookupProperty) {
@@ -105,7 +105,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.SkipCache) {
-        $GraphRequestParams.SkipCache = [System.Boolean]$Request.Query.SkipCache
+        $GraphRequestParams.SkipCache = [System.Convert]::ToBoolean($Request.Query.SkipCache)
     }
 
     if ($Request.Query.ListProperties) {
@@ -122,11 +122,36 @@ function Invoke-ListGraphRequest {
 
     $Metadata = $GraphRequestParams
 
+    # Use raw JSON passthrough for AllTenants cached results when no post-processing is needed.
+    $UseRawJson = $Request.Query.TenantFilter -eq 'AllTenants' -and
+                  -not $Request.Query.ListProperties -and
+                  -not $Request.Query.Sort -and
+                  -not $Request.Query.QueueId
+
     try {
+        if ($UseRawJson) {
+            $GraphRequestParams.RawJsonArray = $true
+        }
         $Results = Get-GraphRequestList @GraphRequestParams
 
         if ($script:LastGraphResponseHeaders) {
             $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
+        }
+
+        # RawJsonArray returns a JSON string directly — skip object-level processing
+        if ($UseRawJson -and $Results -is [string] -and $Results.StartsWith('[')) {
+            if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+                $Metadata.ColdStart = $true
+            }
+            $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+            $GraphRequestData = '{"Results":' + $Results + ',"Metadata":' + $MetadataJson + '}'
+            $StatusCode = [HttpStatusCode]::OK
+
+            return ([HttpResponseContext]@{
+                    StatusCode  = $StatusCode
+                    ContentType = 'application/json'
+                    Body        = $GraphRequestData
+                })
         }
 
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {

@@ -6,7 +6,7 @@ function Invoke-CippTestZTNA21774 {
     param($Tenant)
 
     try {
-        $ServicePrincipals = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipals'
+        $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
         #tested
         if (-not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21774' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Microsoft services applications do not have credentials configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application Management'

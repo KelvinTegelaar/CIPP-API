@@ -8,6 +8,34 @@ function Invoke-ExecGraphRequestProfile {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $Mode = $Request.Query.Mode
+
+    # ── Diagnostics-only mode ───────────────────────────────────────────
+    # Returns a point-in-time snapshot of the CIPPSharp DLL runtime state —
+    # pool usage counters, top hosts, status code distribution, and the
+    # CIPPTokenCache entry count. No Graph/EXO calls, no tenant required.
+    if ($Mode -eq 'Diagnostics') {
+        $Reset = [System.Convert]::ToBoolean($Request.Query.Reset ?? $false)
+
+        $RestDiag  = [CIPP.CIPPRestClient]::GetDiagnostics() | ConvertFrom-Json
+        $CacheDiag = [CIPP.CIPPTokenCache]::GetDiagnostics()  | ConvertFrom-Json
+
+        if ($Reset) {
+            [CIPP.CIPPRestClient]::ResetDiagnostics()
+        }
+
+        return [HttpResponseContext]@{
+            StatusCode = 200
+            Body       = [PSCustomObject]@{
+                Mode              = 'Diagnostics'
+                CapturedAt        = (Get-Date).ToUniversalTime().ToString('o')
+                CountersReset     = $Reset
+                RestClient        = $RestDiag
+                TokenCache        = $CacheDiag
+            }
+        }
+    }
+
     $TenantFilter = $Request.Query.tenantFilter
     $Endpoint = $Request.Query.Endpoint
     if (!$TenantFilter -or !$Endpoint) {

@@ -26,6 +26,8 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         POWERSHELLEQUIVALENT
             New-ProtectionAlert and Set-ProtectionAlert
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "RMS_S_PREMIUM2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

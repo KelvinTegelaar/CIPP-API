@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.4.0'
+ModuleVersion = '3.5.1'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -110,19 +110,11 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.4.0] - 2025-07-03
-
-### Added
-
-- Added SortedList as valid type for -Entity parameter [#52](https://github.com/PalmEmanuel/AzBobbyTables/issues/52)
-- New command `Get-AzDataTableSupportedEntityType` to get the supported data types for the module when using `-Entity` parameter
+          ReleaseNotes = '## [3.5.1] - 2026-04-22
 
 ### Changed
 
-- Dependency version bumps
-- Rewrote core module logic to add a converter system which allows for flexible entity types
-- Updated gitversion config for build and release
-- Improved module tests for the new type converter system
+- Share a single HttpClient across all TableClient/TableServiceClient instances via HttpClientTransport, enabling TCP connection pooling and reducing socket churn in high-concurrency scenarios
 
 '
 

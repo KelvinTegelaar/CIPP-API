@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24839 {
     $TestId = 'ZTNA24839'
 
     try {
-        $DeviceConfigs = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
+        $DeviceConfigs = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
 
         if (-not $DeviceConfigs) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Secure Wi-Fi profiles protect iOS devices from unauthorized network access' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Data'
