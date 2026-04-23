@@ -11,7 +11,6 @@ function Push-NinjaOneQueue {
         'SyncTenant'       { Invoke-NinjaOneTenantSync -QueueItem $Item }
         'SyncTenants'      { Invoke-NinjaOneSync }
         'CveSyncTenant'    { Invoke-NinjaOneCveSyncTenant -QueueItem $Item }
-        'CveSyncTenants'   { Invoke-CIPPScheduledNinjaCveSync }
     }
     return $true
 }
