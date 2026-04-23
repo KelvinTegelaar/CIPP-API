@@ -119,7 +119,7 @@ function Test-CIPPAccessTenant {
             $ExchangeLicenseCapable = Test-CIPPStandardLicense -StandardName 'ExchangeAccessCheck' -TenantFilter $Tenant.customerId -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Exchange license capability check failed. Continuing with Exchange access validation. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warn' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Exchange license capability check failed. Continuing with Exchange access validation. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
             $ExchangeLicenseCapable = $true
         }
 
@@ -150,7 +150,7 @@ function Test-CIPPAccessTenant {
                     Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
                     $ExchangeStatus = $false
                     $ExchangeTest = 'Connected to Exchange but missing permissions in Organization Management. This may impact the ability to manage Exchange features'
-                    Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warn' -LogData $MissingOrgMgmtRoles
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warning' -LogData $MissingOrgMgmtRoles
                 } else {
                     Write-Warning 'All available Organization Management roles are present in Exchange'
                     $ExchangeStatus = $true

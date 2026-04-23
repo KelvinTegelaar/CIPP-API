@@ -62,7 +62,7 @@ function Invoke-ExecUpdateDriftDeviation {
                                 }
                             }
                             if (-not $MatchedTemplate) {
-                                Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find IntuneTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warn'
+                                Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find IntuneTemplate $TemplateId in drift standard settings for remediation" -Sev 'Warning'
                             } else {
                                 $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'remediate' -Value $true -Force
                                 $MatchedTemplate | Add-Member -MemberType NoteProperty -Name 'report' -Value $true -Force
@@ -151,7 +151,7 @@ function Invoke-ExecUpdateDriftDeviation {
                             Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Deleted Policy with ID $($ID)" -Sev 'Info'
                         } else {
                             "could not find policy with ID $($ID)"
-                            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warn'
+                            Write-LogMessage -tenant $TenantFilter -Headers $Request.Headers -API $APINAME -message "Could not find Policy with ID $($ID) to delete for remediation" -sev 'Warning'
                         }
 
 

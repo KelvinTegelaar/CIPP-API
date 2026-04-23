@@ -391,7 +391,7 @@ exit 0
                     if ($Result.status -match '^2') {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed legacy OMA-URI policy: $($Policy.displayName)" -sev Info
                     } else {
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to remove legacy OMA-URI policy: $($Policy.displayName) - $($Result.body.error.message)" -sev Warn
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to remove legacy OMA-URI policy: $($Policy.displayName) - $($Result.body.error.message)" -sev Warning
                     }
                 }
             }

@@ -38,7 +38,7 @@ function Invoke-ListContactTemplates {
         }
 
         if (-not $Templates) {
-            Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -sev 'Warn'
+            Write-LogMessage -headers $Headers -API $APIName -message "Template with ID $RequestedID not found" -sev 'Warning'
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
                     Body       = @{ Error = "Template with ID $RequestedID not found" }
