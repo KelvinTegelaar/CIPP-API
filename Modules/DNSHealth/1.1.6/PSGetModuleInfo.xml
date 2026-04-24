@@ -7,13 +7,13 @@
     </TN>
     <MS>
       <S N="Name">DNSHealth</S>
-      <S N="Version">1.1.5</S>
+      <S N="Version">1.1.6</S>
       <S N="Type">Module</S>
       <S N="Description">CIPP DNS Health Check Module</S>
       <S N="Author">John Duprey</S>
       <S N="CompanyName">johnduprey</S>
       <S N="Copyright">2023 John Duprey</S>
-      <DT N="PublishedDate">2026-04-24T15:04:48-04:00</DT>
+      <DT N="PublishedDate">2026-04-24T17:42:26-04:00</DT>
       <Nil N="InstalledDate" />
       <Nil N="UpdatedDate" />
       <Nil N="LicenseUri" />
@@ -127,25 +127,24 @@
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
           <S N="versionDownloadCount">0</S>
-          <S N="downloadCount">470</S>
-          <S N="packageSize">31576</S>
-          <S N="published">4/24/2026 3:04:48 PM -04:00</S>
-          <S N="created">4/24/2026 3:04:48 PM -04:00</S>
-          <S N="lastUpdated">4/24/2026 3:04:48 PM -04:00</S>
-          <S N="tags">PSModule</S>
+          <S N="downloadCount">477</S>
+          <S N="packageSize">31557</S>
+          <S N="published">4/24/2026 5:42:26 PM -04:00</S>
+          <S N="created">4/24/2026 5:42:26 PM -04:00</S>
+          <S N="lastUpdated">4/24/2026 5:42:26 PM -04:00</S>
+          <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Add-MailProvider PSCommand_Add-MailProvider PSFunction_Get-MailProvider PSCommand_Get-MailProvider PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Remove-MailProvider PSCommand_Remove-MailProvider PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2026-04-24T15:04:48Z</S>
-          <S N="NormalizedVersion">1.1.5</S>
+          <S N="updated">2026-04-24T17:42:26Z</S>
+          <S N="NormalizedVersion">1.1.6</S>
           <S N="Authors">John Duprey</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">DNSHealth.nuspec|DNSHealth.psd1|DNSHealth.psm1|MailProviders\SymantecCloud.json|MailProviders\Microsoft365.json|MailProviders\Sophos.json|MailProviders\Intermedia.json|MailProviders\SpamTitan.json|MailProviders\AppRiver.json|MailProviders\Proofpoint.json|MailProviders\Reflexion.json|MailProviders\_template.json|MailProviders\BarracudaESS.json|MailProviders\Mimecast.json|MailProviders\Null.json|MailProviders\HornetSecurity.json|MailProviders\Google.json</S>
-          <S N="Functions">Read-DmarcPolicy Read-MtaStsPolicy Add-MailProvider Get-MailProvider Read-DkimRecord Read-MtaStsRecord Read-MXRecord Read-NSRecord Read-SPFRecord Read-TlsRptRecord Read-WhoisRecord Remove-MailProvider Resolve-DnsHttpsQuery Set-DnsResolver Test-DNSSEC Test-HttpsCertificate Test-MtaSts</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\Microsoft365.json|MailProviders\Sophos.json|DNSHealth.psd1|MailProviders\SymantecCloud.json|MailProviders\SpamTitan.json|MailProviders\AppRiver.json|DNSHealth.psm1|MailProviders\Intermedia.json|MailProviders\_template.json|MailProviders\BarracudaESS.json|MailProviders\Reflexion.json|MailProviders\HornetSecurity.json|MailProviders\Google.json|MailProviders\Proofpoint.json|MailProviders\Null.json|MailProviders\Mimecast.json</S>
           <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
           <S N="PowerShellVersion">7.0</S>
         </MS>
       </Obj>
-      <S N="InstalledLocation">/Users/johnduprey/GitHub/CIPP Workspace/CIPP-API/Modules/DNSHealth/1.1.5</S>
+      <S N="InstalledLocation">/Users/johnduprey/GitHub/CIPP Workspace/CIPP-API/Modules/DNSHealth/1.1.6</S>
     </MS>
   </Obj>
 </Objs>
