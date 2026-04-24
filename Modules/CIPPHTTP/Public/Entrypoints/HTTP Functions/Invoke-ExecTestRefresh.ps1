@@ -15,9 +15,11 @@ function Invoke-ExecTestRefresh {
         $TestName = $Request.Query.testName ?? $Request.Body.testName
         $Function = 'Invoke-CippTest{0}' -f $TestName
         if (Get-Command -Name $Function -Module 'CIPPTests' -ErrorAction SilentlyContinue) {
-            & $Function -Tenant $TenantFilter
+            $TestResult = & $Function -Tenant $TenantFilter
+            $Table = Get-CippTable -tablename 'CippTestResults'
+            Add-CIPPAzDataTableEntity @Table -Entity $TestResult
             $StatusCode = [HttpStatusCode]::OK
-            $Body = [PSCustomObject]@{ Results = "Successfully updated test $TestName for tenant $TenantFilter" }
+            $Body = [PSCustomObject]@{ Results = "Successfully updated test $TestName for tenant $TenantFilter"; Metadata = $TestResult }
         } else {
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
