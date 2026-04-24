@@ -57,6 +57,13 @@ function Invoke-ExecOffloadFunctions {
                 Body       = $CurrentState
             })
     } else {
+        if ($env:CIPP_HOSTED -eq 'true') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ results = 'Offload function configuration is not available on hosted instances. Please contact the helpdesk to make changes' }
+                })
+        }
+
         Add-CIPPAzDataTableEntity @Table -Entity @{
             PartitionKey = 'OffloadFunctions'
             RowKey       = 'OffloadFunctions'
