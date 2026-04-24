@@ -73,6 +73,7 @@ function Invoke-ListTenantAlignment {
                         standardName         = $ResolvedName
                         complianceStatus     = $_.ComplianceStatus
                         compliant            = $_.Compliant
+                        deviationStatus      = $_.DeviationStatus
                         licenseAvailable     = $_.LicenseAvailable
                         currentValue         = $_.CurrentValue
                         expectedValue        = $_.ExpectedValue
