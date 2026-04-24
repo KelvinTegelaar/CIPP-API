@@ -121,8 +121,12 @@ function Send-CIPPScheduledTaskAlert {
             $HTML += "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
         }
 
-        # Build title
-        $title = "$TaskType - $TenantFilter - $($TaskInfo.Name)"
+        # Build title — honor CustomSubject if set on the task row, otherwise use default format
+        $title = if (![string]::IsNullOrWhiteSpace($TaskInfo.CustomSubject)) {
+            "$($TaskInfo.CustomSubject) - $TenantFilter"
+        } else {
+            "$TaskType - $TenantFilter - $($TaskInfo.Name)"
+        }
         if ($TaskInfo.Reference) {
             $title += " - Reference: $($TaskInfo.Reference)"
         }
