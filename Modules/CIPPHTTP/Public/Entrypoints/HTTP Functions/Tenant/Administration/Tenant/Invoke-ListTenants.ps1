@@ -97,7 +97,7 @@ function Invoke-ListTenants {
                     try {
                         $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value ($TenantDefaults.Value | ConvertFrom-Json) -Force
                     } catch {
-                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse offboarding defaults for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -sev 'Warn'
+                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to parse offboarding defaults for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -sev 'Warning'
                         $Tenant | Add-Member -MemberType NoteProperty -Name 'offboardingDefaults' -Value $null -Force
                     }
                 } else {

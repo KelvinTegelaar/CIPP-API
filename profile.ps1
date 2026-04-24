@@ -216,7 +216,7 @@ $Timings['Timezone'] = $SwTimezone.Elapsed.TotalMilliseconds
 # Import Extra modules if needed
 $SwExtraModules = [System.Diagnostics.Stopwatch]::StartNew()
 $ModulesPath = Join-Path $env:CIPPRootPath 'Modules'
-$NonHttpModules = @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CIPPActivityTriggers')
+$NonHttpModules = @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CIPPActivityTriggers', 'DNSHealth')
 $HttpModule = @('CIPPHTTP')
 
 $HttpDisabled = $env:AzureWebJobs_CIPPHttpTrigger_Disabled -in @('true', '1') -or [System.Environment]::GetEnvironmentVariable('AzureWebJobs.CIPPHttpTrigger.Disabled') -in @('true', '1')

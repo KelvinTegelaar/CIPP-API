@@ -104,7 +104,7 @@ function Invoke-ExecModifyContactPerms {
     }
 
     if ($Results.Count -eq 0) {
-        Write-LogMessage -headers $Headers -API $APIName -message 'No results were generated from the operation' -sev 'Warn'
+        Write-LogMessage -headers $Headers -API $APIName -message 'No results were generated from the operation' -sev 'Warning'
         $Results.Add('No results were generated from the operation. Please check the logs for more details.')
         $HasErrors = $true
     }

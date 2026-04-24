@@ -19,7 +19,7 @@ function Push-UpdatePermissionsQueue {
         $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
 
         if ((!$CPVRows -or $env:ApplicationID -notin $CPVRows.applicationId) -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant') {
-            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message 'A New tenant has been added, or a new CIPP-SAM Application is in use' -Sev 'Warn' -API 'NewTenant'
+            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message 'A New tenant has been added, or a new CIPP-SAM Application is in use' -Sev 'Warning' -API 'NewTenant'
             Write-Information 'Adding CPV permissions'
             Set-CIPPCPVConsent -Tenantfilter $Item.customerId
             $DomainRefreshRequired = $true
@@ -38,7 +38,7 @@ function Push-UpdatePermissionsQueue {
         if ($PermissionFailures) {
             $Status = 'Failed'
             $FailureMessage = ($PermissionFailures -join '; ')
-            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Permission update completed with failures for $($Item.displayName): $FailureMessage" -Sev 'Warn' -API 'UpdatePermissionsQueue'
+            Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Permission update completed with failures for $($Item.displayName): $FailureMessage" -Sev 'Warning' -API 'UpdatePermissionsQueue'
         } else {
             $Status = 'Success'
             Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message "Updated permissions for $($Item.displayName)" -Sev 'Info' -API 'UpdatePermissionsQueue'

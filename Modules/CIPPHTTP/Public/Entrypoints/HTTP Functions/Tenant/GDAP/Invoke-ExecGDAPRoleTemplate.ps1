@@ -18,7 +18,7 @@ function Invoke-ExecGDAPRoleTemplate {
     if ($Request.Query.TemplateId) {
         $Template = $Templates | Where-Object -Property RowKey -EQ $Request.Query.TemplateId
         if (!$Template) {
-            Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$($Request.Query.TemplateId)' not found" -sev 'Warn'
+            Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$($Request.Query.TemplateId)' not found" -sev 'Warning'
             $Body = @{}
         } else {
             Write-LogMessage -headers $Headers -API $APIName -message "Retrieved GDAP role template '$($Request.Query.TemplateId)'" -Sev 'Info'
@@ -68,7 +68,7 @@ function Invoke-ExecGDAPRoleTemplate {
                         }
                     }
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$OriginalRowKey' not found for editing" -sev 'Warn'
+                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$OriginalRowKey' not found for editing" -sev 'Warning'
                     $Body = @{
                         Results = "Template $OriginalRowKey not found"
                     }
@@ -84,7 +84,7 @@ function Invoke-ExecGDAPRoleTemplate {
                         Results = "Deleted template $RowKey"
                     }
                 } else {
-                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$RowKey' not found for deletion" -sev 'Warn'
+                    Write-LogMessage -headers $Headers -API $APIName -message "GDAP role template '$RowKey' not found for deletion" -sev 'Warning'
                     $Body = @{
                         Results = "Template $RowKey not found"
                     }

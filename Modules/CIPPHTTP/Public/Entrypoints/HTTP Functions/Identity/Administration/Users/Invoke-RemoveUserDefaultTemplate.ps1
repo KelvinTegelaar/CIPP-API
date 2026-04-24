@@ -25,7 +25,7 @@ function Invoke-RemoveUserDefaultTemplate {
             $StatusCode = [HttpStatusCode]::OK
         } else {
             $Result = "User Default Template with ID $ID not found"
-            Write-LogMessage -headers $Headers -API $APIName -message $Result -sev 'Warn'
+            Write-LogMessage -headers $Headers -API $APIName -message $Result -sev 'Warning'
             $StatusCode = [HttpStatusCode]::NotFound
         }
 

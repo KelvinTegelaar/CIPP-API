@@ -69,7 +69,7 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
             $MissingLicenseMessage = "This tenant is missing one or more required licenses for this standard: $($RequiredCapabilities -join ', ')."
             Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$($_.value)" -FieldValue $MissingLicenseMessage -Tenant $Tenant
         }
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exiting as the correct license is not present for this standard. Missing: $($RequiredCapabilities -join ', ')" -sev 'Warn'
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exiting as the correct license is not present for this standard. Missing: $($RequiredCapabilities -join ', ')" -sev 'Warning'
         return $true
     }
 
@@ -79,7 +79,7 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     # Align with other template standards by resolving all selected templates upfront
     $SelectedTemplateIds = @($Settings.TemplateList.value)
     if (-not $SelectedTemplateIds) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No reusable settings templates were selected.' -sev 'Warn'
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No reusable settings templates were selected.' -sev 'Warning'
         return $true
     }
 
