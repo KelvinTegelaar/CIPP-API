@@ -1,0 +1,36 @@
+function Invoke-ExecTestRefresh {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Tenant.Tests.ReadWrite
+    #>
+    param($Request, $TriggerMetadata)
+
+    $APIName = $TriggerMetadata.FunctionName
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+    try {
+        $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+        $TestName = $Request.Query.testName ?? $Request.Body.testName
+        $Function = 'Invoke-CippTest{0}' -f $TestName
+        if (Get-Command -Name $Function -Module 'CIPPTests' -ErrorAction SilentlyContinue) {
+            & $Function -Tenant $TenantFilter
+            $StatusCode = [HttpStatusCode]::OK
+            $Body = [PSCustomObject]@{ Results = "Successfully updated test $TestName for tenant $TenantFilter" }
+        } else {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = @{ Message = "Test function not found: $Function" }
+                })
+        }
+    } catch {
+        $StatusCode = [HttpStatusCode]::BadRequest
+        $Body = @{ Message = "Failed to start data collection/test run for $TenantFilter" }
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = $Body
+        })
+}
