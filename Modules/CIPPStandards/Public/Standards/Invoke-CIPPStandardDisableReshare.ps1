@@ -1,0 +1,99 @@
+function Invoke-CIPPStandardDisableReshare {
+    <#
+    .FUNCTIONALITY
+        Internal
+    .COMPONENT
+        (APIName) DisableReshare
+    .SYNOPSIS
+        (Label) Disable Re-sharing by External Users
+    .DESCRIPTION
+        (Helptext) Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
+        (DocsDescription) Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access. This is a tenant wide setting and overrules any settings set on the site level
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "CIS M365 5.0 (7.2.5)"
+            "CISA (MS.AAD.14.2v1)"
+            "CISA (MS.SPO.1.2v1)"
+            "ZTNA21803"
+            "ZTNA21804"
+        EXECUTIVETEXT
+            Prevents external users from sharing company documents with additional people, maintaining control over document distribution and preventing unauthorized access expansion. This security measure ensures that external sharing remains within intended boundaries set by internal employees.
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        ADDEDDATE
+            2022-06-15
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminSharePointSetting
+        RECOMMENDEDBY
+            "CIS"
+            "CIPP"
+        REQUIREDCAPABILITIES
+            "SHAREPOINTWAC"
+            "SHAREPOINTSTANDARD"
+            "SHAREPOINTENTERPRISE"
+            "SHAREPOINTENTERPRISE_EDU"
+            "ONEDRIVE_BASIC"
+            "ONEDRIVE_ENTERPRISE"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+    #>
+
+    param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableReshare' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
+    try {
+        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableReshare state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    if ($Settings.remediate -eq $true) {
+
+        if ($CurrentInfo.isResharingByExternalUsersEnabled) {
+            try {
+                $body = '{"isResharingByExternalUsersEnabled": "False"}'
+                $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled guests from resharing files' -sev Info
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guests from resharing files: $ErrorMessage" -sev Error
+            }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are already disabled from resharing files' -sev Info
+        }
+    }
+    if ($Settings.alert -eq $true) {
+
+        if ($CurrentInfo.isResharingByExternalUsersEnabled) {
+            Write-StandardsAlert -message 'Guests are allowed to reshare files' -object $CurrentInfo -tenant $tenant -standardName 'DisableReshare' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Info
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are not allowed to reshare files' -sev Info
+        }
+    }
+
+    if ($Settings.report -eq $true) {
+        $state = $CurrentInfo.isResharingByExternalUsersEnabled ? ($CurrentInfo | Select-Object isResharingByExternalUsersEnabled) : $true
+
+        $CurrentValue = [PSCustomObject]@{
+            DisableReshare = $state
+        }
+        $ExpectedValue = [PSCustomObject]@{
+            DisableReshare = $true
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableReshare' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
+    }
+}

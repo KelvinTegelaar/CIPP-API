@@ -39,7 +39,6 @@ function Receive-CippHttpTrigger {
 
     # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
     if ($Request.Params.CIPPEndpoint -eq '$batch') {
         # Implement batch processing in the style of graph api $batch
@@ -177,9 +176,16 @@ function Receive-CippQueueTrigger {
 
     Write-Information '####### Starting CIPP Queue Trigger'
     $QueueItem = $QueueItem | ConvertTo-Json -Depth 10 | ConvertFrom-Json
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
     if (Get-Command -Name $QueueItem.Cmdlet -Module CIPPCore -ErrorAction SilentlyContinue) {
+        Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
+    } elseif (Get-Command -Name $QueueItem.Cmdlet -Module CIPPStandards -ErrorAction SilentlyContinue) {
+        Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
+    } elseif (Get-Command -Name $QueueItem.Cmdlet -Module CIPPAlerts -ErrorAction SilentlyContinue) {
+        Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
+    } elseif (Get-Command -Name $QueueItem.Cmdlet -Module CIPPTests -ErrorAction SilentlyContinue) {
+        Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
+    } elseif (Get-Command -Name $QueueItem.Cmdlet -Module CIPPDB -ErrorAction SilentlyContinue) {
         Write-Information "Executing command: $($QueueItem.Cmdlet) with parameters: $($QueueItem.Parameters | ConvertTo-Json -Depth 10 -Compress)"
     } else {
         Write-Warning "Command not found: $($QueueItem.Cmdlet). Skipping execution."
@@ -214,6 +220,7 @@ function Receive-CippOrchestrationTrigger {
         Entrypoint
     #>
     param($Context)
+
     Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     try {
         if (Test-Json -Json $Context.Input) {
@@ -348,6 +355,7 @@ function Receive-CippActivityTrigger {
         Entrypoint
     #>
     param($Item)
+
     Write-Debug "CIPP_ACTION=$($Item.Command ?? $Item.FunctionName)"
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {

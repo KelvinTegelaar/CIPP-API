@@ -30,7 +30,7 @@ function New-CIPPCAPolicy {
                 if ($groupId) {
                     if ($matchedGroups.Count -gt 1) {
                         Write-Warning "Multiple groups found with display name '$_'. Using the first match: $($matchedGroups[0].id). IDs found: $($groupId -join ', ')"
-                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple groups found with display name '$_'. Using first match: $($matchedGroups[0].id)" -Sev 'Warn'
+                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple groups found with display name '$_'. Using first match: $($matchedGroups[0].id)" -Sev 'Warning'
                         $groupId = @($matchedGroups[0].id)
                     }
                     foreach ($gid in $groupId) {
@@ -230,7 +230,7 @@ function New-CIPPCAPolicy {
                 $ExistingLocation = @($AllNamedLocations | Where-Object -Property displayName -EQ $Location.displayName)
                 if ($ExistingLocation.Count -gt 1) {
                     Write-Warning "Multiple named locations found with display name '$($Location.displayName)'. Using the first match: $($ExistingLocation[0].id). IDs found: $($ExistingLocation.id -join ', ')"
-                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Multiple named locations found with display name '$($Location.displayName)'. Using first match: $($ExistingLocation[0].id)" -Sev 'Warn'
+                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Multiple named locations found with display name '$($Location.displayName)'. Using first match: $($ExistingLocation[0].id)" -Sev 'Warning'
                 }
                 $ExistingLocation = $ExistingLocation[0]
                 if ($Overwrite) {
@@ -243,7 +243,7 @@ function New-CIPPCAPolicy {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-Information "Error updating named location: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
-                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$($location.displayName)' (id: $($ExistingLocation.id)) could not be updated — it may have been deleted. Will attempt to create it. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warn' -LogData $ErrorMessage
+                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$($location.displayName)' (id: $($ExistingLocation.id)) could not be updated — it may have been deleted. Will attempt to create it. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
                         $locationExistsInCache = $false
                     }
                 } else {

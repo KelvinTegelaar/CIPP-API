@@ -155,7 +155,42 @@ function New-CippAuditLogSearch {
     }
 
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
-        $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+        try {
+            $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+        } catch {
+            $AuditLogError = $null
+            $AuditLogErrorMessage = [string]$_.Exception.Message
+            $TrimmedAuditLogErrorMessage = $AuditLogErrorMessage.TrimStart()
+            if ($TrimmedAuditLogErrorMessage.StartsWith('{') -or $TrimmedAuditLogErrorMessage.StartsWith('[')) {
+                $AuditLogError = $AuditLogErrorMessage | ConvertFrom-Json -ErrorAction SilentlyContinue
+            }
+
+            if (($null -ne $AuditLogError) -and $AuditLogError.Status -eq 'AuditingDisabledTenant') {
+                try {
+                    $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
+                    $DisabledEntity = [PSCustomObject]@{
+                        PartitionKey = [string]'AuditDisabledTenant'
+                        RowKey       = [string]$TenantFilter
+                        TenantFilter = [string]$TenantFilter
+                        Status       = [string]'AuditingDisabledTenant'
+                        ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
+                    }
+                    Add-CIPPAzDataTableEntity @AuditDisabledTable -Entity $DisabledEntity -Force | Out-Null
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Failed to update audit-disabled tenant cache: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+                }
+
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]$AuditLogError.Status
+                    cippStatus  = [string]'Skipped'
+                    message     = [string]'Unified auditing is disabled for this tenant.'
+                }
+            }
+            throw
+        }
 
 
         if ($ProcessLogs.IsPresent -and $Query.id) {
@@ -164,18 +199,20 @@ function New-CippAuditLogSearch {
             $CippStatus = 'N/A'
         }
 
-        $Entity = [PSCustomObject]@{
-            PartitionKey = [string]'Search'
-            RowKey       = [string]$Query.id
-            Tenant       = [string]$TenantFilter
-            DisplayName  = [string]$DisplayName
-            StartTime    = [datetime]$StartTime.ToUniversalTime()
-            EndTime      = [datetime]$EndTime.ToUniversalTime()
-            Query        = [string]($Query | ConvertTo-Json -Compress)
-            CippStatus   = [string]$CippStatus
+        if ($Query.id) {
+            $Entity = [PSCustomObject]@{
+                PartitionKey = [string]'Search'
+                RowKey       = [string]$Query.id
+                Tenant       = [string]$TenantFilter
+                DisplayName  = [string]$DisplayName
+                StartTime    = [datetime]$StartTime.ToUniversalTime()
+                EndTime      = [datetime]$EndTime.ToUniversalTime()
+                Query        = [string]($Query | ConvertTo-Json -Compress)
+                CippStatus   = [string]$CippStatus
+            }
+            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
         }
-        $Table = Get-CIPPTable -TableName 'AuditLogSearches'
-        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
 
         return $Query
     }

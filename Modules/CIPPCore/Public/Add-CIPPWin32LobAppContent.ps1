@@ -138,7 +138,7 @@ function Add-CIPPWin32LobAppContent {
         if ($CommitStateReq.uploadState -like '*fail*') {
             $errorMsg = "Commit failed. Upload state: $($CommitStateReq.uploadState)"
             if ($Headers) {
-                Write-LogMessage -Headers $Headers -API $APIName -message $errorMsg -sev 'Warn' -tenant $TenantFilter
+                Write-LogMessage -Headers $Headers -API $APIName -message $errorMsg -sev 'Warning' -tenant $TenantFilter
             }
             throw $errorMsg
         }

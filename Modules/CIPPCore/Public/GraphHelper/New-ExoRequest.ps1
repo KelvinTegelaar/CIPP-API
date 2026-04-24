@@ -98,7 +98,7 @@ function New-ExoRequest {
             if (!$Tenant.ComplianceUrl) {
                 Write-Verbose "Getting Compliance URL for $($tenant.defaultDomainName)"
                 $URL = "$Resource/adminapi/$ApiVersion/$($tenant.customerId)/EXOBanner('AutogenSession')?Version=$ModuleVersion"
-                Invoke-RestMethod -ResponseHeadersVariable ComplianceHeaders -MaximumRedirection 0 -ErrorAction SilentlyContinue -Uri $URL -Headers $Headers -SkipHttpErrorCheck | Out-Null
+                Invoke-CIPPRestMethod -ResponseHeadersVariable ComplianceHeaders -MaximumRedirection 0 -ErrorAction SilentlyContinue -Uri $URL -Headers $Headers -SkipHttpErrorCheck | Out-Null
                 $RedirectedHost = ([System.Uri]($ComplianceHeaders.Location | Select-Object -First 1)).Host
                 $RedirectedHostname = '{0}.ps.compliance.protection.outlook.com' -f ($RedirectedHost -split '\.' | Select-Object -First 1)
                 $Resource = "https://$($RedirectedHostname)"
@@ -121,7 +121,7 @@ function New-ExoRequest {
             $Headers.CommandName = '*'
             $URL = "$Resource/adminapi/v1.0/$($tenant.customerId)/EXOModuleFile?Version=$ModuleVersion"
             Write-Verbose "GET [ $URL ]"
-            return (Invoke-RestMethod -Uri $URL -Headers $Headers).value.exportedCmdlets -split ',' | Where-Object { $_ } | Sort-Object
+            return (Invoke-CIPPRestMethod -Uri $URL -Headers $Headers).value.exportedCmdlets -split ',' | Where-Object { $_ } | Sort-Object
         }
 
         if ($PSCmdlet.ParameterSetName -eq 'ExoRequest') {
@@ -140,7 +140,7 @@ function New-ExoRequest {
                         ContentType = 'application/json; charset=utf-8'
                     }
 
-                    $Return = Invoke-RestMethod @ExoRequestParams -ResponseHeadersVariable ResponseHeaders
+                    $Return = Invoke-CIPPRestMethod @ExoRequestParams -ResponseHeadersVariable ResponseHeaders
                     $URL = $Return.'@odata.nextLink'
                     $Return
                 } until ($null -eq $URL)

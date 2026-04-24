@@ -70,8 +70,7 @@ function Add-CIPPDelegatedPermission {
         }
     }
 
-    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $Translator = Get-Content (Join-Path $ModuleBase 'lib\data\PermissionsTranslator.json') | ConvertFrom-Json
+    $Translator = Get-Content (Join-Path $env:CIPPRootPath 'Config\PermissionsTranslator.json') | ConvertFrom-Json
     $CachedSPs = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals'
     $ServicePrincipalList = if ($CachedSPs) {
         $CachedSPs
