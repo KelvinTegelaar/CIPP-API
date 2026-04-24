@@ -4,6 +4,10 @@
     "MxMatch": "",
     "_SpfComment": "https://URL.TO.DOCS",
     "SpfInclude": "",
+    "SpfReplace": [],
     "_DkimComment": "https://URL.TO.DOCS",
-    "Selectors": [""]
+    "Selectors": [
+        ""
+    ],
+    "MinimumSelectorPass": 1
 }
