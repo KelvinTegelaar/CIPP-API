@@ -18,14 +18,12 @@ function Invoke-CippTestCopilotReady002 {
             return
         }
 
-        $Skus = if ($LicenseData.Licenses) { $LicenseData.Licenses } else { $LicenseData }
-
         $CopilotLicenses = [System.Collections.Generic.List[object]]::new()
         $TotalEnabled = 0
         $TotalConsumed = 0
         $TotalAvailable = 0
 
-        foreach ($Sku in $Skus) {
+        foreach ($Sku in $LicenseData) {
             $IsCopilot = ($Sku.License -match 'Copilot') -or
             ($Sku.ServicePlans | Where-Object { $_.servicePlanName -match $CopilotServicePlan })
             if ($IsCopilot) {
