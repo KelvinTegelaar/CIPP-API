@@ -23,16 +23,16 @@ function Invoke-ListCommunityRepos {
     $Repos = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if (!$Request.Query.WriteAccess) {
-        $CIPPRoot = (Get-Item (Get-Module -Name CIPPCore).ModuleBase).Parent.Parent.FullName
-        $CommunityRepos = Join-Path -Path $CIPPRoot -ChildPath 'CommunityRepos.json'
+        $CommunityRepos = Join-Path $env:CIPPRootPath 'CommunityRepos.json'
         $DefaultCommunityRepos = [System.IO.File]::ReadAllText($CommunityRepos) | ConvertFrom-Json
 
         $DefaultsMissing = $false
         foreach ($Repo in $DefaultCommunityRepos) {
-            if ($Repos.Url -notcontains $Repo.Url) {
+            if ($Repos.Url -notcontains $Repo.Url -or $Repos.Buitin -notcontains $Repo.BuiltIn) {
                 $Entity = [PSCustomObject]@{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = $Repo.Id
+                    BuiltIn       = $Repo.BuiltIn
                     Name          = $Repo.Name
                     Description   = $Repo.Description
                     URL           = $Repo.URL
@@ -44,7 +44,7 @@ function Invoke-ListCommunityRepos {
                     UploadBranch  = $Repo.DefaultBranch
                     Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json -ErrorAction SilentlyContinue -Compress)
                 }
-                Add-CIPPAzDataTableEntity @Table -Entity $Entity
+                Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
                 $DefaultsMissing = $true
             }
         }
@@ -56,6 +56,7 @@ function Invoke-ListCommunityRepos {
     $Repos = $Repos | ForEach-Object {
         [pscustomobject]@{
             Id              = $_.RowKey
+            BuiltIn         = $_.BuiltIn
             Name            = $_.Name
             Description     = $_.Description
             URL             = $_.URL
