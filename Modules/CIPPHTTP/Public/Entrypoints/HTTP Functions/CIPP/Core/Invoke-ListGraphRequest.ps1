@@ -159,9 +159,13 @@ function Invoke-ListGraphRequest {
             if ($NextLink -and $Request.Query.TenantFilter -ne 'AllTenants') {
                 Write-Host "NextLink: $NextLink"
                 $Metadata['nextLink'] = $NextLink
+            } else {
+                $Metadata.Remove('nextLink')
             }
-            # Remove nextLink trailing object only if it’s the last item
+            # Remove nextLink trailing object only if it's the last item
             $Results = $Results | Where-Object { $_.PSObject.Properties.Name -notcontains 'nextLink' }
+        } else {
+            $Metadata.Remove('nextLink')
         }
         if ($Request.Query.ListProperties) {
             $Columns = ($Results | Select-Object -First 1).PSObject.Properties.Name
