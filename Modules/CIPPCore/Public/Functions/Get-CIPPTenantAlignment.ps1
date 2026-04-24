@@ -380,12 +380,21 @@ function Get-CIPPTenantAlignment {
 
                 foreach ($item in $ComparisonResults) {
                     $IsAcceptedDeviation = $false
+                    $DeviationStatus = $null
                     if ($IsDriftTemplate -and $item.ComplianceStatus -eq 'Non-Compliant') {
                         $DeviationStatus = $TenantDriftStatuses[$item.StandardName]
                         $IsAcceptedDeviation = $DeviationStatus -in @('Accepted', 'CustomerSpecific')
                     }
 
-                    if ($item.ComplianceStatus -eq 'Compliant' -or $IsAcceptedDeviation) { $CompliantStandards++ }
+                    # Update the item's compliance status and add deviation info for granular consumers
+                    if ($IsAcceptedDeviation) {
+                        $item.ComplianceStatus = if ($DeviationStatus -eq 'Accepted') { 'Accepted Deviation' } else { 'Customer Specific' }
+                    }
+                    if ($DeviationStatus) {
+                        $item | Add-Member -NotePropertyName 'DeviationStatus' -NotePropertyValue $DeviationStatus -Force
+                    }
+
+                    if ($item.ComplianceStatus -in @('Compliant', 'Accepted Deviation', 'Customer Specific')) { $CompliantStandards++ }
                     elseif ($item.ComplianceStatus -eq 'Non-Compliant') { $NonCompliantStandards++ }
                     elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
                     if ($item.ReportingDisabled) { $ReportingDisabledStandardsCount++ }

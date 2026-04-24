@@ -65,6 +65,9 @@ function New-CIPPBackup {
                         } else {
                             Get-AzDataTableEntity @Table
                         }
+                        if ($CSVTable -eq 'Config') {
+                            $Entities = $Entities | Where-Object { $_.PartitionKey -ne 'OffloadFunctions' }
+                        }
                         $Entities | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag, Results | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                     }
                     $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
