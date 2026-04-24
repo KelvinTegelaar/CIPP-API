@@ -71,10 +71,10 @@ function Remove-CIPPGroups {
                 Write-LogMessage -headers $Headers -API $APIName -message "Skipping removal of $Username from group '$GroupName' because it has assigned licenses. This group will be handled during the license removal step." -sev 'Info' -tenant $TenantFilter
             } elseif ($IsDynamic) {
                 $Results.Add("Error: Could not remove $Username from group '$GroupName' because it is a Dynamic Group.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is a Dynamic Group." -sev 'Warn' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is a Dynamic Group." -sev 'Warning' -tenant $TenantFilter
             } elseif ($GroupInfo.onPremisesSyncEnabled) {
                 $Results.Add("Error: Could not remove $Username from group '$GroupName' because it is synced with Active Directory.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is synced with Active Directory." -sev 'Warn' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is synced with Active Directory." -sev 'Warning' -tenant $TenantFilter
             } else {
                 if ($IsM365Group -or (-not $IsMailEnabled)) {
                     # Use Graph API for M365 Groups and Security Groups

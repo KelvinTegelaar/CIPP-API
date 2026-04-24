@@ -255,31 +255,31 @@ function Send-CIPPAlert {
                         '*webhook.office.com*' {
                             if ($UseStandardizedWebhookSchema) {
                                 $RestMethod['Body'] = $ReplacedContent
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             } else {
                                 $TeamsBody = [PSCustomObject]@{
                                     text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
                                 } | ConvertTo-Json -Compress
                                 $RestMethod['Body'] = $TeamsBody
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             }
                         }
                         '*discord.com*' {
                             if ($UseStandardizedWebhookSchema) {
                                 $RestMethod['Body'] = $ReplacedContent
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             } else {
                                 $DiscordBody = [PSCustomObject]@{
                                     content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
                                 } | ConvertTo-Json -Compress
                                 $RestMethod['Body'] = $DiscordBody
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             }
                         }
                         '*slack.com*' {
                             if ($UseStandardizedWebhookSchema) {
                                 $RestMethod['Body'] = $ReplacedContent
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             } else {
                                 $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
                                 if ($SlackBlocks.blocks) {
@@ -290,12 +290,12 @@ function Send-CIPPAlert {
                                     } | ConvertTo-Json -Compress
                                 }
                                 $RestMethod['Body'] = $SlackBody
-                                $WebhookResponse = Invoke-RestMethod @RestMethod
+                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                             }
                         }
                         default {
                             $RestMethod['Body'] = $ReplacedContent
-                            $WebhookResponse = Invoke-RestMethod @RestMethod
+                            $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                         }
                     }
                 }

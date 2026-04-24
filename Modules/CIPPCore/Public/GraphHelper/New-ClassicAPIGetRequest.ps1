@@ -10,7 +10,7 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
         $NextURL = $Uri
         $ReturnedData = do {
             try {
-                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                $Data = Invoke-CIPPRestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
                     Authorization            = "Bearer $($token.access_token)"
                     'x-ms-client-request-id' = [guid]::NewGuid().ToString()
                     'x-ms-client-session-id' = [guid]::NewGuid().ToString()

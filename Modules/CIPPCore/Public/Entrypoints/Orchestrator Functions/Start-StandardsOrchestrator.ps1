@@ -11,6 +11,6 @@ function Start-StandardsOrchestrator {
 
     if ($PSCmdlet.ShouldProcess('Start-StandardsOrchestrator', 'Starting Standards Orchestrator')) {
         Write-LogMessage -API 'Standards' -message 'Starting Standards Schedule' -sev Info
-        Invoke-CIPPStandardsRun -tenantfilter 'allTenants'
+        New-CIPPStandardsRun -tenantfilter 'allTenants'
     }
 }
