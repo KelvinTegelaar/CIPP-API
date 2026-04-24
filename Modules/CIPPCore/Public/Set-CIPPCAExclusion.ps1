@@ -140,15 +140,14 @@ function Set-CIPPCAExclusion {
     } catch {
         if ($Groups) {
             foreach ($Group in $Groupnames) {
-                "Failed to $($ExclusionType) group exclusion for $Group from policy $($CheckExisting.displayName): $($_.Exception.Message)"
                 Write-LogMessage -headers $Headers -API 'Set-CIPPCAExclusion' -message "Failed to $($ExclusionType) group exclusion for $Group from policy $($CheckExisting.displayName): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
             }
         } else {
             foreach ($User in $Username) {
-                "Failed to $($ExclusionType) user exclusion for $User from policy $($CheckExisting.displayName): $($_.Exception.Message)"
                 Write-LogMessage -headers $Headers -API 'Set-CIPPCAExclusion' -message "Failed to $($ExclusionType) user exclusion for $User from policy $($CheckExisting.displayName): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
             }
         }
+        throw
     }
 }
 

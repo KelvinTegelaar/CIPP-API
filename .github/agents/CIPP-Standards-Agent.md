@@ -30,7 +30,7 @@ For detailed scaffolding patterns, the three action modes (remediate/alert/repor
 
 Use this agent when a task involves:
 
-- Adding a new standard (e.g. “implement a standard to enable the audit log”)
+- Adding a new standard (e.g. "implement a standard to enable the audit log")
 
 You **do not** make broad architectural changes. Keep changes focused and minimal.
 
@@ -38,33 +38,33 @@ You **do not** make broad architectural changes. Keep changes focused and minima
 
 ## Key Directories & Patterns
 
-When working on alerts, you should:
+When working on standards, you should:
 
-1. **Discover existing alerts and patterns**
+1. **Discover existing standards and patterns**
    - Use shell commands to explore:
-     - `Modules/CIPPCore/Public/Standards/`
-   - Inspect several existing alert files, e.g.:
-     - `\Modules\CIPPCore\Public\Standards\Invoke-CIPPStandardAddDKIM.ps1`
-     - `\Modules\CIPPCore\Public\Standards\Invoke-CIPPStandardlaps.ps1`
-     - `\Modules\CIPPCore\Public\Standards\Invoke-CIPPStandardOutBoundSpamAlert.ps1`
+     - `Modules/CIPPStandards/Public/Standards/`
+   - Inspect several existing standard files, e.g.:
+     - `Modules/CIPPStandards/Public/Standards/Invoke-CIPPStandardAddDKIM.ps1`
+     - `Modules/CIPPStandards/Public/Standards/Invoke-CIPPStandardlaps.ps1`
+     - `Modules/CIPPStandards/Public/Standards/Invoke-CIPPStandardOutBoundSpamAlert.ps1`
      - Other `Invoke-CIPPStandard*.ps1` files
-   - Understand how alerts are **named, parameterized, and how they call Graph / Exo and helper functions**.
+   - Understand how standards are **named, parameterized, and how they call Graph / Exo and helper functions**.
 
-2. **Follow the standard alert pattern**
-   - Alert functions live in:  
-     `Modules/CIPPCore/Public/Standardss/`
-   - Alert functions are named:  
-     `Invoke-CIPPStandardAddDKIM.ps1`
+2. **Follow the standard pattern**
+   - Standard functions live in:
+     `Modules/CIPPStandards/Public/Standards/`
+   - Standard functions are named:
+     `Invoke-CIPPStandard<Name>.ps1`
    - Typical characteristics:
      - Standard parameter set, including `Tenant` and `Settings` which can be a complex object with subsettings, and similar common params.
      - Uses CIPP helper functions like:
-       - `New-GraphGetRequest`  for any graph requests
-       - `New-ExoReques` for creating exo requests
+       - `New-GraphGetRequest` for any Graph requests
+       - `New-ExoRequest` for Exchange Online requests
      - Uses CIPP logging and error-handling patterns (try/catch, consistent message formatting).
-     - Each standard requires a Remediate, alert, and report section.
+     - Each standard requires a Remediate, Alert, and Report section.
 
 3. **Rely on existing module loading**
-   - The CIPP module auto-loads `Public` functions recursively.
+   - The CIPPStandards module auto-loads `Public` functions recursively.
    - **Do not** modify module manifest or loader behavior just to pick up your new standard.
 
 ---
@@ -73,9 +73,9 @@ When working on alerts, you should:
 
 You **must** respect all of these:
 
-### 1. Always follow existing CIPP alert patterns
+### 1. Always follow existing CIPP standard patterns
 
-When adding or modifying alerts:
+When adding or modifying standards:
 
 - Use the **same structure** as existing `Invoke-CIPPStandard*.ps1` files:
   - Similar function signatures

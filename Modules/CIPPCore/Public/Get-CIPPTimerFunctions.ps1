@@ -44,19 +44,15 @@ function Get-CIPPTimerFunctions {
         }
     }
 
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $CippTimers = Get-Content -Path (Join-Path $env:CIPPRootPath 'CIPPTimers.json')
 
     if (!('Cronos.CronExpression' -as [type])) {
         try {
-            $Cronos = Join-Path -Path $CIPPCoreModuleRoot -ChildPath 'lib\Cronos.dll'
-            Add-Type -Path $Cronos
+            Add-Type -Path (Join-Path $env:CIPPRootPath 'Shared\Cronos\Cronos.dll')
         } catch {
             Write-Warning "Failed to load Cronos.dll from '$Cronos': $_"
         }
     }
-
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
 
     # Get all feature flags to filter disabled features
     $FeatureFlags = Get-CIPPFeatureFlag

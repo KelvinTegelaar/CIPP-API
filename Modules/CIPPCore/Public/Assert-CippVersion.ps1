@@ -11,12 +11,10 @@ function Assert-CippVersion {
 
     #>
     param($CIPPVersion)
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $APIVersion = (Get-Content -Path $CIPPRoot\version_latest.txt).trim()
+    $APIVersion = (Get-Content -Path (Join-Path $env:CIPPRootPath 'version_latest.txt')).trim()
 
-    $RemoteAPIVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt').trim()
-    $RemoteCIPPVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/main/public/version.json').version
+    $RemoteAPIVersion = (Invoke-CIPPRestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt').trim()
+    $RemoteCIPPVersion = (Invoke-CIPPRestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/main/public/version.json').version
 
     [PSCustomObject]@{
         LocalCIPPVersion     = $CIPPVersion
