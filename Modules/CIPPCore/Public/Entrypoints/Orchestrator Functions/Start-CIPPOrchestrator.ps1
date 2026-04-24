@@ -33,6 +33,32 @@ function Start-CIPPOrchestrator {
 
         [switch]$CallerIsQueueTrigger
     )
+
+    # ─── CIPPNG runtime: push batch directly to OrchestratorService ───
+    if ($env:CIPPNG -eq 'true' -and $InputObject) {
+        $OrchestratorName = $InputObject.OrchestratorName ?? 'UnnamedOrchestrator'
+        $BatchJson = ConvertTo-Json -InputObject @($InputObject.Batch) -Depth 10 -Compress
+
+        $PostExecFunctionName = $null
+        $PostExecParametersJson = $null
+        if ($InputObject.PostExecution) {
+            $PostExecFunctionName = $InputObject.PostExecution.FunctionName
+            if ($InputObject.PostExecution.Parameters) {
+                $PostExecParametersJson = $InputObject.PostExecution.Parameters | ConvertTo-Json -Depth 10 -Compress
+            }
+        }
+
+        Write-Information "CIPP-NG: Queuing orchestrator '$OrchestratorName' ($($InputObject.Batch.Count) tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
+        [CIPPASP.Services.OrchestratorBridge]::QueueOrchestration(
+            $OrchestratorName,
+            $BatchJson,
+            4,
+            $PostExecFunctionName,
+            $PostExecParametersJson
+        )
+        return "CIPPNG-$OrchestratorName"
+    }
+
     $OrchestratorTable = Get-CippTable -TableName 'CippOrchestratorInput'
     $BatchTable = Get-CippTable -TableName 'CippOrchestratorBatch'
 
