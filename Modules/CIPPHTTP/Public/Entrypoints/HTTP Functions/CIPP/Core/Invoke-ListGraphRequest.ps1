@@ -117,7 +117,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.AsApp) {
-        $GraphRequestParams.AsApp = $true
+        $GraphRequestParams.AsApp = [System.Convert]::ToBoolean($Request.Query.AsApp)
     }
 
     $Metadata = $GraphRequestParams
