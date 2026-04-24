@@ -1,11 +1,11 @@
 ---
-applyTo: "Modules/CIPPCore/Public/Standards/**"
+applyTo: "Modules/CIPPStandards/Public/Standards/**"
 description: "Use when creating, modifying, or reviewing CIPP standard functions (Invoke-CIPPStandard*). Contains scaffolding patterns, the three action modes (remediate/alert/report), $Settings conventions, API call patterns, and frontend JSON payloads."
 ---
 
 # CIPP Standard Functions
 
-Standard functions live in `Modules/CIPPCore/Public/Standards/` and are auto-loaded by the CIPPCore module. No manifest changes needed.
+Standard functions live in `Modules/CIPPStandards/Public/Standards/` and are auto-loaded by the CIPPStandards module. No manifest changes needed.
 
 ## Naming
 
@@ -51,6 +51,11 @@ function Invoke-CIPPStandard<Name> {
             True
         DISABLEDFEATURES
             {"report":false,"warn":false,"remediate":false}
+        REQUIREDCAPABILITIES
+            "CAPABILITY_1"
+            "CAPABILITY_2"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
@@ -332,6 +337,8 @@ The comment-based help `.NOTES` block drives the frontend UI. Each field maps to
 | `RECOMMENDEDBY` | `recommendedBy` | `"CIS"`, `"CIPP"`, etc. |
 | `MULTIPLE` | `multiple` | `True` for template-based standards (can have multiple instances) |
 | `DISABLEDFEATURES` | `disabledFeatures` | JSON object disabling specific action modes |
+| `REQUIREDCAPABILITIES` | *(discovery only)* | One capability string per line; parsed for standards metadata/JSON generation. The explicit `Test-CIPPStandardLicense` call in the function body still performs the actual runtime license check. |
+| `UPDATECOMMENTBLOCK` | *(tooling only)* | Always include with the literal value `Run the Tools\Update-StandardsComments.ps1 script to update this comment block`. Signals the comment-update tooling to regenerate this block. |
 
 ### Valid CAT values
 
@@ -388,7 +395,7 @@ Impact colour mapping: `Low Impact` → `info`, `Medium Impact` → `warning`, `
 
 ## Checklist for new standards
 
-1. Create `Modules/CIPPCore/Public/Standards/Invoke-CIPPStandard<Name>.ps1`
+1. Create `Modules/CIPPStandards/Public/Standards/Invoke-CIPPStandard<Name>.ps1`
 2. Include the full `.NOTES` metadata block (CAT, TAG, IMPACT, ADDEDCOMPONENT, etc.)
 3. Implement all three modes: remediate, alert, report
 4. Add license gating if the data source requires a specific SKU

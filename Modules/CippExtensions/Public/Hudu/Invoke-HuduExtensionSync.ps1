@@ -33,8 +33,7 @@ function Invoke-HuduExtensionSync {
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
 
         # Import license mapping
-        Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
-        $LicTable = Import-Csv ConversionTable.csv
+        $LicTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
 
         $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
 

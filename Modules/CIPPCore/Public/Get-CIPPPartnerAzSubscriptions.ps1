@@ -6,7 +6,7 @@ function Get-CIPPPartnerAzSubscriptions {
 
     try {
         if ($variable -notmatch '[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}') {
-            $TenantFilter = (Invoke-RestMethod -Method GET "https://login.windows.net/$TenantFilter/.well-known/openid-configuration").token_endpoint.Split('/')[3]
+            $TenantFilter = (Invoke-CIPPRestMethod -Method GET -Uri "https://login.windows.net/$TenantFilter/.well-known/openid-configuration").token_endpoint.Split('/')[3]
         }
     } catch {
         throw "Tenant $($TenantFilter) could not be found"

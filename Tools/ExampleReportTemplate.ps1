@@ -1,7 +1,7 @@
 $Table = Get-CippTable -tablename 'CippReportTemplates'
 
 # Dynamically discover all ZTNA test files
-$TestFiles = Get-ChildItem "C:\Github\CIPP-API\Modules\CIPPCore\Public\Tests\Invoke-CippTestZTNA*.ps1" | Sort-Object Name
+$TestFiles = Get-ChildItem "C:\Github\CIPP-API\Modules\CIPPTests\Public\Tests\Invoke-CippTestZTNA*.ps1" | Sort-Object Name
 $AllTestIds = $TestFiles.BaseName | ForEach-Object { $_ -replace 'Invoke-CippTestZTNA', 'ZTNA' }
 
 Write-Host "Discovered $($AllTestIds.Count) ZTNA tests"

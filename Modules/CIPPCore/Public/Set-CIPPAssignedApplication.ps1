@@ -27,7 +27,7 @@ function Set-CIPPAssignedApplication {
                 Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
             } else {
                 $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Application assigned without filter."
-                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warn' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warning' -tenant $TenantFilter
                 Write-Host $ErrorMessage
             }
         }
