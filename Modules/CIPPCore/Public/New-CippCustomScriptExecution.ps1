@@ -6,7 +6,7 @@ function New-CippCustomScriptExecution {
     .DESCRIPTION
         Runs user-provided PowerShell scripts with strict security constraints:
         - Only data manipulation cmdlets allowed
-        - Read-only access to CIPPDB via New-CIPPDbRequest
+        - Read-only access to CIPPDB via Get-CIPPTestData
         - No file system, network, or write operations
         - PowerShell 7.4 syntax supported
         - Script output can be produced via pipeline output or explicit return
