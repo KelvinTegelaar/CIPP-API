@@ -17,7 +17,7 @@ function Invoke-ExecTestRefresh {
         if (Get-Command -Name $Function -Module 'CIPPTests' -ErrorAction SilentlyContinue) {
             $TestResult = & $Function -Tenant $TenantFilter
             $Table = Get-CippTable -tablename 'CippTestResults'
-            Add-CIPPAzDataTableEntity @Table -Entity $TestResult
+            Add-CIPPAzDataTableEntity @Table -Entity $TestResult -Force
             $StatusCode = [HttpStatusCode]::OK
             $Body = [PSCustomObject]@{ Results = "Successfully updated test $TestName for tenant $TenantFilter"; Metadata = $TestResult }
         } else {
@@ -28,7 +28,10 @@ function Invoke-ExecTestRefresh {
         }
     } catch {
         $StatusCode = [HttpStatusCode]::BadRequest
-        $Body = @{ Message = "Failed to start data collection/test run for $TenantFilter" }
+        $Body = @{
+            Message = "Failed to update test $TestName for $TenantFilter"
+            Error   = Get-CippException -Exception $_
+        }
     }
 
     return ([HttpResponseContext]@{
