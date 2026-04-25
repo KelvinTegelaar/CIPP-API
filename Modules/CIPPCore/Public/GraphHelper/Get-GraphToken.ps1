@@ -26,6 +26,28 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
     }
 
     # ── Slow path: need a new token — do table lookups + token acquisition ──
+    # Acquire per-key lock to prevent thundering herd (multiple runspaces
+    # all missing cache and independently fetching the same token).
+    $LockAcquired = $false
+    if ($UseSharedTokenCache -and $SharedTokenCacheKey) {
+        $LockAcquired = [CIPP.CIPPTokenCache]::AcquireLock($SharedTokenCacheKey, 30000)
+        if ($LockAcquired) {
+            # Double-check: another thread may have stored the token while we waited
+            $SharedCacheEntry = [CIPP.CIPPTokenCache]::Lookup($SharedTokenCacheKey, 120)
+            if ($SharedCacheEntry.Found -and -not [string]::IsNullOrWhiteSpace($SharedCacheEntry.TokenPayloadJson)) {
+                try {
+                    $AccessToken = $SharedCacheEntry.TokenPayloadJson | ConvertFrom-Json -ErrorAction Stop
+                    [CIPP.CIPPTokenCache]::ReleaseLock($SharedTokenCacheKey)
+                    $LockAcquired = $false
+                    if ($ReturnRefresh) { return $AccessToken }
+                    return @{ Authorization = "Bearer $($AccessToken.access_token)" }
+                } catch {
+                    [CIPP.CIPPTokenCache]::Remove($SharedTokenCacheKey)
+                }
+            }
+        }
+    }
+    try {
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $ConfigTable = Get-CippTable -tablename 'Config'
     $Filter = "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
@@ -163,5 +185,11 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
 
         if (!$donotset) { Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant }
         throw "Could not get token: $($Tenant.LastGraphError)"
+    }
+    } finally {
+        # Always release the per-key lock if we acquired it
+        if ($LockAcquired -and $SharedTokenCacheKey) {
+            [CIPP.CIPPTokenCache]::ReleaseLock($SharedTokenCacheKey)
+        }
     }
 }
