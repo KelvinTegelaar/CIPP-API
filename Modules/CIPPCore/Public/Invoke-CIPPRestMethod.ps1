@@ -89,9 +89,11 @@ function Invoke-CIPPRestMethod {
     )
 
     # ------------------------------------------------------------------
-    # Escape hatch — env var kill switch or per-call legacy switch
+    # Escape hatch — env var kill switch, missing pooled client type,
+    # or per-call legacy switch
     # ------------------------------------------------------------------
-    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true') {
+    $HasCippRestClient = $null -ne ('CIPP.CIPPRestClient' -as [type])
+    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient) {
         $LegacyParams = @{
             Uri         = $Uri
             Method      = $Method
