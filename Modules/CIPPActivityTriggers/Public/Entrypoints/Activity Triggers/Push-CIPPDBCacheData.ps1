@@ -87,6 +87,17 @@ function Push-CIPPDBCacheData {
                 QueueId        = $QueueId
                 QueueName      = "DB Cache Graph - $TenantFilter"
             })
+
+        # Teams/SharePoint workloads run separately from the Graph collection because some
+        # perform additional joins/paging and can be slower on large tenants.
+        $Tasks.Add(@{
+                FunctionName   = 'ExecCIPPDBCache'
+                CollectionType = 'Collaboration'
+                TenantFilter   = $TenantFilter
+                QueueId        = $QueueId
+                QueueName      = "DB Cache Collaboration - $TenantFilter"
+            })
+
         # MFAState runs as its own activity — it makes 6+ API calls, bulk group/role member
         # resolution, and O(users × policies) CPU work that can take minutes on large tenants
         $Tasks.Add(@{

@@ -9,6 +9,21 @@ Function Invoke-ListTeams {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
+    $UseReportDB = $Request.Query.UseReportDB
+    if ($request.query.type -eq 'List' -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        try {
+            $GraphRequest = Get-CIPPTeamsReport -TenantFilter $TenantFilter -ErrorAction Stop
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $_.Exception.Message
+        }
+        return ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @($GraphRequest)
+            })
+    }
+
     if ($request.query.type -eq 'List') {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=resourceProvisioningOptions/Any(x:x eq 'Team')&`$select=id,displayName,description,visibility,mailNickname" -tenantid $TenantFilter | Sort-Object -Property displayName
     }

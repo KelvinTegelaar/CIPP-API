@@ -13,6 +13,7 @@ function Invoke-ListSites {
     $TenantFilter = $Request.Query.TenantFilter
     $Type = $Request.Query.Type
     $UserUPN = $Request.Query.UserUPN
+    $UseReportDB = $Request.Query.UseReportDB
 
     if (!$TenantFilter) {
         return ([HttpResponseContext]@{
@@ -28,9 +29,6 @@ function Invoke-ListSites {
             })
     }
 
-    $Tenant = Get-Tenants -TenantFilter $TenantFilter
-    $TenantId = $Tenant.customerId
-
     if ($Type -eq 'SharePointSiteUsage') {
         $Filter = 'isPersonalSite eq false'
     } else {
@@ -38,6 +36,23 @@ function Invoke-ListSites {
     }
 
     try {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+            try {
+                $GraphRequest = Get-CIPPSitesReport -TenantFilter $TenantFilter -Type $Type -URLOnly $Request.Query.URLOnly -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
+        $Tenant = Get-Tenants -TenantFilter $TenantFilter
+        $TenantId = $Tenant.customerId
+
         $BulkRequests = @(
             @{
                 id     = 'listAllSites'
