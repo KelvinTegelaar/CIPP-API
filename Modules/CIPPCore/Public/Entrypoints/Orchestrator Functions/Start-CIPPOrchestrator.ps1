@@ -47,11 +47,12 @@ function Start-CIPPOrchestrator {
                 $QueueItem = [PSCustomObject]$InputObject.QueueFunction.Parameters
             }
             $BatchResult = & $QueueFuncName -Item $QueueItem
-            $InputObject.Batch = @($BatchResult | Where-Object { $null -ne $_ })
-            if ($InputObject.Batch.Count -eq 0) {
+            $QueueBatch = @($BatchResult | Where-Object { $null -ne $_ })
+            if ($QueueBatch.Count -eq 0) {
                 Write-Information "CIPP-NG: QueueFunction '$QueueFuncName' returned 0 tasks for '$OrchestratorName' - skipping"
                 return "CIPPNG-$OrchestratorName-NoTasks"
             }
+            $InputObject | Add-Member -MemberType NoteProperty -Name 'Batch' -Value $QueueBatch -Force
         }
 
         $BatchJson = ConvertTo-Json -InputObject @($InputObject.Batch) -Depth 10 -Compress
