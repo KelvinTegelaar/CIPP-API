@@ -190,6 +190,19 @@ function New-CippAuditLogSearch {
                 }
             }
 
+            # Handle HTML error pages (e.g. Azure Front Door 502/504 gateway timeouts)
+            if ($TrimmedAuditLogErrorMessage -match '<!DOCTYPE|<html' -and $TrimmedAuditLogErrorMessage -match '<title>([^<]+)</title>') {
+                $HtmlTitle = $Matches[1].Trim()
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with gateway error for tenant $TenantFilter ($HtmlTitle) - will retry next cycle" -sev Warning
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]'GatewayError'
+                    cippStatus  = [string]'TransientError'
+                    message     = [string]"Microsoft returned gateway error ($HtmlTitle) - search will be retried next cycle."
+                }
+            }
+
             # Handle Microsoft-side timeouts / transient errors (e.g. UnknownError with empty message)
             $ErrorCode = $AuditLogError.error.code ?? $AuditLogError.code
             if ($ErrorCode -in @('UnknownError', 'ServiceUnavailable', 'RequestTimeout', 'GatewayTimeout', 'TooManyRequests')) {
