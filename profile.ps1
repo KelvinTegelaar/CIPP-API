@@ -148,7 +148,7 @@ $SwAuth.Stop()
 $Timings['Authentication'] = $SwAuth.Elapsed.TotalMilliseconds
 
 $SwVersion = [System.Diagnostics.Stopwatch]::StartNew()
-$CurrentVersion = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'version_latest.txt')).Trim()
+$CurrentVersion = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\version_latest.txt')).Trim()
 $Table = Get-CippTable -tablename 'Version'
 Write-Information "Function App: $($env:WEBSITE_SITE_NAME) | API Version: $CurrentVersion | PS Version: $($PSVersionTable.PSVersion)"
 $env:CippVersion = $CurrentVersion
