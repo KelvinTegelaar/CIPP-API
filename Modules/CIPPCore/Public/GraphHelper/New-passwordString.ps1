@@ -119,7 +119,7 @@ function New-passwordString {
             throw "Word count must be between 2 and 10 for passphrase generation"
         }
 
-        $Words = @(Get-Content (Join-Path $env:CIPPRootPath 'words.txt') -Encoding UTF8 | Where-Object { $_.Length -gt 0 -and $_ -match '^[a-zA-Z]+$' })
+        $Words = @(Get-Content (Join-Path $env:CIPPRootPath 'Config\words.txt') -Encoding UTF8 | Where-Object { $_.Length -gt 0 -and $_ -match '^[a-zA-Z]+$' })
         $wordPool = [System.Collections.Generic.List[string]]::new()
         $Words | ForEach-Object { $wordPool.Add($_) }
         $SelectedWords = @(1..$WordCount | ForEach-Object {
