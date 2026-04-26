@@ -189,6 +189,20 @@ function New-CippAuditLogSearch {
                     message     = [string]'Unified auditing is disabled for this tenant.'
                 }
             }
+
+            # Handle Microsoft-side timeouts / transient errors (e.g. UnknownError with empty message)
+            $ErrorCode = $AuditLogError.error.code ?? $AuditLogError.code
+            if ($ErrorCode -in @('UnknownError', 'ServiceUnavailable', 'RequestTimeout', 'GatewayTimeout', 'TooManyRequests')) {
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with transient error for tenant $TenantFilter ($ErrorCode) - will retry next cycle" -sev Warning
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]$ErrorCode
+                    cippStatus  = [string]'TransientError'
+                    message     = [string]"Microsoft returned $ErrorCode - search will be retried next cycle."
+                }
+            }
+
             throw
         }
 
