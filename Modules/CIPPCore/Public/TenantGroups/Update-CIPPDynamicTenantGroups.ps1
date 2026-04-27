@@ -65,54 +65,66 @@ function Update-CIPPDynamicTenantGroups {
                 if (!$Rules -or $Rules.Count -eq 0) {
                     throw 'No rules found for dynamic group.'
                 }
+
+                $RequiresLicense = $Rules.property -contains 'availableLicense'
+                $RequiresCustomVariables = $Rules.property -contains 'customVariable'
+                $RequiresServicePlans = $Rules.property -contains 'availableServicePlan'
                 Write-Information "Processing $($Rules.Count) rules for group '$($Group.Name)'"
-                $TenantObj = $AllTenants | ForEach-Object {
-                    if ($Rules.property -contains 'availableLicense') {
-                        if ($SkuHashtable.ContainsKey($_.customerId)) {
-                            Write-Information "Using cached licenses for tenant $($_.defaultDomainName)"
-                            $LicenseInfo = $SkuHashtable[$_.customerId]
+
+                $TenantObj = foreach ($Tenant in $AllTenants) {
+                    $LicenseInfo = $null
+                    $SKUId = @()
+                    $ServicePlans = @()
+                    $TenantVariables = @{}
+
+                    if ($RequiresLicense) {
+                        if ($SkuHashtable.ContainsKey($Tenant.customerId)) {
+                            Write-Information "Using cached licenses for tenant $($Tenant.defaultDomainName)"
+                            $LicenseInfo = $SkuHashtable[$Tenant.customerId]
                         } else {
-                            Write-Information "Fetching licenses for tenant $($_.defaultDomainName)"
+                            Write-Information "Fetching licenses for tenant $($Tenant.defaultDomainName)"
                             try {
-                                $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                                $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $Tenant.defaultDomainName
                                 # Cache the result
                                 $CacheEntity = @{
                                     PartitionKey = 'sku'
-                                    RowKey       = [string]$_.customerId
+                                    RowKey       = [string]$Tenant.customerId
                                     JSON         = [string]($LicenseInfo | ConvertTo-Json -Depth 5 -Compress)
                                 }
                                 Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
                             } catch {
-                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                             }
                         }
                     }
 
                     # Fetch custom variables for this tenant if any rules use customVariable
-                    $TenantVariables = @{}
-                    if ($Rules.property -contains 'customVariable') {
+                    if ($RequiresCustomVariables) {
                         try {
-                            $TenantVariables = Get-CIPPTenantVariables -TenantFilter $_.customerId -IncludeGlobal
+                            $TenantVariables = Get-CIPPTenantVariables -TenantFilter $Tenant.customerId -IncludeGlobal
                         } catch {
-                            Write-Information "Error fetching custom variables for tenant $($_.defaultDomainName): $($_.Exception.Message)"
-                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                            Write-Information "Error fetching custom variables for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
+                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                         }
                     }
 
-                    try {
-                        $SKUId = $LicenseInfo.SKUId ?? @()
-                        $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
-                    } catch {
-                        Write-Information "Error fetching capabilities for tenant $($_.defaultDomainName): $($_.Exception.Message)"
-                        Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                    $SKUId = $LicenseInfo.SKUId ?? @()
+                    if ($RequiresServicePlans) {
+                        try {
+                            $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $Tenant.defaultDomainName).psobject.properties.name
+                        } catch {
+                            Write-Information "Error fetching capabilities for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
+                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                        }
                     }
+
                     [pscustomobject]@{
-                        customerId               = $_.customerId
-                        defaultDomainName        = $_.defaultDomainName
-                        displayName              = $_.displayName
+                        customerId               = $Tenant.customerId
+                        defaultDomainName        = $Tenant.defaultDomainName
+                        displayName              = $Tenant.displayName
                         skuId                    = $SKUId
                         servicePlans             = $ServicePlans
-                        delegatedPrivilegeStatus = $_.delegatedPrivilegeStatus
+                        delegatedPrivilegeStatus = $Tenant.delegatedPrivilegeStatus
                         customVariables          = $TenantVariables
                     }
                 }

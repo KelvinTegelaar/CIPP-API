@@ -109,7 +109,7 @@ function Get-GraphTokenFromCert {
     }
 
     try {
-        return Invoke-RestMethod @PostSplat
+        return Invoke-CIPPRestMethod @PostSplat
     } catch {
         Write-Error $_
     }
