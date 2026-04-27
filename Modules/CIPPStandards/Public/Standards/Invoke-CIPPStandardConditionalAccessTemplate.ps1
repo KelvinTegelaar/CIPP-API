@@ -27,6 +27,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
             {"name":"state","label":"What state should we deploy this template in?","type":"radio","options":[{"value":"donotchange","label":"Do not change state"},{"value":"Enabled","label":"Set to enabled"},{"value":"Disabled","label":"Set to disabled"},{"value":"enabledForReportingButNotEnforced","label":"Set to report only"}]}
             {"type":"switch","name":"DisableSD","label":"Disable Security Defaults when deploying policy"}
             {"type":"switch","name":"CreateGroups","label":"Create groups if they do not exist"}
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24549 {
     #Tested - Device
 
     try {
-        $AndroidPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneAndroidAppProtectionPolicies'
+        $AndroidPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneAndroidAppProtectionPolicies'
 
         if (-not $AndroidPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Data on Android is protected by app protection policies' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant'

@@ -15,8 +15,8 @@ function Invoke-CippTestCopilotReady003 {
     $DesktopThresholdPercent = 70
 
     try {
-        $ActivationData = New-CIPPDbRequest -TenantFilter $Tenant -Type 'OfficeActivations'
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $ActivationData = Get-CIPPTestData -TenantFilter $Tenant -Type 'OfficeActivations'
+        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $ActivationData -and -not $AllUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady003' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Office activation or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Users have M365 desktop apps activated' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     .SYNOPSIS
         (Label) Disable Self Service Licensing
     .DESCRIPTION
-        (Helptext) Note: requires 'Billing Administrator' GDAP role. This standard disables all self service licenses and enables all exclusions
-        (DocsDescription) Note: requires 'Billing Administrator' GDAP role. This standard disables all self service licenses and enables all exclusions
+        (Helptext) **Requires 'Billing Administrator' GDAP role.** This standard disables all self service licenses and enables all exclusions
+        (DocsDescription) \*\*Requires 'Billing Administrator' GDAP role.\*\* This standard disables all self service licenses and enables all exclusions
     .NOTES
         CAT
             Entra (AAD) Standards

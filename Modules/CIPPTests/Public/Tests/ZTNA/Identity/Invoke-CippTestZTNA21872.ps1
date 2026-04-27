@@ -9,8 +9,8 @@ function Invoke-CippTestZTNA21872 {
     #Tested
     try {
         # Get conditional access policies and device registration policy from cache
-        $CAPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $DeviceRegistrationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
+        $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
+        $DeviceRegistrationPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'DeviceRegistrationPolicy'
 
         if (-not $CAPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Require multifactor authentication for device join and device registration using user action' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'

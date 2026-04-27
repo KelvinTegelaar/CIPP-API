@@ -14,6 +14,8 @@ function Invoke-CIPPStandardAddDKIM {
             Exchange Standards
         TAG
             "CIS M365 5.0 (2.1.9)"
+            "ORCA108"
+            "CISAMSEXO31"
         EXECUTIVETEXT
             Enables email authentication technology that digitally signs outgoing emails to verify they actually came from your organization. This prevents email spoofing, improves email deliverability, and protects the company's reputation by ensuring recipients can trust emails from your domains.
         ADDEDCOMPONENT
@@ -26,6 +28,12 @@ function Invoke-CIPPStandardAddDKIM {
         RECOMMENDEDBY
             "CIS"
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

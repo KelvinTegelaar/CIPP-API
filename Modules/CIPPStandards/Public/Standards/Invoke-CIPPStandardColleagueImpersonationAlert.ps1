@@ -13,22 +13,31 @@ function Invoke-CIPPStandardColleagueImpersonationAlert {
         CAT
             Exchange Standards
         TAG
+            "Exchange"
+            "Security"
+            "Transport Rules"
         EXECUTIVETEXT
-            Automatically alerts recipients when an email arrives from outside the organisation using a display name that matches an internal user - a common social-engineering technique. Five transport rules cover all display-name initial letters, keeping each rule within Exchange Online size limits. The disclaimer banner is prepended to the message body and directs users to verify authenticity before acting on the email.
+            Protects staff from display-name impersonation attacks by injecting a visible warning banner on emails that appear to come from a colleague but originate externally. Rules are maintained automatically across all letter groups and updated whenever the standard runs.
         ADDEDCOMPONENT
             {"type":"heading","label":"Alert Banner (HTML)","required":false}
-            {"type":"textField","name":"standards.ColleagueImpersonationAlert.disclaimerHtml","label":"Disclaimer HTML - Paste the full HTML for the warning banner","required":true}
-            {"type":"heading","label":"Keyword Exclusions for Transport Rule","required":false}
-            {"type":"autoComplete","name":"standards.ColleagueImpersonationAlert.excludedMailboxes","label":"Exclude mailboxes by keyword (e.g. any DisplayName containing 'Leaver')","multiple":true,"creatable":true,"required":false,"options":[]}
-            {"type":"heading","label":"Exempt Senders (ExceptIfFromAddressContainsWords)","required":false}
-            {"type":"autoComplete","name":"standards.ColleagueImpersonationAlert.additionalExemptSenders","label":"Additional exempt sender addresses (for example no-reply@teams.mail.microsoft)","multiple":true,"creatable":true,"required":false,"options":[]}
+            {"type":"textField","name":"standards.ColleagueImpersonationAlert.disclaimerHtml","label":"Disclaimer HTML – Paste the full HTML for the warning banner","required":true}
+            {"type":"heading","label":"Keyword Exclusions (Exclude certain users by keywords)","required":false}
+            {"type":"autoComplete","name":"standards.ColleagueImpersonationAlert.excludedMailboxes","label":"Exclude mailboxes by keywords for example any Displayname starting with (Leaver)","multiple":true,"creatable":true,"required":false}
+            {"type":"heading","label":"Exempt Senders (Email Accounts)","required":false}
+            {"type":"autoComplete","name":"standards.ColleagueImpersonationAlert.additionalExemptSenders","label":"Additional exempt sender addresses","multiple":true,"creatable":true,"required":false}
         IMPACT
             Medium Impact
         ADDEDDATE
-            2026-03-25
+            2026-03-22
         POWERSHELLEQUIVALENT
             New-TransportRule / Set-TransportRule
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

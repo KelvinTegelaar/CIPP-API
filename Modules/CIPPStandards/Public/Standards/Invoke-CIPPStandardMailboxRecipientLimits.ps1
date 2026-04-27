@@ -16,7 +16,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         EXECUTIVETEXT
             Controls how many recipients employees can include in a single email, helping prevent spam distribution and managing email server load. This security measure protects against both accidental mass mailings and potential abuse while ensuring legitimate business communications can still reach necessary recipients.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.MailboxRecipientLimits.RecipientLimit","label":"Recipient Limit","defaultValue":500}
+            {"type":"number","name":"standards.MailboxRecipientLimits.RecipientLimit","label":"Recipient Limit","defaultValue":500,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":1000,"message":"Maximum value is 1000"}}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -25,6 +25,12 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
             Set-Mailbox -RecipientLimits
         RECOMMENDEDBY
             "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -66,7 +66,7 @@ function Push-SchedulerCIPPNotifications {
                     $Data = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity)
                     $Subject = "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
                     $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'table' -CIPPURL $CIPPURL
-                    Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
+                    Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter 'AllTenants' -APIName 'Alerts'
                     $UpdateLogs = $CurrentLog | ForEach-Object {
                         if ($_.PSObject.Properties.Name -contains 'sentAsAlert') {
                             $_.sentAsAlert = $true
@@ -110,7 +110,7 @@ function Push-SchedulerCIPPNotifications {
             if ($Currentlog) {
                 $JSONContent = $Currentlog | ConvertTo-Json -Compress
                 $Title = "Logbook Notification: Alerts found starting at $((Get-Date).AddMinutes(-15))"
-                Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts' -SchemaSource 'Logbook Notification' -InvokingCommand 'Push-SchedulerCIPPNotifications' -UseStandardizedSchema:$([boolean]$Config.UseStandardizedSchema)
+                Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent $JSONContent -TenantFilter 'AllTenants' -APIName 'Alerts' -SchemaSource 'Logbook Notification' -InvokingCommand 'Push-SchedulerCIPPNotifications' -UseStandardizedSchema:$([boolean]$Config.UseStandardizedSchema)
                 $UpdateLogs = $CurrentLog | ForEach-Object { $_.sentAsAlert = $true; $_ }
                 if ($UpdateLogs) { Add-CIPPAzDataTableEntity @Table -Entity $UpdateLogs -Force }
             }
@@ -120,7 +120,7 @@ function Push-SchedulerCIPPNotifications {
                 $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table' -CIPPURL $CIPPURL
                 $CurrentStandardsLogs | ConvertTo-Json -Compress
                 $Title = "Standards Notification: Out of sync standards detected"
-                Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts' -SchemaSource 'Standards Notification' -InvokingCommand 'Push-SchedulerCIPPNotifications' -UseStandardizedSchema:$([boolean]$Config.UseStandardizedSchema)
+                Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent $JSONContent -TenantFilter 'AllTenants' -APIName 'Alerts' -SchemaSource 'Standards Notification' -InvokingCommand 'Push-SchedulerCIPPNotifications' -UseStandardizedSchema:$([boolean]$Config.UseStandardizedSchema)
                 $updateStandards = $CurrentStandardsLogs | ForEach-Object {
                     if ($_.PSObject.Properties.Name -contains 'sentAsAlert') {
                         $_.sentAsAlert = $true

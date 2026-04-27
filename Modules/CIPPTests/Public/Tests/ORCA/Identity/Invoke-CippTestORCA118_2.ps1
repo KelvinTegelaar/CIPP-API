@@ -6,7 +6,7 @@ function Invoke-CippTestORCA118_2 {
     param($Tenant)
 
     try {
-        $TransportRules = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoTransportRules'
+        $TransportRules = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoTransportRules'
 
         if (-not $TransportRules) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA118_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Domains not allow listed in Transport Rules' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Transport Rules'

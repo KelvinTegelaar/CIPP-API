@@ -103,7 +103,7 @@ function New-CIPPRestoreTask {
                         }
                     } catch {
                         $restorationStats['CustomVariables'].failed++
-                        Write-LogMessage -message "Failed to restore custom variable $($variable.RowKey): $($_.Exception.Message)" -sev 'Warn'
+                        Write-LogMessage -message "Failed to restore custom variable $($variable.RowKey): $($_.Exception.Message)" -sev 'Warning'
                         $RestoreData.Add("Failed to restore custom variable $($variable.RowKey)")
                     }
                 }

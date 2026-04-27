@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCACP01 {
     param($Tenant)
 
     try {
-        $Settings = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Settings'
+        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCACP01' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Consent Policy Settings - Group owner consent for apps accessing data' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Consent Policy'

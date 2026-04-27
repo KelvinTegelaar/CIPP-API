@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21801 {
     param($Tenant)
 
     try {
-        $UserRegistrationDetails = New-CIPPDbRequest -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         if (-not $UserRegistrationDetails -or -not $Users) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21801' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Users have strong authentication methods configured' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Credential Management'

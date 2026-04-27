@@ -25,6 +25,12 @@ function Invoke-CIPPStandardMDMScope {
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

@@ -6,7 +6,7 @@ function Invoke-CippTestEIDSCAAP09 {
     param($Tenant)
 
     try {
-        $AuthorizationPolicy = New-CIPPDbRequest -TenantFilter $Tenant -Type 'AuthorizationPolicy'
+        $AuthorizationPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
         if (-not $AuthorizationPolicy) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAP09' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Authorization Policy - Consent for Risky Apps' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authorization Policy'

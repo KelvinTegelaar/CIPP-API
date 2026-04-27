@@ -18,8 +18,8 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.state","label":"Configure Windows Hello for Business","multiple":false,"options":[{"label":"Not configured","value":"notConfigured"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"switch","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.securityDeviceRequired","label":"Use a Trusted Platform Module (TPM)","default":true}
-            {"type":"number","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinMinimumLength","label":"Minimum PIN length (4-127)","default":4}
-            {"type":"number","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinMaximumLength","label":"Maximum PIN length (4-127)","default":127}
+            {"type":"number","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinMinimumLength","label":"Minimum PIN length (4-127)","default":4,"validators":{"min":{"value":4,"message":"Minimum value is 4"},"max":{"value":127,"message":"Maximum value is 127"}}}
+            {"type":"number","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinMaximumLength","label":"Maximum PIN length (4-127)","default":127,"validators":{"min":{"value":4,"message":"Minimum value is 4"},"max":{"value":127,"message":"Maximum value is 127"}}}
             {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinLowercaseCharactersUsage","label":"Lowercase letters in PIN","multiple":false,"options":[{"label":"Not allowed","value":"disallowed"},{"label":"Allowed","value":"allowed"},{"label":"Required","value":"required"}]}
             {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinUppercaseCharactersUsage","label":"Uppercase letters in PIN","multiple":false,"options":[{"label":"Not allowed","value":"disallowed"},{"label":"Allowed","value":"allowed"},{"label":"Required","value":"required"}]}
             {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.pinSpecialCharactersUsage","label":"Special characters in PIN","multiple":false,"options":[{"label":"Not allowed","value":"disallowed"},{"label":"Allowed","value":"allowed"},{"label":"Required","value":"required"}]}
@@ -35,6 +35,12 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

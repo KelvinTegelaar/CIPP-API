@@ -65,6 +65,19 @@ foreach ($Module in $Modules) {
 $SwCoreModules.Stop()
 $Timings['CoreModules'] = $SwCoreModules.Elapsed.TotalMilliseconds
 
+# Load CIPPSharp assembly once at startup for all worker types
+$SwCIPPSharp = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $CIPPSharpDllPath = Join-Path $env:CIPPRootPath 'Shared\CIPPSharp\bin\CIPPSharp.dll'
+    if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies().Location -contains $CIPPSharpDllPath)) {
+        $null = [Reflection.Assembly]::LoadFile($CIPPSharpDllPath)
+    }
+} catch {
+    Write-Warning "CIPPSharp failed to load: $($_.Exception.Message)"
+}
+$SwCIPPSharp.Stop()
+$Timings['CIPPSharp'] = $SwCIPPSharp.Elapsed.TotalMilliseconds
+
 # Pre-load function permissions cache once per worker startup (fallback remains in runtime code)
 $SwPermissionsPreload = [System.Diagnostics.Stopwatch]::StartNew()
 if (-not $global:CIPPFunctionPermissions) {
@@ -203,7 +216,7 @@ $Timings['Timezone'] = $SwTimezone.Elapsed.TotalMilliseconds
 # Import Extra modules if needed
 $SwExtraModules = [System.Diagnostics.Stopwatch]::StartNew()
 $ModulesPath = Join-Path $env:CIPPRootPath 'Modules'
-$NonHttpModules = @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CIPPActivityTriggers')
+$NonHttpModules = @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CIPPActivityTriggers', 'DNSHealth')
 $HttpModule = @('CIPPHTTP')
 
 $HttpDisabled = $env:AzureWebJobs_CIPPHttpTrigger_Disabled -in @('true', '1') -or [System.Environment]::GetEnvironmentVariable('AzureWebJobs.CIPPHttpTrigger.Disabled') -in @('true', '1')
@@ -262,19 +275,6 @@ if ($WorkerType -ne 'HttpOnly') {
     $SwCronos.Stop()
     $Timings['CronosAssembly'] = $SwCronos.Elapsed.TotalMilliseconds
 }
-
-# Load CIPPHttpClient assembly once at startup for all worker types
-$SwCIPPHttp = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    $CIPPHttpDllPath = Join-Path $env:CIPPRootPath 'Shared\CIPPHttp\bin\CIPPHttp.dll'
-    if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies().Location -contains $CIPPHttpDllPath)) {
-        $null = [Reflection.Assembly]::LoadFile($CIPPHttpDllPath)
-    }
-} catch {
-    Write-Warning "CIPPHttpClient failed to load: $($_.Exception.Message)"
-}
-$SwCIPPHttp.Stop()
-$Timings['CIPPHttpClient'] = $SwCIPPHttp.Elapsed.TotalMilliseconds
 
 $TotalStopwatch.Stop()
 $Timings['Total'] = $TotalStopwatch.Elapsed.TotalMilliseconds

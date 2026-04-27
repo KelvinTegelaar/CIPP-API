@@ -8,7 +8,7 @@ function Invoke-CippTestZTNA21865 {
     $TestId = 'ZTNA21865'
     #tested
     try {
-        $NamedLocations = New-CIPPDbRequest -TenantFilter $Tenant -Type 'NamedLocations'
+        $NamedLocations = Get-CIPPTestData -TenantFilter $Tenant -Type 'NamedLocations'
 
         if (-not $NamedLocations) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Named locations are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'

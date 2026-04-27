@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA24548 {
     #Tested - Device
 
     try {
-        $IosPolicies = New-CIPPDbRequest -TenantFilter $Tenant -Type 'IntuneIosAppProtectionPolicies'
+        $IosPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneIosAppProtectionPolicies'
 
         if (-not $IosPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Data on iOS/iPadOS is protected by app protection policies' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant'

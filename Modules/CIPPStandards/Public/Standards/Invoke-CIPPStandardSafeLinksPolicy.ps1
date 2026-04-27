@@ -17,6 +17,23 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             "mdo_safelinksforemail"
             "mdo_safelinksforOfficeApps"
             "NIST CSF 2.0 (DE.CM-09)"
+            "ORCA105"
+            "ORCA106"
+            "ORCA107"
+            "ORCA112"
+            "ORCA113"
+            "ORCA114"
+            "ORCA116"
+            "ORCA119"
+            "ORCA156"
+            "ORCA179"
+            "ORCA226"
+            "ORCA236"
+            "ORCA237"
+            "ORCA238"
+            "CISAMSEXO151"
+            "CISAMSEXO152"
+            "CISAMSEXO153"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.SafeLinksPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default SafeLinks Policy"}
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
@@ -31,6 +48,12 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             Set-SafeLinksPolicy or New-SafeLinksPolicy
         RECOMMENDEDBY
             "CIS"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

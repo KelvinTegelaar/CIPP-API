@@ -9,7 +9,7 @@ function Invoke-CippTestZTNA21822 {
 
     try {
         # Get B2B management policy from cache
-        $B2BManagementPolicyObject = New-CIPPDbRequest -TenantFilter $Tenant -Type 'B2BManagementPolicy'
+        $B2BManagementPolicyObject = Get-CIPPTestData -TenantFilter $Tenant -Type 'B2BManagementPolicy'
 
         $Passed = 'Failed'
         $AllowedDomains = @()

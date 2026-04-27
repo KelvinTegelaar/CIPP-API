@@ -59,6 +59,9 @@ function Invoke-ExecRestoreBackup {
                     if ($_.table -like 'cache*') {
                         return
                     }
+                    if ($_.table -eq 'Config' -and $_.PartitionKey -eq 'OffloadFunctions') {
+                        return
+                    }
                     if ($RestrictedTables -contains $_.table -and -not $IsSuperAdmin) {
                         Write-Information "Skipping restricted table '$($_.table)' - user does not have superadmin rights"
                         return
@@ -86,6 +89,9 @@ function Invoke-ExecRestoreBackup {
             $RestoredCount = 0
             foreach ($line in ($Request.body | Select-Object * -ExcludeProperty ETag, Timestamp)) {
                 if ($line.table -like 'cache*') {
+                    continue
+                }
+                if ($line.table -eq 'Config' -and $line.PartitionKey -eq 'OffloadFunctions') {
                     continue
                 }
                 if ($RestrictedTables -contains $line.table -and -not $IsSuperAdmin) {

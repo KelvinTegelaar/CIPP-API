@@ -107,7 +107,7 @@ function New-GraphGetRequest {
                     } else {
                         if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
                         if ($noPagination -eq $true) {
-                            if ($Caller -eq 'Get-GraphRequestList') {
+                            if ($Caller -eq 'Get-GraphRequestList' -and $data.'@odata.nextLink') {
                                 @{ 'nextLink' = $data.'@odata.nextLink' }
                             }
                             $nextURL = $null

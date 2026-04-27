@@ -24,6 +24,12 @@ function Invoke-CIPPStandardTeamsEnrollUser {
         POWERSHELLEQUIVALENT
             Set-CsTeamsMeetingPolicy -Identity Global -EnrollUserOverride \$false
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

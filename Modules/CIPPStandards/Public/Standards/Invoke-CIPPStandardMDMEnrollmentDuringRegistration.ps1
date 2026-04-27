@@ -1,4 +1,4 @@
-﻿function Invoke-CIPPStandardMDMEnrollmentDuringRegistration {
+function Invoke-CIPPStandardMDMEnrollmentDuringRegistration {
     <#
     .FUNCTIONALITY
         Internal
@@ -22,8 +22,14 @@
         ADDEDDATE
             2025-12-15
         POWERSHELLEQUIVALENT
-            Graph API PATCH to mobileDeviceManagementPolicies
+            Graph API
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

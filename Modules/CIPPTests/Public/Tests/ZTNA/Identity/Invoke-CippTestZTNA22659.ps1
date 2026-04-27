@@ -18,7 +18,7 @@ function Invoke-CippTestZTNA22659 {
     #Tested
     try {
         # Get service principal risk detections from cache
-        $RiskDetections = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
+        $RiskDetections = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipalRiskDetections'
 
         if (-not $RiskDetections) {
             $TestParams = @{

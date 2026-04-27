@@ -24,6 +24,12 @@ function Invoke-CIPPStandardTeamsGuestAccess {
         POWERSHELLEQUIVALENT
             Set-CsTeamsClientConfiguration -AllowGuestUser \$true
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "MCOSTANDARD"
+            "MCOEV"
+            "MCOIMP"
+            "TEAMS1"
+            "Teams_Room_Standard"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

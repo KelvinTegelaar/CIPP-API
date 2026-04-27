@@ -61,7 +61,7 @@ function Invoke-AddJITAdminTemplate {
                         Write-LogMessage -headers $Headers -API $APIName -message "Unset default flag for existing template: $($data.templateName)" -Sev 'Info'
                     }
                 } catch {
-                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to update existing template: $($_.Exception.Message)" -sev 'Warn'
+                    Write-LogMessage -headers $Headers -API $APIName -message "Failed to update existing template: $($_.Exception.Message)" -sev 'Warning'
                 }
             }
         }
@@ -78,6 +78,9 @@ function Invoke-AddJITAdminTemplate {
             templateName                = $TemplateName
             defaultForTenant            = $DefaultForTenant
             defaultRoles                = $Request.Body.defaultRoles
+            defaultGroups               = $Request.Body.defaultGroups
+            defaultUseRoles             = [bool]$Request.Body.defaultUseRoles
+            defaultUseGroups            = [bool]$Request.Body.defaultUseGroups
             defaultDuration             = $Request.Body.defaultDuration
             defaultExpireAction         = $Request.Body.defaultExpireAction
             defaultNotificationActions  = $Request.Body.defaultNotificationActions
@@ -90,6 +93,11 @@ function Invoke-AddJITAdminTemplate {
         # Add defaultUserAction if provided
         if (![string]::IsNullOrWhiteSpace($DefaultUserAction)) {
             $TemplateObject.defaultUserAction = $DefaultUserAction
+        }
+
+        # Add existing user selection when "select" action is specified
+        if ($DefaultUserAction -eq 'select' -and $Request.Body.defaultExistingUser) {
+            $TemplateObject.defaultExistingUser = $Request.Body.defaultExistingUser
         }
 
         # Add user detail fields when "create" action is specified

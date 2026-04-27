@@ -65,9 +65,29 @@ function Invoke-ListAlertsQueue {
             $ExcludedTenants = @()
         }
 
-        # Handle tenant group display information for alerts
+        # Handle tenant display information for alerts
         $TenantsForDisplay = @()
-        if ($Task.TenantGroup) {
+        if ($Task.Tenants) {
+            # Multi tenant alert
+            try {
+                $TenantsParsed = $Task.Tenants | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+                $TenantsForDisplay = @($TenantsParsed | ForEach-Object {
+                        [PSCustomObject]@{
+                            label = $_.label ?? $_.value
+                            value = $_.value
+                            type  = $_.type ?? 'Tenant'
+                        }
+                    })
+                $ExcludedTenants = @()
+            } catch {
+                Write-Warning "Failed to parse Tenants for alert task $($Task.RowKey): $($_.Exception.Message)"
+                $TenantsForDisplay = @([PSCustomObject]@{
+                        label = $Task.Tenant
+                        value = $Task.Tenant
+                        type  = 'Tenant'
+                    })
+            }
+        } elseif ($Task.TenantGroup) {
             try {
                 $TenantGroupObject = $Task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue
                 if ($TenantGroupObject) {

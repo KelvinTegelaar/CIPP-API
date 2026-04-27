@@ -15,9 +15,9 @@ function Invoke-CippTestZTNA21813 {
         $GlobalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
 
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
-        $RoleAssignmentScheduleInstances = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
-        $RoleEligibilitySchedules = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
-        $Users = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
+        $RoleEligibilitySchedules = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $AllGAUsers = @{}
         $AllPrivilegedUsers = @{}

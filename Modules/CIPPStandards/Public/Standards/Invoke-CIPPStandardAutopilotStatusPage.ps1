@@ -18,7 +18,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         EXECUTIVETEXT
             Provides employees with a visual progress indicator during automated device setup, improving the user experience when receiving new computers. This reduces IT support calls and helps ensure successful device deployment by guiding users through the setup process.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.AutopilotStatusPage.TimeOutInMinutes","label":"Timeout in minutes","defaultValue":60}
+            {"type":"number","name":"standards.AutopilotStatusPage.TimeOutInMinutes","label":"Timeout in minutes","defaultValue":60,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":1440,"message":"Maximum value is 1440"}}}
             {"type":"textField","name":"standards.AutopilotStatusPage.ErrorMessage","label":"Custom Error Message","required":false}
             {"type":"switch","name":"standards.AutopilotStatusPage.ShowProgress","label":"Show progress to users","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotStatusPage.EnableLog","label":"Turn on log collection","defaultValue":true}
@@ -32,6 +32,12 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         ADDEDDATE
             2023-12-30
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

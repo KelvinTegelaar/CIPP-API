@@ -135,7 +135,7 @@
     "Id": "c2ebde3f-fa35-45aa-8a6b-91c835050b79",
     "Command": "Start-DomainOrchestrator",
     "Description": "Orchestrator to process domains",
-    "Cron": "0 30 3 * * *",
+    "Cron": "0 30 5 * * *",
     "Priority": 22,
     "RunOnProcessor": true
   },

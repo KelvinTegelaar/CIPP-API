@@ -13,6 +13,7 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
         CAT
             Entra (AAD) Standards
         TAG
+            "EIDSCAAG01"
         EXECUTIVETEXT
             Completes the transition from legacy authentication policies to Microsoft's modern unified authentication methods policy, ensuring the organization benefits from the latest security features and management capabilities. This migration enables enhanced security controls and simplified policy management.
         ADDEDCOMPONENT

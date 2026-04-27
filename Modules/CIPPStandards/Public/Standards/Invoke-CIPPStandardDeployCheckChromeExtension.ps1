@@ -5,31 +5,32 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     .COMPONENT
         (APIName) DeployCheckChromeExtension
     .SYNOPSIS
-        (Label) Deploy Check Chrome Extension
+        (Label) Deploy Check by CyberDrain Browser Extension
     .DESCRIPTION
-        (Helptext) Deploys the Check by CyberDrain extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
-        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check by CyberDrain extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
+        (Helptext) Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge browsers with configurable settings. Chrome ID: benimdeioplgkhanklclahllklceahbe, Edge ID: knepjpocdagponkonnbggpcnhnaikajg
+        (DocsDescription) Creates an Intune Win32 script application that writes registry keys to install and configure the Check by CyberDrain browser extension on managed devices for both Google Chrome and Microsoft Edge browsers. Uses a PowerShell detection script to enforce configuration drift — when settings change in CIPP the app is automatically redeployed.
     .NOTES
         CAT
             Intune Standards
         TAG
         EXECUTIVETEXT
-            Automatically deploys the Check by CyberDrain extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
+            Automatically deploys the Check by CyberDrain browser extension across all company devices with configurable security and branding settings, ensuring consistent security monitoring and compliance capabilities. This extension provides enhanced security features and monitoring tools that help protect against threats while maintaining user productivity.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.DeployCheckChromeExtension.showNotifications","label":"Show notifications","defaultValue":true}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableValidPageBadge","label":"Enable valid page badge","defaultValue":false}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enablePageBlocking","label":"Enable page blocking","defaultValue":true}
-            {"type":"switch","name":"standards.DeployCheckChromeExtension.forceToolbarPin","label":"Force pin extension to toolbar","defaultValue":true}
-            {"type":"switch","name":"standards.DeployCheckChromeExtension.enableCippReporting","label":"Enable CIPP reporting","defaultValue":false}
-            {"type":"textField","name":"standards.DeployCheckChromeExtension.customRulesUrl","label":"Custom Rules URL","placeholder":"https://YOUR-CIPP-SERVER-URL/rules.json","required":false}
+            {"type":"switch","name":"standards.DeployCheckChromeExtension.forceToolbarPin","label":"Force pin extension to toolbar","defaultValue":false}
+            {"type":"switch","name":"standards.DeployCheckChromeExtension.enableCippReporting","label":"Enable CIPP reporting","defaultValue":true}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.customRulesUrl","label":"Custom Rules URL","placeholder":"https://YOUR-CIPP-SERVER-URL/rules.json","helperText":"Enter the URL for custom rules if you have them. This should point to a JSON file with the same structure as the rules.json used for CIPP reporting.","required":false}
             {"type":"number","name":"standards.DeployCheckChromeExtension.updateInterval","label":"Update interval (hours)","defaultValue":24}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableDebugLogging","label":"Enable debug logging","defaultValue":false}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.enableGenericWebhook","label":"Enable generic webhook","defaultValue":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.webhookUrl","label":"Webhook URL","placeholder":"https://webhook.example.com/endpoint","required":false}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Webhook Events","name":"standards.DeployCheckChromeExtension.webhookEvents","placeholder":"e.g. pageBlocked, pageAllowed"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"URL Allowlist","name":"standards.DeployCheckChromeExtension.urlAllowlist","placeholder":"e.g. https://example.com/*"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.DeployCheckChromeExtension.webhookEvents","label":"Webhook Events","placeholder":"e.g. pageBlocked, pageAllowed"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"freeSolo":true,"name":"standards.DeployCheckChromeExtension.urlAllowlist","label":"URL Allowlist","placeholder":"e.g. https://example.com/*","helperText":"Enter URLs to allowlist in the extension. Press enter to add each URL. Wildcards are allowed. This should be used for sites that are being blocked by the extension but are known to be safe."}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.domainSquattingEnabled","label":"Enable domain squatting detection","defaultValue":true}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.companyName","label":"Company Name","placeholder":"YOUR-COMPANY","required":false}
+            {"type":"textField","name":"standards.DeployCheckChromeExtension.companyURL","label":"Company URL","placeholder":"https://yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.productName","label":"Product Name","placeholder":"YOUR-PRODUCT-NAME","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportEmail","label":"Support Email","placeholder":"support@yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportUrl","label":"Support URL","placeholder":"https://support.yourcompany.com","required":false}
@@ -47,6 +48,12 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             Add-CIPPW32ScriptApplication
         RECOMMENDEDBY
             "CIPP"
+        REQUIREDCAPABILITIES
+            "INTUNE_A"
+            "MDM_Services"
+            "EMS"
+            "SCCM"
+            "MICROSOFTINTUNEPLAN1"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -384,7 +391,7 @@ exit 0
                     if ($Result.status -match '^2') {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed legacy OMA-URI policy: $($Policy.displayName)" -sev Info
                     } else {
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to remove legacy OMA-URI policy: $($Policy.displayName) - $($Result.body.error.message)" -sev Warn
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to remove legacy OMA-URI policy: $($Policy.displayName) - $($Result.body.error.message)" -sev Warning
                     }
                 }
             }
@@ -399,36 +406,56 @@ exit 0
 
                 if ($ExistingHash -eq $SettingsHash) {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "$AppDisplayName settings unchanged — skipping redeploy" -sev Info
-                    return
+                } else {
+                    foreach ($App in @($ExistingApps)) {
+                        $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed existing $AppDisplayName app to redeploy with updated settings" -sev Info
+                    }
+                    Start-Sleep -Seconds 2
+
+                    # Deploy the Win32 script app
+                    $AppProperties = [PSCustomObject]@{
+                        displayName           = $AppDisplayName
+                        description           = $AppDescription
+                        publisher             = 'CIPP'
+                        installScript         = $InstallScript
+                        uninstallScript       = $UninstallScript
+                        detectionScript       = $DetectionScript
+                        runAsAccount          = 'system'
+                        deviceRestartBehavior = 'suppress'
+                    }
+
+                    $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
+
+                    if ($NewApp -and $AssignTo -ne 'On') {
+                        Start-Sleep -Milliseconds 500
+                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                    }
+
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
+                }
+            } else {
+                # App doesn't exist yet — deploy it
+                $AppProperties = [PSCustomObject]@{
+                    displayName           = $AppDisplayName
+                    description           = $AppDescription
+                    publisher             = 'CIPP'
+                    installScript         = $InstallScript
+                    uninstallScript       = $UninstallScript
+                    detectionScript       = $DetectionScript
+                    runAsAccount          = 'system'
+                    deviceRestartBehavior = 'suppress'
                 }
 
-                foreach ($App in @($ExistingApps)) {
-                    $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Removed existing $AppDisplayName app to redeploy with updated settings" -sev Info
+                $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
+
+                if ($NewApp -and $AssignTo -ne 'On') {
+                    Start-Sleep -Milliseconds 500
+                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                 }
-                Start-Sleep -Seconds 2
+
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
             }
-
-            # Deploy the Win32 script app
-            $AppProperties = [PSCustomObject]@{
-                displayName           = $AppDisplayName
-                description           = $AppDescription
-                publisher             = 'CIPP'
-                installScript         = $InstallScript
-                uninstallScript       = $UninstallScript
-                detectionScript       = $DetectionScript
-                runAsAccount          = 'system'
-                deviceRestartBehavior = 'suppress'
-            }
-
-            $NewApp = Add-CIPPW32ScriptApplication -TenantFilter $Tenant -Properties $AppProperties
-
-            if ($NewApp -and $AssignTo -ne 'On') {
-                Start-Sleep -Milliseconds 500
-                Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
-            }
-
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
         }
 
         if ($Settings.alert -eq $true) {
@@ -442,7 +469,6 @@ exit 0
 
         if ($Settings.report -eq $true) {
             $StateIsCorrect = $AppExists
-
             $ExpectedValue = [PSCustomObject]@{
                 AppDeployed = $true
             }

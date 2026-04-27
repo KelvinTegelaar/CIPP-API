@@ -6,8 +6,8 @@ function Invoke-CippTestZTNA21782 {
     param($Tenant)
 
     try {
-        $UserRegistrationDetails = New-CIPPDbRequest -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $RoleAssignments = New-CIPPDbRequest -TenantFilter $Tenant -Type 'RoleAssignments'
+        $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
+        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
 
         if (-not $UserRegistrationDetails -or -not $RoleAssignments) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'

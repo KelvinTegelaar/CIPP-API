@@ -47,10 +47,10 @@ function Invoke-ExecOffboardTenant {
                                 }
                             })
 
-                        $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+                        $null = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
                         $results.Add('Successfully removed guest users')
-                        Write-LogMessage -headers $Request.Headers -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
+                        Write-LogMessage -headers $Headers -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
                     } else {
                         $results.Add('No guest users found to remove')
                     }
@@ -84,15 +84,15 @@ function Invoke-ExecOffboardTenant {
                     $property = $_
                     $propertyContacts = $orgContacts.($($property))
 
-                    if ($propertyContacts -and ($domains -notcontains ($propertyContacts | ForEach-Object { $_.Split('@')[1] }))) {
+                    if ($propertyContacts -and ($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] })) {
                         $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split('@')[1] })
 
                         $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
 
                         try {
-                            New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $TenantFilter -ContentType 'application/json'
+                            $null = New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $TenantFilter
                             $Results.Add("Successfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] }))")
-                            Write-LogMessage -headers $Request.Headers -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
                         } catch {
                             $Errors.Add("Failed to update property $($property): $($_.Exception.message)")
                         }
@@ -110,14 +110,14 @@ function Invoke-ExecOffboardTenant {
                     $DomainTable = Get-CIPPTable -Table 'Domains'
                     $Filter = "TenantGUID eq '{0}'" -f $TenantId
                     $DomainEntries = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
-                    
+
                     if ($DomainEntries) {
                         $DomainCount = ($DomainEntries | Measure-Object).Count
                         foreach ($Domain in $DomainEntries) {
                             Remove-AzDataTableEntity @DomainTable -Entity $Domain
                         }
                         $Results.Add("Successfully removed $DomainCount Domain Analyser entries")
-                        Write-LogMessage -headers $Request.Headers -API $APIName -message "Removed $DomainCount Domain Analyser entries" -Sev 'Info' -tenant $TenantFilter
+                        Write-LogMessage -headers $Headers -API $APIName -message "Removed $DomainCount Domain Analyser entries" -Sev 'Info' -tenant $TenantFilter
                     } else {
                         $Results.Add('No Domain Analyser data found for this tenant')
                     }
@@ -149,7 +149,7 @@ function Invoke-ExecOffboardTenant {
                         try {
                             $null = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.id)" -tenantid $TenantFilter)
                             $Results.Add("Successfully removed app $($_.displayName)")
-                            Write-LogMessage -headers $Request.Headers -API $APIName -message "App $($_.displayName) was removed" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "App $($_.displayName) was removed" -Sev 'Info' -tenant $TenantFilter
                         } catch {
                             #$Results.Add("Failed to removed app $($_.displayName)")
                             $Errors.Add("Failed to removed app $($_.displayName)")
@@ -170,7 +170,7 @@ function Invoke-ExecOffboardTenant {
                         try {
                             $null = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
                             $Results.Add("Successfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
-                            Write-LogMessage -headers $Request.Headers -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
 
                         } catch {
                             $($_.Exception.message)
