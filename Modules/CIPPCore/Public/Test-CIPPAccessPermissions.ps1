@@ -115,7 +115,6 @@ function Test-CIPPAccessPermissions {
                 }
             }
             $Success = $false
-            ) | Out-Null
         } else {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
