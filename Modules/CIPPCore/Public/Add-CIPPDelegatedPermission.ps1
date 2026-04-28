@@ -71,12 +71,7 @@ function Add-CIPPDelegatedPermission {
     }
 
     $Translator = Get-Content (Join-Path $env:CIPPRootPath 'Config\PermissionsTranslator.json') | ConvertFrom-Json
-    $CachedSPs = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals'
-    $ServicePrincipalList = if ($CachedSPs) {
-        $CachedSPs
-    } else {
-        New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
-    }
+    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
     $Results = [System.Collections.Generic.List[string]]::new()
 
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId | Select-Object -First 1
