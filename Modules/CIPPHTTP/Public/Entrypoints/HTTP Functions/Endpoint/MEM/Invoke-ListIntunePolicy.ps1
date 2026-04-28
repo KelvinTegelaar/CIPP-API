@@ -13,6 +13,7 @@ function Invoke-ListIntunePolicy {
     $id = $Request.Query.ID
     $URLName = $Request.Query.URLName
     $UseReportDB = $Request.Query.UseReportDB
+    $IncludeSettingDefinitions = [System.Convert]::ToBoolean($Request.Query.IncludeSettingDefinitions ?? 'false')
 
     try {
         # Return cached report data when AllTenants is requested or UseReportDB is set
@@ -31,7 +32,42 @@ function Invoke-ListIntunePolicy {
         }
 
         if ($ID) {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
+            if ($URLName -ieq 'ConfigurationPolicies' -or $URLName -ieq 'configurationPolicies') {
+                $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$ID')?`$expand=settings" -tenantid $TenantFilter
+
+                if ($IncludeSettingDefinitions -and $GraphRequest.settings) {
+                    $DefinitionRequests = [System.Collections.Generic.List[object]]::new()
+                    $SettingIdMap = @{}
+                    $SettingIndex = 0
+
+                    foreach ($Setting in $GraphRequest.settings) {
+                        if ($Setting.id) {
+                            $RequestId = "setting$SettingIndex"
+                            $SettingIdMap[$RequestId] = $Setting.id
+                            $DefinitionRequests.Add([PSCustomObject]@{
+                                    id     = $RequestId
+                                    method = 'GET'
+                                    url    = "/deviceManagement/configurationPolicies('$ID')/settings('$($Setting.id)')/settingDefinitions"
+                                })
+                            $SettingIndex++
+                        }
+                    }
+
+                    if ($DefinitionRequests.Count -gt 0) {
+                        $DefinitionResults = New-GraphBulkRequest -Requests @($DefinitionRequests) -tenantid $TenantFilter
+                        foreach ($DefinitionResult in $DefinitionResults) {
+                            $SettingId = $SettingIdMap[$DefinitionResult.id]
+                            $Setting = $GraphRequest.settings | Where-Object { $_.id -eq $SettingId } | Select-Object -First 1
+                            if ($Setting) {
+                                $Definitions = @($DefinitionResult.body.value ?? $DefinitionResult.body)
+                                $Setting | Add-Member -NotePropertyName settingDefinitions -NotePropertyValue $Definitions -Force
+                            }
+                        }
+                    }
+                }
+            } else {
+                $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
+            }
         } else {
             $BulkRequests = [PSCustomObject]@(
                 @{
