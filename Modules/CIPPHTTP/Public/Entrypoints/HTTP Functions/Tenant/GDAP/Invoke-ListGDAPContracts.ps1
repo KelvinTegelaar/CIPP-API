@@ -13,7 +13,7 @@ function Invoke-ListGDAPContracts {
     $Uri = "https://graph.microsoft.com/beta/contracts?`$top=$Top"
 
     try {
-        $Results = New-GraphGetRequest -Uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -NoPagination $true -ComplexFilter
+        $Results = New-GraphGetRequest -Uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -ComplexFilter
 
         $Body = @{
             Results  = @($Results)

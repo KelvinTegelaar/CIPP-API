@@ -11,10 +11,10 @@ function Push-ExecScheduledCommand {
     $OrchestratorBasedCommands = @('Invoke-CIPPOffboardingJob')
 
     # Initialize AsyncLocal storage for thread-safe per-invocation context
-    if (-not $script:CippScheduledTaskIdStorage) {
-        $script:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
+    if (-not $global:CippScheduledTaskIdStorage) {
+        $global:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
     }
-    $script:CippScheduledTaskIdStorage.Value = $Item.TaskInfo.RowKey
+    $global:CippScheduledTaskIdStorage.Value = $Item.TaskInfo.RowKey
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
