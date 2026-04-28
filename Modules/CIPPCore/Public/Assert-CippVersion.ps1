@@ -13,7 +13,7 @@ function Assert-CippVersion {
     param($CIPPVersion)
     $APIVersion = (Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\version_latest.txt')).trim()
 
-    $RemoteAPIVersion = (Invoke-CIPPRestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/Config/version_latest.txt').trim()
+    $RemoteAPIVersion = (Invoke-CIPPRestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt').trim()
     $RemoteCIPPVersion = (Invoke-CIPPRestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/main/public/version.json').version
 
     [PSCustomObject]@{
