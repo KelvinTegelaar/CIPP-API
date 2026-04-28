@@ -277,7 +277,17 @@ function Get-CIPPDrift {
                     }
                 }
                 if ($Alignment.standardSettings.ConditionalAccessTemplate) {
-                    $CATemplateIds = $Alignment.standardSettings.ConditionalAccessTemplate.TemplateList | ForEach-Object { $_.value }
+                    $CATemplateIds = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Template in $Alignment.standardSettings.ConditionalAccessTemplate) {
+                        if ($Template.TemplateList.value) {
+                            $CATemplateIds.Add($Template.TemplateList.value)
+                        }
+                        if ($Template.'TemplateList-Tags'.rawData.templates) {
+                            foreach ($TagTemplate in $Template.'TemplateList-Tags'.rawData.templates) {
+                                $CATemplateIds.Add($TagTemplate.GUID)
+                            }
+                        }
+                    }
                 }
             }
 

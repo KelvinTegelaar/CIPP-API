@@ -50,14 +50,21 @@ function Get-CIPPStandards {
                     if ($Item.'TemplateList-Tags'.value) {
                         $HasExpansions = $true
                         $Table = Get-CippTable -tablename 'templates'
-                        $Filter = "PartitionKey eq 'IntuneTemplate'"
+                        $PartitionKey = switch ($StandardName) {
+                            'ConditionalAccessTemplate' { 'CATemplate' }
+                            'IntuneTemplate' { 'IntuneTemplate' }
+                            default { 'IntuneTemplate' }
+                        }
+                        $Filter = "PartitionKey eq '$PartitionKey'"
                         $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $Item.'TemplateList-Tags'.value
 
                         foreach ($TemplateItem in $TemplatesList) {
+                            $TemplateJSON = $TemplateItem.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                            $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
                             $NewItem = $Item.PSObject.Copy()
                             $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
                             $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                    label = "$($TemplateItem.RowKey)"
+                                    label = $TemplateLabel
                                     value = "$($TemplateItem.RowKey)"
                                 }) -Force
                             $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
@@ -73,14 +80,21 @@ function Get-CIPPStandards {
                 if ($StandardValue.'TemplateList-Tags'.value) {
                     $HasExpansions = $true
                     $Table = Get-CippTable -tablename 'templates'
-                    $Filter = "PartitionKey eq 'IntuneTemplate'"
+                    $PartitionKey = switch ($StandardName) {
+                        'ConditionalAccessTemplate' { 'CATemplate' }
+                        'IntuneTemplate' { 'IntuneTemplate' }
+                        default { 'IntuneTemplate' }
+                    }
+                    $Filter = "PartitionKey eq '$PartitionKey'"
                     $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $StandardValue.'TemplateList-Tags'.value
 
                     $NewArray = foreach ($TemplateItem in $TemplatesList) {
+                        $TemplateJSON = $TemplateItem.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                        $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
                         $NewItem = $StandardValue.PSObject.Copy()
                         $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
                         $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                label = "$($TemplateItem.RowKey)"
+                                label = $TemplateLabel
                                 value = "$($TemplateItem.RowKey)"
                             }) -Force
                         $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
