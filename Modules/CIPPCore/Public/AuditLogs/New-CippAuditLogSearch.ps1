@@ -169,10 +169,10 @@ function New-CippAuditLogSearch {
                 try {
                     $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
                     $DisabledEntity = [PSCustomObject]@{
-                        PartitionKey = [string]'AuditDisabledTenant'
-                        RowKey       = [string]$TenantFilter
-                        TenantFilter = [string]$TenantFilter
-                        Status       = [string]'AuditingDisabledTenant'
+                        PartitionKey  = [string]'AuditDisabledTenant'
+                        RowKey        = [string]$TenantFilter
+                        TenantFilter  = [string]$TenantFilter
+                        Status        = [string]'AuditingDisabledTenant'
                         ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
                     }
                     Add-CIPPAzDataTableEntity @AuditDisabledTable -Entity $DisabledEntity -Force | Out-Null
