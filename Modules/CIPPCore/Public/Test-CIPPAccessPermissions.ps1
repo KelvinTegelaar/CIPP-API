@@ -115,11 +115,6 @@ function Test-CIPPAccessPermissions {
                 }
             }
             $Success = $false
-            $Links.Add([PSCustomObject]@{
-                    Text = 'Permissions'
-                    Href = 'https://docs.cipp.app/setup/installation/permissions'
-                }
-            ) | Out-Null
         } else {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }

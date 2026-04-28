@@ -26,7 +26,20 @@ function Invoke-RemoveStandardTemplate {
         }
         $Entities = Get-AzDataTableEntity @Table -Filter $Filter
         Remove-AzDataTableEntity -Force @Table -Entity $Entities
+
+        # Remove any drift remediation scheduled tasks associated with this template
+        $ScheduledTasksTable = Get-CIPPTable -TableName 'ScheduledTasks'
+        $SafeTag = ConvertTo-CIPPODataFilterValue -Value "DriftRemediation_$SafeID"
+        $DriftTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter "PartitionKey eq 'ScheduledTask' and Tag eq '$SafeTag'"
+        foreach ($DriftTask in $DriftTasks) {
+            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $DriftTask
+            Write-LogMessage -Headers $Headers -API $APIName -message "Removed drift remediation scheduled task: $($DriftTask.Name)" -Sev Info
+        }
+
         $Result = "Removed Standards Template named: '$($TemplateName)' with id: $($ID)"
+        if ($DriftTasks) {
+            $Result += ". Also removed $(@($DriftTasks).Count) associated drift remediation scheduled task(s)."
+        }
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {

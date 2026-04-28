@@ -20,13 +20,10 @@ function Invoke-CippTestCopilotReady001 {
             return
         }
 
-        # LicenseOverview is stored as a single item; unwrap if needed
-        $Skus = if ($LicenseData.Licenses) { $LicenseData.Licenses } else { $LicenseData }
-
         $EligibleSkus = [System.Collections.Generic.List[object]]::new()
         $AssignableCount = 0
 
-        foreach ($Sku in $Skus) {
+        foreach ($Sku in $LicenseData) {
             $HasQualifyingPlan = $Sku.ServicePlans | Where-Object { $_.servicePlanName -in $PrerequisiteServicePlans }
             if ($HasQualifyingPlan -and [int]$Sku.TotalLicenses -gt 0) {
                 $EligibleSkus.Add($Sku) | Out-Null

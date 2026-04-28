@@ -362,7 +362,7 @@ function Compare-CIPPIntuneObject {
             return $null
         }
     } else {
-        $intuneCollection = Get-Content .\intuneCollection.json | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $intuneCollection = Get-Content "$env:CIPPRootPath\Config\intuneCollection.json" | ConvertFrom-Json -ErrorAction SilentlyContinue
         # Build a hashtable index for O(1) lookups instead of O(n) Where-Object scans
         $intuneCollectionIndex = @{}
         foreach ($item in $intuneCollection) {
