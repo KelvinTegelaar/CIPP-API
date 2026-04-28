@@ -61,8 +61,8 @@ function Push-ExecCIPPDBCache {
             $CacheFunctionParams.QueueId = $QueueId
         }
 
-        # Add Types if provided (for Mailboxes function)
-        if ($Types) {
+        # Add Types only for cache functions that support sub-modes, such as Mailboxes or Sites.
+        if ($Types -and $Function.Parameters.ContainsKey('Types')) {
             $CacheFunctionParams.Types = $Types
         }
 
