@@ -22,7 +22,7 @@ function Invoke-ListGDAPRelationships {
             if ($Filter) {
                 $Uri = "$Uri&`$filter=$Filter"
             }
-            $Results = New-GraphGetRequest -Uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -NoPagination $true -ComplexFilter
+            $Results = New-GraphGetRequest -Uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -ComplexFilter
         }
 
         $Body = @{

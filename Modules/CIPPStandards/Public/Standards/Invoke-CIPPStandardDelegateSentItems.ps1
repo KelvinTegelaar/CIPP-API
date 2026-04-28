@@ -51,7 +51,7 @@ function Invoke-CIPPStandardDelegateSentItems {
     }
     $Mailboxes = New-CippDbRequest -TenantFilter $Tenant -Type 'Mailboxes'
     if ($Settings.IncludeUserMailboxes -eq $true) {
-        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -ne 'DiscoveryMailbox' -and  ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
+        $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -in @('UserMailbox', 'SharedMailbox') -and ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     } else {
         $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -eq 'SharedMailbox' -and ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     }

@@ -16,7 +16,7 @@
         "distributedTracingEnabled": false,
         "version": "None"
       },
-      "defaultVersion": "10.4.1",
+      "defaultVersion": "10.4.2",
       "versionMatchStrategy": "Strict",
       "versionFailureStrategy": "Fail"
     }

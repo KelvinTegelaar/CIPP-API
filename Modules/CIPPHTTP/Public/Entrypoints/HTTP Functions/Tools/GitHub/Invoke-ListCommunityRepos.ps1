@@ -23,7 +23,7 @@ function Invoke-ListCommunityRepos {
     $Repos = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if (!$Request.Query.WriteAccess) {
-        $CommunityRepos = Join-Path $env:CIPPRootPath 'CommunityRepos.json'
+        $CommunityRepos = Join-Path $env:CIPPRootPath 'Config\CommunityRepos.json'
         $DefaultCommunityRepos = [System.IO.File]::ReadAllText($CommunityRepos) | ConvertFrom-Json
 
         $DefaultsMissing = $false

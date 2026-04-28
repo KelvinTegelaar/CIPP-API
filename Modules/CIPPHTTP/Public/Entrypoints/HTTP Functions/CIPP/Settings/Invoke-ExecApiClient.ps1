@@ -29,6 +29,7 @@ function Invoke-ExecApiClient {
             }
         }
         'AddUpdate' {
+            $Results = [System.Collections.Generic.List[object]]::new()
             if ($Request.Body.ClientId -or $Request.Body.AppName) {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 $AddUpdateSuccess = $false
@@ -75,12 +76,16 @@ function Invoke-ExecApiClient {
                 }
             }
 
+            $IPValidationErrors = [System.Collections.Generic.List[string]]::new()
             if ($Request.Body.IpRange.value) {
                 $IpRange = [System.Collections.Generic.List[string]]::new()
                 $regexPattern = '^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/\d{1,2})?|(?:[0-9A-Fa-f]{1,4}:){1,7}[0-9A-Fa-f]{1,4}(?:/\d{1,3})?)$'
                 foreach ($IP in @($Request.Body.IPRange.value)) {
+                    $IP = $IP.Trim()
                     if ($IP -match $regexPattern) {
                         $IpRange.Add($IP)
+                    } else {
+                        $IPValidationErrors.Add("'$IP' is not a valid IP address or CIDR range.")
                     }
                 }
             } else {
@@ -88,8 +93,8 @@ function Invoke-ExecApiClient {
             }
 
             if (!$AddUpdateSuccess) {
-                $Body = @{
-                    Results = @($AddedText)
+                if ($AddedText) {
+                    $Results.Add($AddedText)
                 }
             } else {
                 $ExistingClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
@@ -100,13 +105,13 @@ function Invoke-ExecApiClient {
                     $Client.Enabled = $Request.Body.Enabled ?? $false
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
                     if ($APIConfig.ApplicationSecret) {
-                        $Results = @{
-                            resultText = "API client updated and application secret reset for '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the new secret."
-                            copyField  = $APIConfig.ApplicationSecret
-                            state      = 'success'
-                        }
+                        $Results.Add(@{
+                                resultText = "API client updated and application secret reset for '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the new secret."
+                                copyField  = $APIConfig.ApplicationSecret
+                                state      = 'success'
+                            })
                     } else {
-                        $Results = 'API client updated'
+                        $Results.Add('API client updated')
                     }
                 } else {
                     $Client = @{
@@ -117,14 +122,30 @@ function Invoke-ExecApiClient {
                         'IPRange'      = "$(@($IpRange) | ConvertTo-Json -Compress)"
                         'Enabled'      = $Request.Body.Enabled ?? $false
                     }
-                    $Results = @{
-                        resultText = "API Client created with the name '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the secret."
-                        copyField  = $APIConfig.ApplicationSecret
-                        state      = 'success'
-                    }
+                    $Results.Add(@{
+                            resultText = "API Client created with the name '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the secret."
+                            copyField  = $APIConfig.ApplicationSecret
+                            state      = 'success'
+                        })
                 }
 
                 Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
+            }
+
+            if ($IPValidationErrors.Count -gt 0) {
+                foreach ($ValidationError in $IPValidationErrors) {
+                    $Results.Add(@{
+                            resultText = $ValidationError
+                            state      = 'warning'
+                        })
+                }
+            }
+
+            if (!$AddUpdateSuccess) {
+                $Body = @{
+                    Results = @($Results)
+                }
+            } else {
                 $Body = @($Results)
             }
         }

@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDisableEntraPortal {
         (APIName) DisableEntraPortal
     .SYNOPSIS
         (Label) Disables the Entra Portal for standard users
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)

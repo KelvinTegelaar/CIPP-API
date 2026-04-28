@@ -119,7 +119,7 @@ Search-CIPPDbData -TenantFilter $Tenant -SearchTerms @('john', 'admin') -Types @
 
 ## Cache types
 
-Available types are defined in `CIPPDBCacheTypes.json`. Each type maps to a `Set-CIPPDBCache*` writer function. Check that file for the current type list — it covers identity, Exchange, security, Intune, compliance, and usage data.
+Available types are defined in `Config\CIPPDBCacheTypes.json`. Each type maps to a `Set-CIPPDBCache*` writer function. Check that file for the current type list — it covers identity, Exchange, security, Intune, compliance, and usage data.
 
 ## Writing a new Set-CIPPDBCache* function
 

@@ -90,7 +90,7 @@ Set-Location $PSScriptRoot
 $json = $collection | ConvertTo-Json -Depth 5
 
 # CIPP-API root (used by Compare-CIPPIntuneObject.ps1 at runtime)
-$apiPath = Join-Path $PSScriptRoot '..\intuneCollection.json'
+$apiPath = Join-Path $PSScriptRoot '..\Config\intuneCollection.json'
 $json | Set-Content -Path $apiPath -Encoding utf8NoBOM
 Write-Host "Written: $(Resolve-Path $apiPath)" -ForegroundColor Green
 
