@@ -59,7 +59,7 @@
     "Id": "5ff6c500-e420-4a3b-8532-ace2e4da4f7d",
     "Command": "Start-ApplicationOrchestrator",
     "Description": "Orchestrator to process application uploads",
-    "Cron": "0 0 */12 * * *",
+    "Cron": "0 30 */12 * * *",
     "Priority": 2,
     "RunOnProcessor": true
   },
@@ -84,7 +84,7 @@
     "Id": "4d80205c-674d-4fc1-abeb-a1ec37e0d796",
     "Command": "Start-DriftStandardsOrchestrator",
     "Description": "Orchestrator to process drift standards",
-    "Cron": "0 0 */12 * * *",
+    "Cron": "0 15 */12 * * *",
     "Priority": 5,
     "RunOnProcessor": true,
     "PreferredProcessor": "standards"
@@ -101,7 +101,7 @@
     "Id": "ed7b5241-1cb9-499b-8f5b-1013ba5764b4",
     "Command": "Set-CIPPGDAPInviteGroups",
     "Description": "Orchestrator to map the groups for GDAP invites",
-    "Cron": "0 0 */3 * * *",
+    "Cron": "0 45 */3 * * *",
     "Priority": 5,
     "RunOnProcessor": true
   },
@@ -109,7 +109,7 @@
     "Id": "0967c860-3a57-4860-8f33-e5136eae7b4e",
     "Command": "Start-TenantDynamicGroupOrchestrator",
     "Description": "Orchestrator to update dynamic tenant groups",
-    "Cron": "0 0 */4 * * *",
+    "Cron": "0 30 */4 * * *",
     "Priority": 6,
     "RunOnProcessor": true
   },
@@ -180,7 +180,7 @@
     "Id": "54c39540-fe91-4795-8613-ac4295751a51",
     "Command": "Start-ExtensionOrchestrator",
     "Description": "Orchestrator to process extensions",
-    "Cron": "0 0 */2 * * *",
+    "Cron": "0 45 */2 * * *",
     "Priority": 12,
     "RunOnProcessor": true
   },
