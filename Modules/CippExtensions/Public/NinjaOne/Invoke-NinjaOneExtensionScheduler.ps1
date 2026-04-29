@@ -76,7 +76,7 @@ function Invoke-NinjaOneExtensionScheduler {
                     $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
                 }
             }
-            $CatchupTenants = $TenantsToProcess | Where-Object { (((($_.lastEndTime -eq $Null) -or ($_.lastStartTime -gt $_.lastEndTime)) -and ($_.lastStartTime -lt (Get-Date).AddMinutes(-30)))) -or ($_.lastStartTime -lt $LastRunTime) }
+            $CatchupTenants = $TenantsToProcess | Where-Object { ((($_.lastEndTime -eq $Null) -or ($_.lastStartTime -gt $_.lastEndTime)) -and ($_.lastStartTime -lt (Get-Date).AddHours(-3))) -or (($_.lastStartTime -lt $LastRunTime) -and ($Null -eq $_.lastEndTime -or $_.lastEndTime -lt $LastRunTime)) }
             $Batch = foreach ($Tenant in $CatchupTenants) {
                 [PSCustomObject]@{
                     NinjaAction  = 'SyncTenant'
