@@ -7,8 +7,8 @@ function Invoke-CippTestCopilotReady002 {
 
     # Copilot add-on licenses are matched by friendly name (License field) since CIPP's LicenseOverview
     # caches display names rather than raw SKU part numbers. All Copilot add-on SKUs contain 'Copilot'.
-    # Service plan anchor: 'M365_COPILOT' is present in all Copilot add-on SKUs.
-    $CopilotServicePlan = 'M365_COPILOT'
+    # Service plan anchor: 'COPILOT' is present in all Copilot add-on SKUs.
+    $CopilotServicePlan = 'COPILOT'
 
     try {
         $LicenseData = Get-CIPPTestData -TenantFilter $Tenant -Type 'LicenseOverview'
@@ -18,16 +18,14 @@ function Invoke-CippTestCopilotReady002 {
             return
         }
 
-        $Skus = if ($LicenseData.Licenses) { $LicenseData.Licenses } else { $LicenseData }
-
         $CopilotLicenses = [System.Collections.Generic.List[object]]::new()
         $TotalEnabled = 0
         $TotalConsumed = 0
         $TotalAvailable = 0
 
-        foreach ($Sku in $Skus) {
-            $IsCopilot = ($Sku.License -like '*Copilot*') -or
-                         ($Sku.ServicePlans | Where-Object { $_.servicePlanName -eq $CopilotServicePlan })
+        foreach ($Sku in $LicenseData) {
+            $IsCopilot = ($Sku.License -match 'Copilot') -or
+            ($Sku.ServicePlans | Where-Object { $_.servicePlanName -match $CopilotServicePlan })
             if ($IsCopilot) {
                 $CopilotLicenses.Add($Sku) | Out-Null
                 $Enabled = [int]$Sku.TotalLicenses
@@ -41,7 +39,7 @@ function Invoke-CippTestCopilotReady002 {
         if ($CopilotLicenses.Count -eq 0) {
             $Status = 'Failed'
             $Result = "No Microsoft 365 Copilot add-on licenses were found in this tenant.`n`n"
-            $Result += "Purchase Microsoft 365 Copilot licenses and assign them to eligible users to enable Copilot features."
+            $Result += 'Purchase Microsoft 365 Copilot licenses and assign them to eligible users to enable Copilot features.'
         } elseif ($TotalConsumed -eq 0) {
             $Status = 'Failed'
             $Result = "Microsoft 365 Copilot licenses exist (**$TotalEnabled** seats) but **none are assigned** to any users.`n`n"

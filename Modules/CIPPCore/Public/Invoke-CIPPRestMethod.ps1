@@ -89,9 +89,11 @@ function Invoke-CIPPRestMethod {
     )
 
     # ------------------------------------------------------------------
-    # Escape hatch — env var kill switch or per-call legacy switch
+    # Escape hatch — env var kill switch, missing pooled client type,
+    # or per-call legacy switch
     # ------------------------------------------------------------------
-    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true') {
+    $HasCippRestClient = $null -ne ('CIPP.CIPPRestClient' -as [type])
+    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient) {
         $LegacyParams = @{
             Uri         = $Uri
             Method      = $Method
@@ -172,22 +174,41 @@ function Invoke-CIPPRestMethod {
             $TimeoutSec,
             $MaximumRedirection
         )
-    } catch [System.Net.Http.HttpRequestException] {
+    } catch {
+        # PowerShell wraps .NET static method exceptions in MethodInvocationException.
+        # The actual HttpRequestException / OperationCanceledException is the InnerException.
+        $InnerEx = $_.Exception.InnerException ?? $_.Exception
+
+        if ($InnerEx -is [System.OperationCanceledException]) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.TimeoutException]::new("The request to '$Uri' timed out after ${TimeoutSec}s.", $InnerEx),
+                    'RequestTimeout',
+                    [System.Management.Automation.ErrorCategory]::OperationTimeout,
+                    $Uri
+                )
+            )
+            return
+        }
+
+        if ($InnerEx -is [System.Net.Http.HttpRequestException]) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    $InnerEx,
+                    'HttpRequestFailed',
+                    [System.Management.Automation.ErrorCategory]::ConnectionError,
+                    $Uri
+                )
+            )
+            return
+        }
+
+        # Unknown exception type — re-throw with the inner exception for a cleaner message
         $PSCmdlet.ThrowTerminatingError(
             [System.Management.Automation.ErrorRecord]::new(
-                $_.Exception,
+                $InnerEx,
                 'HttpRequestFailed',
                 [System.Management.Automation.ErrorCategory]::ConnectionError,
-                $Uri
-            )
-        )
-        return
-    } catch [System.OperationCanceledException] {
-        $PSCmdlet.ThrowTerminatingError(
-            [System.Management.Automation.ErrorRecord]::new(
-                [System.TimeoutException]::new("The request to '$Uri' timed out after ${TimeoutSec}s."),
-                'RequestTimeout',
-                [System.Management.Automation.ErrorCategory]::OperationTimeout,
                 $Uri
             )
         )

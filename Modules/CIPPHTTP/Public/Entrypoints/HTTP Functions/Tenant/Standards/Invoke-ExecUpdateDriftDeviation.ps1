@@ -43,6 +43,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     if ($Deviation.status -eq 'DeniedRemediate') {
                         $Setting = $Deviation.standardName -replace 'standards\.', ''
                         $StandardTemplate = Get-CIPPTenantAlignment -TenantFilter $TenantFilter | Where-Object -Property standardType -EQ 'drift'
+                        $DriftTemplateId = $StandardTemplate.StandardId
                         if ($Setting -like '*IntuneTemplate*') {
                             $Setting = 'IntuneTemplate'
                             $TemplateId = $Deviation.standardName.split('.') | Select-Object -Index 2
@@ -91,7 +92,8 @@ function Invoke-ExecUpdateDriftDeviation {
                         }
                         $TaskBody = @{
                             TenantFilter  = $TenantFilter
-                            Name          = "One Off Drift Remediation: $Setting - $TenantFilter"
+                            Name          = "One Off Drift Remediation: $Setting - $TenantFilter - $DriftTemplateId"
+                            Tag           = "DriftRemediation_$DriftTemplateId"
                             Command       = @{
                                 value = "Invoke-CIPPStandard$Setting"
                                 label = "Invoke-CIPPStandard$Setting"
@@ -114,7 +116,8 @@ function Invoke-ExecUpdateDriftDeviation {
                         if ($PersistentDeny) {
                             $PersistentTaskBody = @{
                                 TenantFilter  = $TenantFilter
-                                Name          = "Persistent Drift Remediation: $Setting - $TenantFilter"
+                                Name          = "Persistent Drift Remediation: $Setting - $TenantFilter - $DriftTemplateId"
+                                Tag           = "DriftRemediation_$DriftTemplateId"
                                 Command       = @{
                                     value = "Invoke-CIPPStandard$Setting"
                                     label = "Invoke-CIPPStandard$Setting"
