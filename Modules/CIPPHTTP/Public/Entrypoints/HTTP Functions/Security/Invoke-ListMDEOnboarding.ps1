@@ -10,6 +10,10 @@ function Invoke-ListMDEOnboarding {
     $TenantFilter = $Request.Query.tenantFilter
     $UseReportDB = $Request.Query.UseReportDB
 
+    if ($TenantFilter -eq 'AllTenants') {
+        $UseReportDB = 'true'
+    }
+
     try {
         if ($UseReportDB -eq 'true') {
             try {
@@ -22,23 +26,22 @@ function Invoke-ListMDEOnboarding {
             }
 
             return ([HttpResponseContext]@{
-                StatusCode = $StatusCode
-                Body       = @($GraphRequest)
-            })
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
         }
 
         $ConnectorId = 'fc780465-2017-40d4-a0c5-307022471b92'
         $ConnectorUri = "https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/$ConnectorId"
         try {
             $ConnectorState = New-GraphGetRequest -uri $ConnectorUri -tenantid $TenantFilter
-            $PartnerState = $ConnectorState.partnerState
+            $GraphRequest = $ConnectorState | Select-Object -ExcludeProperty '@odata.context'
+            $GraphRequest | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter -Force
         } catch {
-            $PartnerState = 'unavailable'
-        }
-
-        $GraphRequest = [PSCustomObject]@{
-            Tenant       = $TenantFilter
-            partnerState = $PartnerState
+            $GraphRequest = [PSCustomObject]@{
+                Tenant       = $TenantFilter
+                partnerState = 'unavailable'
+            }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -48,7 +51,7 @@ function Invoke-ListMDEOnboarding {
     }
 
     return ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = @($GraphRequest)
-    })
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
+        })
 }
