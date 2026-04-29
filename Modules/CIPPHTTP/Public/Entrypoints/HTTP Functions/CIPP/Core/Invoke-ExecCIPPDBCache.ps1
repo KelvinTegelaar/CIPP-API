@@ -13,6 +13,11 @@ function Invoke-ExecCIPPDBCache {
     $Name = $Request.Query.Name
     $Types = $Request.Query.Types
 
+    $ParsedTypes = @()
+    if (-not [string]::IsNullOrWhiteSpace($Types)) {
+        $ParsedTypes = @($Types -split ',' | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne 'None' })
+    }
+
     Write-Information "ExecCIPPDBCache called with Name: '$Name', TenantFilter: '$TenantFilter', Types: '$Types'"
 
     try {
@@ -66,8 +71,8 @@ function Invoke-ExecCIPPDBCache {
                     QueueId      = $Queue.RowKey
                 }
                 # Add Types parameter if provided
-                if ($Types) {
-                    $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue @($Types -split ',') -Force
+                if ($ParsedTypes.Count -gt 0) {
+                    $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue $ParsedTypes -Force
                 }
                 $BatchItem
             }
@@ -91,8 +96,8 @@ function Invoke-ExecCIPPDBCache {
                 QueueId      = $Queue.RowKey
             }
             # Add Types parameter if provided
-            if ($Types) {
-                $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue @($Types -split ',') -Force
+            if ($ParsedTypes.Count -gt 0) {
+                $BatchItem | Add-Member -NotePropertyName 'Types' -NotePropertyValue $ParsedTypes -Force
             }
 
             $InputObject = [PSCustomObject]@{

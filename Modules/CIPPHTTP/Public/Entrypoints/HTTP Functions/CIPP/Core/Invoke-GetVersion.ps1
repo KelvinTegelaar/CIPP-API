@@ -1,9 +1,9 @@
-Function Invoke-GetVersion {
+function Invoke-GetVersion {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.Read
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,5 +15,4 @@ Function Invoke-GetVersion {
             StatusCode = [HttpStatusCode]::OK
             Body       = $Version
         })
-
 }

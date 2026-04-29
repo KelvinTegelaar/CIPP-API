@@ -204,6 +204,10 @@ function Add-CIPPScheduledTask {
             }
 
 
+            if ($task.Tag) {
+                $entity['Tag'] = [string]$task.Tag
+            }
+
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {
                 $entity['DesiredStartTime'] = [string]$DesiredStartTime

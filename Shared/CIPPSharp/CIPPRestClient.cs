@@ -761,11 +761,18 @@ namespace CIPP
         private static readonly ConcurrentDictionary<string, TokenCacheEntry> _entries =
             new(StringComparer.OrdinalIgnoreCase);
 
+        // Per-key semaphores to prevent thundering herd / cache stampede.
+        // When multiple runspaces miss the cache for the same key simultaneously,
+        // only one acquires a token while the others wait and reuse the result.
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _keyLocks =
+            new(StringComparer.OrdinalIgnoreCase);
+
         private static long _hits;
         private static long _misses;
         private static long _sets;
         private static long _invalidations;
         private static long _expiredRemovals;
+        private static long _lockWaits;
 
         public static string BuildKey(
             string tenantId,
@@ -862,6 +869,37 @@ namespace CIPP
             return removed;
         }
 
+        /// <summary>
+        /// Acquire a per-key lock to prevent thundering herd on cache miss.
+        /// Returns true if the lock was acquired within the timeout.
+        /// After acquiring, the caller should Lookup() again (double-check),
+        /// then acquire the token and Store() it, then ReleaseLock().
+        /// </summary>
+        public static bool AcquireLock(string key, int timeoutMs = 30000)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                return false;
+
+            var sem = _keyLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+            Interlocked.Increment(ref _lockWaits);
+            return sem.Wait(timeoutMs);
+        }
+
+        /// <summary>
+        /// Release the per-key lock after token acquisition and Store().
+        /// Safe to call even if AcquireLock returned false (no-ops gracefully).
+        /// </summary>
+        public static void ReleaseLock(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                return;
+
+            if (_keyLocks.TryGetValue(key, out var sem))
+            {
+                try { sem.Release(); } catch (SemaphoreFullException) { /* already released */ }
+            }
+        }
+
         public static string GetDiagnostics()
         {
             return JsonSerializer.Serialize(new
@@ -872,6 +910,8 @@ namespace CIPP
                 Sets = Interlocked.Read(ref _sets),
                 Invalidations = Interlocked.Read(ref _invalidations),
                 ExpiredRemovals = Interlocked.Read(ref _expiredRemovals),
+                LockWaits = Interlocked.Read(ref _lockWaits),
+                ActiveLocks = _keyLocks.Count,
             }, new JsonSerializerOptions { WriteIndented = true });
         }
 
@@ -882,6 +922,7 @@ namespace CIPP
             Interlocked.Exchange(ref _sets, 0);
             Interlocked.Exchange(ref _invalidations, 0);
             Interlocked.Exchange(ref _expiredRemovals, 0);
+            Interlocked.Exchange(ref _lockWaits, 0);
         }
     }
 }

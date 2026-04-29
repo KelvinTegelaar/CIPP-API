@@ -20,7 +20,7 @@ function Test-CIPPGDAPRelationships {
                         Issue        = 'This tenant only has a MLT(Microsoft Led Transition) relationship. This is a read-only relationship. You must migrate this tenant to GDAP.'
                         Tenant       = [string]$Tenant.Group.customer.displayName
                         Relationship = [string]$Tenant.Group.displayName
-                        Link         = 'https://docs.cipp.app/setup/gdap/index'
+                        Link         = 'https://docs.cipp.app/setup/installation/gdap-invite-wizard'
                     }) | Out-Null
             }
             foreach ($Group in $Tenant.Group) {
