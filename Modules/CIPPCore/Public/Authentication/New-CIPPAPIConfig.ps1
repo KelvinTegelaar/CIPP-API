@@ -76,8 +76,8 @@ function New-CIPPAPIConfig {
 
                 Write-Information 'Creating password'
                 $Step = 'Creating Application Password'
-                $AppManagementPolicy = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/policies/defaultAppManagementPolicy" -AsApp $true -NoAuthCheck $true
-                $PasswordExpirationPolicy =  $AppManagementPolicy.applicationRestrictions.passwordcredentials |
+                $AppManagementPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/defaultAppManagementPolicy' -AsApp $true -NoAuthCheck $true
+                $PasswordExpirationPolicy = $AppManagementPolicy.applicationRestrictions.passwordcredentials |
                     Where-Object { $_.restrictionType -eq 'passwordLifetime' }
                 $PasswordBody = $null
                 if (-not ($PasswordExpirationPolicy.state -eq 'disabled' -or $null -eq $PasswordExpirationPolicy.state)) {
@@ -93,7 +93,9 @@ function New-CIPPAPIConfig {
                         $APIPassword = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)/addPassword" -AsApp $true -NoAuthCheck $true -type POST -body $PasswordBody -maxRetries 3
                         break
                     } catch {
+                        $ExceptionMessage = $_.Exception.Message
                         $IsNotReplicatedYet = $_.Exception.Message -match "Resource '.*' does not exist or one of its queried reference-property objects are not present"
+                        $IsCredentialPolicyBlocked = $ExceptionMessage -match 'Credential type not allowed as per assigned policy'
                         if ($IsNotReplicatedYet -and $Attempt -lt 6) {
                             $DelaySeconds = 3
                             Write-Information "Application object not yet replicated for addPassword (attempt $Attempt of 6). Retrying in $DelaySeconds second(s)."
@@ -105,6 +107,14 @@ function New-CIPPAPIConfig {
                             }
                             continue
                         }
+
+                        if ($IsCredentialPolicyBlocked -and $Attempt -lt 6) {
+                            $DelaySeconds = [Math]::Min(30, 5 * $Attempt)
+                            Write-Information "Credential policy still blocks addPassword (attempt $Attempt of 6). Waiting for policy propagation and retrying in $DelaySeconds second(s)."
+                            Start-Sleep -Seconds $DelaySeconds
+                            continue
+                        }
+
                         throw
                     }
                 }
@@ -167,7 +177,7 @@ function New-CIPPAPIConfig {
                         } catch {
                             if ($Attempt -lt 6) {
                                 Start-Sleep -Seconds 3
-                                 Write-Information "Retrying service principal creation for AppId $($APIApp.appId) (attempt $Attempt of 6) after failure: $($_.Exception.Message)"
+                                Write-Information "Retrying service principal creation for AppId $($APIApp.appId) (attempt $Attempt of 6) after failure: $($_.Exception.Message)"
                                 continue
                             }
                             throw

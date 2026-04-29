@@ -12,7 +12,7 @@ function Invoke-ListSites {
 
     $TenantFilter = $Request.Query.TenantFilter
     $Type = $Request.Query.Type
-    $UserUPN = $Request.Query.UserUPN
+    $UseReportDB = $Request.Query.UseReportDB
 
     if (!$TenantFilter) {
         return ([HttpResponseContext]@{
@@ -26,6 +26,31 @@ function Invoke-ListSites {
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = 'Type is required'
             })
+    }
+
+    if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+        try {
+            if ($Type -eq 'SharePointSiteUsage') {
+                $GraphRequest = Get-CIPPSharePointSiteUsageReport -TenantFilter $TenantFilter -ErrorAction Stop
+            } elseif ($Type -eq 'OneDriveUsageAccount') {
+                $GraphRequest = Get-CIPPOneDriveUsageReport -TenantFilter $TenantFilter -ErrorAction Stop
+            }
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $_.Exception.Message
+        }
+
+        if ($null -ne $GraphRequest) {
+            if ($Request.query.URLOnly -eq 'true') {
+                $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.webUrl }
+            }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest | Sort-Object -Property displayName)
+                })
+        }
     }
 
     $Tenant = Get-Tenants -TenantFilter $TenantFilter

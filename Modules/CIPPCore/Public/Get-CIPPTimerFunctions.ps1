@@ -44,7 +44,7 @@ function Get-CIPPTimerFunctions {
         }
     }
 
-    $CippTimers = Get-Content -Path (Join-Path $env:CIPPRootPath 'CIPPTimers.json')
+    $CippTimers = Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\CIPPTimers.json')
 
     if (!('Cronos.CronExpression' -as [type])) {
         try {

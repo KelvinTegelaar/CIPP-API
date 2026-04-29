@@ -15,7 +15,7 @@ function Start-CIPPStatsTimer {
         $TenantCount = (Get-Tenants -IncludeAll).count
 
 
-        $APIVersion = Get-Content (Join-Path $env:CIPPRootPath 'version_latest.txt') | Out-String
+        $APIVersion = Get-Content (Join-Path $env:CIPPRootPath 'Config\version_latest.txt') | Out-String
         $Table = Get-CIPPTable -TableName Extensionsconfig
         try {
             $RawExt = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
