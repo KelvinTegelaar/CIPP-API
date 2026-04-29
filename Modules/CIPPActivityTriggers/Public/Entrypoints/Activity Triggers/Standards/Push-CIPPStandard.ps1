@@ -41,10 +41,11 @@ function Push-CIPPStandard {
     }
 
     # Initialize AsyncLocal storage for thread-safe per-invocation context
-    if (-not $script:CippStandardInfoStorage) {
-        $script:CippStandardInfoStorage = [System.Threading.AsyncLocal[object]]::new()
+    # Uses $global: so Write-LogMessage (CIPPCore module) can read it across module boundaries
+    if (-not $global:CippStandardInfoStorage) {
+        $global:CippStandardInfoStorage = [System.Threading.AsyncLocal[object]]::new()
     }
-    $script:CippStandardInfoStorage.Value = $StandardInfo
+    $global:CippStandardInfoStorage.Value = $StandardInfo
 
     # ---- Standard execution telemetry ----
     $runId = [guid]::NewGuid().ToString()
@@ -124,8 +125,8 @@ function Push-CIPPStandard {
                 Error        = $err
             } | ConvertTo-Json -Compress)
 
-        if ($script:CippStandardInfoStorage) {
-            $script:CippStandardInfoStorage.Value = $null
+        if ($global:CippStandardInfoStorage) {
+            $global:CippStandardInfoStorage.Value = $null
         }
     }
 }

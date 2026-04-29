@@ -70,7 +70,7 @@ function Set-CIPPStandardsCompareField {
             if ($ExistingHash.ContainsKey($Field.FieldName)) {
                 $Entity = $ExistingHash[$Field.FieldName]
                 $Entity.Value = $NormalizedValue
-                $Entity | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
+                $Entity | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$global:CippStandardInfoStorage.Value.StandardTemplateId) -Force
                 $Entity | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$Field.LicenseAvailable) -Force
                 $Entity | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$Field.CurrentValue) -Force
                 $Entity | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$Field.ExpectedValue) -Force
@@ -79,7 +79,7 @@ function Set-CIPPStandardsCompareField {
                     PartitionKey     = [string]$TenantName.defaultDomainName
                     RowKey           = [string]$Field.FieldName
                     Value            = $NormalizedValue
-                    TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                    TemplateId       = [string]$global:CippStandardInfoStorage.Value.StandardTemplateId
                     LicenseAvailable = [bool]$Field.LicenseAvailable
                     CurrentValue     = [string]$Field.CurrentValue
                     ExpectedValue    = [string]$Field.ExpectedValue
@@ -106,7 +106,7 @@ function Set-CIPPStandardsCompareField {
             try {
                 if ($Existing) {
                     $Existing.Value = $NormalizedValue
-                    $Existing | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
+                    $Existing | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$global:CippStandardInfoStorage.Value.StandardTemplateId) -Force
                     $Existing | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$LicenseAvailable) -Force
                     $Existing | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$CurrentValue) -Force
                     $Existing | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$ExpectedValue) -Force
@@ -116,7 +116,7 @@ function Set-CIPPStandardsCompareField {
                         PartitionKey     = [string]$TenantName.defaultDomainName
                         RowKey           = [string]$FieldName
                         Value            = $NormalizedValue
-                        TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
+                        TemplateId       = [string]$global:CippStandardInfoStorage.Value.StandardTemplateId
                         LicenseAvailable = [bool]$LicenseAvailable
                         CurrentValue     = [string]$CurrentValue
                         ExpectedValue    = [string]$ExpectedValue

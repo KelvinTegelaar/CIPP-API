@@ -37,7 +37,9 @@ function Invoke-ExecCAExclusion {
 
         $VacationGroupName = "Vacation Exclusion - $($Policy.displayName)"
         $escapedGroupName = $VacationGroupName -replace "'", "''"
-        $VacationGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=displayName eq '$escapedGroupName' and mailEnabled eq false and securityEnabled eq true" -tenantid $TenantFilter)
+        $groupFilter = "displayName eq '$escapedGroupName' and mailEnabled eq false and securityEnabled eq true"
+        $encodedGroupFilter = [System.Uri]::EscapeDataString($groupFilter)
+        $VacationGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$encodedGroupFilter" -tenantid $TenantFilter)
 
         $DuplicateGroupWarning = $null
         if ($VacationGroups.Count -eq 0) {

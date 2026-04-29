@@ -23,7 +23,7 @@ function Get-CippAllowedPermissions {
 
     # Get all available permissions and base roles configuration
 
-    $Version = (Get-Content -Path (Join-Path $env:CIPPRootPath 'version_latest.txt')).trim()
+    $Version = (Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\version_latest.txt')).trim()
     $BaseRoles = Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\cipp-roles.json') | ConvertFrom-Json
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly', 'anonymous', 'authenticated')
 

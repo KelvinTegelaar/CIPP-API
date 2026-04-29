@@ -49,7 +49,7 @@ function Invoke-ListGDAPServicePrincipals {
     $Uri = "https://graph.microsoft.com/beta/servicePrincipals?`$top=$Top&`$select=$Select&`$count=true&`$filter=$Filter"
 
     try {
-        $Results = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter -NoPagination $true -ComplexFilter
+        $Results = New-GraphGetRequest -Uri $Uri -tenantid $TenantFilter -ComplexFilter
 
         $Body = @{
             Results = @($Results)

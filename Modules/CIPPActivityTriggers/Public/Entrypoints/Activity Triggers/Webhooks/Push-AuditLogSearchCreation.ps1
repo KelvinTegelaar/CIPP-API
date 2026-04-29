@@ -41,7 +41,7 @@ function Push-AuditLogSearchCreation {
     } catch {
         Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
-        Write-LogMessage -API 'Audit Logs' -tenant $Tenant.defaultDomainName -Message "Error creating audit log search for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -Sev Error -LogData (Get-CippException -Exception $_)
+        #Write-LogMessage -API 'Audit Logs' -tenant $Tenant.defaultDomainName -Message "Error creating audit log search for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)" -Sev Error -LogData (Get-CippException -Exception $_)
     }
     return $true
 }
