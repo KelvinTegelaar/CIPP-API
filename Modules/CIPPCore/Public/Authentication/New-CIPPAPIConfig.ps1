@@ -192,7 +192,13 @@ function New-CIPPAPIConfig {
         if ($ResetSecret.IsPresent -and $APIApp) {
             if ($PSCmdlet.ShouldProcess($APIApp.displayName, 'Reset API Secret')) {
                 $Step = 'Resetting Application Password'
-                Write-Information 'Removing all old passwords'
+
+                try {
+                    $PolicyUpdate = Update-AppManagementPolicy -ApplicationId $APIApp.appId
+                    Write-Information "Policy check for secret reset: $($PolicyUpdate.PolicyAction)"
+                } catch {
+                    Write-Information "Failed to update app management policy during secret reset: $($_.Exception.Message)"
+                }
 
                 $AppManagementPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/defaultAppManagementPolicy' -AsApp $true -NoAuthCheck $true
                 $PasswordExpirationPolicy = $AppManagementPolicy.applicationRestrictions.passwordcredentials |
@@ -207,39 +213,50 @@ function New-CIPPAPIConfig {
                     $NewPasswordCredential.endDateTime = $ExpirationDate
                 }
 
-                $Requests = @(
-                    @{
-                        id      = 'removeOldPasswords'
-                        method  = 'PATCH'
-                        url     = "applications/$($APIApp.id)/"
-                        headers = @{
-                            'Content-Type' = 'application/json'
+                Write-Information 'Removing all old passwords'
+                for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
+                    $Requests = @(
+                        @{
+                            id      = 'removeOldPasswords'
+                            method  = 'PATCH'
+                            url     = "applications/$($APIApp.id)/"
+                            headers = @{
+                                'Content-Type' = 'application/json'
+                            }
+                            body    = @{
+                                passwordCredentials = @()
+                            }
+                        },
+                        @{
+                            id        = 'addNewPassword'
+                            method    = 'POST'
+                            url       = "applications/$($APIApp.id)/addPassword"
+                            headers   = @{
+                                'Content-Type' = 'application/json'
+                            }
+                            body      = @{
+                                passwordCredential = $NewPasswordCredential
+                            }
+                            dependsOn = @('removeOldPasswords')
                         }
-                        body    = @{
-                            passwordCredentials = @()
+                    )
+                    $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
+                    $AddPasswordResponse = $BatchResponse | Where-Object { $_.id -eq 'addNewPassword' }
+                    if ($AddPasswordResponse.status -ge 400) {
+                        $ErrorBody = $AddPasswordResponse.body
+                        $ErrorMsg = $ErrorBody.error.message ?? ($ErrorBody | ConvertTo-Json -Compress -Depth 5)
+                        $IsCredentialPolicyBlocked = $ErrorMsg -match 'Credential type not allowed as per assigned policy'
+                        if ($IsCredentialPolicyBlocked -and $Attempt -lt 6) {
+                            $DelaySeconds = [Math]::Min(10, 1 * $Attempt)
+                            Write-Information "Credential policy still blocks addPassword (attempt $Attempt of 6). Waiting for policy propagation and retrying in $DelaySeconds second(s)."
+                            Start-Sleep -Seconds $DelaySeconds
+                            continue
                         }
-                    },
-                    @{
-                        id        = 'addNewPassword'
-                        method    = 'POST'
-                        url       = "applications/$($APIApp.id)/addPassword"
-                        headers   = @{
-                            'Content-Type' = 'application/json'
-                        }
-                        body      = @{
-                            passwordCredential = $NewPasswordCredential
-                        }
-                        dependsOn = @('removeOldPasswords')
+                        throw "Failed to add new password during secret reset: $ErrorMsg"
                     }
-                )
-                $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
-                $AddPasswordResponse = $BatchResponse | Where-Object { $_.id -eq 'addNewPassword' }
-                if ($AddPasswordResponse.status -ge 400) {
-                    $ErrorBody = $AddPasswordResponse.body
-                    $ErrorMsg = $ErrorBody.error.message ?? ($ErrorBody | ConvertTo-Json -Compress -Depth 5)
-                    throw "Failed to add new password during secret reset: $ErrorMsg"
+                    $APIPassword = $AddPasswordResponse.body
+                    break
                 }
-                $APIPassword = $AddPasswordResponse.body
                 Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
             }
         }
