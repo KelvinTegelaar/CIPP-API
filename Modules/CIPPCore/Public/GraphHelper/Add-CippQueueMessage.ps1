@@ -32,7 +32,7 @@ function Add-CippQueueMessage {
         if ($env:CIPPNG -eq 'true') {
             $ParametersJson = $Parameters | ConvertTo-Json -Depth 10 -Compress
             [CRAFT.Services.QueueBridge]::Enqueue($Cmdlet, $ParametersJson)
-            Write-Information "CIPP-NG: Queued $Cmdlet for background execution"
+            Write-Information "CRAFT: Queued $Cmdlet for background execution"
             return $true
         }
 
