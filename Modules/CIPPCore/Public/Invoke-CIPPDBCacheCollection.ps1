@@ -91,9 +91,7 @@ function Invoke-CIPPDBCacheCollection {
         ExchangeData       = @(
             'CASMailboxes'
             'MailboxUsage'
-            'OneDriveSiteListing'
             'OneDriveUsage'
-            'SharePointSiteListing'
             'SharePointSiteUsage'
             'OfficeActivations'
         )
