@@ -274,7 +274,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         if ($RuleStateIsCorrect -eq $false) {
             $cmdParams = @{
                 Priority          = 0
-                RecipientDomainIs = $AcceptedDomains.Name
+                RecipientDomainIs = ConvertTo-SafeArray -Field $AcceptedDomains.Name
             }
 
             if ($RuleState.AntiPhishPolicy -ne $PolicyName) {
