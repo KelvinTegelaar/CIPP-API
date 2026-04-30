@@ -121,7 +121,7 @@ function Get-CIPPLicenseOverview {
                 $Term = 'Term unknown or non-NCE license'
                 if ($SubInfo.isTrial) {
                     $Term = 'Trial'
-                } elseif ($diff.Days -ge 360 -and $diff.Days -le 1089) {
+                } elseif ($diff.Days -ge 36 -and $diff.Days -le 1089) {
                     $Term = 'Yearly'
                 } elseif ($diff.Days -ge 1090 -and $diff.Days -le 1100) {
                     $Term = '3 Year'
