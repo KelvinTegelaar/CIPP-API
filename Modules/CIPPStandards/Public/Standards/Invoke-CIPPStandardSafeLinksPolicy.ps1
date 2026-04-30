@@ -179,7 +179,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             if ($RuleStateIsCorrect -eq $false) {
                 $cmdParams = @{
                     Priority          = 0
-                    RecipientDomainIs = $AcceptedDomains.Name
+                    RecipientDomainIs = ConvertTo-SafeArray -Field $AcceptedDomains.Name
                 }
 
                 if ($RuleState.SafeLinksPolicy -ne $PolicyName) {
