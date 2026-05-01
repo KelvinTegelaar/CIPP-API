@@ -16,8 +16,6 @@ function New-CippAuditLogSearch {
         The record types to filter on.
     .PARAMETER KeywordFilter
         The keyword to filter on.
-    .PARAMETER ServiceFilter
-        The service to filter on.
     .PARAMETER OperationsFilters
         The operations to filter on.
     .PARAMETER UserPrincipalNameFilters
@@ -109,8 +107,6 @@ function New-CippAuditLogSearch {
         [Parameter()]
         [string]$KeywordFilters,
         [Parameter()]
-        [string[]]$ServiceFilters,
-        [Parameter()]
         [string[]]$OperationsFilters,
         [Parameter()]
         [string[]]$UserPrincipalNameFilters,
@@ -137,9 +133,6 @@ function New-CippAuditLogSearch {
     }
     if ($KeywordFilters) {
         $SearchParams.keywordFilter = $KeywordFilters
-    }
-    if ($ServiceFilters) {
-        $SearchParams.serviceFilters = @($ServiceFilters)
     }
     if ($UserPrincipalNameFilters) {
         $SearchParams.userPrincipalNameFilters = @($UserPrincipalNameFilters)
