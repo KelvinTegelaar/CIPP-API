@@ -130,16 +130,16 @@ function New-CippAuditLogSearch {
         filterEndDateTime   = $EndTime.AddHours(1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
     }
     if ($OperationsFilters) {
-        $SearchParams.operationsFilters = $OperationsFilters
+        $SearchParams.operationFilters = @($OperationsFilters)
     }
     if ($RecordTypeFilters) {
         $SearchParams.recordTypeFilters = @($RecordTypeFilters)
     }
     if ($KeywordFilters) {
-        $SearchParams.keywordFilters = $KeywordFilters
+        $SearchParams.keywordFilter = $KeywordFilters
     }
     if ($ServiceFilters) {
-        $SearchParams.serviceFilters = $ServiceFilters
+        $SearchParams.serviceFilter = (@($ServiceFilters) -join ',')
     }
     if ($UserPrincipalNameFilters) {
         $SearchParams.userPrincipalNameFilters = @($UserPrincipalNameFilters)
@@ -151,7 +151,7 @@ function New-CippAuditLogSearch {
         $SearchParams.objectIdFilters = @($ObjectIdFilters)
     }
     if ($AdministrativeUnitFilters) {
-        $SearchParams.administrativeUnitFilters = @($AdministrativeUnitFilters)
+        $SearchParams.administrativeUnitIdFilters = @($AdministrativeUnitFilters)
     }
 
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
@@ -193,26 +193,26 @@ function New-CippAuditLogSearch {
             # Handle HTML error pages (e.g. Azure Front Door 502/504 gateway timeouts)
             if ($TrimmedAuditLogErrorMessage -match '<!DOCTYPE|<html' -and $TrimmedAuditLogErrorMessage -match '<title>([^<]+)</title>') {
                 $HtmlTitle = $Matches[1].Trim()
-                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with gateway error for tenant $TenantFilter ($HtmlTitle) - will retry next cycle" -sev Warning
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with gateway error for tenant $TenantFilter ($HtmlTitle)" -sev Warning
                 return [PSCustomObject]@{
                     id          = $null
                     displayName = [string]$DisplayName
                     status      = [string]'GatewayError'
                     cippStatus  = [string]'TransientError'
-                    message     = [string]"Microsoft returned gateway error ($HtmlTitle) - search will be retried next cycle."
+                    message     = [string]"Microsoft returned gateway error ($HtmlTitle)."
                 }
             }
 
             # Handle Microsoft-side timeouts / transient errors (e.g. UnknownError with empty message)
             $ErrorCode = $AuditLogError.error.code ?? $AuditLogError.code
             if ($ErrorCode -in @('UnknownError', 'ServiceUnavailable', 'RequestTimeout', 'GatewayTimeout', 'TooManyRequests')) {
-                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with transient error for tenant $TenantFilter ($ErrorCode) - will retry next cycle" -sev Warning
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with transient error for tenant $TenantFilter ($ErrorCode)" -sev Warning
                 return [PSCustomObject]@{
                     id          = $null
                     displayName = [string]$DisplayName
                     status      = [string]$ErrorCode
                     cippStatus  = [string]'TransientError'
-                    message     = [string]"Microsoft returned $ErrorCode - search will be retried next cycle."
+                    message     = [string]"Microsoft returned $ErrorCode."
                 }
             }
 
