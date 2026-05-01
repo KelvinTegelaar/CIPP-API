@@ -10,13 +10,10 @@ function Push-AuditLogSearchCreation {
     $Tenant = $Item.Tenant
     $StartTime = $Item.StartTime
     $EndTime = $Item.EndTime
-    $ServiceFilters = @($Item.ServiceFilters)
-
     try {
         $LogSearch = @{
             StartTime         = $StartTime
             EndTime           = $EndTime
-            ServiceFilters    = $ServiceFilters
             TenantFilter      = $Tenant.defaultDomainName
             ProcessLogs       = $true
             RecordTypeFilters = @(
