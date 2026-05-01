@@ -139,7 +139,7 @@ function New-CippAuditLogSearch {
         $SearchParams.keywordFilter = $KeywordFilters
     }
     if ($ServiceFilters) {
-        $SearchParams.serviceFilter = (@($ServiceFilters) -join ',')
+        $SearchParams.serviceFilters = @($ServiceFilters)
     }
     if ($UserPrincipalNameFilters) {
         $SearchParams.userPrincipalNameFilters = @($UserPrincipalNameFilters)
