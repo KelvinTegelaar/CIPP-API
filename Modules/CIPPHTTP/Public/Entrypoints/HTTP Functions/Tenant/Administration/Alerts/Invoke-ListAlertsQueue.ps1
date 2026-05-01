@@ -60,7 +60,7 @@ function Invoke-ListAlertsQueue {
 
     foreach ($Task in $ScheduledTasks) {
         if ($Task.excludedTenants) {
-            $ExcludedTenants = @($Task.excludedTenants)
+            $ExcludedTenants = @($Task.excludedTenants -split ',' | Where-Object { $_ })
         } else {
             $ExcludedTenants = @()
         }
