@@ -10,8 +10,6 @@ function New-CippQueueEntry {
         [int]$TotalTasks = 1
     )
 
-    $CippQueue = Get-CippTable -TableName CippQueue
-
     $QueueEntry = @{
         PartitionKey = 'CippQueue'
         RowKey       = (New-Guid).Guid.ToString()
@@ -21,8 +19,13 @@ function New-CippQueueEntry {
         Status       = 'Queued'
         TotalTasks   = $TotalTasks
     }
-    $CippQueue.Entity = $QueueEntry
 
+    if ($env:CIPPNG -eq 'true') {
+        return $QueueEntry
+    }
+
+    $CippQueue = Get-CippTable -TableName CippQueue
+    $CippQueue.Entity = $QueueEntry
     Add-CIPPAzDataTableEntity @CippQueue
 
     $QueueEntry

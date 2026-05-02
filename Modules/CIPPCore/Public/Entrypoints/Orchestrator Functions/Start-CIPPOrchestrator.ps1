@@ -55,6 +55,12 @@ function Start-CIPPOrchestrator {
             $InputObject | Add-Member -MemberType NoteProperty -Name 'Batch' -Value $QueueBatch -Force
         }
 
+        # Include QueueId in RunName so the frontend can poll status by QueueId
+        $BatchQueueId = ($InputObject.Batch | Select-Object -First 1).QueueId
+        if ($BatchQueueId) {
+            $OrchestratorName = "$OrchestratorName-$BatchQueueId"
+        }
+
         $BatchJson = ConvertTo-Json -InputObject @($InputObject.Batch) -Depth 10 -Compress
 
         $PostExecFunctionName = $null
