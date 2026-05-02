@@ -34,6 +34,11 @@ function Get-CIPPDbItem {
     )
 
     try {
+        # Enforce tenant lock when running inside custom script execution
+        if ($script:CIPPLockedTenant) {
+            $TenantFilter = $script:CIPPLockedTenant
+        }
+
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
         if ($TenantFilter -ne 'allTenants') {

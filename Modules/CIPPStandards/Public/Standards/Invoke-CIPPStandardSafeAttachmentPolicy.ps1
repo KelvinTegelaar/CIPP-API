@@ -154,7 +154,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             if ($RuleStateIsCorrect -eq $false) {
                 $cmdParams = @{
                     Priority          = 0
-                    RecipientDomainIs = $AcceptedDomains.Name
+                    RecipientDomainIs = ConvertTo-SafeArray -Field $AcceptedDomains.Name
                 }
 
                 if ($RuleState.SafeAttachmentPolicy -ne $PolicyName) {

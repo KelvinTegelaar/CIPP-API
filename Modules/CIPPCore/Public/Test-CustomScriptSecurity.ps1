@@ -42,6 +42,12 @@ function Test-CustomScriptSecurity {
         $variablePath = $variableExpr.VariablePath
         $userPath = $variablePath.UserPath
 
+        # Block access to the tenant lock variable used for data access safety
+        if ($userPath -eq 'CIPPLockedTenant') {
+            $lineNumber = $variableExpr.Extent.StartLineNumber
+            throw "Security violation at line $lineNumber`: Access to internal variable 'CIPPLockedTenant' is not allowed."
+        }
+
         if ($userPath -match '^[^:]+:') {
             $lineNumber = $variableExpr.Extent.StartLineNumber
             throw "Security violation at line $lineNumber`: Scoped/namespace-qualified variable access is not allowed ('$userPath'). Avoid variables such as `$env:, `$global:, and `$script:."
@@ -59,10 +65,7 @@ function Test-CustomScriptSecurity {
         'ConvertTo-Json', 'ConvertFrom-Json', 'Write-Output', 'Write-Host',
 
         # CIPP data access (read-only)
-        'New-CIPPDbRequest', 'Get-CIPPDbItem', 'Get-CIPPTestData',
-
-        # Test specific methods
-        'Add-CIPPTestResult'
+        'New-CIPPDbRequest', 'Get-CIPPDbItem', 'Get-CIPPTestData'
     )
 
     # Find all command invocations (exclude hashtable key assignments and property access)

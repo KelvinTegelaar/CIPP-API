@@ -13,10 +13,7 @@ function Invoke-ExecCustomRole {
     $AccessIPRangeTable = Get-CippTable -tablename 'AccessIPRanges'
     $Action = $Request.Query.Action ?? $Request.Body.Action
 
-    $CIPPCore = (Get-Module -Name CIPPCore).ModuleBase
-    $CIPPRoot = (Get-Item -Path $CIPPCore).Parent.Parent.FullName
-
-    $CippRolesJson = Join-Path -Path $CIPPRoot -ChildPath 'Config\cipp-roles.json'
+    $CippRolesJson = Join-Path -Path $env:CIPPRootPath -ChildPath 'Config\cipp-roles.json'
     if (Test-Path $CippRolesJson) {
         $DefaultRoles = [System.IO.File]::ReadAllText($CippRolesJson) | ConvertFrom-Json
     } else {
