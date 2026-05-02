@@ -191,6 +191,100 @@ function Invoke-ExecCommunityRepo {
                 }
             }
         }
+        'UploadScript' {
+            $ScriptGuid = $Request.Body.GUID
+            $ScriptTable = Get-CippTable -tablename 'CustomPowershellScripts'
+            $ScriptFilter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '$($ScriptGuid)'"
+            $ScriptVersions = @(Get-CIPPAzDataTableEntity @ScriptTable -Filter $ScriptFilter)
+            $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
+
+            if ($ScriptVersions.Count -gt 0) {
+                $LatestScript = $ScriptVersions | Sort-Object -Property Version -Descending | Select-Object -First 1
+                $ExportData = @{
+                    ScriptName           = $LatestScript.ScriptName
+                    ScriptContent        = $LatestScript.ScriptContent
+                    Description          = $LatestScript.Description
+                    Category             = $LatestScript.Category
+                    Risk                 = $LatestScript.Risk
+                    Pillar               = $LatestScript.Pillar
+                    ImplementationEffort = $LatestScript.ImplementationEffort
+                    UserImpact           = $LatestScript.UserImpact
+                    ReturnType           = $LatestScript.ReturnType
+                    MarkdownTemplate     = $LatestScript.MarkdownTemplate
+                    ResultSchema         = $LatestScript.ResultSchema
+                    ResultMode           = $LatestScript.ResultMode
+                }
+
+                $Basename = $LatestScript.ScriptName -replace '\s', '_' -replace '[^\w\d_]', ''
+                $Path = 'CustomTests/{0}.json' -f $Basename
+                $null = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($ExportData | ConvertTo-Json -Compress -Depth 10) -Message $Request.Body.Message -Branch $Branch
+
+                $Results = @{
+                    resultText = "Custom test '$($LatestScript.ScriptName)' uploaded"
+                    state      = 'success'
+                }
+            } else {
+                $Results = @{
+                    resultText = "Custom test '$($ScriptGuid)' not found"
+                    state      = 'error'
+                }
+            }
+        }
+        'ImportScript' {
+            $Path = $Request.Body.Path
+            $FullName = $Request.Body.FullName
+            $Branch = $Request.Body.Branch
+            try {
+                $FileContent = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
+                $ScriptData = $FileContent.content | ConvertFrom-Json
+
+                if (-not $ScriptData.ScriptName -or -not $ScriptData.ScriptContent) {
+                    throw 'Invalid custom test file: ScriptName and ScriptContent are required'
+                }
+
+                Test-CustomScriptSecurity -ScriptContent $ScriptData.ScriptContent
+
+                $ScriptTable = Get-CippTable -tablename 'CustomPowershellScripts'
+                $ScriptGuid = (New-Guid).ToString()
+                $Version = 1
+                $RowKey = '{0}-v{1}' -f $ScriptGuid, $Version
+
+                $Entity = @{
+                    PartitionKey         = 'CustomScript'
+                    RowKey               = $RowKey
+                    ScriptGuid           = $ScriptGuid
+                    ScriptName           = $ScriptData.ScriptName
+                    Version              = $Version
+                    ScriptContent        = $ScriptData.ScriptContent
+                    Description          = $ScriptData.Description ?? ''
+                    Category             = $ScriptData.Category ?? ''
+                    Risk                 = $ScriptData.Risk ?? 'Medium'
+                    Pillar               = $ScriptData.Pillar ?? 'Identity'
+                    ImplementationEffort = $ScriptData.ImplementationEffort ?? 'Medium'
+                    UserImpact           = $ScriptData.UserImpact ?? 'Low'
+                    Enabled              = $false
+                    AlertOnFailure       = $false
+                    ReturnType           = $ScriptData.ReturnType ?? 'JSON'
+                    MarkdownTemplate     = $ScriptData.MarkdownTemplate ?? ''
+                    ResultSchema         = $ScriptData.ResultSchema ?? ''
+                    ResultMode           = $ScriptData.ResultMode ?? 'Auto'
+                    CreatedBy            = 'GitHub Import'
+                    CreatedDate          = (Get-Date).ToUniversalTime().ToString('o')
+                }
+
+                Add-CIPPAzDataTableEntity @ScriptTable -Entity $Entity -Force
+
+                $Results = @{
+                    resultText = "Custom test '$($ScriptData.ScriptName)' imported (disabled by default)"
+                    state      = 'success'
+                }
+            } catch {
+                $Results = @{
+                    resultText = "Error importing custom test: $($_.Exception.Message)"
+                    state      = 'error'
+                }
+            }
+        }
         default {
             $Results = @{
                 resultText = "Action $Action not supported"

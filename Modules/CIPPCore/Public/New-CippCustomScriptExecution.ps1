@@ -72,10 +72,16 @@ function New-CippCustomScriptExecution {
         # Validate script security constraints using AST parsing
         Test-CustomScriptSecurity -ScriptContent $ScriptContent
 
-        # Create script block with parameter binding
+        # Replace %variable% placeholders with tenant/custom values
+        $ScriptContent = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $ScriptContent
+
+        # Create script block from user content
         $ScriptBlock = [scriptblock]::Create($ScriptContent)
 
-        # Build parameter hashtable for splatting (named parameters)
+        # Lock tenant for data access functions — scripts cannot query other tenants
+        # Module-scoped variable: isolated per runspace (no cross-invocation interference)
+        # and inaccessible to user scripts (AST blocks $script: access)
+        $script:CIPPLockedTenant = $TenantFilter
         $ScriptParams = @{
             TenantFilter = $TenantFilter
         }
@@ -92,7 +98,11 @@ function New-CippCustomScriptExecution {
         # Execute the script in current session (already has CIPP functions loaded)
         # The AST validation ensures only safe commands are used
         # Use splatting to pass named parameters
-        $Result = & $ScriptBlock @ScriptParams
+        try {
+            $Result = & $ScriptBlock @ScriptParams
+        } finally {
+            $script:CIPPLockedTenant = $null
+        }
 
         # Convert result to array if it's not already
         if ($null -eq $Result) {
@@ -104,6 +114,7 @@ function New-CippCustomScriptExecution {
         }
 
     } catch {
+        $script:CIPPLockedTenant = $null
         Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Failed to execute custom script: $($_.Exception.Message)" -sev 'Error'
         throw
     }

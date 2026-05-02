@@ -280,9 +280,17 @@ function New-CIPPAlertTemplate {
     }
 
     if ($Format -eq 'html') {
+        # Escape curly braces in content variables so the -f format operator
+        # does not interpret data values (e.g. JSON in drift/standards) as placeholders
+        $FmtTitle = [string]$Title -replace '\{', '{{' -replace '\}', '}}'
+        $FmtIntroText = [string]$IntroText -replace '\{', '{{' -replace '\}', '}}'
+        $FmtButtonUrl = [string]$ButtonUrl -replace '\{', '{{' -replace '\}', '}}'
+        $FmtButtonText = [string]$ButtonText -replace '\{', '{{' -replace '\}', '}}'
+        $FmtAfterButtonText = [string]$AfterButtonText -replace '\{', '{{' -replace '\}', '}}'
+        $FmtAuditLogLink = [string]$AuditLogLink -replace '\{', '{{' -replace '\}', '}}'
         return  [pscustomobject]@{
             title       = $Title
-            htmlcontent = $HTMLTemplate -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText, $AuditLogLink
+            htmlcontent = $HTMLTemplate -f $FmtTitle, $FmtIntroText, $FmtButtonUrl, $FmtButtonText, $FmtAfterButtonText, $FmtAuditLogLink
         }
     } elseif ($Format -eq 'json') {
         if ($InputObject -eq 'auditlog') {
