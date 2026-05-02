@@ -21,14 +21,20 @@ function Invoke-ListUserGroups {
     @{ Name = 'GroupTypes'; Expression = { $_.groupTypes -join ',' } },
     @{ Name = 'OnPremisesSync'; Expression = { $_.onPremisesSyncEnabled } },
     @{ Name = 'IsAssignableToRole'; Expression = { $_.isAssignableToRole } },
-    @{ Name = 'calculatedGroupType'; Expression = {
+    @{Name = 'calculatedGroupType'; Expression = {
+            if ($_.groupTypes -contains 'Unified') { 'm365' }
+            elseif ($_.mailEnabled -and $_.securityEnabled) { 'security' }
+            elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'generic' }
+            elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
+        }
+    },
+    @{Name = 'groupType'; Expression = {
             if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
             elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
             elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
             elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
         }
     }
-
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
