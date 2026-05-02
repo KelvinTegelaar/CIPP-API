@@ -28,6 +28,7 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
             "SHAREPOINTSTANDARD"
             "SHAREPOINTENTERPRISE"
             "SHAREPOINTENTERPRISE_EDU"
+            "SHAREPOINTENTERPRISE_GOV"
             "ONEDRIVE_BASIC"
             "ONEDRIVE_ENTERPRISE"
         UPDATECOMMENTBLOCK
@@ -37,7 +38,7 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableUserSiteCreate' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableUserSiteCreate' -TenantFilter $Tenant -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'SHAREPOINTENTERPRISE_GOV', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
 
     if ($TestResult -eq $false) {
         return $true
