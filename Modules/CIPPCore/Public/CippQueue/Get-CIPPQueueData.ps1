@@ -5,7 +5,7 @@ function Get-CIPPQueueData {
     $Reference = $Request.Query.Reference ?? $Reference
 
     if ($env:CIPPNG -eq 'true') {
-        $json = [CRAFT.Services.QueueStatusBridge]::GetRunStatus($Reference, $QueueId)
+        $json = [Craft.Services.QueueStatusBridge]::GetRunStatus($Reference, $QueueId)
         return ($json | ConvertFrom-Json)
     }
 
