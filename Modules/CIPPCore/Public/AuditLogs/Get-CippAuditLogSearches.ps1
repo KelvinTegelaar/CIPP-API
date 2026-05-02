@@ -20,7 +20,7 @@ function Get-CippAuditLogSearches {
         $PendingQueries = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "PartitionKey eq 'Search' and Tenant eq '$TenantFilter' and (CippStatus eq 'Pending' or (CippStatus eq 'Processing' and Timestamp le datetime'$15MinutesAgo')) and Timestamp ge datetime'$1DayAgo'" | Sort-Object Timestamp
     } else {
         $7DaysAgo = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $PendingQueries = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "Tenant eq '$TenantFilter' and Timestamp ge datetime'$7DaysAgo'"
+        $PendingQueries = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "PartitionKey eq 'Search' and Tenant eq '$TenantFilter' and Timestamp ge datetime'$7DaysAgo'"
     }
 
     $BulkRequests = foreach ($PendingQuery in $PendingQueries) {

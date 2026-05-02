@@ -119,11 +119,13 @@ function Get-CIPPLicenseOverview {
                 $SubInfo = $SkuIDs | Where-Object { $_.id -eq $Subscription }
                 $diff = $SubInfo.nextLifecycleDateTime - $SubInfo.createdDateTime
                 $Term = 'Term unknown or non-NCE license'
-                if ($diff.Days -ge 32 -and $diff.Days -le 1089) {
+                if ($SubInfo.isTrial) {
+                    $Term = 'Trial'
+                } elseif ($diff.Days -ge 36 -and $diff.Days -le 1089) {
                     $Term = 'Yearly'
                 } elseif ($diff.Days -ge 1090 -and $diff.Days -le 1100) {
                     $Term = '3 Year'
-                } elseif ($diff.Days -ge 25 -and $diff.Days -le 31) {
+                } elseif ($diff.Days -ge 25 -and $diff.Days -le 35) {
                     $Term = 'Monthly'
                 }
                 $TimeUntilRenew = ($subinfo.nextLifecycleDateTime - (Get-Date)).days
