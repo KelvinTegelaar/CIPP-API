@@ -16,12 +16,21 @@ function Get-CIPPTestData {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
         [string]$Type
     )
+
+    # Enforce tenant lock when running inside custom script execution
+    if ($script:CIPPLockedTenant) {
+        $TenantFilter = $script:CIPPLockedTenant
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+        throw 'TenantFilter is required.'
+    }
 
     $CacheKey = '{0}|{1}' -f $TenantFilter, $Type
 

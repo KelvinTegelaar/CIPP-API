@@ -68,14 +68,13 @@ function Start-AuditLogSearchCreation {
             }
 
             $TenantInConfig = $false
-            $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
             foreach ($ConfigEntry in $ConfigEntries) {
                 if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
                     continue
                 }
                 if ($ConfigEntry.ExpandedTenants -contains $Tenant.defaultDomainName -or $ConfigEntry.ExpandedTenants -contains 'AllTenants') {
                     $TenantInConfig = $true
-                    $MatchingConfigs.Add($ConfigEntry)
+                    break
                 }
             }
 
@@ -83,14 +82,11 @@ function Start-AuditLogSearchCreation {
                 continue
             }
 
-            if ($MatchingConfigs) {
-                [PSCustomObject]@{
-                    FunctionName   = 'AuditLogSearchCreation'
-                    Tenant         = $Tenant | Select-Object defaultDomainName, customerId, displayName
-                    StartTime      = $StartTime
-                    EndTime        = $EndTime
-                    ServiceFilters = @($MatchingConfigs | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] })
-                }
+            [PSCustomObject]@{
+                FunctionName = 'AuditLogSearchCreation'
+                Tenant       = $Tenant | Select-Object defaultDomainName, customerId, displayName
+                StartTime    = $StartTime
+                EndTime      = $EndTime
             }
         }
 
