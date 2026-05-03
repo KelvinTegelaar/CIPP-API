@@ -97,6 +97,15 @@ function Invoke-CIPPStandardSPFileRequests {
 
                 $CurrentState | Set-CIPPSPOTenant -Properties $Properties
 
+                # Reflect the just-applied state in-memory so the report block does not write
+                # the pre-remediation values into the drift compare field.
+                $CurrentState.CoreRequestFilesLinkEnabled     = $WantedState
+                $CurrentState.OneDriveRequestFilesLinkEnabled = $WantedState
+                if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
+                    $CurrentState.CoreRequestFilesLinkExpirationInDays     = $ExpirationDays
+                    $CurrentState.OneDriveRequestFilesLinkExpirationInDays = $ExpirationDays
+                }
+
                 $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set File Requests to $HumanReadableState$ExpirationMessage" -sev Info
             } catch {
