@@ -56,5 +56,11 @@ function Get-CIPPSchedulerBlockedCommands {
 
         # Backup & restore
         'Get-CIPPBackup'
+
+        # Queueing functions - would allow attackers to create new scheduled tasks with blocked commands
+        'Add-CippQueueMessage'
+        'New-CippQueueEntry'
+        'Set-CippQueueTask'
+        'Update-CippQueueEntry'
     )
 }
