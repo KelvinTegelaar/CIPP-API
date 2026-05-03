@@ -58,7 +58,9 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         return
     }
 
-    $CurrentAgeLimitForRetention = ([timespan]$CurrentState.AgeLimitForRetention).TotalDays
+    $CurrentAgeLimitForRetention = if ($CurrentState.AgeLimitForRetention) {
+        ([timespan]$CurrentState.AgeLimitForRetention).TotalDays
+    }
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
     ($CurrentState.RetentionEnabled -eq $true) -and
