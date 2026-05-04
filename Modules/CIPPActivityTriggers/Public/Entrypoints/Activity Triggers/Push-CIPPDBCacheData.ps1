@@ -27,7 +27,7 @@ function Push-CIPPDBCacheData {
         # Check tenant capabilities for license-specific features
         $IntuneCapable = $false
         try {
-            $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+            $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneLicenseCheck' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Intune license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -35,7 +35,7 @@ function Push-CIPPDBCacheData {
 
         $ConditionalAccessCapable = $false
         try {
-            $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2') -SkipLog
+            $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessLicenseCheck' -TenantFilter $TenantFilter -Preset Entra -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Conditional Access license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -43,7 +43,7 @@ function Push-CIPPDBCacheData {
 
         $AzureADPremiumP2Capable = $false
         try {
-            $AzureADPremiumP2Capable = Test-CIPPStandardLicense -StandardName 'AzureADPremiumP2LicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
+            $AzureADPremiumP2Capable = Test-CIPPStandardLicense -StandardName 'AzureADPremiumP2LicenseCheck' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Azure AD Premium P2 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -51,7 +51,7 @@ function Push-CIPPDBCacheData {
 
         $ExchangeCapable = $false
         try {
-            $ExchangeCapable = Test-CIPPStandardLicense -StandardName 'ExchangeLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') -SkipLog
+            $ExchangeCapable = Test-CIPPStandardLicense -StandardName 'ExchangeLicenseCheck' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Exchange license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -59,7 +59,7 @@ function Push-CIPPDBCacheData {
 
         $ComplianceCapable = $false
         try {
-            $ComplianceCapable = Test-CIPPStandardLicense -StandardName 'ComplianceLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2') -SkipLog
+            $ComplianceCapable = Test-CIPPStandardLicense -StandardName 'ComplianceLicenseCheck' -TenantFilter $TenantFilter -Preset Compliance -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -67,7 +67,7 @@ function Push-CIPPDBCacheData {
 
         $SharePointCapable = $false
         try {
-            $SharePointCapable = Test-CIPPStandardLicense -StandardName 'SharePointLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE') -SkipLog
+            $SharePointCapable = Test-CIPPStandardLicense -StandardName 'SharePointLicenseCheck' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SharePoint license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
@@ -75,7 +75,7 @@ function Push-CIPPDBCacheData {
 
         $TeamsCapable = $false
         try {
-            $TeamsCapable = Test-CIPPStandardLicense -StandardName 'TeamsLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard') -SkipLog
+            $TeamsCapable = Test-CIPPStandardLicense -StandardName 'TeamsLicenseCheck' -TenantFilter $TenantFilter -Preset Teams -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Teams license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage

@@ -37,7 +37,7 @@ function Invoke-CIPPStandardMDMEnrollmentDuringRegistration {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'MDMEnrollmentDuringRegistration' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'MDMEnrollmentDuringRegistration' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

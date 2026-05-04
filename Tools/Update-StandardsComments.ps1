@@ -47,9 +47,137 @@ function EscapeMarkdown([object]$InputObject) {
     return $Temp.Replace('\', '\\').Replace('*', '\*').Replace('_', '\_').Replace("``", "\``").Replace('$', '\$').Replace('|', '\|').Replace('<', '\<').Replace('>', '\>').Replace([System.Environment]::NewLine, '<br />')
 }
 
+function Get-StringValuesFromAst {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.Language.Ast]$ArgumentAst
+    )
+
+    try {
+        $Value = $ArgumentAst.SafeGetValue()
+        if ($Value -is [array]) {
+            return @($Value | ForEach-Object { $_.ToString() })
+        }
+
+        if ($Value -is [string]) {
+            return @($Value)
+        }
+    } catch {}
+
+    if ($ArgumentAst -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
+        return @($ArgumentAst.Value)
+    }
+
+    if ($ArgumentAst -is [System.Management.Automation.Language.ExpandableStringExpressionAst]) {
+        return @($ArgumentAst.Value)
+    }
+
+    if ($ArgumentAst -is [System.Management.Automation.Language.ArrayLiteralAst]) {
+        return @($ArgumentAst.Elements | ForEach-Object { Get-StringValuesFromAst -ArgumentAst $_ })
+    }
+
+    if ($ArgumentAst -is [System.Management.Automation.Language.PipelineAst]) {
+        return @($ArgumentAst.PipelineElements | ForEach-Object { Get-StringValuesFromAst -ArgumentAst $_ })
+    }
+
+    if ($ArgumentAst -is [System.Management.Automation.Language.CommandExpressionAst]) {
+        return @(Get-StringValuesFromAst -ArgumentAst $ArgumentAst.Expression)
+    }
+
+    return @()
+}
+
+function Get-CIPPCapabilityPresets {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $Tokens = $null
+    $ParseErrors = $null
+    $Ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$Tokens, [ref]$ParseErrors)
+    $LicenseFunction = $Ast.Find({
+            param($Node)
+            $Node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $Node.Name -eq 'Test-CIPPStandardLicense'
+        }, $true)
+
+    $PresetAssignment = $LicenseFunction.Body.Find({
+            param($Node)
+            $Node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $Node.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $Node.Left.VariablePath.UserPath -eq 'Presets' -and
+            $Node.Right -is [System.Management.Automation.Language.HashtableAst]
+        }, $true)
+
+    $Presets = @{}
+    foreach ($Pair in $PresetAssignment.Right.KeyValuePairs) {
+        $PresetName = (Get-StringValuesFromAst -ArgumentAst $Pair.Item1)[0]
+        $Presets[$PresetName] = @(Get-StringValuesFromAst -ArgumentAst $Pair.Item2)
+    }
+
+    return $Presets
+}
+
+function Get-LicenseCheckCapabilities {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$CapabilityPresets
+    )
+
+    $Tokens = $null
+    $ParseErrors = $null
+    $Ast = [System.Management.Automation.Language.Parser]::ParseInput($Content, [ref]$Tokens, [ref]$ParseErrors)
+    $LicenseCheck = $Ast.Find({
+            param($Node)
+            $Node -is [System.Management.Automation.Language.CommandAst] -and $Node.GetCommandName() -eq 'Test-CIPPStandardLicense'
+        }, $true)
+
+    if (!$LicenseCheck) {
+        return @()
+    }
+
+    $Capabilities = [System.Collections.Generic.List[string]]::new()
+    for ($Index = 0; $Index -lt $LicenseCheck.CommandElements.Count; $Index++) {
+        $Element = $LicenseCheck.CommandElements[$Index]
+        if ($Element -isnot [System.Management.Automation.Language.CommandParameterAst]) {
+            continue
+        }
+
+        $Argument = if (($Index + 1) -lt $LicenseCheck.CommandElements.Count -and $LicenseCheck.CommandElements[$Index + 1] -isnot [System.Management.Automation.Language.CommandParameterAst]) {
+            $LicenseCheck.CommandElements[$Index + 1]
+        }
+
+        if (!$Argument) {
+            continue
+        }
+
+        switch ($Element.ParameterName) {
+            'Preset' {
+                foreach ($PresetName in (Get-StringValuesFromAst -ArgumentAst $Argument)) {
+                    foreach ($Capability in $CapabilityPresets[$PresetName]) {
+                        $Capabilities.Add($Capability)
+                    }
+                }
+            }
+            'RequiredCapabilities' {
+                foreach ($Capability in (Get-StringValuesFromAst -ArgumentAst $Argument)) {
+                    $Capabilities.Add($Capability)
+                }
+            }
+        }
+    }
+
+    return @($Capabilities | Where-Object { $_ } | Select-Object -Unique)
+}
 
 # Find the paths to the standards.json file based on the current script path
-$StandardsJSONPath = Split-Path (Split-Path $PSScriptRoot)
+$CIPPApiRoot = Split-Path $PSScriptRoot
+$CapabilityPresets = Get-CIPPCapabilityPresets -Path (Join-Path $CIPPApiRoot 'Modules\CIPPCore\Public\Functions\Test-CIPPStandardLicense.ps1')
+
+$StandardsJSONPath = Split-Path $CIPPApiRoot
 $StandardsJSONPath = Resolve-Path "$StandardsJSONPath\*\src\data\standards.json"
 $StandardsInfo = Get-Content -Path $StandardsJSONPath | ConvertFrom-Json -Depth 10
 
@@ -57,7 +185,7 @@ foreach ($Standard in $StandardsInfo) {
 
     # Calculate the standards file name and path
     $StandardFileName = $Standard.name -replace 'standards.', 'Invoke-CIPPStandard'
-    $StandardsFilePath = Resolve-Path "$(Split-Path $PSScriptRoot)\Modules\CIPPStandards\Public\Standards\$StandardFileName.ps1"
+    $StandardsFilePath = Resolve-Path "$CIPPApiRoot\Modules\CIPPStandards\Public\Standards\$StandardFileName.ps1"
     if (-not (Test-Path $StandardsFilePath)) {
         Write-Host "No file found for standard $($Standard.name)" -ForegroundColor Yellow
         continue
@@ -120,20 +248,15 @@ foreach ($Standard in $StandardsInfo) {
 
         }
 
-        # Extract RequiredCapabilities from Test-CIPPStandardLicense in the function body
-        # Match the first occurrence of -RequiredCapabilities @(...) in the file
-        $CapabilitiesRegex = 'Test-CIPPStandardLicense\s[^}]*-RequiredCapabilities\s+@\(([^)]+)\)'
-        if ($Content -match $CapabilitiesRegex) {
-            $RawCapabilities = $Matches[1]
-            $Capabilities = @($RawCapabilities -split ',' | ForEach-Object { $_.Trim().Trim("'").Trim('"') } | Where-Object { $_ })
-            if ($Capabilities.Count -gt 0) {
-                $NewComment.Add("       REQUIREDCAPABILITIES`n")
-                foreach ($Cap in $Capabilities) {
-                    $NewComment.Add("           `"$Cap`"`n")
-                }
-                # Update the standard object for JSON output
-                $Standard | Add-Member -NotePropertyName 'requiredCapabilities' -NotePropertyValue $Capabilities -Force
+        $Capabilities = Get-LicenseCheckCapabilities -Content $Content -CapabilityPresets $CapabilityPresets
+        if ($Capabilities.Count -gt 0) {
+            $NewComment.Add("       REQUIREDCAPABILITIES`n")
+            foreach ($Cap in $Capabilities) {
+                $NewComment.Add("           `"$Cap`"`n")
             }
+
+            # Update the standard object for JSON output
+            $Standard | Add-Member -NotePropertyName 'requiredCapabilities' -NotePropertyValue $Capabilities -Force
         } else {
             # No license check — remove stale property if present
             if ($Standard.PSObject.Properties['requiredCapabilities']) {

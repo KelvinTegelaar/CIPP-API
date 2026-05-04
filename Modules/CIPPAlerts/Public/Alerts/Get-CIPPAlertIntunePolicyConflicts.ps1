@@ -56,14 +56,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
         return
     }
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -RequiredCapabilities @(
-        'INTUNE_A',
-        'MDM_Services',
-        'EMS',
-        'SCCM',
-        'MICROSOFTINTUNEPLAN1'
-    )
-
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -Preset Intune
     if (-not $HasLicense) {
         return
     }
@@ -132,11 +125,11 @@ function Get-CIPPAlertIntunePolicyConflicts {
         $AppCount = ($Issues | Where-Object { $_.Type -eq 'Application' }).Count
 
         $AlertData = @([PSCustomObject]@{
-                Message        = "Found $PolicyCount policy issues and $AppCount application issues in Intune."
-                Tenant         = $TenantFilter
-                PolicyIssues   = $PolicyCount
-                AppIssues      = $AppCount
-                Issues         = $Issues
+                Message      = "Found $PolicyCount policy issues and $AppCount application issues in Intune."
+                Tenant       = $TenantFilter
+                PolicyIssues = $PolicyCount
+                AppIssues    = $AppCount
+                Issues       = $Issues
             })
     } else {
         $AlertData = $Issues

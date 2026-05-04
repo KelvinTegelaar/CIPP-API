@@ -46,7 +46,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneBrandingProfile' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneBrandingProfile' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

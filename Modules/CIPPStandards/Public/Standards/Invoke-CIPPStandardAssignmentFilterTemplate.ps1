@@ -37,7 +37,7 @@ function Invoke-CIPPStandardAssignmentFilterTemplate {
     #>
     param($Tenant, $Settings)
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AssignmentFilterTemplate' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AssignmentFilterTemplate' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

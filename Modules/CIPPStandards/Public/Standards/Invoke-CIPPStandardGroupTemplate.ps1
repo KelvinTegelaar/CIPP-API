@@ -67,7 +67,7 @@ function Invoke-CIPPStandardGroupTemplate {
 
                     # Check if Exchange license is required for distribution groups
                     if ($groupobj.groupType -in @('distribution', 'dynamicdistribution')) {
-                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
+                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -Preset Exchange -SkipLog
                         if (!$TestResult) {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot create group $($groupobj.displayname) as the tenant is not licensed for Exchange." -Sev 'Error'
                             continue
@@ -132,7 +132,7 @@ function Invoke-CIPPStandardGroupTemplate {
 
                     } else {
                         # Handle Exchange Online groups (Distribution, DynamicDistribution)
-                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_LITE') -SkipLog
+                        $TestResult = Test-CIPPStandardLicense -StandardName 'GroupTemplate' -TenantFilter $Tenant -Preset Exchange -SkipLog
                         if (!$TestResult) {
                             Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot update group $($groupobj.displayName) as the tenant is not licensed for Exchange." -Sev 'Error'
                             continue

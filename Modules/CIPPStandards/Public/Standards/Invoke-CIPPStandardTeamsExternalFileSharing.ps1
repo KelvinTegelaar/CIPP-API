@@ -43,7 +43,7 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalFileSharing' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalFileSharing' -TenantFilter $Tenant -Preset Teams
 
     if ($TestResult -eq $false) {
         return $true

@@ -46,7 +46,7 @@ function Invoke-CIPPStandardAutopilotProfile {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotProfile' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotProfile' -TenantFilter $Tenant -Preset Intune
 
     # Get the current configuration
 
