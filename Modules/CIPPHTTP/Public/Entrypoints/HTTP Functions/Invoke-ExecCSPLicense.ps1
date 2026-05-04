@@ -14,21 +14,22 @@ function Invoke-ExecCSPLicense {
     $TenantFilter = $Request.Body.tenantFilter
     $Action = $Request.Body.Action
     $SKU = $Request.Body.SKU.value ?? $Request.Body.SKU
+    $BillingTerm = $Request.Body.SKU.addedFields.billingTerm ?? $Request.Body.SKU.addedFields.billingCycle ?? 'Monthly'
 
     try {
         if ($Action -eq 'Add') {
-            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
+            $null = Set-Pax8Subscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add -BillingTerm $BillingTerm
         }
 
         if ($Action -eq 'Remove') {
-            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
+            $null = Set-Pax8Subscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove -BillingTerm $BillingTerm
         }
 
         if ($Action -eq 'NewSub') {
-            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
+            $null = Set-Pax8Subscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity -BillingTerm $BillingTerm
         }
         if ($Action -eq 'Cancel') {
-            $null = Remove-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
+            $null = Remove-Pax8Subscription -Headers $Headers -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
         }
         $Result = 'License change executed successfully.'
         $StatusCode = [HttpStatusCode]::OK

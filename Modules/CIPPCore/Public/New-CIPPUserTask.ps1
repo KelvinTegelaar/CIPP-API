@@ -21,8 +21,8 @@ function New-CIPPUserTask {
     try {
         if ($UserObj.licenses.value) {
             if ($UserObj.sherwebLicense.value) {
-                $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $null = $Results.Add('Added Sherweb License, scheduling assignment')
+                $null = Set-Pax8Subscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $null = $Results.Add('Added Pax8 License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"
@@ -31,7 +31,7 @@ function New-CIPPUserTask {
                     }
                     Parameters    = [pscustomobject]@{
                         UserId      = $CreationResults.Username
-                        APIName     = 'Sherweb License Assignment'
+                        APIName     = 'Pax8 License Assignment'
                         AddLicenses = $UserObj.licenses.value
                     }
                     ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.

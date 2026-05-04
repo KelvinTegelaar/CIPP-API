@@ -34,6 +34,9 @@ Function Invoke-ExecExtensionMapping {
       'Sherweb' {
         $Result = Get-SherwebMapping -CIPPMapping $Table
       }
+      'Pax8' {
+        $Result = Get-Pax8Mapping -CIPPMapping $Table
+      }
       'HaloPSAFields' {
         $TicketTypes = Get-HaloTicketType
         $Outcomes = Get-HaloTicketOutcome
@@ -56,6 +59,9 @@ Function Invoke-ExecExtensionMapping {
       switch ($Request.Query.AddMapping) {
         'Sherweb' {
           $Result = Set-SherwebMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+        }
+        'Pax8' {
+          $Result = Set-Pax8Mapping -CIPPMapping $Table -APIName $APIName -Request $Request
         }
         'HaloPSA' {
           $Result = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request

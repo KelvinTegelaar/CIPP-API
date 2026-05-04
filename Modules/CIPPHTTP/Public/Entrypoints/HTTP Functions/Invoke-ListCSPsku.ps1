@@ -13,9 +13,9 @@ function Invoke-ListCSPsku {
 
     try {
         if ($CurrentSkuOnly) {
-            $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
+            $GraphRequest = Get-Pax8CurrentSubscription -TenantFilter $TenantFilter
         } else {
-            $GraphRequest = Get-SherwebCatalog -TenantFilter $TenantFilter
+            $GraphRequest = Get-Pax8Catalog -TenantFilter $TenantFilter
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

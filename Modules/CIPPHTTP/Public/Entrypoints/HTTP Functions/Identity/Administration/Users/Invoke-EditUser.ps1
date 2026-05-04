@@ -106,8 +106,8 @@ function Invoke-EditUser {
 
         if ($licenses -or $UserObj.removeLicenses) {
             if ($UserObj.sherwebLicense.value) {
-                $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $Results.Add('Added Sherweb License, scheduling assignment')
+                $null = Set-Pax8Subscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $Results.Add('Added Pax8 License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"
@@ -116,7 +116,7 @@ function Invoke-EditUser {
                     }
                     Parameters    = [pscustomobject]@{
                         UserId            = $UserObj.id
-                        APIName           = 'Sherweb License Assignment'
+                        APIName           = 'Pax8 License Assignment'
                         AddLicenses       = $licenses
                         UserPrincipalName = $UserPrincipalName
                     }

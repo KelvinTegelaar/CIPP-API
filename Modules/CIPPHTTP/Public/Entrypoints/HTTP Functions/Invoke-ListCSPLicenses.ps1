@@ -11,10 +11,10 @@ function Invoke-ListCSPLicenses {
     $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        $Result = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
+        $Result = Get-Pax8CurrentSubscription -TenantFilter $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = 'Unable to retrieve CSP licenses, ensure that you have enabled the Sherweb integration and mapped the tenant in the integration settings.'
+        $Result = 'Unable to retrieve CSP licenses, ensure that you have enabled the Pax8 integration and mapped the tenant in the integration settings.'
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 

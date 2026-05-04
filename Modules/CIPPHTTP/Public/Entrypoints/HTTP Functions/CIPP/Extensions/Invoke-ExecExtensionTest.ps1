@@ -73,6 +73,14 @@ Function Invoke-ExecExtensionTest {
                     $Results = [pscustomobject]@{'Results' = 'Failed to connect to Sherweb, check your API credentials and try again.' }
                 }
             }
+            'Pax8' {
+                $token = Get-Pax8Authentication
+                if ($token) {
+                    $Results = [pscustomobject]@{'Results' = 'Successfully Connected to Pax8' }
+                } else {
+                    $Results = [pscustomobject]@{'Results' = 'Failed to connect to Pax8, check your API credentials and try again.' }
+                }
+            }
             'HIBP' {
                 $ConnectionTest = Get-HIBPConnectionTest
                 $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }

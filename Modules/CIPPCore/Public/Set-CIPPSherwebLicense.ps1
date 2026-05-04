@@ -11,5 +11,5 @@ function Set-CIPPSherwebLicense {
         [int]$Remove
     )
 
-    Set-SherwebSubscription -SKU $SKUid -Quantity $Quantity -Add $Add -Remove $Remove -TenantFilter $tenantFilter
+    Set-Pax8Subscription -SKU $SKUid -Quantity $Quantity -Add $Add -Remove $Remove -TenantFilter $tenantFilter
 }
