@@ -47,11 +47,34 @@ function Invoke-ListAlertsQueue {
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
+            $HasAccess = $false
             foreach ($Tenant in $Tenants) {
-                if ($AllowedTenants -contains $Tenant.customerId) {
-                    $AllTasksArrayList.Add($TaskEntry)
-                    break
+                if ($Tenant.type -eq 'Group') {
+                    try {
+                        $GroupFilter = @([PSCustomObject]@{
+                                type  = 'Group'
+                                value = $Tenant.value
+                                label = $Tenant.label
+                            })
+                        $ExpandedGroupTenants = Expand-CIPPTenantGroups -TenantFilter $GroupFilter
+                        foreach ($ExpandedTenant in $ExpandedGroupTenants) {
+                            if ($AllowedTenants -contains $ExpandedTenant.addedFields.customerId) {
+                                $HasAccess = $true
+                                break
+                            }
+                        }
+                    } catch {
+                        Write-Warning "Failed to expand tenant group for webhook access check: $($_.Exception.Message)"
+                    }
+                } else {
+                    if ($AllowedTenants -contains $Tenant.customerId) {
+                        $HasAccess = $true
+                    }
                 }
+                if ($HasAccess) { break }
+            }
+            if ($HasAccess) {
+                $AllTasksArrayList.Add($TaskEntry)
             }
         } else {
             $AllTasksArrayList.Add($TaskEntry)
@@ -133,23 +156,18 @@ function Invoke-ListAlertsQueue {
         }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
-            # For tenant groups, we need to expand and check access
+            $HasAccess = $false
             if ($Task.TenantGroup) {
+                # Expand legacy TenantGroup field and check access
                 try {
                     $TenantGroupObject = $Task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue
                     if ($TenantGroupObject) {
-                        # Create a tenant filter object for expansion
                         $TenantFilterForExpansion = @([PSCustomObject]@{
                                 type  = 'Group'
                                 value = $TenantGroupObject.value
                                 label = $TenantGroupObject.label
                             })
-
-                        # Expand the tenant group to individual tenants
                         $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
-
-                        # Check if user has access to any tenant in the group
-                        $HasAccess = $false
                         foreach ($ExpandedTenant in $ExpandedTenants) {
                             $TenantInfo = $TenantList | Where-Object -Property defaultDomainName -EQ $ExpandedTenant.value
                             if ($TenantInfo -and $AllowedTenants -contains $TenantInfo.customerId) {
@@ -157,20 +175,48 @@ function Invoke-ListAlertsQueue {
                                 break
                             }
                         }
-
-                        if ($HasAccess) {
-                            $AllTasksArrayList.Add($TaskEntry)
-                        }
                     }
                 } catch {
                     Write-Warning "Failed to expand tenant group for access check: $($_.Exception.Message)"
                 }
+            } elseif ($Task.Tenants) {
+                # Multi-tenant alert - may contain groups or individual tenants
+                try {
+                    $TenantsParsed = $Task.Tenants | ConvertFrom-Json -ErrorAction Stop
+                    foreach ($TenantItem in $TenantsParsed) {
+                        if ($TenantItem.type -eq 'Group') {
+                            $GroupFilter = @([PSCustomObject]@{
+                                    type  = 'Group'
+                                    value = $TenantItem.value
+                                    label = $TenantItem.label
+                                })
+                            $ExpandedGroupTenants = Expand-CIPPTenantGroups -TenantFilter $GroupFilter
+                            foreach ($ExpandedTenant in $ExpandedGroupTenants) {
+                                if ($AllowedTenants -contains $ExpandedTenant.addedFields.customerId) {
+                                    $HasAccess = $true
+                                    break
+                                }
+                            }
+                        } else {
+                            $TenantInfo = $TenantList | Where-Object -Property defaultDomainName -EQ $TenantItem.value
+                            if ($TenantInfo -and $AllowedTenants -contains $TenantInfo.customerId) {
+                                $HasAccess = $true
+                            }
+                        }
+                        if ($HasAccess) { break }
+                    }
+                } catch {
+                    Write-Warning "Failed to parse Tenants for access check on task $($Task.RowKey): $($_.Exception.Message)"
+                }
             } else {
-                # Regular tenant access check
+                # Regular single-tenant access check
                 $Tenant = $TenantList | Where-Object -Property defaultDomainName -EQ $Task.Tenant
                 if ($AllowedTenants -contains $Tenant.customerId) {
-                    $AllTasksArrayList.Add($TaskEntry)
+                    $HasAccess = $true
                 }
+            }
+            if ($HasAccess) {
+                $AllTasksArrayList.Add($TaskEntry)
             }
         } else {
             $AllTasksArrayList.Add($TaskEntry)
