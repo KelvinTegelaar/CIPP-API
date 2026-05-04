@@ -31,7 +31,7 @@ function Invoke-CIPPDBCacheCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage')]
+        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams')]
         [string]$CollectionType,
 
         [Parameter(Mandatory = $true)]
@@ -87,6 +87,8 @@ function Invoke-CIPPDBCacheCollection {
             'ExoAdminAuditLogConfig'
             'ExoPresetSecurityPolicy'
             'ExoTenantAllowBlockList'
+            'OwaMailboxPolicy'
+            'ReportSubmissionPolicy'
         )
         ExchangeData       = @(
             'CASMailboxes'
@@ -126,6 +128,18 @@ function Invoke-CIPPDBCacheCollection {
             'CopilotUserCountSummary'
             'CopilotUserCountTrend'
             'CopilotReadinessActivity'
+        )
+        SharePoint         = @(
+            'SPOTenant'
+            'SPOTenantSyncClientRestriction'
+        )
+        Teams              = @(
+            'CsTeamsMeetingPolicy'
+            'CsTeamsClientConfiguration'
+            'CsExternalAccessPolicy'
+            'CsTenantFederationConfiguration'
+            'CsTeamsMessagingPolicy'
+            'CsTeamsAppPermissionPolicy'
         )
     }
 

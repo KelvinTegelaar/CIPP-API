@@ -19,7 +19,8 @@ function Set-CIPPDBCacheGroups {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Debug
 
-        $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,groupTypes,mail,mailEnabled,securityEnabled,membershipRule,onPremisesSyncEnabled' -tenantid $TenantFilter
+        $GroupSelect = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,assignedLicenses,licenseProcessingState'
+        $Groups = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect" -tenantid $TenantFilter
 
         # Build bulk request for group members
         $MemberRequests = $Groups | ForEach-Object {
@@ -36,10 +37,25 @@ function Set-CIPPDBCacheGroups {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Fetching group members' -sev Debug
             $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
 
-            # Add members to each group object
+            # Add members and computed properties to each group object
             $GroupsWithMembers = foreach ($Group in $Groups) {
                 $Members = ($MemberResults | Where-Object { $_.id -eq $Group.id }).body.value
+                $groupType = if ($Group.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                elseif ($Group.mailEnabled -and $Group.securityEnabled) { 'Mail-Enabled Security' }
+                elseif (-not $Group.mailEnabled -and $Group.securityEnabled) { 'Security' }
+                elseif ([string]::IsNullOrEmpty($Group.groupTypes) -and $Group.mailEnabled -and -not $Group.securityEnabled) { 'Distribution List' }
+                else { 'Unknown' }
+                $calculatedGroupType = if ($Group.groupTypes -contains 'Unified') { 'm365' }
+                elseif ($Group.mailEnabled -and $Group.securityEnabled) { 'security' }
+                elseif (-not $Group.mailEnabled -and $Group.securityEnabled) { 'generic' }
+                elseif ([string]::IsNullOrEmpty($Group.groupTypes) -and $Group.mailEnabled -and -not $Group.securityEnabled) { 'distributionList' }
+                else { 'unknown' }
                 $Group | Add-Member -NotePropertyName 'members' -NotePropertyValue $Members -Force
+                $Group | Add-Member -NotePropertyName 'primDomain' -NotePropertyValue ($Group.mail -split '@' | Select-Object -Last 1) -Force
+                $Group | Add-Member -NotePropertyName 'teamsEnabled' -NotePropertyValue ($Group.resourceProvisioningOptions -contains 'Team') -Force
+                $Group | Add-Member -NotePropertyName 'dynamicGroupBool' -NotePropertyValue ($Group.groupTypes -contains 'DynamicMembership') -Force
+                $Group | Add-Member -NotePropertyName 'groupType' -NotePropertyValue $groupType -Force
+                $Group | Add-Member -NotePropertyName 'calculatedGroupType' -NotePropertyValue $calculatedGroupType -Force
                 $Group
             }
 
@@ -48,6 +64,24 @@ function Set-CIPPDBCacheGroups {
             $Groups = $null
             $GroupsWithMembers = $null
         } else {
+            $Groups = foreach ($Group in $Groups) {
+                $groupType = if ($Group.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                elseif ($Group.mailEnabled -and $Group.securityEnabled) { 'Mail-Enabled Security' }
+                elseif (-not $Group.mailEnabled -and $Group.securityEnabled) { 'Security' }
+                elseif ([string]::IsNullOrEmpty($Group.groupTypes) -and $Group.mailEnabled -and -not $Group.securityEnabled) { 'Distribution List' }
+                else { 'Unknown' }
+                $calculatedGroupType = if ($Group.groupTypes -contains 'Unified') { 'm365' }
+                elseif ($Group.mailEnabled -and $Group.securityEnabled) { 'security' }
+                elseif (-not $Group.mailEnabled -and $Group.securityEnabled) { 'generic' }
+                elseif ([string]::IsNullOrEmpty($Group.groupTypes) -and $Group.mailEnabled -and -not $Group.securityEnabled) { 'distributionList' }
+                else { 'unknown' }
+                $Group | Add-Member -NotePropertyName 'primDomain' -NotePropertyValue ($Group.mail -split '@' | Select-Object -Last 1) -Force
+                $Group | Add-Member -NotePropertyName 'teamsEnabled' -NotePropertyValue ($Group.resourceProvisioningOptions -contains 'Team') -Force
+                $Group | Add-Member -NotePropertyName 'dynamicGroupBool' -NotePropertyValue ($Group.groupTypes -contains 'DynamicMembership') -Force
+                $Group | Add-Member -NotePropertyName 'groupType' -NotePropertyValue $groupType -Force
+                $Group | Add-Member -NotePropertyName 'calculatedGroupType' -NotePropertyValue $calculatedGroupType -Force
+                $Group
+            }
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $Groups
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $Groups -Count
             $Groups = $null
