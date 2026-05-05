@@ -33,9 +33,12 @@ function Get-CIPPDrift {
     $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
     $IntuneTable = Get-CippTable -tablename 'templates'
 
+    # Load all templates for tag resolution (mirrors Get-CIPPTenantAlignment)
+    $AllTableTemplates = Get-CIPPAzDataTableEntity @IntuneTable
+
     # Always load templates for display name resolution, even if tenant doesn't have licenses
     $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
-    $RawIntuneTemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter)
+    $RawIntuneTemplates = $AllTableTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' }
     $AllIntuneTemplates = $RawIntuneTemplates | ForEach-Object {
         try {
             $JSONData = $_.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
@@ -51,8 +54,7 @@ function Get-CIPPDrift {
     } | Sort-Object -Property displayName
 
     # Load all CA templates
-    $CAFilter = "PartitionKey eq 'CATemplate'"
-    $RawCATemplates = (Get-CIPPAzDataTableEntity @IntuneTable -Filter $CAFilter)
+    $RawCATemplates = $AllTableTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' }
     $AllCATemplates = $RawCATemplates | ForEach-Object {
         try {
             $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
@@ -269,9 +271,15 @@ function Get-CIPPDrift {
                         if ($Template.TemplateList.value) {
                             $IntuneTemplateIds.Add($Template.TemplateList.value)
                         }
-                        if ($Template.'TemplateList-Tags'.rawData.templates) {
-                            foreach ($TagTemplate in $Template.'TemplateList-Tags'.rawData.templates) {
-                                $IntuneTemplateIds.Add($TagTemplate.GUID)
+                        if ($Template.'TemplateList-Tags') {
+                            foreach ($Tag in $Template.'TemplateList-Tags') {
+                                $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
+                                $ResolvedTagTemplates = $AllTableTemplates | Where-Object -Property package -EQ $TagValue
+                                foreach ($ResolvedTemplate in $ResolvedTagTemplates) {
+                                    if ($ResolvedTemplate.RowKey -and $ResolvedTemplate.RowKey -notin $IntuneTemplateIds) {
+                                        $IntuneTemplateIds.Add($ResolvedTemplate.RowKey)
+                                    }
+                                }
                             }
                         }
                     }
