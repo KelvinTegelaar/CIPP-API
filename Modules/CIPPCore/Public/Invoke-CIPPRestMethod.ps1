@@ -90,10 +90,12 @@ function Invoke-CIPPRestMethod {
 
     # ------------------------------------------------------------------
     # Escape hatch — env var kill switch, missing pooled client type,
-    # or per-call legacy switch
+    # per-call legacy switch, or binary body (byte[] cannot be
+    # serialised to string for the pooled C# client)
     # ------------------------------------------------------------------
     $HasCippRestClient = $null -ne ('CIPP.CIPPRestClient' -as [type])
-    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient) {
+    $IsBinaryBody = $Body -is [byte[]]
+    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient -or $IsBinaryBody) {
         $LegacyParams = @{
             Uri         = $Uri
             Method      = $Method
