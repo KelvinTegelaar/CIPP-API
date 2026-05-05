@@ -34,7 +34,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -58,7 +58,9 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         return
     }
 
-    $CurrentAgeLimitForRetention = ([timespan]$CurrentState.AgeLimitForRetention).TotalDays
+    $CurrentAgeLimitForRetention = if ($CurrentState.AgeLimitForRetention) {
+        ([timespan]$CurrentState.AgeLimitForRetention).TotalDays
+    }
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
     ($CurrentState.RetentionEnabled -eq $true) -and

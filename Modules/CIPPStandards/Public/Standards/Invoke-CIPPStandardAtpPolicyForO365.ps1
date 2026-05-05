@@ -36,7 +36,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -46,6 +46,13 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     if ($TestResult -eq $false) {
         return $true
     } #we're done.
+
+    $MDOTestResult = Test-CIPPStandardLicense -StandardName 'AtpPolicyForO365' -TenantFilter $Tenant -RequiredCapabilities @('ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV', 'THREAT_INTELLIGENCE')
+
+    if ($MDOTestResult -eq $false) {
+        return $true
+    } #tenant lacks Microsoft Defender for Office 365 — Test-CIPPStandardLicense logs and sets LicenseAvailable=false.
+
     try {
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
             Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
