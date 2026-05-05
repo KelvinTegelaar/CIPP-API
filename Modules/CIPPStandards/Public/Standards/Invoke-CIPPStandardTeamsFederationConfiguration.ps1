@@ -75,7 +75,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             $AllowedDomains = $null
             $BlockedDomains = @()
             if ($null -ne $Settings.DomainList) {
-                $AllowedDomainsAsAList = @($Settings.DomainList).Split(',').Trim()
+                $AllowedDomainsAsAList = @($Settings.DomainList).Split(',').Trim() | Sort-Object
             } else {
                 $AllowedDomainsAsAList = @()
             }
@@ -85,7 +85,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             $AllowedDomains = $AllowAllKnownDomains
             $AllowedDomainsAsAList = @()
             if ($null -ne $Settings.DomainList) {
-                $BlockedDomains = @($Settings.DomainList).Split(',').Trim()
+                $BlockedDomains = @($Settings.DomainList).Split(',').Trim() | Sort-Object
             } else {
                 $BlockedDomains = @()
             }
