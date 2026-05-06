@@ -1846,6 +1846,10 @@ function Invoke-NinjaOneTenantSync {
 
 
             ### CIPP Applied Standards Cards
+            $ModuleBase = Get-Module CIPPExtensions | Select-Object -ExpandProperty ModuleBase
+            $CIPPRoot = (Get-Item $ModuleBase).Parent.Parent.FullName
+            Set-Location $CIPPRoot
+
             try {
                 $StandardsDefinitions = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/refs/heads/main/src/data/standards.json'
                 $AppliedStandards = Get-CIPPStandards -TenantFilter $Customer.defaultDomainName
@@ -2194,6 +2198,91 @@ function Invoke-NinjaOneTenantSync {
         #Write-Information "Ninja Body: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
         $Result = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.IntegrationId)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
 
+
+
+        # CVE Sync — runs as part of tenant sync if enabled
+        if ($Configuration.CveSyncEnabled -eq $true) {
+            try {
+                $ScanGroupPrefix = $Configuration.CveSyncPrefix ?? ''
+                $ScanGroupName   = "$ScanGroupPrefix$TenantFilter"
+                $NinjaBaseUrl    = "https://$($Configuration.Instance)/api/v2"
+
+                $CveScanGroups = Invoke-RestMethod -Method Get -Uri "$NinjaBaseUrl/vulnerability/scan-groups" -Headers @{ Authorization = "Bearer $($Token.access_token)" } -TimeoutSec 30 -ErrorAction Stop
+                $ResolvedScanGroup = $CveScanGroups | Where-Object { $_.groupName -eq $ScanGroupName }
+
+                if (-not $ResolvedScanGroup) {
+                    Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync skipped — scan group '$ScanGroupName' not found" -sev 'Warning'
+                } else {
+                    $ResolvedScanGroupId = $ResolvedScanGroup.id
+                    $DeviceIdHeader      = $ResolvedScanGroup.deviceIdHeader
+                    $CveIdHeader         = $ResolvedScanGroup.cveIdHeader
+
+                    if ([string]::IsNullOrWhiteSpace($DeviceIdHeader) -or [string]::IsNullOrWhiteSpace($CveIdHeader)) {
+                        Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync skipped — scan group missing required header config" -sev 'Warning'
+                    } else {
+                        $AllVulns = Get-DefenderTvmRaw -TenantId $TenantFilter -MaxPages 0
+
+                        if (-not $AllVulns) {
+                            Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message 'CVE sync — no vulnerability data returned' -sev 'Warning'
+                        } else {
+                            $ExceptionsTable      = Get-CIPPTable -TableName 'CveExceptions'
+                            $AllExceptions        = Get-CIPPAzDataTableEntity @ExceptionsTable
+                            $ApplicableExceptions = $AllExceptions | Where-Object { $_.RowKey -eq $TenantFilter -or $_.RowKey -eq 'ALL' }
+
+                            if ($ApplicableExceptions) {
+                                $ExceptedCveIds = $ApplicableExceptions | Select-Object -ExpandProperty cveId -Unique
+                                $BeforeCount    = $AllVulns.Count
+                                $AllVulns       = $AllVulns | Where-Object { $_.cveId -notin $ExceptedCveIds }
+                                Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync — filtered $($BeforeCount - $AllVulns.Count) excepted CVEs, $($AllVulns.Count) remaining" -sev 'Info'
+                            }
+
+                            $CsvRows      = [System.Collections.Generic.List[object]]::new()
+                            $SkippedCount = 0
+
+                            foreach ($Item in $AllVulns) {
+                                if ([string]::IsNullOrWhiteSpace($Item.cveId) -or [string]::IsNullOrWhiteSpace($Item.deviceName)) {
+                                    $SkippedCount++
+                                    continue
+                                }
+                                [void]$CsvRows.Add([PSCustomObject]@{
+                                    $DeviceIdHeader = $Item.deviceName.Trim()
+                                    $CveIdHeader    = $Item.cveId.Trim()
+                                })
+                            }
+
+                            if ($SkippedCount -gt 0) {
+                                Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync — skipped $SkippedCount rows (missing deviceName or cveId)" -sev 'Warning'
+                            }
+
+                            $CsvBytes = New-VulnCsvBytes -Rows $CsvRows -Headers @($DeviceIdHeader, $CveIdHeader)
+
+                            if ($CsvBytes -and $CsvBytes.Length -gt 0) {
+                                $UploadUri = "$NinjaBaseUrl/vulnerability/scan-groups/$ResolvedScanGroupId/upload"
+                                $PollUri   = "$NinjaBaseUrl/vulnerability/scan-groups/$ResolvedScanGroupId"
+                                $CveResp   = Invoke-NinjaOneVulnCsvUpload -Uri $UploadUri -PollUri $PollUri -CsvBytes $CsvBytes -Headers @{ Authorization = "Bearer $($Token.access_token)" }
+
+                                $FinalStatus    = $CveResp.status ?? 'unknown'
+                                $ProcessedCount = $CveResp.recordsProcessed ?? '?'
+
+                                if ($FinalStatus -eq 'COMPLETE') {
+                                    Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync complete — $($CsvRows.Count) CVEs sent to '$ScanGroupName', $ProcessedCount processed" -sev 'Info'
+                                } elseif ($FinalStatus -eq 'IN_PROGRESS') {
+                                    Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync upload accepted — $($CsvRows.Count) CVEs sent to '$ScanGroupName', still processing (timed out polling)" -sev 'Warning'
+                                } else {
+                                    Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync finished with status '$FinalStatus' for '$ScanGroupName', $ProcessedCount processed" -sev 'Warning'
+                                }
+                            } else {
+                                Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message 'CVE sync — failed to generate CSV bytes' -sev 'Warning'
+                            }
+                        }
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+                # Do not rethrow — CVE sync failure should not fail the whole tenant sync
+            }
+        }
 
         Write-Information 'Cleaning Users Cache'
         if (($ParsedUsers | Measure-Object).count -gt 0) {
