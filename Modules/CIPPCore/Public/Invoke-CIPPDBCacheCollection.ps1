@@ -114,8 +114,13 @@ function Invoke-CIPPDBCacheCollection {
         Intune             = @(
             'ManagedDevices'
             'IntunePolicies'
+            'IntuneApplications'
+            'IntuneAssignmentFilters'
+            'IntuneCompliancePolicies'
             'ManagedDeviceEncryptionStates'
             'IntuneAppProtectionPolicies'
+            'IntuneScripts'
+            'IntuneReusableSettings'
             'DetectedApps'
             'MDEOnboarding'
         )
