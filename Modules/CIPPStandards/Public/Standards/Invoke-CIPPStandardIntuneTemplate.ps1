@@ -31,6 +31,7 @@ function Invoke-CIPPStandardIntuneTemplate {
             {"name":"excludeGroup","label":"Exclude Groups","type":"textField","required":false,"helpText":"Enter the group name(s) to exclude from the assignment. Wildcards are allowed. Multiple group names are comma-seperated."}
             {"type":"textField","required":false,"name":"assignmentFilter","label":"Assignment Filter Name (Optional)","helpText":"Enter the assignment filter name to apply to this policy assignment. Wildcards are allowed."}
             {"name":"assignmentFilterType","label":"Assignment Filter Mode (Optional)","type":"radio","required":false,"helpText":"Choose whether to include or exclude devices matching the filter. Only applies if you specified a filter name above. Defaults to Include if not specified.","options":[{"label":"Include - Assign to devices matching the filter","value":"include"},{"label":"Exclude - Assign to devices NOT matching the filter","value":"exclude"}]}
+            {"type":"number","required":false,"name":"levenshteinDistance","label":"Fuzzy Match Distance (0 = exact name match only, higher values allow replacing policies with similar names)","defaultValue":0}
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -146,6 +147,9 @@ function Invoke-CIPPStandardIntuneTemplate {
                 $PolicyParams.AssignmentFilterName = $CompareResult.assignmentFilter
                 $PolicyParams.AssignmentFilterType = $CompareResult.assignmentFilterType ?? 'include'
             }
+
+            # Pass fuzzy-match threshold (0 = exact only, which preserves previous behaviour)
+            $PolicyParams.LevenshteinDistance = [int]($Settings.levenshteinDistance ?? 0)
 
             Set-CIPPIntunePolicy @PolicyParams
             # Remediation succeeded — accept Graph return and update state so report reflects it
