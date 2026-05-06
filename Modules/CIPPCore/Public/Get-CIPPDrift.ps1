@@ -33,11 +33,11 @@ function Get-CIPPDrift {
     $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
     $IntuneTable = Get-CippTable -tablename 'templates'
 
-    # Load all templates for tag resolution (mirrors Get-CIPPTenantAlignment)
-    $AllTableTemplates = Get-CIPPAzDataTableEntity @IntuneTable
+    # Load only IntuneTemplate partition for tag resolution and display name lookup
+    $RawIntuneTemplates = Get-CIPPAzDataTableEntity @IntuneTable -Filter "PartitionKey eq 'IntuneTemplate'"
     # Build a hashtable indexed by Package for O(1) tag lookup
     $TemplatesByPackage = @{}
-    foreach ($t in $AllTableTemplates) {
+    foreach ($t in $RawIntuneTemplates) {
         if ($t.Package) {
             if (-not $TemplatesByPackage.ContainsKey($t.Package)) {
                 $TemplatesByPackage[$t.Package] = [System.Collections.Generic.List[object]]::new()
@@ -45,35 +45,36 @@ function Get-CIPPDrift {
             $TemplatesByPackage[$t.Package].Add($t)
         }
     }
-
-    # Always load templates for display name resolution, even if tenant doesn't have licenses
-    $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
-    $RawIntuneTemplates = $AllTableTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' }
-    $AllIntuneTemplates = $RawIntuneTemplates | ForEach-Object {
+    # Build GUID-indexed hashtables for O(1) display name lookups in deviation loop
+    $IntuneTemplatesByGuid = @{}
+    $AllIntuneTemplates = foreach ($RawTemplate in $RawIntuneTemplates) {
         try {
-            $JSONData = $_.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
+            $JSONData = $RawTemplate.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
             $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
             $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
             $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
             $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $RawTemplate.RowKey -Force
+            $IntuneTemplatesByGuid[$RawTemplate.RowKey] = $data
             $data
         } catch {
             # Skip invalid templates
         }
-    } | Sort-Object -Property displayName
+    }
 
-    # Load all CA templates
-    $RawCATemplates = $AllTableTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' }
-    $AllCATemplates = $RawCATemplates | ForEach-Object {
+    # Load CA templates with GUID hashtable
+    $RawCATemplates = Get-CIPPAzDataTableEntity @IntuneTable -Filter "PartitionKey eq 'CATemplate'"
+    $CATemplatesByGuid = @{}
+    $AllCATemplates = foreach ($RawTemplate in $RawCATemplates) {
         try {
-            $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+            $data = $RawTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $RawTemplate.RowKey -Force
+            $CATemplatesByGuid[$RawTemplate.RowKey] = $data
             $data
         } catch {
             # Skip invalid templates
         }
-    } | Sort-Object -Property displayName
+    }
 
     try {
         $AlignmentData = Get-CIPPTenantAlignment -TenantFilter $TenantFilter -TemplateId $TemplateId | Where-Object -Property standardType -EQ 'drift'
@@ -116,44 +117,22 @@ function Get-CIPPDrift {
                         $standardDescription = $null
                         #if the $ComparisonItem.StandardName contains *IntuneTemplate*, then it's an Intune policy deviation, and we need to grab the correct displayname from the template table
                         if ($ComparisonItem.StandardName -like '*IntuneTemplate*') {
-                            # Extract GUID from format like: standards.IntuneTemplate.{GUID}.IntuneTemplate.json
-                            # Split by '.' and find the element that looks like a GUID (contains hyphens and is 36 chars)
                             $Parts = $ComparisonItem.StandardName.Split('.')
-                            $CompareGuid = $Parts | Where-Object { $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object -First 1
-
-                            if ($CompareGuid) {
-                                Write-Verbose "Extracted Intune GUID: $CompareGuid from $($ComparisonItem.StandardName)"
-                                $Template = $AllIntuneTemplates | Where-Object { $_.GUID -match "$CompareGuid" }
-                                if ($Template) {
-                                    $displayName = $Template.displayName
-                                    $standardDescription = $Template.description
-                                    Write-Verbose "Found Intune template: $displayName"
-                                } else {
-                                    Write-Warning "Intune template not found for GUID: $CompareGuid"
-                                }
-                            } else {
-                                Write-Verbose "No valid GUID found in: $($ComparisonItem.StandardName)"
+                            $CompareGuid = foreach ($p in $Parts) { if ($p -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') { $p; break } }
+                            if ($CompareGuid -and $IntuneTemplatesByGuid.ContainsKey($CompareGuid)) {
+                                $Template = $IntuneTemplatesByGuid[$CompareGuid]
+                                $displayName = $Template.displayName
+                                $standardDescription = $Template.description
                             }
                         }
                         # Handle Conditional Access templates
                         if ($ComparisonItem.StandardName -like '*ConditionalAccessTemplate*') {
-                            # Extract GUID from format like: standards.ConditionalAccessTemplate.{GUID}.CATemplate.json
-                            # Split by '.' and find the element that looks like a GUID (contains hyphens and is 36 chars)
                             $Parts = $ComparisonItem.StandardName.Split('.')
-                            $CompareGuid = $Parts | Where-Object { $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object -First 1
-
-                            if ($CompareGuid) {
-                                Write-Verbose "Extracted CA GUID: $CompareGuid from $($ComparisonItem.StandardName)"
-                                $Template = $AllCATemplates | Where-Object { $_.GUID -match "$CompareGuid" }
-                                if ($Template) {
-                                    $displayName = $Template.displayName
-                                    $standardDescription = $Template.description
-                                    Write-Verbose "Found CA template: $displayName"
-                                } else {
-                                    Write-Warning "CA template not found for GUID: $CompareGuid"
-                                }
-                            } else {
-                                Write-Verbose "No valid GUID found in: $($ComparisonItem.StandardName)"
+                            $CompareGuid = foreach ($p in $Parts) { if ($p -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') { $p; break } }
+                            if ($CompareGuid -and $CATemplatesByGuid.ContainsKey($CompareGuid)) {
+                                $Template = $CATemplatesByGuid[$CompareGuid]
+                                $displayName = $Template.displayName
+                                $standardDescription = $Template.description
                             }
                         }
                         # Handle QuarantineTemplate — suffix is hex-encoded display name, decode it
@@ -302,7 +281,9 @@ function Get-CIPPDrift {
             # Get actual CA templates from templates table
             if ($CATemplateIds.Count -gt 0) {
                 try {
-                    $TemplateCATemplates = $AllCATemplates | Where-Object { $_.GUID -in $CATemplateIds }
+                    $TemplateCATemplates = foreach ($id in $CATemplateIds) {
+                        if ($CATemplatesByGuid.ContainsKey($id)) { $CATemplatesByGuid[$id] }
+                    }
                 } catch {
                     Write-Warning "Failed to get CA templates: $($_.Exception.Message)"
                 }
@@ -311,8 +292,9 @@ function Get-CIPPDrift {
             # Get actual Intune templates from templates table
             if ($IntuneTemplateIds.Count -gt 0) {
                 try {
-
-                    $TemplateIntuneTemplates = $AllIntuneTemplates | Where-Object { $_.GUID -in $IntuneTemplateIds }
+                    $TemplateIntuneTemplates = foreach ($id in $IntuneTemplateIds) {
+                        if ($IntuneTemplatesByGuid.ContainsKey($id)) { $IntuneTemplatesByGuid[$id] }
+                    }
                 } catch {
                     Write-Warning "Failed to get Intune templates: $($_.Exception.Message)"
                 }
