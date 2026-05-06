@@ -69,7 +69,7 @@ function Get-CIPPTenantAlignment {
             $Tenants = Get-Tenants -IncludeErrors
             $AllStandards | Where-Object { $_.PartitionKey -in $Tenants.defaultDomainName }
         }
-        $TagTemplates = Get-CIPPAzDataTableEntity @TemplateTable
+        $TagTemplates = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneTemplate'"
         # Build a hashtable indexed by Package for O(1) tag lookup
         $TemplatesByPackage = @{}
         foreach ($t in $TagTemplates) {
@@ -212,7 +212,6 @@ function Get-CIPPTenantAlignment {
 
                         if ($IntuneTemplate.'TemplateList-Tags') {
                             foreach ($Tag in $IntuneTemplate.'TemplateList-Tags') {
-                                Write-Host "Processing Intune Tag: $($Tag.value)"
                                 $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
                                 $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
                                 $TagTemplate = if ($TemplatesByPackage.ContainsKey($Tag.value)) { $TemplatesByPackage[$Tag.value] } else { @() }
