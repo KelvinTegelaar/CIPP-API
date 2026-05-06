@@ -38,7 +38,7 @@ function Push-CIPPStandardsList {
 
         if ($IntuneTemplateFound) {
             # Perform license check
-            $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+            $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -Preset Intune
 
             if (-not $TestResult) {
                 # Remove IntuneTemplate standards and set compare fields
@@ -253,7 +253,7 @@ function Push-CIPPStandardsList {
 
         $CAStandardFound = ($ComputedStandards.Keys.Where({ $_ -like '*ConditionalAccessTemplate*' }, 'First').Count -gt 0)
         if ($CAStandardFound) {
-            $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+            $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -Preset Entra
             if (-not $TestResult) {
                 $CAKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*ConditionalAccessTemplate*' })
                 $BulkFields = [System.Collections.Generic.List[object]]::new()

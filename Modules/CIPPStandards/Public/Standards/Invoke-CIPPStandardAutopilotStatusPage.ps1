@@ -44,7 +44,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotStatusPage' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutopilotStatusPage' -TenantFilter $Tenant -Preset Intune
 
     # Get current Autopilot enrollment status page configuration
 

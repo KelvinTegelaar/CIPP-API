@@ -17,7 +17,7 @@ function Set-CIPPDBCachePIMSettings {
     )
 
     try {
-        $TestResult = Test-CIPPStandardLicense -StandardName 'PIMSettingsCache' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
+        $TestResult = Test-CIPPStandardLicense -StandardName 'PIMSettingsCache' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog
 
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium P2 license, skipping PIM' -sev Debug

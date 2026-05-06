@@ -38,7 +38,7 @@ function Invoke-CIPPStandardMDMScope {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'MDMScope' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'MDMScope' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

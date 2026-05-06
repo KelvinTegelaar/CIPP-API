@@ -37,7 +37,7 @@ function Invoke-CIPPStandardAutoArchiveMailbox {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchiveMailbox' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchiveMailbox' -TenantFilter $Tenant -Preset Exchange
 
     if ($TestResult -eq $false) {
         return $true

@@ -40,7 +40,7 @@ function Invoke-CIPPStandardintuneDeviceReg {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceReg' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'intuneDeviceReg' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

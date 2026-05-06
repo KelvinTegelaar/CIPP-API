@@ -10,13 +10,17 @@ function Test-CIPPStandardLicense {
     .PARAMETER TenantFilter
         The tenant to check licensing for
     .PARAMETER RequiredCapabilities
-        Array of required capabilities for the standard
+        Array of required capabilities for the standard. Can be combined with Preset for edge cases.
+    .PARAMETER Preset
+        One or more predefined capability sets to check for the standard
     .FUNCTIONALITY
         Internal
     .EXAMPLE
         Test-CIPPStandardLicense -StandardName "ConditionalAccessTemplate" -TenantFilter "contoso.onmicrosoft.com" -RequiredCapabilities @('AADPremiumService')
     .EXAMPLE
         Test-CIPPStandardLicense -StandardName "SafeLinksPolicy" -TenantFilter "contoso.onmicrosoft.com" -RequiredCapabilities @('DEFENDER_FOR_OFFICE_365_PLAN_1', 'DEFENDER_FOR_OFFICE_365_PLAN_2')
+    .EXAMPLE
+        Test-CIPPStandardLicense -StandardName "TeamsGuestAccess" -TenantFilter "contoso.onmicrosoft.com" -Preset Teams
     #>
     [CmdletBinding()]
     param(
@@ -26,12 +30,43 @@ function Test-CIPPStandardLicense {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string[]]$RequiredCapabilities,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Exchange', 'SharePoint', 'Intune', 'Entra', 'EntraP2', 'Teams', 'Compliance')]
+        [string[]]$Preset,
 
         [Parameter(Mandatory = $false)]
         [switch]$SkipLog
     )
+
+    $Presets = @{
+        Exchange   = @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE',
+            'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV',
+            'EXCHANGE_LITE')
+        SharePoint = @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE',
+            'SHAREPOINTENTERPRISE_EDU', 'SHAREPOINTENTERPRISE_GOV',
+            'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
+        Intune     = @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+        Entra      = @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+        EntraP2    = @('AAD_PREMIUM_P2')
+        Teams      = @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
+        Compliance = @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2')
+    }
+
+    if ((!$Preset -or $Preset.Count -eq 0) -and (!$RequiredCapabilities -or $RequiredCapabilities.Count -eq 0)) {
+        throw 'Test-CIPPStandardLicense requires either -Preset or -RequiredCapabilities.'
+    }
+
+    if ($Preset) {
+        $RequiredCapabilities = @(
+            $RequiredCapabilities
+            foreach ($CapabilityPreset in $Preset) {
+                $Presets[$CapabilityPreset]
+            }
+        ) | Where-Object { $_ } | Select-Object -Unique
+    }
 
     try {
         $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
