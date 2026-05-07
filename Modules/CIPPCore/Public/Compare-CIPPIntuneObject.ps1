@@ -12,7 +12,7 @@ function Compare-CIPPIntuneObject {
         [Parameter(Mandatory = $false)]
         [string[]]$CompareType = @()
     )
-    if ($CompareType -ne 'Catalog') {
+    if ($CompareType -notcontains 'Catalog') {
         $defaultExcludeProperties = @(
             'id',
             'createdDateTime',
