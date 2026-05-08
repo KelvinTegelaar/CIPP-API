@@ -18,14 +18,19 @@ function Invoke-ExecQuarantineManagement {
 
         if ($ActionType -eq 'Release') {
             $params['ReleaseToAll'] = $true
+            if ($Request.Body.Identity -is [string]) {
+                $params['Identity'] = $Request.Body.Identity
+            } else {
+                $params['Identities'] = $Request.Body.Identity
+                $params['Identity'] = '000'
+            }
         } else {
             $params['ActionType'] = $ActionType
-        }
-
-        if ($Request.Body.Identity -is [string]) {
-            $params['Identity'] = $Request.Body.Identity
-        } else {
-            $params['Identities'] = $Request.Body.Identity
+            if ($Request.Body.Identity -is [string]) {
+                $params['Identities'] = @($Request.Body.Identity)
+            } else {
+                $params['Identities'] = $Request.Body.Identity
+            }
             $params['Identity'] = '000'
         }
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $params

@@ -62,6 +62,7 @@ function Push-DomainAnalyserDomain {
         MSCNAMEDKIMSelectors   = ''
         EnterpriseEnrollment   = ''
         EnterpriseRegistration = ''
+        AutoDiscover           = ''
         Score                  = ''
         MaximumScore           = 160
         ScorePercentage        = ''
@@ -292,6 +293,26 @@ function Push-DomainAnalyserDomain {
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Enterprise Registration CNAME error for $Domain" -LogData (Get-CippException -Exception $_) -sev Error
     }
     #EndRegion Intune Enrollment CNAME Check
+
+    #Region AutoDiscover Check
+    try {
+        $AutoDiscoverRecord = Read-AutoDiscoverRecord -Domain $Domain
+        $AutoDiscoverFailCount = $AutoDiscoverRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
+        $AutoDiscoverWarnCount = $AutoDiscoverRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+        if ($AutoDiscoverFailCount -eq 0 -and $AutoDiscoverWarnCount -eq 0) {
+            $Result.AutoDiscover = 'Correct'
+        } elseif ($AutoDiscoverFailCount -eq 0) {
+            $Result.AutoDiscover = "$($AutoDiscoverRecord.RecordType): $($AutoDiscoverRecord.Record)"
+            $ScoreExplanation.Add("AutoDiscover $($AutoDiscoverRecord.RecordType) record points to unexpected target") | Out-Null
+        } else {
+            $Result.AutoDiscover = 'No Record'
+            $ScoreExplanation.Add('No AutoDiscover DNS record found') | Out-Null
+        }
+    } catch {
+        $Result.AutoDiscover = 'Error'
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "AutoDiscover check error for $Domain" -LogData (Get-CippException -Exception $_) -sev Error
+    }
+    #EndRegion AutoDiscover Check
 
     #Region MSCNAME DKIM Records
     # Get Microsoft DKIM CNAME selector Records

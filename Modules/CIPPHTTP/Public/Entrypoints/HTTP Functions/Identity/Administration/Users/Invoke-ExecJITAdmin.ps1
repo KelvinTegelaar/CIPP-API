@@ -63,6 +63,7 @@ function Invoke-ExecJITAdmin {
                 'FirstName'         = $Request.Body.FirstName
                 'LastName'          = $Request.Body.LastName
                 'UserPrincipalName' = $Username
+                'UsageLocation'     = $Request.Body.usageLocation
             }
             Expiration   = $Expiration
             StartDate    = $Start
