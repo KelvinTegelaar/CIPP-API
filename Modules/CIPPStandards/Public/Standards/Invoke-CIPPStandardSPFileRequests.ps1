@@ -157,8 +157,8 @@ function Invoke-CIPPStandardSPFileRequests {
         $CurrentValue = @{
             CoreRequestFilesLinkEnabled              = $CurrentState.CoreRequestFilesLinkEnabled
             OneDriveRequestFilesLinkEnabled          = $CurrentState.OneDriveRequestFilesLinkEnabled
-            CoreRequestFilesLinkExpirationInDays     = $CurrentState.CoreRequestFilesLinkExpirationInDays
-            OneDriveRequestFilesLinkExpirationInDays = $CurrentState.OneDriveRequestFilesLinkExpirationInDays
+            CoreRequestFilesLinkExpirationInDays     = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $CurrentState.CoreRequestFilesLinkExpirationInDays } else { $null }
+            OneDriveRequestFilesLinkExpirationInDays = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $CurrentState.OneDriveRequestFilesLinkExpirationInDays } else { $null }
             SharingCapability                        = $SharingCapabilityEnum[$CurrentState.SharingCapability]
         }
         $ExpectedValue = @{
