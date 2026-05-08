@@ -7,13 +7,13 @@
     </TN>
     <MS>
       <S N="Name">DNSHealth</S>
-      <S N="Version">1.1.6</S>
+      <S N="Version">1.1.8</S>
       <S N="Type">Module</S>
       <S N="Description">CIPP DNS Health Check Module</S>
       <S N="Author">John Duprey</S>
       <S N="CompanyName">johnduprey</S>
       <S N="Copyright">2023 John Duprey</S>
-      <DT N="PublishedDate">2026-04-24T17:42:26-04:00</DT>
+      <DT N="PublishedDate">2026-05-08T15:46:09-04:00</DT>
       <Nil N="InstalledDate" />
       <Nil N="UpdatedDate" />
       <Nil N="LicenseUri" />
@@ -36,18 +36,14 @@
         </TN>
         <DCT>
           <En>
-            <S N="Key">Cmdlet</S>
+            <S N="Key">Workflow</S>
             <Obj N="Value" RefId="3">
               <TNRef RefId="1" />
               <LST />
             </Obj>
           </En>
           <En>
-            <S N="Key">RoleCapability</S>
-            <Ref N="Value" RefId="3" />
-          </En>
-          <En>
-            <S N="Key">Command</S>
+            <S N="Key">Function</S>
             <Obj N="Value" RefId="4">
               <TNRef RefId="1" />
               <LST>
@@ -55,6 +51,7 @@
                 <S>Read-MtaStsPolicy</S>
                 <S>Add-MailProvider</S>
                 <S>Get-MailProvider</S>
+                <S>Read-AutoDiscoverRecord</S>
                 <S>Read-DkimRecord</S>
                 <S>Read-MtaStsRecord</S>
                 <S>Read-MXRecord</S>
@@ -72,15 +69,15 @@
             </Obj>
           </En>
           <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
             <S N="Key">DscResource</S>
             <Ref N="Value" RefId="3" />
           </En>
           <En>
-            <S N="Key">Workflow</S>
-            <Ref N="Value" RefId="3" />
-          </En>
-          <En>
-            <S N="Key">Function</S>
+            <S N="Key">Command</S>
             <Obj N="Value" RefId="5">
               <TNRef RefId="1" />
               <LST>
@@ -88,6 +85,7 @@
                 <S>Read-MtaStsPolicy</S>
                 <S>Add-MailProvider</S>
                 <S>Get-MailProvider</S>
+                <S>Read-AutoDiscoverRecord</S>
                 <S>Read-DkimRecord</S>
                 <S>Read-MtaStsRecord</S>
                 <S>Read-MXRecord</S>
@@ -103,6 +101,10 @@
                 <S>Test-MtaSts</S>
               </LST>
             </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="3" />
           </En>
         </DCT>
       </Obj>
@@ -127,24 +129,24 @@
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
           <S N="versionDownloadCount">0</S>
-          <S N="downloadCount">477</S>
-          <S N="packageSize">31557</S>
-          <S N="published">4/24/2026 5:42:26 PM -04:00</S>
-          <S N="created">4/24/2026 5:42:26 PM -04:00</S>
-          <S N="lastUpdated">4/24/2026 5:42:26 PM -04:00</S>
-          <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Add-MailProvider PSCommand_Add-MailProvider PSFunction_Get-MailProvider PSCommand_Get-MailProvider PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Remove-MailProvider PSCommand_Remove-MailProvider PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
+          <S N="downloadCount">495</S>
+          <S N="packageSize">32431</S>
+          <S N="published">5/8/2026 3:46:09 PM -04:00</S>
+          <S N="created">5/8/2026 3:46:09 PM -04:00</S>
+          <S N="lastUpdated">5/8/2026 3:46:09 PM -04:00</S>
+          <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Add-MailProvider PSCommand_Add-MailProvider PSFunction_Get-MailProvider PSCommand_Get-MailProvider PSFunction_Read-AutoDiscoverRecord PSCommand_Read-AutoDiscoverRecord PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Remove-MailProvider PSCommand_Remove-MailProvider PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2026-04-24T17:42:26Z</S>
-          <S N="NormalizedVersion">1.1.6</S>
+          <S N="updated">2026-05-08T15:46:09Z</S>
+          <S N="NormalizedVersion">1.1.8</S>
           <S N="Authors">John Duprey</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">DNSHealth.nuspec|MailProviders\Microsoft365.json|MailProviders\Sophos.json|DNSHealth.psd1|MailProviders\SymantecCloud.json|MailProviders\SpamTitan.json|MailProviders\AppRiver.json|DNSHealth.psm1|MailProviders\Intermedia.json|MailProviders\_template.json|MailProviders\BarracudaESS.json|MailProviders\Reflexion.json|MailProviders\HornetSecurity.json|MailProviders\Google.json|MailProviders\Proofpoint.json|MailProviders\Null.json|MailProviders\Mimecast.json</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\SymantecCloud.json|MailProviders\Microsoft365.json|MailProviders\Sophos.json|DNSHealth.psd1|MailProviders\Intermedia.json|MailProviders\SpamTitan.json|MailProviders\AppRiver.json|DNSHealth.psm1|MailProviders\Reflexion.json|MailProviders\_template.json|MailProviders\BarracudaESS.json|MailProviders\Null.json|MailProviders\HornetSecurity.json|MailProviders\Google.json|MailProviders\Proofpoint.json|MailProviders\Mimecast.json</S>
           <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
           <S N="PowerShellVersion">7.0</S>
         </MS>
       </Obj>
-      <S N="InstalledLocation">/Users/johnduprey/GitHub/CIPP Workspace/CIPP-API/Modules/DNSHealth/1.1.6</S>
+      <S N="InstalledLocation">/Users/johnduprey/GitHub/CIPP Workspace/CIPP-API/Modules/DNSHealth/1.1.8</S>
     </MS>
   </Obj>
 </Objs>

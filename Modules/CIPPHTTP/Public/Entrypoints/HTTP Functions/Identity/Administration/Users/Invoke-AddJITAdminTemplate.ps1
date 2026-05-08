@@ -112,8 +112,8 @@ function Invoke-AddJITAdminTemplate {
             if (![string]::IsNullOrWhiteSpace($Request.Body.defaultUserName)) {
                 $TemplateObject.defaultUserName = $Request.Body.defaultUserName
             }
-            if (![string]::IsNullOrWhiteSpace($Request.Body.defaultUsageLocation)) {
-                $TemplateObject.defaultUsageLocation = $Request.Body.defaultUsageLocation
+            if ($Request.Body.defaultUsageLocation) {
+                $TemplateObject.defaultUsageLocation = $Request.Body.defaultUsageLocation.value ?? $Request.Body.defaultUsageLocation
             }
 
             # defaultDomain is only saved for specific tenant templates (not AllTenants)
