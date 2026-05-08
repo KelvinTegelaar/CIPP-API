@@ -212,6 +212,7 @@ function Invoke-ListTests {
             Custom   = @{
                 Passed         = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Passed' }).Count
                 Failed         = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Failed' }).Count
+                NeedsAttention = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Investigate' }).Count
                 Skipped        = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Skipped' }).Count
                 Informational  = @($CustomResultsForCounts | Where-Object { $_.Status -eq 'Informational' }).Count
                 Total          = $CustomTotal
