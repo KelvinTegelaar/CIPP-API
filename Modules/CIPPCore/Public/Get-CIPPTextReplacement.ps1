@@ -17,7 +17,7 @@ function Get-CIPPTextReplacement {
         [switch]$EscapeForJson
     )
     if ($Text -isnot [string]) {
-        return $Text
+        return , $Text
     }
 
     # Without a tenant context, skip replacement lookups and return input as-is.

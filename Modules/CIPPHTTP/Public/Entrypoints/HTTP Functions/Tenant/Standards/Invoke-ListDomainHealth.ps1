@@ -133,6 +133,15 @@ function Invoke-ListDomainHealth {
                         }
                         $Body = Test-MtaSts @HttpsQuery
                     }
+                    'ReadAutoDiscover' {
+                        $AutoDiscoverQuery = @{
+                            Domain = $Request.Query.Domain
+                        }
+                        if ($Request.Query.ExpectedTarget) {
+                            $AutoDiscoverQuery.ExpectedTarget = $Request.Query.ExpectedTarget
+                        }
+                        $Body = Read-AutoDiscoverRecord @AutoDiscoverQuery
+                    }
                 }
             } else {
                 $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }

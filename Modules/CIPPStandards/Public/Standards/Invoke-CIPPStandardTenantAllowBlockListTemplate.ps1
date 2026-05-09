@@ -63,16 +63,42 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
         })
 
     if ($Settings.remediate -eq $true) {
+        # Track entries submitted across templates to handle overlapping entries without relying on Exchange replication
+        $SubmittedEntries = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.HashSet[string]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
         foreach ($TemplateData in $ResolvedTemplates) {
             try {
                 $Entries = @($TemplateData.entries -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+                $ListType = [string]$TemplateData.listType
+
+                # Get existing entries to avoid duplicate errors that block the entire batch
+                if (-not $SubmittedEntries.ContainsKey($ListType)) {
+                    $SubmittedEntries[$ListType] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    try {
+                        $ExistingItems = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{
+                            ListType = $ListType
+                        }
+                        foreach ($Item in @($ExistingItems)) {
+                            [void]$SubmittedEntries[$ListType].Add($Item.Value)
+                        }
+                    } catch {
+                        # If we can't fetch existing items, continue with empty set
+                    }
+                }
+
+                $NewEntries = @($Entries | Where-Object { -not $SubmittedEntries[$ListType].Contains($_) })
+
+                if ($NewEntries.Count -eq 0) {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "All entries from Tenant Allow/Block List template '$($TemplateData.templateName)' already exist for $Tenant" -sev 'Info'
+                    continue
+                }
 
                 $ExoParams = @{
                     tenantid  = $Tenant
                     cmdlet    = 'New-TenantAllowBlockListItems'
                     cmdParams = @{
-                        Entries                  = $Entries
-                        ListType                 = [string]$TemplateData.listType
+                        Entries                  = $NewEntries
+                        ListType                 = $ListType
                         Notes                    = [string]$TemplateData.notes
                         $TemplateData.listMethod = [bool]$true
                     }
@@ -85,14 +111,13 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
                 }
 
                 New-ExoRequest @ExoParams
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed Tenant Allow/Block List template '$($TemplateData.templateName)' with entries: $($TemplateData.entries)" -sev 'Info'
+                foreach ($Entry in $NewEntries) {
+                    [void]$SubmittedEntries[$ListType].Add($Entry)
+                }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed Tenant Allow/Block List template '$($TemplateData.templateName)' with entries: $($NewEntries -join ', ')" -sev 'Info'
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                if ($ErrorMessage -like '*already exists*') {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Tenant Allow/Block List entries from template '$($TemplateData.templateName)' already exist for $Tenant" -sev 'Info'
-                } else {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to deploy Tenant Allow/Block List template '$($TemplateData.templateName)' for $Tenant. Error: $ErrorMessage" -sev 'Error'
-                }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to deploy Tenant Allow/Block List template '$($TemplateData.templateName)' for $Tenant. Error: $ErrorMessage" -sev 'Error'
             }
         }
     }

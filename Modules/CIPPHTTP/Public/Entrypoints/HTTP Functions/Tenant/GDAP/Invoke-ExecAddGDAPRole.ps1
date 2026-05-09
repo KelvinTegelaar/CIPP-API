@@ -101,10 +101,10 @@ function Invoke-ExecAddGDAPRole {
                 if ($GroupName -in $ExistingGroups.displayName) {
                     @{
                         PartitionKey     = 'Roles'
-                        RowKey           = ($ExistingGroups | Where-Object -Property displayName -EQ $GroupName).id
+                        RowKey           = ($ExistingGroups | Where-Object -Property displayName -EQ $GroupName | Select-Object -First 1).id
                         RoleName         = $RoleName
                         GroupName        = $GroupName
-                        GroupId          = ($ExistingGroups | Where-Object -Property displayName -EQ $GroupName).id
+                        GroupId          = ($ExistingGroups | Where-Object -Property displayName -EQ $GroupName | Select-Object -First 1).id
                         roleDefinitionId = $Value
                     }
                     $Results.Add("$GroupName already exists")

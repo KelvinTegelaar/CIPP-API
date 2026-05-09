@@ -12,12 +12,14 @@ function Invoke-ListIntunePolicy {
     $TenantFilter = $Request.Query.TenantFilter
     $id = $Request.Query.ID
     $URLName = $Request.Query.URLName
+    $DefinitionIds = $Request.Query.DefinitionIds
     $UseReportDB = $Request.Query.UseReportDB
     $IncludeSettingDefinitions = [System.Convert]::ToBoolean($Request.Query.IncludeSettingDefinitions ?? 'false')
+    $IsGroupPolicyDefinitionLookup = ($URLName -ieq 'GroupPolicyDefinitions') -and -not [string]::IsNullOrWhiteSpace($DefinitionIds)
 
     try {
         # Return cached report data when AllTenants is requested or UseReportDB is set
-        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+        if (-not $IsGroupPolicyDefinitionLookup -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
             try {
                 $GraphRequest = Get-CIPPIntunePolicyReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
@@ -31,8 +33,30 @@ function Invoke-ListIntunePolicy {
                 })
         }
 
-        if ($ID) {
-            if ($URLName -ieq 'ConfigurationPolicies' -or $URLName -ieq 'configurationPolicies') {
+        if ($IsGroupPolicyDefinitionLookup) {
+            $DefinitionIdList = @($DefinitionIds -split ',' | ForEach-Object { $_.Trim() } | Where-Object { Test-IsGuid -String $_ } | Select-Object -Unique)
+
+            if ($DefinitionIdList.Count -eq 0) {
+                $GraphRequest = @()
+            } else {
+                $DefinitionRequests = [System.Collections.Generic.List[object]]::new()
+                $DefinitionIndex = 0
+
+                foreach ($DefinitionId in $DefinitionIdList) {
+                    $RequestId = "definition$DefinitionIndex"
+                    $DefinitionRequests.Add([PSCustomObject]@{
+                            id     = $RequestId
+                            method = 'GET'
+                            url    = "/deviceManagement/groupPolicyDefinitions('$DefinitionId')?`$expand=presentations"
+                        })
+                    $DefinitionIndex++
+                }
+
+                $DefinitionResults = New-GraphBulkRequest -Requests @($DefinitionRequests) -tenantid $TenantFilter
+                $GraphRequest = $DefinitionResults | Where-Object { $_.status -eq 200 -and $_.body.id } | ForEach-Object { $_.body }
+            }
+        } elseif ($ID) {
+            if ($URLName -ieq 'ConfigurationPolicies') {
                 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$ID')?`$expand=settings" -tenantid $TenantFilter
 
                 if ($IncludeSettingDefinitions -and $GraphRequest.settings) {
@@ -61,6 +85,47 @@ function Invoke-ListIntunePolicy {
                             if ($Setting) {
                                 $Definitions = @($DefinitionResult.body.value ?? $DefinitionResult.body)
                                 $Setting | Add-Member -NotePropertyName settingDefinitions -NotePropertyValue $Definitions -Force
+                            }
+                        }
+                    }
+                }
+            } elseif ($URLName -ieq 'GroupPolicyConfigurations') {
+                $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$ID')" -tenantid $TenantFilter
+
+                if ($IncludeSettingDefinitions) {
+                    $DefinitionValuesResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$ID')/definitionValues?`$expand=definition" -tenantid $TenantFilter
+                    $DefinitionValues = @($DefinitionValuesResponse.value ?? $DefinitionValuesResponse)
+                    $GraphRequest | Add-Member -NotePropertyName definitionValues -NotePropertyValue $DefinitionValues -Force
+
+                    if ($DefinitionValues.Count -gt 0) {
+                        $PresentationRequests = [System.Collections.Generic.List[object]]::new()
+                        $DefinitionValueLookup = @{}
+                        $DefinitionValueIdMap = @{}
+                        $DefinitionValueIndex = 0
+
+                        foreach ($DefinitionValue in $DefinitionValues) {
+                            if ($DefinitionValue.id) {
+                                $RequestId = "definitionValue$DefinitionValueIndex"
+                                $DefinitionValueIdMap[$RequestId] = $DefinitionValue.id
+                                $DefinitionValueLookup[$DefinitionValue.id] = $DefinitionValue
+                                $PresentationRequests.Add([PSCustomObject]@{
+                                        id     = $RequestId
+                                        method = 'GET'
+                                        url    = "/deviceManagement/groupPolicyConfigurations('$ID')/definitionValues('$($DefinitionValue.id)')/presentationValues?`$expand=presentation"
+                                    })
+                                $DefinitionValueIndex++
+                            }
+                        }
+
+                        if ($PresentationRequests.Count -gt 0) {
+                            $PresentationResults = New-GraphBulkRequest -Requests @($PresentationRequests) -tenantid $TenantFilter
+                            foreach ($PresentationResult in $PresentationResults) {
+                                $DefinitionValueId = $DefinitionValueIdMap[$PresentationResult.id]
+                                $DefinitionValue = $DefinitionValueLookup[$DefinitionValueId]
+                                if ($DefinitionValue) {
+                                    $PresentationValues = @($PresentationResult.body.value ?? $PresentationResult.body)
+                                    $DefinitionValue | Add-Member -NotePropertyName presentationValues -NotePropertyValue $PresentationValues -Force
+                                }
                             }
                         }
                     }

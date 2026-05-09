@@ -231,7 +231,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 DeliverMessageAfterScan    = $CurrentState.DeliverMessageAfterScan
                 DisableUrlRewrite          = $CurrentState.DisableUrlRewrite
                 EnableOrganizationBranding = $CurrentState.EnableOrganizationBranding
-                DoNotRewriteUrls           = $CurrentState.DoNotRewriteUrls
+                DoNotRewriteUrls           = @($CurrentState.DoNotRewriteUrls | Sort-Object)
             }
             $ExpectedValue = @{
                 Name                       = $PolicyName
@@ -245,7 +245,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 DeliverMessageAfterScan    = $true
                 DisableUrlRewrite          = $Settings.DisableUrlRewrite
                 EnableOrganizationBranding = $Settings.EnableOrganizationBranding
-                DoNotRewriteUrls           = $Settings.DoNotRewriteUrls.value ?? @()
+                DoNotRewriteUrls           = @(($Settings.DoNotRewriteUrls.value ?? @()) | Sort-Object)
             }
             Set-CIPPStandardsCompareField -FieldName 'standards.SafeLinksPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
         }

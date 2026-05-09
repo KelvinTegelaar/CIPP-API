@@ -40,12 +40,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDMARCToMOERA' -Settings $Settings
 
-    $RecordModel = [PSCustomObject]@{
-        HostName = '_dmarc'
-        TtlValue = 3600
-        Type     = 'TXT'
-        Value    = $Settings.RecordValue.Value ?? 'v=DMARC1; p=reject;'
-    }
+    $DesiredValue = $Settings.RecordValue.Value ?? 'v=DMARC1; p=reject;'
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
@@ -56,54 +51,21 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
         $CurrentInfo = foreach ($Domain in $Domains) {
             # Get current DNS records that matches _dmarc hostname and TXT type
-            $RecordsResponse = New-GraphGetRequest -TenantID $Tenant -Uri "https://graph.microsoft.com/beta/domains/$($Domain)/serviceConfigurationRecords"
-            $AllRecords = @($RecordsResponse)
-            $CurrentRecords = $AllRecords | Where-Object {
-                $_.recordType -ieq 'Txt' -and ($_.label -ieq '_dmarc' -or $_.label -ieq "_dmarc.$($Domain)")
-            }
-            Write-Information "Found $($CurrentRecords.count) DMARC records for domain $($Domain)"
+            $RecordsResponse = Read-DmarcPolicy -Domain $Domain
+            $CurrentRecord = $RecordsResponse.Record
+            Write-Information "Found DMARC record for domain $($Domain)"
 
-            if ($CurrentRecords.count -eq 0) {
-                #record not found, return a model with Match set to false
+            if (-not $CurrentRecord) {
                 [PSCustomObject]@{
                     DomainName    = $Domain
                     Match         = $false
                     CurrentRecord = $null
                 }
             } else {
-                foreach ($CurrentRecord in $CurrentRecords) {
-                    # Create variable matching the RecordModel used for comparison
-                    $CurrentRecordModel = [PSCustomObject]@{
-                        HostName = '_dmarc'
-                        TtlValue = $CurrentRecord.ttl
-                        Type     = 'TXT'
-                        Value    = $CurrentRecord.text
-                    }
-
-                    # Compare the current record with the expected record model
-                    if (!(Compare-Object -ReferenceObject $RecordModel -DifferenceObject $CurrentRecordModel -Property HostName, TtlValue, Type, Value)) {
-                        [PSCustomObject]@{
-                            DomainName    = $Domain
-                            Match         = $true
-                            CurrentRecord = [PSCustomObject]@{
-                                HostName = '_dmarc'
-                                TtlValue = $CurrentRecord.ttl
-                                Type     = 'TXT'
-                                Value    = $CurrentRecord.text
-                            }
-                        }
-                    } else {
-                        [PSCustomObject]@{
-                            DomainName    = $Domain
-                            Match         = $false
-                            CurrentRecord = [PSCustomObject]@{
-                                HostName = '_dmarc'
-                                TtlValue = $CurrentRecord.ttl
-                                Type     = 'TXT'
-                                Value    = $CurrentRecord.text
-                            }
-                        }
-                    }
+                [PSCustomObject]@{
+                    DomainName    = $Domain
+                    Match         = $CurrentRecord -eq $DesiredValue
+                    CurrentRecord = $CurrentRecord
                 }
             }
         }

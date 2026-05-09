@@ -36,22 +36,43 @@ function Invoke-CIPPStandardAutoAddProxy {
         $QueueItem
     )
 
-    try {
-        $Domains = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-AcceptedDomain' | Select-Object -ExpandProperty DomainName
-        $AllMailboxes = New-ExoRequest -TenantId $Tenant -Cmdlet 'Get-Mailbox'
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the AutoAddProxy state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
+    if ($TestResult -eq $false) {
+        return $true
+    }
+
+    # Re-run protection — skip if already executed within the last 24 hours
+    $Rerun = Test-CIPPRerun -Tenant $Tenant -API 'AutoAddProxy' -Interval 86400
+    if ($Rerun) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'AutoAddProxy recently executed. Skipping to prevent duplicate execution.' -sev Debug
+        return $true
+    }
+
+    # Use the reporting DB cache for both accepted domains and mailboxes
+    $Domains = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoAcceptedDomains' | Select-Object -ExpandProperty DomainName)
+    if ($Domains.Count -eq 0) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No cached accepted domains found. Ensure the ExoAcceptedDomains cache has been populated.' -sev Error
         return
     }
 
+    $AllMailboxes = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Mailboxes')
+    if ($AllMailboxes.Count -eq 0) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No cached mailboxes found. Ensure the mailbox cache has been populated.' -sev Error
+        return
+    }
+
+    # Build a list of all email addresses per mailbox from the cache fields
+    # Cache stores: primarySmtpAddress, AdditionalEmailAddresses (comma-separated lowercase smtp aliases)
     $MissingProxies = 0
     foreach ($Domain in $Domains) {
-        $ProcessMailboxes = $AllMailboxes | Where-Object {
-            $addresses = @($_.EmailAddresses) -replace '^[^:]+:'    # remove SPO:, SMTP:, etc.
-            $hasDomain = $addresses | Where-Object { $_ -like "*@$Domain" }
-            if ($hasDomain) { return $false } else { return $true }
-        }
+        $ProcessMailboxes = @($AllMailboxes | Where-Object {
+            $AllAddresses = @($_.primarySmtpAddress)
+            if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
+                $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
+            }
+            $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
+            -not $HasDomain
+        })
         $MissingProxies += $ProcessMailboxes.Count
     }
 
@@ -62,7 +83,6 @@ function Invoke-CIPPStandardAutoAddProxy {
     $CurrentValue = [PSCustomObject]@{
         MissingProxies = $MissingProxies
     }
-
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
@@ -83,19 +103,25 @@ function Invoke-CIPPStandardAutoAddProxy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes already have proxy addresses for all domains' -sev Info
         } else {
             foreach ($Domain in $Domains) {
-                $ProcessMailboxes = $AllMailboxes | Where-Object {
-                    $addresses = @($_.EmailAddresses) -replace '^[^:]+:'    # remove SPO:, SMTP:, etc.
-                    $hasDomain = $addresses | Where-Object { $_ -like "*@$Domain" }
-                    if ($hasDomain) { return $false } else { return $true }
-                }
+                $ProcessMailboxes = @($AllMailboxes | Where-Object {
+                    $AllAddresses = @($_.primarySmtpAddress)
+                    if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
+                        $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
+                    }
+                    $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
+                    -not $HasDomain
+                })
 
                 $bulkRequest = foreach ($Mailbox in $ProcessMailboxes) {
-                    $LocalPart = $Mailbox.UserPrincipalName -split '@' | Select-Object -First 1
+                    if ([string]::IsNullOrWhiteSpace($Mailbox.UPN)) { continue }
+                    $LocalPart = $Mailbox.UPN -split '@' | Select-Object -First 1
                     $NewAlias = "$LocalPart@$Domain"
                     @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
-                            Parameters = @{Identity = $Mailbox.Identity ; EmailAddresses = @{
+                            Parameters = @{
+                                Identity       = $Mailbox.UPN
+                                EmailAddresses = @{
                                     '@odata.type' = '#Exchange.GenericHashTable'
                                     Add           = "smtp:$NewAlias"
                                 }
@@ -103,11 +129,13 @@ function Invoke-CIPPStandardAutoAddProxy {
                         }
                     }
                 }
-                $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($bulkRequest)
-                foreach ($Result in $BatchResults) {
-                    if ($Result.error) {
-                        $ErrorMessage = Get-CippException -Exception $Result.error
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                if ($bulkRequest) {
+                    $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($bulkRequest)
+                    foreach ($Result in $BatchResults) {
+                        if ($Result.error) {
+                            $ErrorMessage = Get-CippException -Exception $Result.error
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply proxy address to $($Result.error.target) Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                        }
                     }
                 }
             }

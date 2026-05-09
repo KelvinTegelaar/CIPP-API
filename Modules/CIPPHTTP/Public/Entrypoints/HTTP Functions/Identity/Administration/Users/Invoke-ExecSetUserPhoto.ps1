@@ -64,7 +64,7 @@ function Invoke-ExecSetUserPhoto {
             }
 
             # Upload the photo using Graph API
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$userId/photo/`$value" -tenantid $tenantFilter -type PATCH -body $photoBytes -ContentType 'image/jpeg' -NoAuthCheck $true
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$userId/photo/`$value" -tenantid $tenantFilter -type PUT -body $photoBytes -ContentType 'image/jpeg'
 
             $Results.Add('Successfully set user profile picture.')
             Write-LogMessage -API $APIName -tenant $tenantFilter -headers $Headers -message "Set profile picture for user $userId" -Sev Info

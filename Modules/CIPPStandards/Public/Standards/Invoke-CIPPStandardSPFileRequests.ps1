@@ -48,8 +48,15 @@ function Invoke-CIPPStandardSPFileRequests {
         return $true
     }
 
+    $SharingCapabilityEnum = @{
+        0L = 'Disabled'
+        1L = 'External Users Only'
+        2L = 'External Users and Guests (Anyone)'
+        3L = 'Existing External Users Only'
+    }
+
     try {
-        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, CoreRequestFilesLinkEnabled, OneDriveRequestFilesLinkEnabled, CoreRequestFilesLinkExpirationInDays, OneDriveRequestFilesLinkExpirationInDays
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, CoreRequestFilesLinkEnabled, OneDriveRequestFilesLinkEnabled, CoreRequestFilesLinkExpirationInDays, OneDriveRequestFilesLinkExpirationInDays, SharingCapability
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to get current state of SPO tenant details' -sev Error
         return
@@ -61,8 +68,8 @@ function Invoke-CIPPStandardSPFileRequests {
         return
     }
 
-    $WantedState = $Settings.state
-    $ExpirationDays = $Settings.expirationDays
+    $WantedState = [bool]$Settings.state
+    $ExpirationDays = if ($null -ne $Settings.expirationDays) { [int]$Settings.expirationDays } else { $null }
     $HumanReadableState = if ($WantedState -eq $true) { 'enabled' } else { 'disabled' }
 
     # Check if current state matches desired state
@@ -83,25 +90,39 @@ function Invoke-CIPPStandardSPFileRequests {
     if ($Settings.remediate -eq $true) {
 
         if ($AllSettingsCorrect -eq $false) {
-            try {
-                $Properties = @{
-                    CoreRequestFilesLinkEnabled     = $WantedState
-                    OneDriveRequestFilesLinkEnabled = $WantedState
+            if ($CurrentState.SharingCapability -ne 2) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Cannot set File Requests to $HumanReadableState because the Tenant sharing level is set to $($SharingCapabilityEnum[$CurrentState.SharingCapability]). The sharing level must be set to 'External Users and Guests (Anyone)' to remediate this standard. There may be a conflicting standard preventing this." -sev Error
+            } else {
+                try {
+                    $Properties = @{
+                        CoreRequestFilesLinkEnabled     = $WantedState
+                        OneDriveRequestFilesLinkEnabled = $WantedState
+                    }
+
+                    # Add expiration settings if specified and feature is being enabled
+                    if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
+                        $Properties['CoreRequestFilesLinkExpirationInDays'] = $ExpirationDays
+                        $Properties['OneDriveRequestFilesLinkExpirationInDays'] = $ExpirationDays
+                    }
+
+                    $CurrentState | Set-CIPPSPOTenant -Properties $Properties
+
+                    # Reflect the just-applied state in-memory so the report block does not write
+                    # the pre-remediation values into the drift compare field.
+                    $CurrentState.CoreRequestFilesLinkEnabled = $WantedState
+                    $CurrentState.OneDriveRequestFilesLinkEnabled = $WantedState
+                    if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
+                        $CurrentState.CoreRequestFilesLinkExpirationInDays = $ExpirationDays
+                        $CurrentState.OneDriveRequestFilesLinkExpirationInDays = $ExpirationDays
+                    }
+
+                    $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set File Requests to $HumanReadableState$ExpirationMessage" -sev Info
+
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set File Requests to $HumanReadableState. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
-
-                # Add expiration settings if specified and feature is being enabled
-                if ($null -ne $ExpirationDays -and $WantedState -eq $true) {
-                    $Properties['CoreRequestFilesLinkExpirationInDays'] = $ExpirationDays
-                    $Properties['OneDriveRequestFilesLinkExpirationInDays'] = $ExpirationDays
-                }
-
-                $CurrentState | Set-CIPPSPOTenant -Properties $Properties
-
-                $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set File Requests to $HumanReadableState$ExpirationMessage" -sev Info
-            } catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set File Requests to $HumanReadableState. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         } else {
             $ExpirationMessage = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { " with $ExpirationDays day expiration" } else { '' }
@@ -136,14 +157,16 @@ function Invoke-CIPPStandardSPFileRequests {
         $CurrentValue = @{
             CoreRequestFilesLinkEnabled              = $CurrentState.CoreRequestFilesLinkEnabled
             OneDriveRequestFilesLinkEnabled          = $CurrentState.OneDriveRequestFilesLinkEnabled
-            CoreRequestFilesLinkExpirationInDays     = $CurrentState.CoreRequestFilesLinkExpirationInDays
-            OneDriveRequestFilesLinkExpirationInDays = $CurrentState.OneDriveRequestFilesLinkExpirationInDays
+            CoreRequestFilesLinkExpirationInDays     = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $CurrentState.CoreRequestFilesLinkExpirationInDays } else { $null }
+            OneDriveRequestFilesLinkExpirationInDays = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $CurrentState.OneDriveRequestFilesLinkExpirationInDays } else { $null }
+            SharingCapability                        = $SharingCapabilityEnum[$CurrentState.SharingCapability]
         }
         $ExpectedValue = @{
             CoreRequestFilesLinkEnabled              = $WantedState
             OneDriveRequestFilesLinkEnabled          = $WantedState
-            CoreRequestFilesLinkExpirationInDays     = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $ExpirationDays } else { $null }
-            OneDriveRequestFilesLinkExpirationInDays = if ($null -ne $ExpirationDays -and $WantedState -eq $true) { $ExpirationDays } else { $null }
+            CoreRequestFilesLinkExpirationInDays     = if ($null -ne $ExpirationDays) { $ExpirationDays } else { $CurrentState.CoreRequestFilesLinkExpirationInDays }
+            OneDriveRequestFilesLinkExpirationInDays = if ($null -ne $ExpirationDays) { $ExpirationDays } else { $CurrentState.OneDriveRequestFilesLinkExpirationInDays }
+            SharingCapability                        = if ($WantedState -eq $true) { 'External Users and Guests (Anyone)' } else { $SharingCapabilityEnum[$CurrentState.SharingCapability] }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SPFileRequests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }

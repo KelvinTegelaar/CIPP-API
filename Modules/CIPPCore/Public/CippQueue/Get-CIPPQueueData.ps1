@@ -4,6 +4,11 @@ function Get-CIPPQueueData {
     $QueueId = $Request.Query.QueueId ?? $QueueId
     $Reference = $Request.Query.Reference ?? $Reference
 
+    if ($env:CIPPNG -eq 'true') {
+        $json = [Craft.Services.QueueStatusBridge]::GetRunStatus($Reference, $QueueId)
+        return ($json | ConvertFrom-Json)
+    }
+
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
     $3HoursAgo = (Get-Date).ToUniversalTime().AddHours(-3).ToString('yyyy-MM-ddTHH:mm:ssZ')
