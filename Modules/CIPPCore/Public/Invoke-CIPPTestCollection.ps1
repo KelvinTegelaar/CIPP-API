@@ -14,6 +14,8 @@ function Invoke-CIPPTestCollection {
         - ORCA             → Invoke-CippTestORCA*
         - EIDSCA           → Invoke-CippTestEIDSCA*
         - CISA             → Invoke-CippTestCISA*
+        - CIS              → Invoke-CippTestCIS_*
+        - SMB1001          → Invoke-CippTestSMB1001_*
         - CopilotReadiness → Invoke-CippTestCopilotReady*
         - Custom           → Special: enumerates enabled ScriptGuids from DB and calls
                              Invoke-CippTestCustomScripts once per guid (the function
@@ -31,7 +33,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CopilotReadiness', 'GenericTests', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]
@@ -45,6 +47,8 @@ function Invoke-CIPPTestCollection {
         ORCA             = 'Invoke-CippTestORCA*'
         EIDSCA           = 'Invoke-CippTestEIDSCA*'
         CISA             = 'Invoke-CippTestCISA*'
+        CIS              = 'Invoke-CippTestCIS_*'
+        SMB1001          = 'Invoke-CippTestSMB1001_*'
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
         GenericTests     = 'Invoke-CippTestGenericTest*'
     }

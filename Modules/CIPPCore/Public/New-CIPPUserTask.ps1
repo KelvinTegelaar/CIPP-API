@@ -81,13 +81,13 @@ function New-CIPPUserTask {
     }
 
     if ($UserObj.setManager) {
-        $ManagerResult = Set-CIPPManager -User $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
-        $Results.Add($ManagerResult)
+        $ManagerResults = Set-CIPPManager -Users $CreationResults.Username -Manager $UserObj.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($ManagerResults.Result)
     }
 
     if ($UserObj.setSponsor) {
-        $SponsorResult = Set-CIPPSponsor -User $CreationResults.Username -Sponsor $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
-        $Results.Add($SponsorResult)
+        $SponsorResults = Set-CIPPSponsor -Users $CreationResults.Username -Sponsor $UserObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($SponsorResults.Result)
     }
 
     return @{

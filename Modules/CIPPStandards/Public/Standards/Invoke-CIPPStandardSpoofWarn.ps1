@@ -58,6 +58,9 @@ function Invoke-CIPPStandardSpoofWarn {
         return
     }
 
+    # Sanitize AllowList — the API may return @('') instead of @() for an empty list
+    $CurrentInfo.AllowList = @($CurrentInfo.AllowList | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 

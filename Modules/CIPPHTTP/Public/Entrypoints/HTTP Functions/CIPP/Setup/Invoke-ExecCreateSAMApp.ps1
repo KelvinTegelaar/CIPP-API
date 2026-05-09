@@ -14,7 +14,9 @@ function Invoke-ExecCreateSAMApp {
     try {
         $Token = $Request.body
         if ($Token) {
-            $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+            $URL = $Request.headers.origin ?? $Request.headers.referer?.TrimEnd('/')
+            $RedirectUri = "$URL/authredirect"
+            $AuthCallbackUri = "$URL/.auth/callback"
             $TenantId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/organization' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value.id
             #Find Existing app registration
             $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq 'CIPP-SAM'" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value | Select-Object -Last 1
@@ -25,14 +27,14 @@ function Invoke-ExecCreateSAMApp {
                 #remove the entire web object from the app registration
                 $SamManifestFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\SAMManifest.json')
                 $app = Get-Content $SamManifestFile.FullName | ConvertFrom-Json
-                $app.web.redirectUris = @("$($url)/authredirect")
+                $app.web.redirectUris = @($RedirectUri, $AuthCallbackUri)
                 $app = ConvertTo-Json -Depth 15 -Compress -InputObject $app
                 Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method PATCH -Body $app -ContentType 'application/json'
             } else {
                 $state = 'created'
                 $SamManifestFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\SAMManifest.json')
                 $app = Get-Content $SamManifestFile.FullName | ConvertFrom-Json
-                $app.web.redirectUris = @("$($url)/authredirect")
+                $app.web.redirectUris = @($RedirectUri, $AuthCallbackUri)
                 $app = $app | ConvertTo-Json -Depth 15
                 $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body $app -ContentType 'application/json')
                 $attempt = 0
@@ -101,6 +103,10 @@ function Invoke-ExecCreateSAMApp {
                 ApplicationId = $AppId.appId
             }
             Add-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
+
+            # Reload credentials into env vars
+            $null = Get-CIPPAuthentication
+
             $Results = @{'message' = "Successfully $state the application registration. The application ID is $($AppId.appid). You may continue to the next step."; severity = 'success' }
         }
 

@@ -63,6 +63,7 @@ function Invoke-ExecJITAdmin {
                 'FirstName'         = $Request.Body.FirstName
                 'LastName'          = $Request.Body.LastName
                 'UserPrincipalName' = $Username
+                'UsageLocation'     = $Request.Body.usageLocation.value ?? $Request.Body.usageLocation
             }
             Expiration   = $Expiration
             StartDate    = $Start
@@ -128,14 +129,42 @@ function Invoke-ExecJITAdmin {
     #Region TAP creation
     if ($Request.Body.UseTAP) {
         try {
-            if ($Start -gt (Get-Date)) {
-                $TapParams = @{
-                    startDateTime = [System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate).DateTime
+            $LifetimeMinutes = $null
+            $RequestedMinutes = $null
+            $ParsedRequestLifetime = $false
+            if (![string]::IsNullOrWhiteSpace($Request.Body.tapLifetimeInMinutes)) {
+                try {
+                    $RequestedMinutes = [int]$Request.Body.tapLifetimeInMinutes
+                    $ParsedRequestLifetime = $true
+                } catch {
+                    Write-Warning "Failed to parse TAP lifetime from request: $($_.Exception.Message)"
                 }
-                $TapBody = ConvertTo-Json -Depth 5 -InputObject $TapParams
-            } else {
-                $TapBody = '{}'
             }
+
+            if ($null -eq $RequestedMinutes) {
+                $RequestedMinutes = [int](($Expiration - $Start).TotalMinutes)
+            }
+
+            try {
+                $Policy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $TenantFilter
+                $PolicyMax = [int]($Policy.maximumLifetimeInMinutes ?? 1440)
+                $PolicyMin = [Math]::Min([int]($Policy.minimumLifetimeInMinutes ?? 1), $PolicyMax)
+                $LifetimeMinutes = [Math]::Min([Math]::Max($RequestedMinutes, $PolicyMin), $PolicyMax)
+            } catch {
+                Write-Warning "Failed to determine TAP lifetime from policy: $($_.Exception.Message)"
+                if ($ParsedRequestLifetime) {
+                    $LifetimeMinutes = $RequestedMinutes
+                }
+            }
+
+            $TapParams = @{}
+            if ($Start -gt (Get-Date)) {
+                $TapParams.startDateTime = [System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate).DateTime
+            }
+            if ($LifetimeMinutes -gt 0) {
+                $TapParams.lifetimeInMinutes = [int]$LifetimeMinutes
+            }
+            $TapBody = if ($TapParams.Count) { ConvertTo-Json -Depth 5 -InputObject $TapParams } else { '{}' }
             # Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
             # Retry creating the TAP up to 10 times, since it can fail due to the user not being fully created yet. Sometimes it takes 2 reties, sometimes it takes 8+. Very annoying. -Bobby
             $Retries = 0

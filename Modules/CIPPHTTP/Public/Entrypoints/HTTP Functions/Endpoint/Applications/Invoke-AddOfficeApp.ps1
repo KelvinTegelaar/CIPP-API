@@ -19,8 +19,21 @@ function Invoke-AddOfficeApp {
         try {
             $ExistingO365 = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $Tenant | Where-Object { $_.displayName -eq 'Microsoft 365 Apps for Windows 10 and later' }
             if (!$ExistingO365) {
-                # Check if custom XML is provided
-                if ($Request.Body.useCustomXml -and $Request.Body.customXml) {
+                # Check if this is a template deployment with IntuneBody (saved from existing app)
+                if ($Request.Body.IntuneBody) {
+                    $IntuneBody = $Request.Body.IntuneBody
+                    if ($IntuneBody -is [string]) {
+                        $IntuneBody = $IntuneBody | ConvertFrom-Json -Depth 100
+                    }
+                    # Remove read-only properties that the Graph API won't accept on create
+                    $ReadOnlyProps = @('id', 'createdDateTime', 'lastModifiedDateTime', 'uploadState', 'publishingState', 'isAssigned', 'roleScopeTagIds', 'dependentAppCount', 'supersedingAppCount', 'supersededAppCount', 'committedContentVersion', 'fileName', 'size')
+                    foreach ($prop in $ReadOnlyProps) {
+                        if ($IntuneBody.PSObject.Properties[$prop]) {
+                            $IntuneBody.PSObject.Properties.Remove($prop)
+                        }
+                    }
+                    $ObjBody = $IntuneBody
+                } elseif ($Request.Body.useCustomXml -and $Request.Body.customXml) {
                     # Use custom XML configuration
                     $ObjBody = [pscustomobject]@{
                         '@odata.type'            = '#microsoft.graph.officeSuiteApp'
@@ -76,7 +89,7 @@ function Invoke-AddOfficeApp {
                         'officeSuiteAppDefaultFileFormat'      = 'OfficeOpenXMLFormat'
                         'localesToInstall'                     = @($Request.Body.languages.value)
                         'shouldUninstallOlderVersionsOfOffice' = [bool]$Request.Body.RemoveVersions
-                        'updateChannel'                        = $Request.Body.updateChannel.value
+                        'updateChannel'                        = if ($Request.Body.updateChannel.value) { $Request.Body.updateChannel.value } else { $Request.Body.updateChannel }
                         'useSharedComputerActivation'          = [bool]$Request.Body.SharedComputerActivation
                         'productIds'                           = $products
                         'largeIcon'                            = @{

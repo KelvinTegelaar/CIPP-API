@@ -12,6 +12,10 @@ function Set-CippQueueTask {
         [string]$Message
     )
 
+    if ($env:CIPPNG -eq 'true') {
+        return @{ RowKey = $TaskId; QueueId = $QueueId; Name = $Name; Status = $Status }
+    }
+
     $CippQueueTasks = Get-CippTable -TableName CippQueueTasks
 
     $QueueTaskEntry = @{

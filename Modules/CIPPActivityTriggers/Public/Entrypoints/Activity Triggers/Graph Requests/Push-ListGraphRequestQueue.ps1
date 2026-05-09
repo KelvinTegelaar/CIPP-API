@@ -63,6 +63,15 @@ function Push-ListGraphRequestQueue {
             Data         = [string]$Json
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+
+        if ($env:CIPPNG -eq 'true') {
+            try {
+                [Craft.Services.CacheBridge]::InvalidateByScope('AllTenants')
+            } catch {
+                Write-Information "CacheBridge invalidation skipped: $($_.Exception.Message)"
+            }
+        }
+
         return $true
     } catch {
         Write-Warning "Queue Error: $($_.Exception.Message)"
