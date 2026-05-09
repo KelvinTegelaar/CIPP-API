@@ -130,6 +130,9 @@ function Invoke-EditJITAdminTemplate {
             if (![string]::IsNullOrWhiteSpace($Request.Body.defaultUserName)) {
                 $TemplateObject.defaultUserName = $Request.Body.defaultUserName
             }
+            if ($Request.Body.defaultUsageLocation) {
+                $TemplateObject.defaultUsageLocation = $Request.Body.defaultUsageLocation.value ?? $Request.Body.defaultUsageLocation
+            }
 
             # defaultDomain is only saved for specific tenant templates (not AllTenants)
             if ($TenantFilter -ne 'AllTenants' -and $Request.Body.defaultDomain) {

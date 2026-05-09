@@ -48,9 +48,10 @@ function Get-CIPPAlertIntunePolicyConflicts {
         return
     }
 
-    $AlertableStatuses = @()
-    if ($Config.AlertErrors) { $AlertableStatuses += 'error', 'failed' }
-    if ($Config.AlertConflicts) { $AlertableStatuses += 'conflict' }
+    $AlertableStatuses = @(
+        if ($Config.AlertErrors) { 'error'; 'failed' }
+        if ($Config.AlertConflicts) { 'conflict' }
+    )
 
     if (-not $AlertableStatuses) {
         return
@@ -68,7 +69,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
         return
     }
 
-    $Issues = @()
+    $Issues = [System.Collections.Generic.List[object]]::new()
 
     if ($Config.IncludePolicies) {
         try {
@@ -77,16 +78,16 @@ function Get-CIPPAlertIntunePolicyConflicts {
             foreach ($Device in $ManagedDevices) {
                 $PolicyStates = $Device.deviceConfigurationStates | Where-Object { $_.state -and ($AlertableStatuses -contains $_.state) }
                 foreach ($State in $PolicyStates) {
-                    $Issues += [PSCustomObject]@{
-                        Message           = "Policy '$($State.displayName)' is $($State.state) on device '$($Device.deviceName)' for $($Device.userPrincipalName)."
-                        Tenant            = $TenantFilter
-                        Type              = 'Policy'
-                        PolicyName        = $State.displayName
-                        IssueStatus       = $State.state
-                        DeviceName        = $Device.deviceName
-                        UserPrincipalName = $Device.userPrincipalName
-                        DeviceId          = $Device.id
-                    }
+                    $Issues.Add([PSCustomObject]@{
+                            Message           = "Policy '$($State.displayName)' is $($State.state) on device '$($Device.deviceName)' for $($Device.userPrincipalName)."
+                            Tenant            = $TenantFilter
+                            Type              = 'Policy'
+                            PolicyName        = $State.displayName
+                            IssueStatus       = $State.state
+                            DeviceName        = $Device.deviceName
+                            UserPrincipalName = $Device.userPrincipalName
+                            DeviceId          = $Device.id
+                        })
                 }
             }
         } catch {
@@ -105,16 +106,16 @@ function Get-CIPPAlertIntunePolicyConflicts {
                 }
 
                 foreach ($Status in $BadStatuses) {
-                    $Issues += [PSCustomObject]@{
-                        Message           = "App '$($App.displayName)' install is $($Status.installState) on device '$($Status.deviceName)' for $($Status.userPrincipalName)."
-                        Tenant            = $TenantFilter
-                        Type              = 'Application'
-                        AppName           = $App.displayName
-                        IssueStatus       = $Status.installState
-                        DeviceName        = $Status.deviceName
-                        UserPrincipalName = $Status.userPrincipalName
-                        DeviceId          = $Status.deviceId
-                    }
+                    $Issues.Add([PSCustomObject]@{
+                            Message           = "App '$($App.displayName)' install is $($Status.installState) on device '$($Status.deviceName)' for $($Status.userPrincipalName)."
+                            Tenant            = $TenantFilter
+                            Type              = 'Application'
+                            AppName           = $App.displayName
+                            IssueStatus       = $Status.installState
+                            DeviceName        = $Status.deviceName
+                            UserPrincipalName = $Status.userPrincipalName
+                            DeviceId          = $Status.deviceId
+                        })
                 }
             }
         } catch {
@@ -132,11 +133,11 @@ function Get-CIPPAlertIntunePolicyConflicts {
         $AppCount = ($Issues | Where-Object { $_.Type -eq 'Application' }).Count
 
         $AlertData = @([PSCustomObject]@{
-                Message        = "Found $PolicyCount policy issues and $AppCount application issues in Intune."
-                Tenant         = $TenantFilter
-                PolicyIssues   = $PolicyCount
-                AppIssues      = $AppCount
-                Issues         = $Issues
+                Message      = "Found $PolicyCount policy issues and $AppCount application issues in Intune."
+                Tenant       = $TenantFilter
+                PolicyIssues = $PolicyCount
+                AppIssues    = $AppCount
+                Issues       = $Issues
             })
     } else {
         $AlertData = $Issues

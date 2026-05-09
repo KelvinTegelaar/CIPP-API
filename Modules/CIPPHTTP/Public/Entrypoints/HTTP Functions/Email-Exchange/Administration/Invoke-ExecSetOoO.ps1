@@ -71,6 +71,10 @@ function Invoke-ExecSetOoO {
             }
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($Request.Body.timezone)) {
+            $SplatParams.Timezone = $Request.Body.timezone
+        }
+
         Write-Information "Setting Out of Office with the following parameters: $($SplatParams | ConvertTo-Json -Depth 10)"
         $Results = Set-CIPPOutOfOffice @SplatParams
         $StatusCode = [HttpStatusCode]::OK

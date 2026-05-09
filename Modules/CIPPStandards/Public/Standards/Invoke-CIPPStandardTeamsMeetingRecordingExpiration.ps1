@@ -91,7 +91,6 @@ function Invoke-CIPPStandardTeamsMeetingRecordingExpiration {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsMeetingRecordingExpiration' -FieldValue $CurrentExpirationDays -StoreAs string -Tenant $Tenant
 
-        $CurrentExpirationDays = if ($StateIsCorrect) { $true } else { $CurrentExpirationDays }
         $CurrentValue = @{
             MeetingRecordingExpirationDays = $CurrentExpirationDays
         }

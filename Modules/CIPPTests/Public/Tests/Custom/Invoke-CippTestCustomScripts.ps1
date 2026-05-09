@@ -68,7 +68,7 @@ function Invoke-CippTestCustomScripts {
 
                 # Auto-detected status from output, then apply explicit override if present
                 $AutoStatus = if ($FailedRows.Count -gt 0) { 'Failed' } else { 'Passed' }
-                $ValidExplicitStatuses = @('Passed', 'Failed', 'Info')
+                $ValidExplicitStatuses = @('Passed', 'Failed', 'Info', 'Investigate')
                 if ($ExplicitStatus -and $ExplicitStatus -in $ValidExplicitStatuses) {
                     $AutoStatus = $ExplicitStatus
                 }
@@ -76,6 +76,7 @@ function Invoke-CippTestCustomScripts {
                 $FinalStatus = switch ($ResultMode) {
                     'AlwaysPass' { 'Passed' }
                     'AlwaysInfo' { 'Info' }
+                    'AlwaysInvestigate' { 'Investigate' }
                     default { $AutoStatus }
                 }
 
@@ -90,6 +91,7 @@ function Invoke-CippTestCustomScripts {
                 $FinalStatus = switch ($ResultMode) {
                     'AlwaysPass' { 'Passed' }
                     'AlwaysInfo' { 'Info' }
+                    'AlwaysInvestigate' { 'Investigate' }
                     default { 'Failed' }
                 }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultMarkdown "Custom script execution failed: $($ErrorMessage.NormalizedError)" -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'

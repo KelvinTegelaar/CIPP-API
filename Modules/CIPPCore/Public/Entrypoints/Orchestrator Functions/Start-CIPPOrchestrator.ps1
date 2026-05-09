@@ -34,25 +34,28 @@ function Start-CIPPOrchestrator {
         [switch]$CallerIsQueueTrigger
     )
 
-    # ─── CRAFT runtime: push batch directly to OrchestratorService ───
+    # ─── Craft runtime: push batch directly to OrchestratorService ───
     if ($env:CIPPNG -eq 'true' -and $InputObject) {
         $OrchestratorName = $InputObject.OrchestratorName ?? 'UnnamedOrchestrator'
 
         # QueueFunction pattern: call the function first to generate batch items
         if (-not $InputObject.Batch -and $InputObject.QueueFunction) {
             $QueueFuncName = "Push-$($InputObject.QueueFunction.FunctionName)"
-            Write-Information "CRAFT: Calling QueueFunction '$QueueFuncName' to build batch for '$OrchestratorName'"
-            $QueueItem = [PSCustomObject]@{}
-            if ($InputObject.QueueFunction.Parameters) {
-                $QueueItem = [PSCustomObject]$InputObject.QueueFunction.Parameters
-            }
+            Write-Information "Craft: Calling QueueFunction '$QueueFuncName' to build batch for '$OrchestratorName'"
+            $QueueItem = [PSCustomObject]$InputObject.QueueFunction
             $BatchResult = & $QueueFuncName -Item $QueueItem
             $QueueBatch = @($BatchResult | Where-Object { $null -ne $_ })
             if ($QueueBatch.Count -eq 0) {
-                Write-Information "CRAFT: QueueFunction '$QueueFuncName' returned 0 tasks for '$OrchestratorName' - skipping"
-                return "CRAFT-$OrchestratorName-NoTasks"
+                Write-Information "Craft: QueueFunction '$QueueFuncName' returned 0 tasks for '$OrchestratorName' - skipping"
+                return "Craft-$OrchestratorName-NoTasks"
             }
             $InputObject | Add-Member -MemberType NoteProperty -Name 'Batch' -Value $QueueBatch -Force
+        }
+
+        # Include QueueId in RunName so the frontend can poll status by QueueId
+        $BatchQueueId = ($InputObject.Batch | Select-Object -First 1).QueueId
+        if ($BatchQueueId) {
+            $OrchestratorName = "$OrchestratorName-$BatchQueueId"
         }
 
         $BatchJson = ConvertTo-Json -InputObject @($InputObject.Batch) -Depth 10 -Compress
@@ -66,15 +69,16 @@ function Start-CIPPOrchestrator {
             }
         }
 
-        Write-Information "CRAFT: Queuing orchestrator '$OrchestratorName' ($($InputObject.Batch.Count) tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
-        [CRAFT.Services.OrchestratorBridge]::QueueOrchestration(
+        Write-Information "Craft: Queuing orchestrator '$OrchestratorName' ($($InputObject.Batch.Count) tasks$(if ($PostExecFunctionName) { ", PostExec: $PostExecFunctionName" }))"
+        [Craft.Services.OrchestratorBridge]::QueueOrchestration(
             $OrchestratorName,
             $BatchJson,
             4,
             $PostExecFunctionName,
-            $PostExecParametersJson
+            $PostExecParametersJson,
+            $InputObject.Reference
         )
-        return "CRAFT-$OrchestratorName"
+        return "Craft-$OrchestratorName"
     }
 
     $OrchestratorTable = Get-CippTable -TableName 'CippOrchestratorInput'
