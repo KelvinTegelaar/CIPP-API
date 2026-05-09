@@ -106,13 +106,13 @@ function Invoke-CIPPStandardMailContacts {
     }
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object)
-            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Sort-Object)
+            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object -Unique)
+            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
             contactEmail                = $CurrentInfo.privacyProfile.contactEmail
         }
         $ExpectedValue = @{
-            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object)
-            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique | Sort-Object)
+            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object -Unique)
+            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
             contactEmail                = $Contacts.GeneralContact
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant

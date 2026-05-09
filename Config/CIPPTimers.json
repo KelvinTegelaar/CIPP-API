@@ -78,6 +78,7 @@
     "Cron": "0 0 */12 * * *",
     "Priority": 4,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "PreferredProcessor": "standards"
   },
   {
@@ -87,6 +88,7 @@
     "Cron": "0 15 */12 * * *",
     "Priority": 5,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "PreferredProcessor": "standards"
   },
   {
@@ -120,6 +122,7 @@
     "Cron": "0 0 0 * * 0",
     "Priority": 7,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -137,6 +140,7 @@
     "Description": "Orchestrator to process domains",
     "Cron": "0 30 5 * * *",
     "Priority": 22,
+    "TZOffset": true,
     "RunOnProcessor": true
   },
   {
@@ -149,6 +153,7 @@
     "Cron": "0 0 23 * * *",
     "Priority": 10,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -158,6 +163,7 @@
     "Cron": "0 0 0 * * *",
     "Priority": 10,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -166,6 +172,7 @@
     "Description": "Timer to process billing",
     "Cron": "0 0 0 * * *",
     "Priority": 12,
+    "TZOffset": true,
     "RunOnProcessor": true
   },
   {
@@ -174,6 +181,7 @@
     "Description": "Orchestrator to process BPA reports",
     "Cron": "0 0 3 * * *",
     "Priority": 10,
+    "TZOffset": true,
     "RunOnProcessor": true
   },
   {
@@ -191,6 +199,7 @@
     "Cron": "0 0 0 * * *",
     "Priority": 15,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -200,6 +209,7 @@
     "Cron": "0 0 23 * * *",
     "Priority": 20,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -212,6 +222,7 @@
     "Cron": "0 0 0 * * *",
     "Priority": 20,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -221,6 +232,7 @@
     "Cron": "0 0 2 * * *",
     "Priority": 21,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -230,6 +242,7 @@
     "Cron": "0 30 2 * * *",
     "Priority": 22,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -239,6 +252,7 @@
     "Cron": "0 0 3 * * *",
     "Priority": 23,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   },
   {
@@ -248,6 +262,7 @@
     "Cron": "0 0 4 * * *",
     "Priority": 24,
     "RunOnProcessor": true,
+    "TZOffset": true,
     "IsSystem": true
   }
 ]

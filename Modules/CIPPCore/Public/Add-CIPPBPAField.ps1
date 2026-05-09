@@ -34,7 +34,7 @@ function Add-CIPPBPAField {
             $Result[$fieldName] = [string]$JsonString
         }
         'string' {
-            $Result[$fieldName], [string]$FieldValue
+            $Result[$fieldName] = [string]$FieldValue
         }
     }
     Add-CIPPAzDataTableEntity @Table -Entity $Result -Force

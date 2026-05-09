@@ -23,7 +23,7 @@ function Invoke-ExecListBackup {
     if ($NameOnly) {
         try {
             $Processed = foreach ($item in $Result) {
-                $properties = $item.PSObject.Properties | Where-Object { $_.Name -notin @('TenantFilter', 'ETag', 'PartitionKey', 'RowKey', 'Timestamp', 'OriginalEntityId', 'SplitOverProps', 'PartIndex') -and $_.Value }
+                $properties = $item.PSObject.Properties | Where-Object { $_.Name -notin @('TenantFilter', 'ETag', 'PartitionKey', 'RowKey', 'Timestamp', 'OriginalEntityId', 'SplitOverProps', 'PartIndex', 'Backup', 'BackupIsBlob') -and $_.Value }
 
                 if ($Type -eq 'Scheduled') {
                     [PSCustomObject]@{
@@ -51,7 +51,7 @@ function Invoke-ExecListBackup {
                     }
                 }
             }
-            $Result = $Processed | Sort-Object Timestamp -Descending
+            $Result = if ($Processed) { @($Processed | Sort-Object Timestamp -Descending) } else { @() }
         } catch {
             Write-Warning "Error processing backup entries: $_"
             Write-Information $_.InvocationInfo.PositionMessage
