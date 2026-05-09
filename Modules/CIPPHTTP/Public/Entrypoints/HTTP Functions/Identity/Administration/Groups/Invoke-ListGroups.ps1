@@ -14,6 +14,19 @@ function Invoke-ListGroups {
     $Owners = $Request.Query.owners
 
     $ExpandMembers = $Request.Query.expandMembers ?? $false
+    $UseReportDB = $Request.Query.UseReportDB
+
+    # Cache path: list view only — skip when fetching a specific group's details
+    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        try {
+            $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $_.Exception.Message
+        }
+        return ([HttpResponseContext]@{ StatusCode = $StatusCode; Body = @($GraphRequest) })
+    }
 
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
     if ($ExpandMembers -ne $false) {

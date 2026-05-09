@@ -14,7 +14,7 @@ function Get-CIPPAlertNewAppApproval {
     )
 
     try {
-        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
+        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any(u:u/status eq 'InProgress')" -tenantid $TenantFilter
 
         if ($Approvals.count -gt 0) {
             $TenantGUID = (Get-Tenants -TenantFilter $TenantFilter -SkipDomains).customerId
@@ -24,6 +24,9 @@ function Get-CIPPAlertNewAppApproval {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
 
                 $userConsentRequests | ForEach-Object {
+                    if ($_.status -eq 'Expired') {
+                        return
+                    }
                     $consentUrl = if ($App.consentType -eq 'Static') {
                         # if something is going wrong here you've probably stumbled on a fourth variation - rvdwegen
                         "https://login.microsoftonline.com/$($TenantFilter)/adminConsent?client_id=$($App.appId)&bf_id=$($App.id)&redirect_uri=https://entra.microsoft.com/TokenAuthorize"

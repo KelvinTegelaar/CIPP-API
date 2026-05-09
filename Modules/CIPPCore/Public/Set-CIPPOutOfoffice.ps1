@@ -18,7 +18,8 @@ function Set-CIPPOutOfOffice {
         [bool]$AutoDeclineFutureRequestsWhenOOF,
         [bool]$DeclineEventsForScheduledOOF,
         [bool]$DeclineAllEventsForScheduledOOF,
-        [string]$DeclineMeetingMessage
+        [string]$DeclineMeetingMessage,
+        [string]$Timezone
     )
 
     try {
@@ -68,9 +69,23 @@ function Set-CIPPOutOfOffice {
 
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams $CmdParams -Anchor $UserID
 
-        $Results = $State -eq 'Scheduled' ?
-        "Scheduled Out-of-office for $($UserID) between $($StartTime.toString()) and $($EndTime.toString())" :
-        "Set Out-of-office for $($UserID) to $State."
+        if ($State -eq 'Scheduled') {
+            # Convert display times to the user's local timezone if provided
+            $DisplayStart = $StartTime
+            $DisplayEnd = $EndTime
+            if ($Timezone) {
+                try {
+                    $UserTz = [System.TimeZoneInfo]::FindSystemTimeZoneById($Timezone)
+                    $DisplayStart = [System.TimeZoneInfo]::ConvertTimeFromUtc($StartTime, $UserTz)
+                    $DisplayEnd = [System.TimeZoneInfo]::ConvertTimeFromUtc($EndTime, $UserTz)
+                } catch {
+                    # Fall back to UTC times if timezone conversion fails
+                }
+            }
+            $Results = "Scheduled Out-of-office for $($UserID) between $($DisplayStart.ToString()) and $($DisplayEnd.ToString())"
+        } else {
+            $Results = "Set Out-of-office for $($UserID) to $State."
+        }
 
         Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Info' -tenant $TenantFilter
         return $Results

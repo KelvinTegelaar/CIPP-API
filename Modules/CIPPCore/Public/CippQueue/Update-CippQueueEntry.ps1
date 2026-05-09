@@ -12,6 +12,8 @@ function Update-CippQueueEntry {
         [switch]$IncrementTotalTasks
     )
 
+    if ($env:CIPPNG -eq 'true') { return }
+
     $CippQueue = Get-CippTable -TableName CippQueue
 
     if ($RowKey) {

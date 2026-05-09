@@ -60,13 +60,25 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             })
     }
 
+    try {
+        $AuthPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -tenantid $Tenant
+        $AllowEmailSubscriptions = if ($AuthPolicy.allowedToSignUpEmailBasedSubscriptions) { 'Enabled' } else { 'Disabled' }
+        $CurrentValues.Add([PSCustomObject]@{
+                productName = 'Email Based Subscriptions'
+                productId   = 'allowedToSignUpEmailBasedSubscriptions'
+                policyValue = $AllowEmailSubscriptions
+            })
+    } catch {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve authorization policy: $($_.Exception.Message)" -sev Error
+    }
+
     if ($Settings.DisableTrials) {
         try {
             $AutoClaimPolicy = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim'
             $CurrentValues.Add([PSCustomObject]@{
                     productName = 'Trial Autoclaim'
                     productId   = 'autoclaim'
-                    policyValue = $AutoClaimPolicy.policyValue
+                    policyValue = $AutoClaimPolicy.tenantPolicyValue ?? 'Disabled'
                 })
         } catch {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy: $($_.Exception.Message)" -sev Error
@@ -99,6 +111,12 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
             })
     }
 
+    $ExpectedValues.Add([PSCustomObject]@{
+            productName = 'Email Based Subscriptions'
+            productId   = 'allowedToSignUpEmailBasedSubscriptions'
+            policyValue = 'Disabled'
+        })
+
     if ($settings.remediate) {
 
         $Compare = Compare-Object -ReferenceObject $ExpectedValues -DifferenceObject $CurrentValues -Property productName, productId, policyValue
@@ -119,6 +137,9 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
 
                     if ($Item.productId -eq 'autoclaim') {
                         New-GraphPostRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim' -Body $body
+                    } elseif ($Item.productId -eq 'allowedToSignUpEmailBasedSubscriptions') {
+                        $authBody = @{ allowedToSignUpEmailBasedSubscriptions = $false } | ConvertTo-Json -Compress
+                        New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -tenantid $Tenant -body $authBody -type PATCH
                     } else {
                         New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($Item.productId)" -tenantid $Tenant -body $body -type PUT
                     }
@@ -139,13 +160,25 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
                     policyValue = $Item.policyValue
                 })
         }
+        try {
+            $AuthPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/authorizationPolicy' -tenantid $Tenant
+            $AllowEmailSubscriptions = if ($AuthPolicy.allowedToSignUpEmailBasedSubscriptions) { 'Enabled' } else { 'Disabled' }
+            $CurrentValues.Add([PSCustomObject]@{
+                    productName = 'Email Based Subscriptions'
+                    productId   = 'allowedToSignUpEmailBasedSubscriptions'
+                    policyValue = $AllowEmailSubscriptions
+                })
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve authorization policy after remediation: $($_.Exception.Message)" -sev Error
+        }
+
         if ($Settings.DisableTrials) {
             try {
                 $AutoClaimPolicy = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $Tenant -Uri 'https://admin.microsoft.com/fd/m365licensing/v1/policies/autoclaim'
                 $CurrentValues.Add([PSCustomObject]@{
                         productName = 'Trial Autoclaim'
                         productId   = 'autoclaim'
-                        policyValue = $AutoClaimPolicy.policyValue
+                        policyValue = $AutoClaimPolicy.tenantPolicyValue ?? 'Disabled'
                     })
             } catch {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy after remediation: $($_.Exception.Message)" -sev Error
