@@ -20,7 +20,15 @@ function Set-CIPPDefaultAPDeploymentProfile {
     )
 
     try {
-        if ($Language -in @('user-select', 'os-default')) { $Language = "$null" }
+        # Map language selection to Graph API locale values:
+        # 'user-select' -> empty string (lets user choose during OOBE)
+        # 'os-default' or $null -> $null (uses operating system default)
+        # Specific tag (e.g. 'en-US') -> passed through as-is
+        if ($Language -eq 'user-select') {
+            $Language = ''
+        } elseif ($Language -eq 'os-default' -or $null -eq $Language) {
+            $Language = $null
+        }
 
         # userType in outOfBoxExperienceSetting is only valid for user-driven (singleUser) mode.
         # The Intune API rejects it for self-deploying (shared) mode.
@@ -40,7 +48,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'displayName'                   = "$($DisplayName)"
             'description'                   = "$($Description)"
             'deviceNameTemplate'            = "$($DeviceNameTemplate)"
-            'locale'                        = "$($Language)"
+            'locale'                        = $Language
             'preprovisioningAllowed'        = $([bool]($AllowWhiteGlove))
             'deviceType'                    = 'windowsPc'
             'hardwareHashExtractionEnabled' = $([bool]($CollectHash))

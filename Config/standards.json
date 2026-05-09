@@ -5729,6 +5729,126 @@
     ]
   },
   {
+    "name": "standards.DlpCompliancePolicyTemplate",
+    "label": "DLP Compliance Policy Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": true,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates.",
+    "executiveText": "Deploys Data Loss Prevention policies from a standardized template library. Ensures consistent DLP coverage across tenants for sensitive data such as financial, identity, and regulated content.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "dlpCompliancePolicyTemplate",
+        "label": "Select DLP Compliance Policy Templates",
+        "api": {
+          "url": "/api/ListDlpCompliancePolicyTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListDlpCompliancePolicyTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.RetentionCompliancePolicyTemplate",
+    "label": "Retention Compliance Policy Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": true,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview retention compliance policies from CIPP templates.",
+    "executiveText": "Deploys retention policies that govern how long content is preserved in Exchange, SharePoint, OneDrive, and Teams. Enforces consistent compliance retention across tenants for regulatory and legal hold needs.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "retentionCompliancePolicyTemplate",
+        "label": "Select Retention Compliance Policy Templates",
+        "api": {
+          "url": "/api/ListRetentionCompliancePolicyTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListRetentionCompliancePolicyTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.SensitivityLabelTemplate",
+    "label": "Sensitivity Label Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": true,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview sensitivity labels from CIPP templates.",
+    "executiveText": "Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "sensitivityLabelTemplate",
+        "label": "Select Sensitivity Label Templates",
+        "api": {
+          "url": "/api/ListSensitivityLabelTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListSensitivityLabelTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.SensitiveInfoTypeTemplate",
+    "label": "Sensitive Information Type Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": true,
+      "remediate": false
+    },
+    "impact": "Low Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy custom Microsoft Purview Sensitive Information Types from CIPP templates.",
+    "executiveText": "Deploys custom Sensitive Information Types so DLP policies can detect organization-specific identifiers — employee IDs, project codenames, internal account numbers — across tenants consistently.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "sensitiveInfoTypeTemplate",
+        "label": "Select Sensitive Information Type Templates",
+        "api": {
+          "url": "/api/ListSensitiveInfoTypeTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListSensitiveInfoTypeTemplates"
+        }
+      }
+    ]
+  },
+  {
     "name": "standards.AssignmentFilterTemplate",
     "label": "Assignment Filter Template",
     "multi": true,
