@@ -8,7 +8,7 @@ function Invoke-CIPPStandardDlpCompliancePolicyTemplate {
         (Label) DLP Compliance Policy Template
     .DESCRIPTION
         (Helptext) Deploy Microsoft Purview DLP compliance policies from CIPP templates. Existing policies are overwritten in place.
-        (DocsDescription) Deploy Microsoft Purview DLP compliance policies from CIPP templates. If a policy or rule with the same name already exists in the tenant, it is updated in place; otherwise it is created.
+        (DocsDescription) Deploy Microsoft Purview DLP compliance policies from CIPP templates. If a policy or rule with the same name already exists in the tenant, it is updated in place; otherwise it is created. Microsoft built-in default policies are skipped.
     .NOTES
         MULTI
             True
@@ -31,42 +31,6 @@ function Invoke-CIPPStandardDlpCompliancePolicyTemplate {
     #>
     param($Tenant, $Settings)
 
-    $PolicyAllowedFields = @(
-        'Name', 'Comment', 'Mode', 'Priority',
-        'ExchangeLocation', 'ExchangeLocationException',
-        'SharePointLocation', 'SharePointLocationException',
-        'OneDriveLocation', 'OneDriveLocationException',
-        'TeamsLocation', 'TeamsLocationException',
-        'EndpointDlpLocation', 'EndpointDlpLocationException',
-        'OnPremisesScannerDlpLocation', 'OnPremisesScannerDlpLocationException',
-        'ThirdPartyAppDlpLocation', 'ThirdPartyAppDlpLocationException',
-        'PowerBIDlpLocation', 'PowerBIDlpLocationException',
-        'ModernGroupLocation', 'ModernGroupLocationException'
-    )
-
-    $RuleAllowedFields = @(
-        'Name', 'Policy', 'Comment', 'Disabled', 'Mode', 'Priority',
-        'ContentContainsSensitiveInformation',
-        'ContentPropertyContainsWords', 'BlockAccess', 'BlockAccessScope',
-        'NotifyUser', 'NotifyEmailCustomText', 'NotifyEmailCustomSubject',
-        'NotifyPolicyTipCustomText', 'GenerateAlert', 'AlertProperties',
-        'GenerateIncidentReport', 'IncidentReportContent',
-        'ExceptIfContentContainsSensitiveInformation',
-        'AccessScope', 'From', 'FromMemberOf', 'FromAddressContainsWords',
-        'FromAddressMatchesPatterns', 'SentTo', 'SentToMemberOf',
-        'RecipientDomainIs', 'AnyOfRecipientAddressContainsWords',
-        'AnyOfRecipientAddressMatchesPatterns', 'AnyOfRecipientAddressDomainIs',
-        'ExceptIfFrom', 'ExceptIfFromMemberOf', 'ExceptIfFromAddressContainsWords',
-        'ExceptIfFromAddressMatchesPatterns',
-        'AddRecipients', 'BlockMessage', 'GenerateAlertOn', 'IncidentReportTo',
-        'ReportSeverityLevel', 'RuleErrorAction',
-        'ContentExtensionMatchesWords', 'DocumentNameMatchesPatterns',
-        'DocumentNameMatchesWords', 'DocumentSizeOver',
-        'ContentCharacterSetContainsWords', 'ContentFileTypeMatches'
-    )
-
-    $LocationFields = $PolicyAllowedFields | Where-Object { $_ -like '*Location*' }
-
     $TemplateSelection = $Settings.dlpCompliancePolicyTemplate ?? $Settings.TemplateList ?? $Settings.'standards.DlpCompliancePolicyTemplate.TemplateIds'
     $TemplateIds = @($TemplateSelection | ForEach-Object {
             if ($_ -is [string]) { $_ } elseif ($_.value) { $_.value } else { $null }
@@ -86,73 +50,20 @@ function Invoke-CIPPStandardDlpCompliancePolicyTemplate {
         return
     }
 
-    try {
-        $ExistingPolicies = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DlpCompliancePolicy' -Compliance | Select-Object Name
-    } catch {
-        $ExistingPolicies = @()
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not list existing DLP compliance policies: $($_.Exception.Message)" -sev Warning
-    }
-
-    try {
-        $ExistingRules = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DlpComplianceRule' -Compliance | Select-Object Name, ParentPolicyName
-    } catch {
-        $ExistingRules = @()
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not list existing DLP compliance rules: $($_.Exception.Message)" -sev Warning
-    }
-
     if ($Settings.remediate -eq $true) {
         foreach ($Template in @($Templates)) {
-            $TemplateName = $Template.Name ?? $Template.name
-            try {
-                $PolicyParams = Format-CIPPCompliancePolicyParams -Source $Template -AllowedFields $PolicyAllowedFields -LocationFields $LocationFields
-                $PolicyExists = [bool]($ExistingPolicies | Where-Object { $_.Name -eq $TemplateName })
-
-                if ($PolicyExists) {
-                    $SetParams = @{} + $PolicyParams
-                    $SetParams.Remove('Name')
-                    $SetParams['Identity'] = $TemplateName
-                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-DlpCompliancePolicy' -cmdParams $SetParams -Compliance -useSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated DLP compliance policy '$TemplateName' in place" -sev Info
-                } else {
-                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-DlpCompliancePolicy' -cmdParams $PolicyParams -Compliance -useSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created DLP compliance policy '$TemplateName'" -sev Info
-                }
-
-                $RuleSource = $Template.RuleParams
-                if ($RuleSource) {
-                    $RuleHash = Format-CIPPCompliancePolicyParams -Source $RuleSource -AllowedFields $RuleAllowedFields
-                    $RuleHash['Policy'] = $TemplateName
-                    $RuleName = if ($RuleHash.ContainsKey('Name') -and -not [string]::IsNullOrWhiteSpace([string]$RuleHash['Name'])) {
-                        $RuleHash['Name']
-                    } else {
-                        "$TemplateName Rule"
-                    }
-                    $RuleHash['Name'] = $RuleName
-
-                    $RuleExists = [bool]($ExistingRules | Where-Object { $_.Name -eq $RuleName -or $_.ParentPolicyName -eq $TemplateName })
-
-                    if ($RuleExists) {
-                        $SetRuleHash = @{} + $RuleHash
-                        $SetRuleHash.Remove('Name')
-                        $SetRuleHash.Remove('Policy')
-                        $SetRuleHash['Identity'] = $RuleName
-                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-DlpComplianceRule' -cmdParams $SetRuleHash -Compliance -useSystemMailbox $true
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated DLP rule '$RuleName' for policy '$TemplateName'" -sev Info
-                    } else {
-                        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-DlpComplianceRule' -cmdParams $RuleHash -Compliance -useSystemMailbox $true
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created DLP rule '$RuleName' for policy '$TemplateName'" -sev Info
-                    }
-                }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to deploy DLP compliance policy '$TemplateName'. Error: $ErrorMessage" -sev Error
-            }
+            $null = Set-CIPPDlpCompliancePolicy -TenantFilter $Tenant -Template $Template -APIName 'Standards'
         }
     }
 
+    # Determine which templated policies are present in the tenant for alert/report modes
+    $ExistingPolicyNames = try {
+        @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DlpCompliancePolicy' -Compliance | Select-Object -ExpandProperty Name)
+    } catch { @() }
+
     $MissingPolicies = @(foreach ($Template in @($Templates)) {
             $TemplateName = $Template.Name ?? $Template.name
-            if (-not ($ExistingPolicies | Where-Object { $_.Name -eq $TemplateName })) { $TemplateName }
+            if ($ExistingPolicyNames -notcontains $TemplateName) { $TemplateName }
         })
 
     if ($Settings.alert -eq $true) {
