@@ -11,56 +11,99 @@ Function Invoke-AddSensitivityLabel {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    $ReadOnlyProperties = @(
-        'GUID', 'comments', 'PolicyParams',
-        'Identity', 'Guid', 'Id', 'ImmutableId', 'IsValid',
-        'WhenCreated', 'WhenChanged', 'WhenCreatedUTC', 'WhenChangedUTC',
-        'CreatedBy', 'ModifiedBy', 'LastModifiedBy', 'ObjectState',
-        'Type', 'PublishedInPolicies', 'Disabled'
+    $LabelAllowedFields = @(
+        'Name', 'DisplayName', 'Comment', 'Tooltip', 'ParentId',
+        'Disabled', 'ContentType', 'Priority',
+        'EncryptionEnabled', 'EncryptionProtectionType', 'EncryptionRightsDefinitions',
+        'EncryptionContentExpiredOnDateInDaysOrNever', 'EncryptionDoNotForward',
+        'EncryptionEncryptOnly', 'EncryptionOfflineAccessDays',
+        'EncryptionPromptUser', 'EncryptionAESKeySize',
+        'ContentMarkingHeaderEnabled', 'ContentMarkingHeaderText',
+        'ContentMarkingHeaderFontSize', 'ContentMarkingHeaderFontColor', 'ContentMarkingHeaderAlignment',
+        'ContentMarkingFooterEnabled', 'ContentMarkingFooterText',
+        'ContentMarkingFooterFontSize', 'ContentMarkingFooterFontColor', 'ContentMarkingFooterAlignment',
+        'ContentMarkingFooterMargin',
+        'ContentMarkingWatermarkEnabled', 'ContentMarkingWatermarkText',
+        'ContentMarkingWatermarkFontSize', 'ContentMarkingWatermarkFontColor', 'ContentMarkingWatermarkLayout',
+        'ApplyContentMarkingHeaderEnabled', 'ApplyContentMarkingFooterEnabled', 'ApplyWaterMarkingEnabled',
+        'SiteAndGroupProtectionEnabled', 'SiteAndGroupProtectionPrivacy',
+        'SiteAndGroupProtectionAllowAccessToGuestUsers',
+        'SiteAndGroupProtectionAllowEmailFromGuestUsers',
+        'SiteAndGroupProtectionAllowFullAccess',
+        'SiteAndGroupProtectionAllowLimitedAccess',
+        'SiteAndGroupProtectionBlockAccess',
+        'Conditions', 'AdvancedSettings', 'Settings', 'LocaleSettings'
+    )
+
+    $PolicyAllowedFields = @(
+        'Name', 'Comment', 'Labels', 'AdvancedSettings', 'Settings',
+        'ExchangeLocation', 'ExchangeLocationException',
+        'SharePointLocation', 'SharePointLocationException',
+        'OneDriveLocation', 'OneDriveLocationException',
+        'ModernGroupLocation', 'ModernGroupLocationException',
+        'PolicyTemplateInfo'
     )
 
     $RawParams = $Request.Body.PowerShellCommand | ConvertFrom-Json
     $PolicyParams = $RawParams.PolicyParams
 
-    $LabelParams = @{}
-    foreach ($prop in $RawParams.PSObject.Properties) {
-        if ($prop.Name -in $ReadOnlyProperties) { continue }
-        $val = $prop.Value
-        if ($null -eq $val) { continue }
-        if ($val -is [string] -and [string]::IsNullOrWhiteSpace($val)) { continue }
-        if (($val -is [array] -or $val -is [System.Collections.IList]) -and @($val).Count -eq 0) { continue }
-        $LabelParams[$prop.Name] = $val
-    }
+    $LabelParams = Format-CIPPCompliancePolicyParams -Source $RawParams -AllowedFields $LabelAllowedFields
 
     $Tenants = ($Request.Body.selectedTenants).value
     $Result = foreach ($TenantFilter in $Tenants) {
         try {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-Label' -cmdParams $LabelParams -Compliance -useSystemMailbox $true
+            $ExistingLabels = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Label' -Compliance | Select-Object Name, DisplayName } catch { @() }
+            $ExistingLabelPolicies = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-LabelPolicy' -Compliance | Select-Object Name } catch { @() }
+
+            $LabelExists = [bool]($ExistingLabels | Where-Object { $_.Name -eq $LabelParams.Name -or $_.DisplayName -eq $LabelParams.Name })
+
+            if ($LabelExists) {
+                $SetParams = @{} + $LabelParams
+                $SetParams.Remove('Name')
+                $SetParams['Identity'] = $LabelParams.Name
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Label' -cmdParams $SetParams -Compliance -useSystemMailbox $true
+                $LabelAction = "Updated sensitivity label $($LabelParams.Name) in $TenantFilter."
+            } else {
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-Label' -cmdParams $LabelParams -Compliance -useSystemMailbox $true
+                $LabelAction = "Created sensitivity label $($LabelParams.Name) in $TenantFilter."
+            }
 
             if ($PolicyParams) {
-                $PolicyHash = @{}
-                $PolicyParams.PSObject.Properties | ForEach-Object {
-                    $val = $_.Value
-                    if ($null -eq $val) { return }
-                    if ($val -is [string] -and [string]::IsNullOrWhiteSpace($val)) { return }
-                    if (($val -is [array] -or $val -is [System.Collections.IList]) -and @($val).Count -eq 0) { return }
-                    $PolicyHash[$_.Name] = $val
-                }
+                $PolicyHash = Format-CIPPCompliancePolicyParams -Source $PolicyParams -AllowedFields $PolicyAllowedFields
                 if (-not $PolicyHash.ContainsKey('Labels') -or -not $PolicyHash['Labels']) {
                     $PolicyHash['Labels'] = @($LabelParams.Name)
                 }
-                if (-not $PolicyHash.ContainsKey('Name') -or [string]::IsNullOrWhiteSpace($PolicyHash['Name'])) {
-                    $PolicyHash['Name'] = "$($LabelParams.Name) Policy"
+                $PolicyName = if ($PolicyHash.ContainsKey('Name') -and -not [string]::IsNullOrWhiteSpace([string]$PolicyHash['Name'])) {
+                    $PolicyHash['Name']
+                } else {
+                    "$($LabelParams.Name) Policy"
                 }
-                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-LabelPolicy' -cmdParams $PolicyHash -Compliance -useSystemMailbox $true
+                $PolicyHash['Name'] = $PolicyName
+
+                $LabelPolicyExists = [bool]($ExistingLabelPolicies | Where-Object { $_.Name -eq $PolicyName })
+
+                if ($LabelPolicyExists) {
+                    # Set-LabelPolicy uses Add{Location}/Remove{Location} pairs and AddLabels/RemoveLabels.
+                    $LabelPolicyAddPrefixed = @('Labels') + ($PolicyAllowedFields | Where-Object { $_ -like '*Location*' })
+                    $SetPolicyHash = @{}
+                    foreach ($key in $PolicyHash.Keys) {
+                        if ($key -eq 'Name') { continue }
+                        $targetKey = if ($key -in $LabelPolicyAddPrefixed) { "Add$key" } else { $key }
+                        $SetPolicyHash[$targetKey] = $PolicyHash[$key]
+                    }
+                    $SetPolicyHash['Identity'] = $PolicyName
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-LabelPolicy' -cmdParams $SetPolicyHash -Compliance -useSystemMailbox $true
+                } else {
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-LabelPolicy' -cmdParams $PolicyHash -Compliance -useSystemMailbox $true
+                }
             }
 
-            "Successfully created sensitivity label $($LabelParams.Name) for $TenantFilter."
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created sensitivity label $($LabelParams.Name) for $TenantFilter." -sev Info
+            $LabelAction
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $LabelAction -sev Info
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            "Could not create sensitivity label for $($TenantFilter): $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not create sensitivity label for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            "Could not deploy sensitivity label for $($TenantFilter): $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not deploy sensitivity label for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 

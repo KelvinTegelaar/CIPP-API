@@ -15,7 +15,7 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-            {"report":false,"warn":true,"remediate":false}
+            {"report":false,"warn":false,"remediate":false}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -30,55 +30,6 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
     param($Tenant, $Settings)
-
-    function New-CippSitRulePackXml {
-        param(
-            [Parameter(Mandatory)][string]$Name,
-            [string]$Description,
-            [Parameter(Mandatory)][string]$Pattern,
-            [int]$Confidence = 85,
-            [int]$PatternsProximity = 300,
-            [string]$Locale = 'en-us',
-            [string]$PublisherName = 'CIPP'
-        )
-
-        $RulePackId = (New-Guid).Guid
-        $PublisherId = (New-Guid).Guid
-        $EntityId = (New-Guid).Guid
-        $RegexId = "Regex_$(((New-Guid).Guid) -replace '-')"
-        $esc = { param($s) [System.Security.SecurityElement]::Escape([string]$s) }
-
-        return @"
-<?xml version="1.0" encoding="UTF-8"?>
-<RulePackage xmlns="http://schemas.microsoft.com/office/2018/09/search.external/rulepack">
-  <RulePack id="$RulePackId">
-    <Version major="1" minor="0" patch="0" build="0"/>
-    <Publisher id="$PublisherId"/>
-    <Details defaultLangCode="$Locale">
-      <LocalizedDetails langcode="$Locale">
-        <PublisherName>$(& $esc $PublisherName)</PublisherName>
-        <Name>$(& $esc $Name)</Name>
-        <Description>$(& $esc $Description)</Description>
-      </LocalizedDetails>
-    </Details>
-  </RulePack>
-  <Rules>
-    <Entity id="$EntityId" patternsProximity="$PatternsProximity" recommendedConfidence="$Confidence">
-      <Pattern confidenceLevel="$Confidence">
-        <IdMatch idRef="$RegexId"/>
-      </Pattern>
-    </Entity>
-    <Regex id="$RegexId">$(& $esc $Pattern)</Regex>
-    <LocalizedStrings>
-      <Resource idRef="$EntityId">
-        <Name default="true" langcode="$Locale">$(& $esc $Name)</Name>
-        <Description default="true" langcode="$Locale">$(& $esc $Description)</Description>
-      </Resource>
-    </LocalizedStrings>
-  </Rules>
-</RulePackage>
-"@
-    }
 
     $TemplateSelection = $Settings.sensitiveInfoTypeTemplate ?? $Settings.TemplateList ?? $Settings.'standards.SensitiveInfoTypeTemplate.TemplateIds'
     $TemplateIds = @($TemplateSelection | ForEach-Object {
@@ -110,12 +61,11 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         foreach ($Template in @($Templates)) {
             $TemplateName = $Template.Name ?? $Template.name
             try {
-                # Build the rule pack bytes (simple mode synthesizes XML, advanced mode decodes base64)
                 $FileDataBytes = $null
                 if ($Template.FileDataBase64) {
                     $FileDataBytes = [System.Convert]::FromBase64String($Template.FileDataBase64)
                 } elseif ($Template.Pattern) {
-                    $Xml = New-CippSitRulePackXml `
+                    $Xml = New-CIPPSitRulePackXml `
                         -Name $TemplateName `
                         -Description ($Template.Description ?? '') `
                         -Pattern $Template.Pattern `
@@ -132,7 +82,6 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
                 $Existing = $ExistingSits | Where-Object { $_.Name -eq $TemplateName } | Select-Object -First 1
 
                 if ($Existing) {
-                    # Block updates to Microsoft built-ins — they're locked at the platform level
                     if ($Existing.Publisher -like 'Microsoft*') {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sensitive Information Type '$TemplateName' is a built-in Microsoft type and cannot be overwritten — skipping." -sev Warning
                         continue
@@ -142,12 +91,8 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
                         Identity = $TemplateName
                         FileData = $FileDataBytes
                     }
-                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Description)) {
-                        $SetParams['Description'] = $Template.Description
-                    }
-                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Locale)) {
-                        $SetParams['Locale'] = $Template.Locale
-                    }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Description)) { $SetParams['Description'] = $Template.Description }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Locale)) { $SetParams['Locale'] = $Template.Locale }
 
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-DlpSensitiveInformationType' -cmdParams $SetParams -Compliance -useSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Sensitive Information Type '$TemplateName' in place" -sev Info
@@ -156,12 +101,8 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
                         Name     = $TemplateName
                         FileData = $FileDataBytes
                     }
-                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Description)) {
-                        $NewParams['Description'] = $Template.Description
-                    }
-                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Locale)) {
-                        $NewParams['Locale'] = $Template.Locale
-                    }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Description)) { $NewParams['Description'] = $Template.Description }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$Template.Locale)) { $NewParams['Locale'] = $Template.Locale }
 
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-DlpSensitiveInformationType' -cmdParams $NewParams -Compliance -useSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Sensitive Information Type '$TemplateName'" -sev Info
@@ -173,15 +114,26 @@ function Invoke-CIPPStandardSensitiveInfoTypeTemplate {
         }
     }
 
-    if ($Settings.report -eq $true) {
-        $MissingSits = foreach ($Template in @($Templates)) {
+    $MissingSits = @(foreach ($Template in @($Templates)) {
             $TemplateName = $Template.Name ?? $Template.name
             if (-not ($ExistingSits | Where-Object { $_.Name -eq $TemplateName })) { $TemplateName }
-        }
+        })
 
-        $CurrentValue = @{ MissingSensitiveInfoTypes = $MissingSits ? @($MissingSits) : @() }
+    if ($Settings.alert -eq $true) {
+        if ($MissingSits.Count -eq 0) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All selected Sensitive Information Type templates are deployed.' -sev Info
+        } else {
+            $AlertMessage = "Sensitive Information Types not deployed in tenant: $($MissingSits -join ', ')"
+            Write-StandardsAlert -message $AlertMessage -object @{ MissingSensitiveInfoTypes = $MissingSits } -tenant $Tenant -standardName 'SensitiveInfoTypeTemplate' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message $AlertMessage -sev Info
+        }
+    }
+
+    if ($Settings.report -eq $true) {
+        $CurrentValue = @{ MissingSensitiveInfoTypes = $MissingSits }
         $ExpectedValue = @{ MissingSensitiveInfoTypes = @() }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.SensitiveInfoTypeTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'SensitiveInfoTypeTemplate' -FieldValue ($MissingSits.Count -eq 0) -StoreAs bool -Tenant $Tenant
     }
 }

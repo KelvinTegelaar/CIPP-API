@@ -5735,12 +5735,12 @@
     "cat": "Templates",
     "disabledFeatures": {
       "report": false,
-      "warn": true,
+      "warn": false,
       "remediate": false
     },
     "impact": "Medium Impact",
     "addedDate": "2026-05-10",
-    "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates.",
+    "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates. Existing policies are overwritten in place.",
     "executiveText": "Deploys Data Loss Prevention policies from a standardized template library. Ensures consistent DLP coverage across tenants for sensitive data such as financial, identity, and regulated content.",
     "addedComponent": [
       {
@@ -5765,7 +5765,7 @@
     "cat": "Templates",
     "disabledFeatures": {
       "report": false,
-      "warn": true,
+      "warn": false,
       "remediate": false
     },
     "impact": "Medium Impact",
@@ -5795,7 +5795,7 @@
     "cat": "Templates",
     "disabledFeatures": {
       "report": false,
-      "warn": true,
+      "warn": false,
       "remediate": false
     },
     "impact": "Medium Impact",
@@ -5825,7 +5825,7 @@
     "cat": "Templates",
     "disabledFeatures": {
       "report": false,
-      "warn": true,
+      "warn": false,
       "remediate": false
     },
     "impact": "Low Impact",
