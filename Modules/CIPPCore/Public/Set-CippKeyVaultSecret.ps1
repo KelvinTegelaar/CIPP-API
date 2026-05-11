@@ -56,7 +56,7 @@ function Set-CippKeyVaultSecret {
 
         # Call Key Vault REST API
         $uri = "https://$VaultName.vault.azure.net/secrets/$Name`?api-version=7.4"
-        $response = Invoke-RestMethod -Uri $uri -Headers @{
+        $response = Invoke-CIPPRestMethod -Uri $uri -Headers @{
             Authorization = "Bearer $token"
             'Content-Type' = 'application/json'
         } -Method Put -Body $body -ErrorAction Stop

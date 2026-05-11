@@ -68,7 +68,7 @@ function Import-CommunityTemplate {
             $Template | Add-Member -MemberType NoteProperty -Name SHA -Value $SHA -Force
             $Template | Add-Member -MemberType NoteProperty -Name Source -Value $Source -Force
             Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
-            
+
             if ($Existing -and $Existing.SHA -ne $SHA) {
                 $StatusMessage = "Updated template '$($Template.RowKey)' from source '$Source' (SHA changed)."
             } elseif ($Existing) {
@@ -217,6 +217,21 @@ function Import-CommunityTemplate {
                         '*managedAppPolicies*' { 'AppProtection' }
                         '*deviceAppManagement*' { 'AppProtection' }
                     }
+
+                    # Fallback: infer type from template content when @odata.id is missing or unrecognized
+                    if (-not $URLName) {
+                        $odataType = $Template.'@odata.type'
+                        $URLName = if ($null -ne $Template.settings -and $null -ne $Template.technologies) { 'Catalog' }
+                            elseif ($null -ne $Template.scheduledActionsForRule -or $odataType -match 'CompliancePolicy') { 'DeviceCompliancePolicies' }
+                            elseif ($odataType -match 'windowsDriverUpdateProfile') { 'windowsDriverUpdateProfiles' }
+                            elseif ($odataType -match 'ManagedApp|managedAppProtection') { 'AppProtection' }
+                            elseif ($odataType -match 'deviceConfiguration|#microsoft\.graph\.\w+Configuration$') { 'Device' }
+                            else { $null }
+                        if ($URLName) {
+                            Write-Information "Inferred Intune template type '$URLName' from content structure for '$($Template.displayName ?? $Template.Name)'"
+                        }
+                    }
+
                     $RawJson = $Template | Select-Object * -ExcludeProperty id, lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', 'lastModifiedDateTime@odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type'
                     Remove-ODataProperties -Object $RawJson
                     $RawJson = $RawJson | ConvertTo-Json -Depth 100 -Compress
@@ -288,6 +303,6 @@ function Import-CommunityTemplate {
         Write-Warning $StatusMessage
         Write-Information $_.InvocationInfo.PositionMessage
     }
-    
+
     return $StatusMessage
 }

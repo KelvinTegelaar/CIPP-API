@@ -10,7 +10,7 @@ function Set-CIPPUserJITAdmin {
     Tenant to manage for JIT admin
 
     .PARAMETER User
-    User object to manage JIT admin roles, required property UserPrincipalName - If user is being created we also require FirstName and LastName
+    User object to manage JIT admin roles, required property UserPrincipalName - If user is being created we also require FirstName and LastName. Optional UsageLocation (ISO 3166-1 alpha-2 country code) can be provided for user creation.
 
     .PARAMETER Roles
     List of Role GUIDs to add or remove
@@ -81,6 +81,9 @@ function Set-CIPPUserJITAdmin {
                         jitAdminReason     = $Reason
                         jitAdminCreatedBy  = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
                     }
+                }
+                if (-not [string]::IsNullOrWhiteSpace($User.UsageLocation)) {
+                    $Body.usageLocation = $User.UsageLocation
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
                 try {

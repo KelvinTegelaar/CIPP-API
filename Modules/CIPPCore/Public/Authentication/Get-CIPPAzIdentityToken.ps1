@@ -55,7 +55,7 @@ function Get-CIPPAzIdentityToken {
             'X-IDENTITY-HEADER' = $Secret
         }
 
-        $TokenResponse = Invoke-RestMethod -Method Get -Headers $Headers -Uri $TokenUri -ErrorAction Stop
+        $TokenResponse = Invoke-CIPPRestMethod -Method Get -Headers $Headers -Uri $TokenUri -ErrorAction Stop
 
         # Calculate expiration time
         $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $TokenResponse.expires_in

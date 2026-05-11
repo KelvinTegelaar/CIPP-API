@@ -14,6 +14,8 @@ function Invoke-CIPPTestCollection {
         - ORCA             → Invoke-CippTestORCA*
         - EIDSCA           → Invoke-CippTestEIDSCA*
         - CISA             → Invoke-CippTestCISA*
+        - CIS              → Invoke-CippTestCIS_*
+        - SMB1001          → Invoke-CippTestSMB1001_*
         - CopilotReadiness → Invoke-CippTestCopilotReady*
         - Custom           → Special: enumerates enabled ScriptGuids from DB and calls
                              Invoke-CippTestCustomScripts once per guid (the function
@@ -31,7 +33,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CopilotReadiness', 'GenericTests', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]
@@ -45,6 +47,8 @@ function Invoke-CIPPTestCollection {
         ORCA             = 'Invoke-CippTestORCA*'
         EIDSCA           = 'Invoke-CippTestEIDSCA*'
         CISA             = 'Invoke-CippTestCISA*'
+        CIS              = 'Invoke-CippTestCIS_*'
+        SMB1001          = 'Invoke-CippTestSMB1001_*'
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
         GenericTests     = 'Invoke-CippTestGenericTest*'
     }
@@ -81,11 +85,24 @@ function Invoke-CIPPTestCollection {
 
         Write-Information "Starting Custom suite for $TenantFilter ($($EnabledGuids.Count) scripts)"
 
+        $Table = Get-CippTable -tablename 'CippTestResults'
+        $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
+
         foreach ($Guid in $EnabledGuids) {
             $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             try {
                 Write-Information "  [Custom] Running CustomScript-$Guid for $TenantFilter"
-                Invoke-CippTestCustomScripts -Tenant $TenantFilter -ScriptGuid $Guid
+                $TestOutput = @(Invoke-CippTestCustomScripts -Tenant $TenantFilter -ScriptGuid $Guid)
+                foreach ($Entity in $TestOutput) {
+                    if ($Entity -is [hashtable] -and $Entity.PartitionKey -and $Entity.RowKey) {
+                        $ResultBatch.Add($Entity)
+                    }
+                }
+                if ($ResultBatch.Count -ge 100) {
+                    Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
+                    Write-Information "  [Custom] Flushed $($ResultBatch.Count) results to table"
+                    $ResultBatch.Clear()
+                }
                 $ItemStopwatch.Stop()
                 $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
                 $Timings.Add("CustomScript-$Guid : ${ElapsedSeconds}s")
@@ -99,6 +116,12 @@ function Invoke-CIPPTestCollection {
                 $Timings.Add("CustomScript-$Guid : ${ElapsedSeconds}s (FAILED)")
                 Write-Warning "  [Custom] Failed CustomScript-$Guid after ${ElapsedSeconds}s: $($_.Exception.Message)"
             }
+        }
+
+        # Final flush
+        if ($ResultBatch.Count -gt 0) {
+            Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
+            Write-Information "  [Custom] Flushed final $($ResultBatch.Count) results to table"
         }
 
         $SuiteStopwatch.Stop()
@@ -140,11 +163,24 @@ function Invoke-CIPPTestCollection {
 
     Write-Information "Starting $SuiteName suite for $TenantFilter ($($TestFunctions.Count) tests)"
 
+    $Table = Get-CippTable -tablename 'CippTestResults'
+    $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
+
     foreach ($TestFunction in $TestFunctions) {
         $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
             Write-Information "  [$SuiteName] Running $($TestFunction.Name) for $TenantFilter"
-            & $TestFunction.Name -Tenant $TenantFilter
+            $TestOutput = @(& $TestFunction.Name -Tenant $TenantFilter)
+            foreach ($Entity in $TestOutput) {
+                if ($Entity -is [hashtable] -and $Entity.PartitionKey -and $Entity.RowKey) {
+                    $ResultBatch.Add($Entity)
+                }
+            }
+            if ($ResultBatch.Count -ge 100) {
+                Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
+                Write-Information "  [$SuiteName] Flushed $($ResultBatch.Count) results to table"
+                $ResultBatch.Clear()
+            }
             $ItemStopwatch.Stop()
             $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
             $Timings.Add("$($TestFunction.Name) : ${ElapsedSeconds}s")
@@ -158,6 +194,12 @@ function Invoke-CIPPTestCollection {
             $Timings.Add("$($TestFunction.Name) : ${ElapsedSeconds}s (FAILED)")
             Write-Warning "  [$SuiteName] Failed $($TestFunction.Name) after ${ElapsedSeconds}s: $($_.Exception.Message)"
         }
+    }
+
+    # Final flush
+    if ($ResultBatch.Count -gt 0) {
+        Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
+        Write-Information "  [$SuiteName] Flushed final $($ResultBatch.Count) results to table"
     }
 
     $SuiteStopwatch.Stop()
