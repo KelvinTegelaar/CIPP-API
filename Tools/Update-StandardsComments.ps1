@@ -146,7 +146,7 @@ foreach ($Standard in $StandardsInfo) {
         $NewComment.Add("           Run the Tools\Update-StandardsComments.ps1 script to update this comment block`n")
         # -Online help link
         $NewComment.Add("   .LINK`n")
-        $DocsLink = 'https://docs.cipp.app/user-documentation/tenant/standards/list-standards'
+        $DocsLink = 'https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards'
 
         $NewComment.Add("       $DocsLink`n")
         $NewComment.Add('   #>')

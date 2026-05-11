@@ -103,6 +103,25 @@ function Push-CIPPDBCacheData {
                 QueueId        = $QueueId
                 QueueName      = "DB Cache Graph - $TenantFilter"
             })
+
+        # SharePoint config + site data
+        $Tasks.Add(@{
+                FunctionName   = 'ExecCIPPDBCache'
+                CollectionType = 'SharePoint'
+                TenantFilter   = $TenantFilter
+                QueueId        = $QueueId
+                QueueName      = "DB Cache SharePoint - $TenantFilter"
+            })
+
+        # Teams config + usage data
+        $Tasks.Add(@{
+                FunctionName   = 'ExecCIPPDBCache'
+                CollectionType = 'Teams'
+                TenantFilter   = $TenantFilter
+                QueueId        = $QueueId
+                QueueName      = "DB Cache Teams - $TenantFilter"
+            })
+
         # MFAState runs as its own activity — it makes 6+ API calls, bulk group/role member
         # resolution, and O(users × policies) CPU work that can take minutes on large tenants
         $Tasks.Add(@{

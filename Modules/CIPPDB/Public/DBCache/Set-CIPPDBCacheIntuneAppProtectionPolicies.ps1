@@ -1,14 +1,4 @@
 function Set-CIPPDBCacheIntuneAppProtectionPolicies {
-    <#
-    .SYNOPSIS
-        Caches Intune App Protection Policies
-
-    .PARAMETER TenantFilter
-        The tenant to cache app protection policies for
-
-    .PARAMETER QueueId
-        The queue ID to update with total tasks (optional)
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -17,27 +7,83 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
     )
 
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune App Protection Policies' -sev Debug
-
-        # iOS Managed App Protection Policies
-        $IosPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/iosManagedAppProtections?$expand=assignments' -tenantid $TenantFilter
-        if ($IosPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneIosAppProtectionPolicies' -Data $IosPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneIosAppProtectionPolicies' -Data $IosPolicies -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($IosPolicies.Count) iOS app protection policies" -sev Debug
+        $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAppProtectionPoliciesCache' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+        if ($TestResult -eq $false) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping app protection policies cache' -sev Debug
+            return
         }
-        $IosPolicies = $null
 
-        # Android Managed App Protection Policies
-        $AndroidPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/androidManagedAppProtections?$expand=assignments' -tenantid $TenantFilter
-        if ($AndroidPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAndroidAppProtectionPolicies' -Data $AndroidPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAndroidAppProtectionPolicies' -Data $AndroidPolicies -Count
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AndroidPolicies.Count) Android app protection policies" -sev Debug
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune app protection and app configuration policies' -sev Debug
+
+        $BulkRequests = @(
+            @{
+                id     = 'Groups'
+                method = 'GET'
+                url    = '/groups?$top=999&$select=id,displayName'
+            }
+            @{
+                id     = 'ManagedAppPolicies'
+                method = 'GET'
+                url    = '/deviceAppManagement/managedAppPolicies?$orderby=displayName'
+            }
+            @{
+                id     = 'MobileAppConfigurations'
+                method = 'GET'
+                url    = '/deviceAppManagement/mobileAppConfigurations?$expand=assignments&$orderby=displayName'
+            }
+        )
+
+        $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter
+        $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
+        $ManagedAppPolicies = ($BulkResults | Where-Object { $_.id -eq 'ManagedAppPolicies' }).body.value
+        $MobileAppConfigs = ($BulkResults | Where-Object { $_.id -eq 'MobileAppConfigurations' }).body.value
+
+        $ManagedAppPoliciesWithAssignments = [System.Collections.Generic.List[object]]::new()
+        if ($ManagedAppPolicies) {
+            $OdataTypes = ($ManagedAppPolicies | Select-Object -ExpandProperty '@odata.type' -Unique) -replace '#microsoft.graph.', ''
+            $ManagedAppPoliciesBulkRequests = foreach ($type in $OdataTypes) {
+                $urlSegment = switch ($type) {
+                    'androidManagedAppProtection' { 'androidManagedAppProtections' }
+                    'iosManagedAppProtection' { 'iosManagedAppProtections' }
+                    'mdmWindowsInformationProtectionPolicy' { 'mdmWindowsInformationProtectionPolicies' }
+                    'windowsManagedAppProtection' { 'windowsManagedAppProtections' }
+                    'targetedManagedAppConfiguration' { 'targetedManagedAppConfigurations' }
+                    default { $null }
+                }
+                if ($urlSegment) {
+                    @{
+                        id     = $type
+                        method = 'GET'
+                        url    = "/deviceAppManagement/${urlSegment}?`$expand=assignments&`$orderby=displayName"
+                    }
+                }
+            }
+
+            if ($ManagedAppPoliciesBulkRequests) {
+                $ManagedAppPoliciesBulkResults = New-GraphBulkRequest -Requests @($ManagedAppPoliciesBulkRequests) -tenantid $TenantFilter
+                foreach ($Result in $ManagedAppPoliciesBulkResults) {
+                    foreach ($Policy in @($Result.body.value)) {
+                        if ($null -eq $Policy) { continue }
+                        $Policy | Add-Member -NotePropertyName 'URLName' -NotePropertyValue $Result.id -Force
+                        $ManagedAppPoliciesWithAssignments.Add($Policy)
+                    }
+                }
+            }
         }
-        $AndroidPolicies = $null
 
+        if (-not $Groups) { $Groups = @() }
+        if (-not $MobileAppConfigs) { $MobileAppConfigs = @() }
+
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -Count
+
+        $TotalCount = (($ManagedAppPoliciesWithAssignments | Measure-Object).Count + ($MobileAppConfigs | Measure-Object).Count)
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $TotalCount app protection/configuration policies" -sev Debug
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache App Protection Policies: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache app protection policies: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
 }

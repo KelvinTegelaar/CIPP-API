@@ -40,6 +40,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             {"type":"textField","name":"standards.DeployCheckChromeExtension.logoUrl","label":"Logo URL","placeholder":"https://yourcompany.com/logo.png","required":false}
             {"name":"AssignTo","label":"Who should this app be assigned to?","type":"radio","options":[{"label":"Do not assign","value":"On"},{"label":"Assign to all users","value":"allLicensedUsers"},{"label":"Assign to all devices","value":"AllDevices"},{"label":"Assign to all users and devices","value":"AllDevicesAndUsers"},{"label":"Assign to Custom Group","value":"customGroup"}]}
             {"type":"textField","required":false,"name":"customGroup","label":"Enter the custom group name if you selected 'Assign to Custom Group'. Wildcards are allowed."}
+            {"name":"excludeGroup","label":"Exclude Groups","type":"textField","required":false,"helpText":"Enter the group name(s) to exclude from the assignment. Wildcards are allowed. Multiple group names are comma-separated."}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -57,7 +58,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -372,6 +373,7 @@ exit 0
         if ($Settings.remediate -eq $true) {
             $AssignTo = $Settings.AssignTo ?? 'AllDevices'
             if ($Settings.customGroup) { $AssignTo = $Settings.customGroup }
+            $ExcludeGroup = $Settings.excludeGroup
 
             # Clean up legacy OMA-URI configuration policies from the old approach
             $LegacyPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?$select=id,displayName' -tenantid $Tenant | Where-Object {
@@ -429,7 +431,7 @@ exit 0
 
                     if ($NewApp -and $AssignTo -ne 'On') {
                         Start-Sleep -Milliseconds 500
-                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                     }
 
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
@@ -451,7 +453,7 @@ exit 0
 
                 if ($NewApp -and $AssignTo -ne 'On') {
                     Start-Sleep -Milliseconds 500
-                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                 }
 
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info

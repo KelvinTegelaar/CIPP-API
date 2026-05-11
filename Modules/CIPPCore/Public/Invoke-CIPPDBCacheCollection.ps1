@@ -93,9 +93,8 @@ function Invoke-CIPPDBCacheCollection {
         ExchangeData       = @(
             'CASMailboxes'
             'MailboxUsage'
-            'OneDriveUsage'
-            'SharePointSiteUsage'
             'OfficeActivations'
+            'HVEAccounts'
         )
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'
@@ -114,8 +113,13 @@ function Invoke-CIPPDBCacheCollection {
         Intune             = @(
             'ManagedDevices'
             'IntunePolicies'
+            'IntuneApplications'
+            'IntuneAssignmentFilters'
+            'IntuneCompliancePolicies'
             'ManagedDeviceEncryptionStates'
             'IntuneAppProtectionPolicies'
+            'IntuneScripts'
+            'IntuneReusableSettings'
             'DetectedApps'
             'MDEOnboarding'
         )
@@ -132,6 +136,8 @@ function Invoke-CIPPDBCacheCollection {
         SharePoint         = @(
             'SPOTenant'
             'SPOTenantSyncClientRestriction'
+            'SharePointSiteUsage'
+            'OneDriveUsage'
         )
         Teams              = @(
             'CsTeamsMeetingPolicy'
@@ -140,6 +146,9 @@ function Invoke-CIPPDBCacheCollection {
             'CsTenantFederationConfiguration'
             'CsTeamsMessagingPolicy'
             'CsTeamsAppPermissionPolicy'
+            'Teams'
+            'TeamsActivity'
+            'TeamsVoice'
         )
     }
 

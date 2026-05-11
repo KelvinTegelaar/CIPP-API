@@ -33,7 +33,7 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -45,10 +45,10 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
 
     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Processing SafeLinks template with settings: $($Settings | ConvertTo-Json -Compress)" -sev Debug
 
-    # Verify tenant has necessary license
-    if (-not (Test-MDOLicense -Tenant $Tenant -Settings $Settings)) {
+    $MDOTestResult = Test-CIPPStandardLicense -StandardName 'SafeLinksTemplatePolicy' -TenantFilter $Tenant -RequiredCapabilities @('ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV', 'THREAT_INTELLIGENCE')
+    if ($MDOTestResult -eq $false) {
         return
-    }
+    } #tenant lacks Microsoft Defender for Office 365 — Test-CIPPStandardLicense logs and sets LicenseAvailable=false.
 
     # Normalize template list property
     $TemplateList = Get-NormalizedTemplateList -Settings $Settings
@@ -69,35 +69,6 @@ function Invoke-CIPPStandardSafeLinksTemplatePolicy {
             Invoke-SafeLinksReport -Tenant $Tenant -TemplateList $TemplateList -Settings $Settings
         }
     }
-}
-
-function Test-MDOLicense {
-    param($Tenant, $Settings)
-
-    $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $Tenant
-    $MDOLicensed = $TenantCapabilities.ATP_ENTERPRISE -eq $true
-
-    if (-not $MDOLicensed) {
-        $Message = 'Tenant does not have Microsoft Defender for Office 365 license'
-
-        if ($Settings.remediate -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply SafeLinks templates: $Message" -sev Error
-        }
-
-        if ($Settings.alert -eq $true) {
-            Write-StandardsAlert -message "SafeLinks templates could not be applied: $Message" -object $MDOLicensed -tenant $Tenant -standardName 'SafeLinksTemplatePolicy' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "SafeLinks templates could not be applied: $Message" -sev Info
-        }
-
-        if ($Settings.report -eq $true) {
-            Add-CIPPBPAField -FieldName 'SafeLinksTemplatePolicy' -FieldValue $false -StoreAs bool -Tenant $Tenant
-            Set-CIPPStandardsCompareField -FieldName 'standards.SafeLinksTemplatePolicy' -FieldValue $false -Tenant $Tenant
-        }
-
-        return $false
-    }
-
-    return $true
 }
 
 function Get-NormalizedTemplateList {

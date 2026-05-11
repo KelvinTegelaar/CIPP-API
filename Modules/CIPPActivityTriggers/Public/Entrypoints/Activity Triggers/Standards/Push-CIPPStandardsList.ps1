@@ -63,30 +63,26 @@ function Push-CIPPStandardsList {
                 Write-Information "Removed IntuneTemplate standards for $TenantFilter - missing required license"
             } else {
                 # License valid - check policy timestamps to filter unchanged templates
-                $TypeMap = @{
-                    Device                       = 'deviceManagement/deviceConfigurations'
-                    Catalog                      = 'deviceManagement/configurationPolicies'
-                    Admin                        = 'deviceManagement/groupPolicyConfigurations'
-                    deviceCompliancePolicies     = 'deviceManagement/deviceCompliancePolicies'
-                    AppProtection_Android        = 'deviceAppManagement/androidManagedAppProtections'
-                    AppProtection_iOS            = 'deviceAppManagement/iosManagedAppProtections'
-                    windowsDriverUpdateProfiles  = 'deviceManagement/windowsDriverUpdateProfiles'
-                    windowsFeatureUpdateProfiles = 'deviceManagement/windowsFeatureUpdateProfiles'
-                    windowsQualityUpdatePolicies = 'deviceManagement/windowsQualityUpdatePolicies'
-                    windowsQualityUpdateProfiles = 'deviceManagement/windowsQualityUpdateProfiles'
-                }
-
-                $BulkRequests = $TypeMap.GetEnumerator() | ForEach-Object {
-                    @{
-                        id     = $_.Key
-                        url    = "$($_.Value)?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName,name&`$top=999"
-                        method = 'GET'
-                    }
-                }
+                # URLs are fully specified per-type because Graph OData support varies:
+                # - Catalog uses 'name' not 'displayName'
+                # - windows update types don't support $orderby
+                # - App protection types only work via managedAppPolicies
+                $BulkRequests = @(
+                    @{ id = 'Device'; url = "deviceManagement/deviceConfigurations?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName&`$top=999"; method = 'GET' }
+                    @{ id = 'Catalog'; url = "deviceManagement/configurationPolicies?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,name&`$top=999"; method = 'GET' }
+                    @{ id = 'Admin'; url = "deviceManagement/groupPolicyConfigurations?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName&`$top=999"; method = 'GET' }
+                    @{ id = 'deviceCompliancePolicies'; url = "deviceManagement/deviceCompliancePolicies?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName&`$top=999"; method = 'GET' }
+                    @{ id = 'AppProtection'; url = "deviceAppManagement/managedAppPolicies?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName&`$top=999"; method = 'GET' }
+                    @{ id = 'AppConfiguration'; url = "deviceAppManagement/mobileAppConfigurations?`$orderby=lastModifiedDateTime desc&`$select=id,lastModifiedDateTime,displayName&`$top=200"; method = 'GET' }
+                    @{ id = 'windowsDriverUpdateProfiles'; url = "deviceManagement/windowsDriverUpdateProfiles?`$select=id,lastModifiedDateTime,displayName&`$top=200"; method = 'GET' }
+                    @{ id = 'windowsFeatureUpdateProfiles'; url = "deviceManagement/windowsFeatureUpdateProfiles?`$select=id,lastModifiedDateTime,displayName&`$top=200"; method = 'GET' }
+                    @{ id = 'windowsQualityUpdatePolicies'; url = "deviceManagement/windowsQualityUpdatePolicies?`$select=id,lastModifiedDateTime,displayName&`$top=200"; method = 'GET' }
+                    @{ id = 'windowsQualityUpdateProfiles'; url = "deviceManagement/windowsQualityUpdateProfiles?`$select=id,lastModifiedDateTime,displayName&`$top=200"; method = 'GET' }
+                )
 
                 try {
                     $TrackingTable = Get-CippTable -tablename 'IntunePolicyTypeTracking'
-                    $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -NoPaginateIds @($BulkRequests.id)
+                    $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -NoPaginateIds @($BulkRequests | ForEach-Object { $_.id })
                     $PolicyTimestamps = @{}
                     $PolicyNamesByType = @{}
 
@@ -186,7 +182,7 @@ function Push-CIPPStandardsList {
 
                         $PolicyType = $ParsedTemplate.Type
                         $PolicyChanged = if ($PolicyType -eq 'AppProtection') {
-                            [bool]($PolicyTimestamps['AppProtection_Android'] -or $PolicyTimestamps['AppProtection_iOS'])
+                            [bool]$PolicyTimestamps['AppProtection']
                         } else {
                             [bool]$PolicyTimestamps[$PolicyType]
                         }
@@ -227,7 +223,7 @@ function Push-CIPPStandardsList {
                                 # Verify the policy still exists in Graph before trusting compliance
                                 $TemplateDisplayName = $ParsedTemplate.Displayname
                                 $TypeNames = if ($PolicyType -eq 'AppProtection') {
-                                    @($PolicyNamesByType['AppProtection_Android']) + @($PolicyNamesByType['AppProtection_iOS'])
+                                    @($PolicyNamesByType['AppProtection'])
                                 } else {
                                     @($PolicyNamesByType[$PolicyType])
                                 }
