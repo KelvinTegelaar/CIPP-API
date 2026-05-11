@@ -7,47 +7,71 @@ function Invoke-ListLicenses {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    $QueueId = $Request.Query.QueueId
+    $Metadata = @{}
+
     if ($TenantFilter -ne 'AllTenants') {
-        $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | ForEach-Object {
-            $_
-        }
+        $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
     } else {
         $Table = Get-CIPPTable -TableName cachelicenses
-        $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
-        if (!$Rows) {
-            $GraphRequest = [PSCustomObject]@{
-                Tenant  = 'Loading data for all tenants. Please check back in 1 minute'
-                License = 'Loading data for all tenants. Please check back in 1 minute'
-            }
-            $Tenants = Get-Tenants -IncludeErrors
 
-            if (($Tenants | Measure-Object).Count -gt 0) {
-                $Queue = New-CippQueueEntry -Name 'Licenses (All Tenants)' -TotalTasks ($Tenants | Measure-Object).Count
-                $Tenants = $Tenants | Select-Object customerId, defaultDomainName, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'ListLicensesQueue' } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }
-                $InputObject = [PSCustomObject]@{
-                    OrchestratorName = 'ListLicensesOrchestrator'
-                    Batch            = @($Tenants)
-                    SkipLog          = $true
-                }
-                #Write-Host ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-                Write-Host "Started permissions orchestration with ID = '$InstanceId'"
-            }
+        if ($QueueId) {
+            $Filter = "QueueId eq '{0}'" -f $QueueId
+            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         } else {
+            $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+            $Filter = "Timestamp ge datetime'{0}'" -f $Timestamp
+            $Tenants = Get-Tenants -IncludeErrors
+            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.RowKey -in $Tenants.defaultDomainName }
+        }
+
+        if ($Rows) {
             $GraphRequest = $Rows | ForEach-Object {
                 $LicenseData = $_.License | ConvertFrom-Json -ErrorAction SilentlyContinue
                 foreach ($License in $LicenseData) {
                     $License
                 }
             }
+        } else {
+            $QueueReference = 'AllTenants-Licenses'
+            $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' -and $_.Reference -eq $QueueReference }
+
+            if ($RunningQueue) {
+                $Metadata.Queued = $true
+                $Metadata.QueueMessage = 'Data still processing, please wait'
+                $Metadata.QueueId = $RunningQueue.RowKey
+                $GraphRequest = @()
+            } else {
+                $TenantList = Get-Tenants -IncludeErrors
+                if (($TenantList | Measure-Object).Count -gt 0) {
+                    $Queue = New-CippQueueEntry -Name 'Licenses (All Tenants)' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
+                    $TenantList = $TenantList | Select-Object customerId, defaultDomainName, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'ListLicensesQueue' } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }
+                    $InputObject = [PSCustomObject]@{
+                        OrchestratorName = 'ListLicensesOrchestrator'
+                        Batch            = @($TenantList)
+                        SkipLog          = $true
+                    }
+                    $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
+                    Write-Host "Started licenses orchestration with ID = '$InstanceId'"
+
+                    $Metadata.Queued = $true
+                    $Metadata.QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
+                    $Metadata.QueueId = $Queue.RowKey
+                }
+                $GraphRequest = @()
+            }
         }
+    }
+
+    $Body = [PSCustomObject]@{
+        Results  = @($GraphRequest)
+        Metadata = $Metadata
     }
 
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
+            Body       = $Body
         })
 
 }
