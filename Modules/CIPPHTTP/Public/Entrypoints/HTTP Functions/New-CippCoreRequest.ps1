@@ -138,6 +138,9 @@ function New-CippCoreRequest {
                         Method       = $Request.Method
                         TriggerType  = 'HTTP'
                     }
+                    if ($TriggerMetadata.InvocationId) {
+                        $metadata['InvocationId'] = $TriggerMetadata.InvocationId
+                    }
 
                     # Add tenant filter if present
                     if ($Request.Query.TenantFilter) {

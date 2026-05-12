@@ -48,7 +48,9 @@ function Measure-CippTask {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $result = $null
     $errorOccurred = $false
+    $cancelled = $false
     $errorMessage = $null
+    $errorType = $null
 
     try {
         # Execute the actual task (use dot-sourcing to preserve parent scope variables)
@@ -56,6 +58,10 @@ function Measure-CippTask {
     } catch {
         $errorOccurred = $true
         $errorMessage = $_.Exception.Message
+        $errorType = $_.Exception.GetType().Name
+        if ($_.Exception -is [System.OperationCanceledException] -or $_.Exception -is [System.Threading.Tasks.TaskCanceledException]) {
+            $cancelled = $true
+        }
         # Re-throw to preserve original error behavior
         throw
     } finally {
@@ -70,9 +76,20 @@ function Measure-CippTask {
                 $props = New-Object 'System.Collections.Generic.Dictionary[string,string]'
                 $props['TaskName'] = $TaskName
                 $props['Success'] = (-not $errorOccurred).ToString()
+                $props['Outcome'] = if ($cancelled) {
+                    'Cancelled'
+                } elseif ($errorOccurred) {
+                    'Failed'
+                } else {
+                    'Succeeded'
+                }
                 $props['RawPropsAsJson'] = ($Metadata | ConvertTo-Json -Compress)
                 if ($errorOccurred) {
                     $props['ErrorMessage'] = $errorMessage
+                    $props['ErrorType'] = $errorType
+                }
+                if ($Metadata -and $Metadata.ContainsKey('InvocationId') -and $Metadata['InvocationId']) {
+                    $props['InvocationId'] = [string]$Metadata['InvocationId']
                 }
 
                 # Add all metadata to properties
@@ -94,7 +111,10 @@ function Measure-CippTask {
 
                 # Send custom event to Application Insights
                 $global:TelemetryClient.TrackEvent($EventName, $props, $metrics)
-                $global:TelemetryClient.Flush()
+                $shouldFlush = $errorOccurred -or $cancelled -or ($env:CIPP_TELEMETRY_FORCE_FLUSH -in @('true', '1'))
+                if ($shouldFlush) {
+                    $global:TelemetryClient.Flush()
+                }
 
                 Write-Verbose "Telemetry sent for task '$TaskName' to event '$EventName' (${durationMs}ms)"
             } catch {
