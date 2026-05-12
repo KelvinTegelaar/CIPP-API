@@ -22,6 +22,18 @@ function Invoke-ExecTravelCAPolicy {
         # Build user lists
         $UserUPNs = $Users.addedFields.userPrincipalName
         $UserIds  = $Users.value
+        # Resolve UPNs to object IDs (Graph CA policy requires GUIDs)
+        $ResolvedIds = [System.Collections.Generic.List[string]]::new()
+        foreach ($UPN in $UserUPNs) {
+            try {
+                $UserObj = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UPN)?`$select=id" -tenantid $TenantFilter -asApp $true -ErrorAction Stop
+                $ResolvedIds.Add($UserObj.id)
+            } catch {
+                Write-Information "Could not resolve UPN $UPN to object ID, using value from request"
+                $ResolvedIds.Add($UPN)
+            }
+        }
+        if ($ResolvedIds.Count -gt 0) { $UserIds = $ResolvedIds }
 
         # Build date strings for policy name
         $StartStr   = [datetimeoffset]::FromUnixTimeSeconds($StartDate).ToString('yyyyMMdd')
@@ -126,8 +138,26 @@ function Invoke-ExecTravelCAPolicy {
             Write-LogMessage -headers $Headers -API 'Invoke-ExecTravelCAPolicy' `
                 -message "Created country Named Location: $CountryLocationName ($($CountryCodes -join ', '))" `
                 -Sev 'Info' -tenant $TenantFilter
-            # Wait for Named Location to propagate
-            Start-Sleep -Seconds 3
+            # Wait for Named Location to propagate - retry until verified
+            $MaxRetries = 10
+            $RetryCount = 0
+            $LocationVerified = $false
+            while (-not $LocationVerified -and $RetryCount -lt $MaxRetries) {
+                Start-Sleep -Seconds 8
+                $RetryCount++
+                try {
+                    $VerifyById = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($NewLocation.id)" -tenantid $TenantFilter -asApp $true -ErrorAction Stop
+                    if ($VerifyById.id -eq $NewLocation.id) {
+                        $LocationVerified = $true
+                        Write-Information "Named Location verified after $RetryCount attempt(s): $($NewLocation.id)"
+                    }
+                } catch {
+                    Write-Information "Named Location not yet available, retry $RetryCount of $MaxRetries"
+                }
+            }
+            if (-not $LocationVerified) {
+                throw "Named Location $($NewLocation.id) did not propagate after $MaxRetries retries"
+            }
         }
         #endregion
 
