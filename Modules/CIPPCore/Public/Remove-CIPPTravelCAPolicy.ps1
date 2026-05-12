@@ -25,7 +25,9 @@ function Remove-CIPPTravelCAPolicy {
                 -message "Deleted travel CA policy: $($Policy.displayName)" `
                 -Sev 'Info' -tenant $TenantFilter
         }
-        # Find and delete the associated country Named Location if it exists
+        # Wait for policy deletion to propagate before removing Named Location
+        Start-Sleep -Seconds 15
+                # Find and delete the associated country Named Location if it exists
         $CountryLocationName = $PolicyName -replace 'CIPP_TravelPolicy_', 'CIPP_Travel_'
         $CountryLocationName = "${CountryLocationName}_Countries"
         $Locations = New-GraphGetRequest `
