@@ -46,7 +46,7 @@ function Invoke-CIPPStandardDisableViva {
         } else {
             try {
                 # TODO This does not work without Global Admin permissions for some reason. Throws an "EXCEPTION: Tenant admin role is required" error. -Bobby
-                New-GraphPOSTRequest -Uri "https://graph.microsoft.com/beta/organization/$Tenant/settings/peopleInsights" -tenantid $Tenant -Type PATCH -Body '{"isEnabledInOrganization": false}' -ContentType 'application/json'
+                New-GraphPOSTRequest -Uri "https://graph.microsoft.com/beta/organization/$Tenant/settings/peopleInsights" -tenantid $Tenant -Type PATCH -Body '{"isEnabledInOrganization": false}' -ContentType 'application/json' -AsApp $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Disabled Viva insights' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

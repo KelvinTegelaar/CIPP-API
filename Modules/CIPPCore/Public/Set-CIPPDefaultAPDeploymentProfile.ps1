@@ -24,9 +24,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         # 'user-select' -> empty string (lets user choose during OOBE)
         # 'os-default' or $null -> $null (uses operating system default)
         # Specific tag (e.g. 'en-US') -> passed through as-is
-        if ($Language -eq 'user-select') {
-            $Language = ''
-        } elseif ($Language -eq 'os-default' -or $null -eq $Language) {
+        if ($Language -eq 'os-default') {
             $Language = $null
         }
 
@@ -48,15 +46,19 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'displayName'                   = "$($DisplayName)"
             'description'                   = "$($Description)"
             'deviceNameTemplate'            = "$($DeviceNameTemplate)"
-            'locale'                        = $Language
+            'locale'                        = "$($Language)"
             'preprovisioningAllowed'        = $([bool]($AllowWhiteGlove))
             'deviceType'                    = 'windowsPc'
             'hardwareHashExtractionEnabled' = $([bool]($CollectHash))
             'roleScopeTagIds'               = @()
             'outOfBoxExperienceSetting'     = $OutOfBoxSetting
         }
+        if ($Language -eq 'user-select') {
+            #Add language query to body only if user-select, as Graph API treats empty string differently than null
+            $ObjBody.locale = ''
+            $ObjBody | Add-Member -MemberType NoteProperty -Name 'language' -Value '' -Force
+        }
         $Body = ConvertTo-Json -InputObject $ObjBody -Depth 10
-
         Write-Information $Body
 
         $Profiles = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $DisplayName

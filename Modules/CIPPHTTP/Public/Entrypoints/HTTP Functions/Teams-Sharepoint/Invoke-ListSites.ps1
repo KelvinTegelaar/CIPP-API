@@ -78,9 +78,17 @@ function Invoke-ListSites {
 
         $Result = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests) -asapp $true
         $Sites = ($Result | Where-Object { $_.id -eq 'listAllSites' }).body.value
-        $UsageBase64 = ($Result | Where-Object { $_.id -eq 'usage' }).body
-        $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBase64))
-        $Usage = ($UsageJson | ConvertFrom-Json).value
+        $UsageResponse = $Result | Where-Object { $_.id -eq 'usage' }
+        if ($UsageResponse.status -and $UsageResponse.status -ne 200) {
+            throw ($UsageResponse.body.error.message ?? "Usage report request failed with status $($UsageResponse.status)")
+        }
+        $UsageBody = $UsageResponse.body
+        if ($UsageBody -is [string]) {
+            $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBody))
+            $Usage = ($UsageJson | ConvertFrom-Json).value
+        } else {
+            $Usage = @($UsageBody.value)
+        }
 
         $GraphRequest = foreach ($Site in $Sites) {
             $SiteUsage = $Usage | Where-Object { $_.siteId -eq $Site.sharepointIds.siteId }

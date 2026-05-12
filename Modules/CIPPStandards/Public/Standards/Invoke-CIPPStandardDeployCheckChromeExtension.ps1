@@ -137,7 +137,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         ExtSettingsKey     = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSettings\`$edgeExtensionId"
         ToolbarProp        = 'toolbar_state'
         ToolbarPinned      = 'force_shown'
-        ToolbarUnpinned    = 'hidden'
+        ToolbarUnpinned    = 'default_hidden'
     }
 )
 
