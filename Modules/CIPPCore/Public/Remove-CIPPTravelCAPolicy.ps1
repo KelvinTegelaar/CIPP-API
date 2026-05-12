@@ -15,31 +15,40 @@ function Remove-CIPPTravelCAPolicy {
             Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
                 -message "Travel policy '$PolicyName' not found, may already be deleted" `
                 -Sev 'Info' -tenant $TenantFilter
-            return "Policy '$PolicyName' not found or already deleted"
+        } else {
+            foreach ($Policy in $Policies) {
+                $null = New-GraphPOSTRequest `
+                    -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($Policy.id)" `
+                    -tenantid $TenantFilter -type DELETE -body '' -asApp $true
+                Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
+                    -message "Deleted travel CA policy: $($Policy.displayName)" `
+                    -Sev 'Info' -tenant $TenantFilter
+            }
         }
-        foreach ($Policy in $Policies) {
-            $null = New-GraphPOSTRequest `
-                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($Policy.id)" `
-                -tenantid $TenantFilter -type DELETE -body '' -asApp $true
-            Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                -message "Deleted travel CA policy: $($Policy.displayName)" `
-                -Sev 'Info' -tenant $TenantFilter
-        }
+
         # Wait for policy deletion to propagate before removing Named Location
         Start-Sleep -Seconds 15
-                # Find and delete the associated country Named Location if it exists
-        $CountryLocationName = $PolicyName -replace 'CIPP_TravelPolicy_', 'CIPP_Travel_'
-        $CountryLocationName = "${CountryLocationName}_Countries"
-        $Locations = New-GraphGetRequest `
-            -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?`$filter=displayName eq '$CountryLocationName'&`$select=id,displayName" `
-            -tenantid $TenantFilter -asApp $true
-        foreach ($Loc in $Locations) {
-            $null = New-GraphPOSTRequest `
-                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($Loc.id)" `
-                -tenantid $TenantFilter -type DELETE -body '' -asApp $true
+
+        # Find and delete the associated country Named Location if it exists (non-fatal)
+        try {
+            $CountryLocationName = $PolicyName -replace 'CIPP_TravelPolicy_', 'CIPP_Travel_'
+            $CountryLocationName = "${CountryLocationName}_Countries"
+            $Locations = New-GraphGetRequest `
+                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?`$filter=displayName eq '$CountryLocationName'&`$select=id,displayName" `
+                -tenantid $TenantFilter -asApp $true
+            foreach ($Loc in $Locations) {
+                $null = New-GraphPOSTRequest `
+                    -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($Loc.id)" `
+                    -tenantid $TenantFilter -type DELETE -body '' -asApp $true
+                Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
+                    -message "Deleted country Named Location: $($Loc.displayName)" `
+                    -Sev 'Info' -tenant $TenantFilter
+            }
+        } catch {
+            Write-Information "Non-fatal: Could not delete Named Location: $($_.Exception.Message)"
             Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                -message "Deleted country Named Location: $($Loc.displayName)" `
-                -Sev 'Info' -tenant $TenantFilter
+                -message "Could not delete Named Location (non-fatal): $($_.Exception.Message)" `
+                -Sev 'Warning' -tenant $TenantFilter
         }
 
         # Remove users from CIPP_TravelingUsers group only if not active in other travel policies
