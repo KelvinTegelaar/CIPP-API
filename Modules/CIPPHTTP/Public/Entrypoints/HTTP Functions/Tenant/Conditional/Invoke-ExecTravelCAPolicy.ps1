@@ -215,22 +215,6 @@ function Invoke-ExecTravelCAPolicy {
         }
         Add-CIPPScheduledTask -Task $AddMemberTask -hidden $false
 
-        # EndDate: Remove users from CIPP_TravelingUsers group
-        $RemoveMemberTask = [pscustomobject]@{
-            TenantFilter  = $TenantFilter
-            Name          = "Vacation Travel - Remove from group: $PolicyName"
-            Command       = @{ value = 'Remove-CIPPGroupMember'; label = 'Remove-CIPPGroupMember' }
-            Parameters    = [pscustomobject]@{
-                GroupType = 'Security'
-                GroupId   = $TravelGroupId
-                Member    = $UserMembers
-            }
-            ScheduledTime = $EndDate
-            PostExecution = $Request.Body.postExecution
-            Reference     = $Request.Body.reference
-        }
-        Add-CIPPScheduledTask -Task $RemoveMemberTask -hidden $false
-
         # EndDate: Delete travel CA policy and country Named Location
         $DeletePolicyTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
@@ -239,6 +223,7 @@ function Invoke-ExecTravelCAPolicy {
             Parameters    = [pscustomobject]@{
                 TenantFilter = $TenantFilter
                 PolicyName   = $PolicyName
+                Users        = @($UserIds)
             }
             ScheduledTime = $EndDate
             PostExecution = $Request.Body.postExecution
