@@ -150,6 +150,8 @@ function Invoke-ExecTravelCAPolicy {
                     if ($VerifyById.id -eq $NewLocation.id) {
                         $LocationVerified = $true
                         Write-Information "Named Location verified after $RetryCount attempt(s): $($NewLocation.id)"
+                        # Extra sleep after verification to ensure full propagation
+                        Start-Sleep -Seconds 10
                     }
                 } catch {
                     Write-Information "Named Location not yet available, retry $RetryCount of $MaxRetries"
