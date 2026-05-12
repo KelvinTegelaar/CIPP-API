@@ -20,5 +20,24 @@
       "/tenant/standards/bpa-report/builder",
       "/tenant/standards/bpa-report/view"
     ]
+  },
+  {
+    "Id": "SuperAdminNG",
+    "Name": "Super Admin",
+    "Description": "Additional super admin pages for CIPP instances (CIPP Users, SSO, Container management).",
+    "Enabled": false,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [
+      "ExecCIPPUsers",
+      "ListCIPPUsers",
+      "ExecSSOSetup",
+      "ExecContainerManagement"
+    ],
+    "Pages": [
+      "/cipp/advanced/super-admin/cipp-users",
+      "/cipp/advanced/super-admin/sso",
+      "/cipp/advanced/super-admin/container"
+    ]
   }
 ]

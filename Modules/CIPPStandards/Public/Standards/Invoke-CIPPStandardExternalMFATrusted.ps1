@@ -36,7 +36,7 @@ function Invoke-CIPPStandardExternalMFATrusted {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ExternalMFATrusted' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ExternalMFATrusted' -TenantFilter $Tenant -Preset Entra
 
     if ($TestResult -eq $false) {
         return $true

@@ -7,7 +7,7 @@ function Set-CIPPDBCacheIntuneApplications {
     )
 
     try {
-        $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneApplicationsCache' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+        $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneApplicationsCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping applications cache' -sev Debug
             return

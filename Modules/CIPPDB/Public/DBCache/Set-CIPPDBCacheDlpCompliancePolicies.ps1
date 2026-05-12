@@ -17,7 +17,7 @@ function Set-CIPPDBCacheDlpCompliancePolicies {
     )
 
     try {
-        $LicenseCheck = Test-CIPPStandardLicense -StandardName 'DlpCompliancePoliciesCache' -TenantFilter $TenantFilter -RequiredCapabilities @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2') -SkipLog
+        $LicenseCheck = Test-CIPPStandardLicense -StandardName 'DlpCompliancePoliciesCache' -TenantFilter $TenantFilter -Preset Compliance -SkipLog
 
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Purview/AIP license, skipping DLP compliance policies' -sev Debug

@@ -7,7 +7,7 @@ function Set-CIPPDBCacheIntuneAssignmentFilters {
     )
 
     try {
-        $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAssignmentFiltersCache' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+        $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneAssignmentFiltersCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping assignment filters cache' -sev Debug
             return

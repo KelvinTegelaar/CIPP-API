@@ -37,7 +37,7 @@ function Invoke-CIPPStandardTeamsEnrollUser {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEnrollUser' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsEnrollUser' -TenantFilter $Tenant -Preset Teams
 
     # Get EnrollUserOverride value using null-coalescing operator
 

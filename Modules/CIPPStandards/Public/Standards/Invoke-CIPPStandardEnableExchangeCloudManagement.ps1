@@ -39,7 +39,7 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
 
     param($Tenant, $Settings)
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableExchangeCloudManagement' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableExchangeCloudManagement' -TenantFilter $Tenant -Preset Exchange
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

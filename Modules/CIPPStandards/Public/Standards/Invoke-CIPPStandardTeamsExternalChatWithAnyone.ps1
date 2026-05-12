@@ -38,7 +38,7 @@ function Invoke-CIPPStandardTeamsExternalChatWithAnyone {
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalChatWithAnyone' -TenantFilter $Tenant -RequiredCapabilities @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'TeamsExternalChatWithAnyone' -TenantFilter $Tenant -Preset Teams
 
     if ($TestResult -eq $false) {
         return $true

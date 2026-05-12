@@ -36,7 +36,7 @@ function Invoke-CIPPStandardAutoAddProxy {
         $QueueItem
     )
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchive' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'AutoArchive' -TenantFilter $Tenant -Preset Exchange
     if ($TestResult -eq $false) {
         return $true
     }
@@ -66,13 +66,13 @@ function Invoke-CIPPStandardAutoAddProxy {
     $MissingProxies = 0
     foreach ($Domain in $Domains) {
         $ProcessMailboxes = @($AllMailboxes | Where-Object {
-            $AllAddresses = @($_.primarySmtpAddress)
-            if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
-                $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
-            }
-            $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
-            -not $HasDomain
-        })
+                $AllAddresses = @($_.primarySmtpAddress)
+                if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
+                    $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
+                }
+                $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
+                -not $HasDomain
+            })
         $MissingProxies += $ProcessMailboxes.Count
     }
 
@@ -104,13 +104,13 @@ function Invoke-CIPPStandardAutoAddProxy {
         } else {
             foreach ($Domain in $Domains) {
                 $ProcessMailboxes = @($AllMailboxes | Where-Object {
-                    $AllAddresses = @($_.primarySmtpAddress)
-                    if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
-                        $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
-                    }
-                    $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
-                    -not $HasDomain
-                })
+                        $AllAddresses = @($_.primarySmtpAddress)
+                        if (-not [string]::IsNullOrWhiteSpace($_.AdditionalEmailAddresses)) {
+                            $AllAddresses += @($_.AdditionalEmailAddresses -split ',\s*')
+                        }
+                        $HasDomain = $AllAddresses | Where-Object { $_ -like "*@$Domain" }
+                        -not $HasDomain
+                    })
 
                 $bulkRequest = foreach ($Mailbox in $ProcessMailboxes) {
                     if ([string]::IsNullOrWhiteSpace($Mailbox.UPN)) { continue }

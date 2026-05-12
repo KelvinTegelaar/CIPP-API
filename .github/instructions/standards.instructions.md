@@ -67,7 +67,7 @@ function Invoke-CIPPStandard<Name> {
 
     # 1. License gate (if the data source requires a specific SKU)
     $TestResult = Test-CIPPStandardLicense -StandardName '<Name>' -TenantFilter $Tenant `
-        -RequiredCapabilities @('CAPABILITY_1', 'CAPABILITY_2')
+        -Preset Exchange
     if ($TestResult -eq $false) { return $true }
 
     # 2. Get current state
@@ -235,13 +235,13 @@ Gate early using `Test-CIPPStandardLicense`. Never inspect raw SKU IDs.
 
 ```powershell
 $TestResult = Test-CIPPStandardLicense -StandardName '<Name>' -TenantFilter $Tenant `
-    -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE')
+    -Preset Exchange
 if ($TestResult -eq $false) { return $true }
 ```
 
 The function checks tenant capabilities, logs if missing, and automatically sets the `Set-CIPPStandardsCompareField` with `LicenseAvailable = $false`.
 
-Reference existing standards in the same domain for common capability strings. The `Test-CIPPStandardLicense` function source documents the capability matching logic.
+Use presets for common service families: `Exchange`, `SharePoint`, `Intune`, `Entra`, `EntraP2`, `Teams`, and `Compliance`. Use `-RequiredCapabilities` only when no preset matches, or combine it with `-Preset` when a standard needs a preset plus extra edge-case capabilities.
 
 ## API call patterns
 
@@ -337,7 +337,7 @@ The comment-based help `.NOTES` block drives the frontend UI. Each field maps to
 | `RECOMMENDEDBY` | `recommendedBy` | `"CIS"`, `"CIPP"`, etc. |
 | `MULTIPLE` | `multiple` | `True` for template-based standards (can have multiple instances) |
 | `DISABLEDFEATURES` | `disabledFeatures` | JSON object disabling specific action modes |
-| `REQUIREDCAPABILITIES` | *(discovery only)* | One capability string per line; parsed for standards metadata/JSON generation. The explicit `Test-CIPPStandardLicense` call in the function body still performs the actual runtime license check. |
+| `REQUIREDCAPABILITIES` | *(discovery only)* | One capability string per line; generated from `Test-CIPPStandardLicense -Preset` and/or `-RequiredCapabilities` for standards metadata/JSON generation. The explicit `Test-CIPPStandardLicense` call in the function body still performs the actual runtime license check. |
 | `UPDATECOMMENTBLOCK` | *(tooling only)* | Always include with the literal value `Run the Tools\Update-StandardsComments.ps1 script to update this comment block`. Signals the comment-update tooling to regenerate this block. |
 
 ### Valid CAT values

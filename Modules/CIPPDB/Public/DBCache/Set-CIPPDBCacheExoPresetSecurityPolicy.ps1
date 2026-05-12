@@ -19,7 +19,7 @@ function Set-CIPPDBCacheExoPresetSecurityPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Preset Security Policies' -sev Debug
 
-        $MDOTestResult = Test-CIPPStandardLicense -StandardName 'ExoPresetSecurityPolicy' -TenantFilter $TenantFilter -RequiredCapabilities @('ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV', 'THREAT_INTELLIGENCE') -SkipLog
+        $MDOTestResult = Test-CIPPStandardLicense -StandardName 'ExoPresetSecurityPolicy' -TenantFilter $TenantFilter -Preset DefenderForOffice365 -SkipLog
         if ($MDOTestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Preset Security Policy cache: tenant lacks Microsoft Defender for Office 365' -sev Debug
             return
