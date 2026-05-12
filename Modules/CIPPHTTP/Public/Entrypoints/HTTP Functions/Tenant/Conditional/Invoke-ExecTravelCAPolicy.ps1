@@ -125,7 +125,7 @@ function Invoke-ExecTravelCAPolicy {
         if ($CountryCodes -and $CountryCodes.Count -gt 0) {
             $CountryLocationName = "CIPP_Travel_${StartStr}_${EndStr}_Countries"
             $CountryLocationBody = @{
-                '@odata.type'                     = '#microsoft.graph.countriesAndRegionsDefinition'
+                '@odata.type'                     = '#microsoft.graph.countryNamedLocation'
                 displayName                       = $CountryLocationName
                 countriesAndRegions               = @($CountryCodes)
                 includeUnknownCountriesAndRegions = $false
@@ -200,7 +200,7 @@ function Invoke-ExecTravelCAPolicy {
         # StartDate: Add users to CIPP_TravelingUsers group
         $AddMemberTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
-            Name          = "Travel Mode - Add to group: $PolicyName"
+            Name          = "Vacation Travel - Add to group: $PolicyName"
             Command       = @{ value = 'Add-CIPPGroupMember'; label = 'Add-CIPPGroupMember' }
             Parameters    = [pscustomobject]@{
                 GroupType = 'Security'
@@ -216,7 +216,7 @@ function Invoke-ExecTravelCAPolicy {
         # EndDate: Remove users from CIPP_TravelingUsers group
         $RemoveMemberTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
-            Name          = "Travel Mode - Remove from group: $PolicyName"
+            Name          = "Vacation Travel - Remove from group: $PolicyName"
             Command       = @{ value = 'Remove-CIPPGroupMember'; label = 'Remove-CIPPGroupMember' }
             Parameters    = [pscustomobject]@{
                 GroupType = 'Security'
@@ -232,7 +232,7 @@ function Invoke-ExecTravelCAPolicy {
         # EndDate: Delete travel CA policy and country Named Location
         $DeletePolicyTask = [pscustomobject]@{
             TenantFilter  = $TenantFilter
-            Name          = "Travel Mode - Delete policy: $PolicyName"
+            Name          = "Vacation Travel - Delete policy: $PolicyName"
             Command       = @{ value = 'Remove-CIPPTravelCAPolicy'; label = 'Remove-CIPPTravelCAPolicy' }
             Parameters    = [pscustomobject]@{
                 TenantFilter = $TenantFilter
