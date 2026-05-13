@@ -33,7 +33,7 @@ function Remove-CippKeyVaultSecret {
         $token = Get-CIPPAzIdentityToken -ResourceUrl 'https://vault.azure.net'
         $uri = "https://$VaultName.vault.azure.net/secrets/$Name`?api-version=7.4"
 
-        $response = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $token" } -Method Delete -ErrorAction Stop
+        $response = Invoke-CIPPRestMethod -Uri $uri -Headers @{ Authorization = "Bearer $token" } -Method Delete -ErrorAction Stop
 
         return @{
             Name      = $Name

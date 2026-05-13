@@ -12,8 +12,8 @@ function Set-CIPPCAPolicyServiceException {
     # Get the current policy
     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
 
-    # If the policy is set to affect either all or all guests/external users
-    if ($policy.conditions.users.includeUsers -eq 'All' -or $policy.conditions.users.includeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'all') {
+    # If the policy is set to affect all users, all guests/external users, or specific directory roles
+    if ($policy.conditions.users.includeUsers -eq 'All' -or $policy.conditions.users.includeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'all' -or $policy.conditions.users.includeRoles.Count -gt 0) {
 
         # Check if the policy already has the correct service provider exception
         if ($policy.conditions.users.excludeGuestsOrExternalUsers) {

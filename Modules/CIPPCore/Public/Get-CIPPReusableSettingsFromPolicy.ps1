@@ -17,7 +17,7 @@ function Get-CIPPReusableSettingsFromPolicy {
     try {
         $policyObject = $PolicyJson | ConvertFrom-Json -Depth 300 -ErrorAction Stop
     } catch {
-        Write-LogMessage -headers $Headers -API $APIName -message "Reusable settings discovery failed: policy JSON invalid ($($_.Exception.Message))" -Sev 'Warn'
+        Write-LogMessage -headers $Headers -API $APIName -message "Reusable settings discovery failed: policy JSON invalid ($($_.Exception.Message))" -Sev 'Warning'
         return $result
     }
 
@@ -101,7 +101,7 @@ function Get-CIPPReusableSettingsFromPolicy {
         try {
             $setting = New-GraphGETRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings/$settingId" -tenantid $Tenant
             if ($null -eq $setting) {
-                Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId not returned from Graph" -Sev 'Warn'
+                Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId not returned from Graph" -Sev 'Warning'
                 continue
             }
 
@@ -121,7 +121,7 @@ function Get-CIPPReusableSettingsFromPolicy {
 
             $settingDisplayName = $setting.displayName ?? $settingNormalized.displayName
             if (-not $settingDisplayName) {
-                Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId missing displayName" -Sev 'Warn'
+                Write-LogMessage -headers $Headers -API $APIName -message "Reusable setting $settingId missing displayName" -Sev 'Warning'
                 continue
             }
 
@@ -208,7 +208,7 @@ function Get-CIPPReusableSettingsFromPolicy {
                     sourceId    = $settingId
                 })
         } catch {
-            Write-LogMessage -headers $Headers -API $APIName -message "Failed to link reusable setting $settingId for template creation: $($_.Exception.Message)" -Sev 'Warn'
+            Write-LogMessage -headers $Headers -API $APIName -message "Failed to link reusable setting $settingId for template creation: $($_.Exception.Message)" -Sev 'Warning'
         }
     }
 

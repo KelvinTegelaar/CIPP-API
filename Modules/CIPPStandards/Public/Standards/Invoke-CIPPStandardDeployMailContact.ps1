@@ -1,0 +1,138 @@
+function Invoke-CIPPStandardDeployMailContact {
+    <#
+    .FUNCTIONALITY
+        Internal
+    .COMPONENT
+        (APIName) DeployMailContact
+    .SYNOPSIS
+        (Label) Deploy Mail Contact
+    .DESCRIPTION
+        (Helptext) Creates a new mail contact in Exchange Online across all selected tenants. The contact will be visible in the Global Address List.
+        (DocsDescription) This standard creates a new mail contact in Exchange Online. Mail contacts are useful for adding external email addresses to your organization's address book. They can be used for distribution lists, shared mailboxes, and other collaboration scenarios.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+        EXECUTIVETEXT
+            Automatically creates external email contacts in the organization's address book, enabling seamless communication with external partners and vendors. This standardizes contact management across all company locations and improves collaboration efficiency.
+        ADDEDCOMPONENT
+            {"type":"textField","name":"standards.DeployMailContact.ExternalEmailAddress","label":"External Email Address","required":true}
+            {"type":"textField","name":"standards.DeployMailContact.DisplayName","label":"Display Name","required":true}
+            {"type":"textField","name":"standards.DeployMailContact.FirstName","label":"First Name","required":false}
+            {"type":"textField","name":"standards.DeployMailContact.LastName","label":"Last Name","required":false}
+        IMPACT
+            Low Impact
+        ADDEDDATE
+            2024-03-19
+        POWERSHELLEQUIVALENT
+            New-MailContact
+        RECOMMENDEDBY
+            "CIPP"
+        REQUIREDCAPABILITIES
+            "EXCHANGE_S_STANDARD"
+            "EXCHANGE_S_ENTERPRISE"
+            "EXCHANGE_S_STANDARD_GOV"
+            "EXCHANGE_S_ENTERPRISE_GOV"
+            "EXCHANGE_LITE"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
+    #>
+
+    param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DeployMailContact' -TenantFilter $Tenant -Preset Exchange #No Foundation because that does not allow powershell access
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
+
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($Settings.DisplayName)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DeployMailContact: DisplayName cannot be empty or just whitespace.' -sev Error
+        return
+    }
+
+    try {
+        $null = [System.Net.Mail.MailAddress]::new($Settings.ExternalEmailAddress)
+    } catch {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "DeployMailContact: Invalid email address format: $($Settings.ExternalEmailAddress)" -sev Error
+        return
+    }
+
+    # Check if contact already exists
+    try {
+        $ExistingContact = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailContact' -cmdParams @{
+            Identity    = $Settings.ExternalEmailAddress
+            ErrorAction = 'Stop'
+        }
+        $ExistingContactLookup = New-GraphGetRequest -tenantid $Tenant -uri "https://graph.microsoft.com/beta/contacts/$($ExistingContact.ExternalDirectoryObjectId)" -ErrorAction 'Stop'
+    } catch {
+        if ($_.Exception.Message -like "*couldn't be found*") {
+            $ExistingContact = $null
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error checking for existing mail contact: $(Get-CippException -Exception $_).NormalizedError" -sev Error
+            return
+        }
+    }
+
+    # Remediation
+    if ($Settings.remediate -eq $true -and -not $ExistingContact) {
+        try {
+            $NewContactParams = @{
+                Name                 = $Settings.DisplayName
+                ExternalEmailAddress = $Settings.ExternalEmailAddress
+                FirstName            = $Settings.FirstName
+                LastName             = $Settings.LastName
+            }
+            $NewContactParams.Name = $Settings.DisplayName
+            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
+            # I would like to update the contact object here but exchange replication delays make it unreliable, so instead it will alert on the discrepancy until the next run - Zac
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $(Get-CippException -Exception $_).NormalizedError" -sev Error
+        }
+    } elseif ($Settings.remediate -eq $true -and $ExistingContact -and ($ExistingContactLookup.givenName -ne $Settings.FirstName -or $ExistingContactLookup.surname -ne $Settings.LastName -or $ExistingContactLookup.displayName -ne $Settings.DisplayName)) {
+        try {
+            $ContactParams = @{
+                Identity            = $ExistingContact.Guid
+                DisplayName         = $Settings.DisplayName
+                FirstName           = $Settings.FirstName
+                LastName            = $Settings.LastName
+            }
+            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Contact' -cmdParams $ContactParams
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully updated contact properties for $($Settings.DisplayName)" -sev Info
+            # I would like to update the contact object here but exchange replication delays make it unreliable, so instead it will alert on the discrepancy until the next run - Zac
+        } catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not update mail contact. $(Get-CippException -Exception $_).NormalizedError" -sev Error
+        }
+    }
+
+    # Alert
+    if ($Settings.alert -eq $true) {
+        if ($ExistingContact) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact $($Settings.DisplayName) already exists" -sev Info
+        } else {
+            Write-StandardsAlert -message "Mail contact $($Settings.DisplayName) needs to be created" -object $ContactData -tenant $Tenant -standardName 'DeployMailContact' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact $($Settings.DisplayName) needs to be created" -sev Info
+        }
+    }
+
+    # Report
+    if ($Settings.report -eq $true) {
+        $ContactData = @{
+            DisplayName          = $Settings.DisplayName
+            ExternalEmailAddress = $Settings.ExternalEmailAddress
+            FirstName            = $Settings.FirstName ?? ''
+            LastName             = $Settings.LastName ?? ''
+        }
+        $currentValue = @{
+            DisplayName          = $ExistingContactLookup.displayName
+            ExternalEmailAddress = ($ExistingContact.ExternalEmailAddress -replace 'SMTP:', '')
+            FirstName            = $ExistingContactLookup.givenName ?? ''
+            LastName             = $ExistingContactLookup.surname ?? ''
+        }
+        Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ContactData -StoreAs json -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -CurrentValue $CurrentValue -ExpectedValue $ContactData -Tenant $Tenant
+    }
+}

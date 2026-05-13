@@ -57,7 +57,7 @@ function Repair-CIPPIntuneTemplateNesting {
         } -Force
 
         $Template.RAWJson = $currentRawJson
-        Write-LogMessage -API 'IntuneTemplate' -message "Repaired double-nested RAWJson for template '$($Template.Displayname)' ($($Template.GUID))" -Sev 'Warn'
+        Write-LogMessage -API 'IntuneTemplate' -message "Repaired double-nested RAWJson for template '$($Template.Displayname)' ($($Template.GUID))" -Sev 'Warning'
     }
 
     return $Template

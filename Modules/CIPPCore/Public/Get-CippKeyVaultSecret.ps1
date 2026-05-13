@@ -55,7 +55,7 @@ function Get-CippKeyVaultSecret {
 
         for ($i = 0; $i -lt $maxRetries; $i++) {
             try {
-                $response = Invoke-RestMethod -Uri $uri -Headers @{
+                $response = Invoke-CIPPRestMethod -Uri $uri -Headers @{
                     Authorization = "Bearer $token"
                 } -Method Get -ErrorAction Stop
                 break

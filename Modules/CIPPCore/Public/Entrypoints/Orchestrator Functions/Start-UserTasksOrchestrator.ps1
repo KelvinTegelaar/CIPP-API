@@ -73,7 +73,36 @@ function Start-UserTasksOrchestrator {
                 }
 
                 # Cache Get-Command result to avoid repeated expensive reflection calls
-                $CommandInfo = Get-Command $task.Command
+                $CommandInfo = Get-Command -Name $task.Command -ErrorAction SilentlyContinue
+                if (-not $CommandInfo) {
+                    # Resolve the required module from standardised command name patterns
+                    $ModuleToImport = switch -Wildcard ($task.Command) {
+                        'Invoke-CIPPStandard*' { 'CIPPStandards' }
+                        'Get-CIPPAlert*' { 'CIPPAlerts' }
+                        default { $null }
+                    }
+
+                    if ($ModuleToImport) {
+                        Write-Information "Command '$($task.Command)' not found. Attempting import of '$ModuleToImport' module."
+                        $ImportedModule = $false
+                        try {
+                            if (-not (Get-Module -Name $ModuleToImport)) {
+                                Import-Module $ModuleToImport -ErrorAction Stop
+                                $ImportedModule = $true
+                                Write-Information "Imported module '$ModuleToImport' for command resolution retry."
+                            }
+                            $CommandInfo = Get-Command -Name $task.Command -ErrorAction Stop
+                        } catch {
+                            throw "Unable to resolve command '$($task.Command)' for scheduled task '$($task.Name)' after importing '$ModuleToImport'. $($_.Exception.Message)"
+                        } finally {
+                            if ($ImportedModule) {
+                                Remove-Module $ModuleToImport -ErrorAction SilentlyContinue
+                            }
+                        }
+                    } else {
+                        throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
+                    }
+                }
                 $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
 
                 $ScheduledCommand = [pscustomobject]@{
