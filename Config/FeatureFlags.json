@@ -19,7 +19,8 @@
       "/tenant/standards/bpa-report",
       "/tenant/standards/bpa-report/builder",
       "/tenant/standards/bpa-report/view"
-    ]
+    ],
+    "Hidden": false
   },
   {
     "Id": "SuperAdminNG",
@@ -38,6 +39,7 @@
       "/cipp/advanced/super-admin/cipp-users",
       "/cipp/advanced/super-admin/sso",
       "/cipp/advanced/super-admin/container"
-    ]
+    ],
+    "Hidden": true
   }
 ]
