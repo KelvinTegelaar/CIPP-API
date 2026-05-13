@@ -16,6 +16,7 @@ function Send-CIPPAlert {
         $TableName,
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
+        $AffectedUser,
         [switch]$UseStandardizedSchema
     )
     Write-Information 'Shipping Alert'
@@ -333,6 +334,9 @@ function Send-CIPPAlert {
                         TenantId   = $TenantFilter
                         AlertText  = "$HTMLContent"
                         AlertTitle = "$($Title)"
+                    }
+                    if ($AffectedUser) {
+                        $Alert.AffectedUser = $AffectedUser
                     }
                     New-CippExtAlert -Alert $Alert
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
