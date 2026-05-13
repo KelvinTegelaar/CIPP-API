@@ -50,9 +50,11 @@ function Get-HaloUser {
 
     $BuildResult = {
         param($MatchedUser)
+        # Cast to [int] so PowerShell's default [double] deserialisation of JSON numbers
+        # doesn't serialise back as e.g. "95.0", which Halo rejects.
         [pscustomobject]@{
-            id      = $MatchedUser.id
-            site_id = $MatchedUser.site_id
+            id      = [int]$MatchedUser.id
+            site_id = [int]$MatchedUser.site_id
         }
     }
 
