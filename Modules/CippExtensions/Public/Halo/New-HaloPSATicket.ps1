@@ -3,15 +3,34 @@ function New-HaloPSATicket {
   param (
     $title,
     $description,
-    $client
+    $client,
+    [string]$UserUPN,
+    [string]$AzureOID,
+    [string]$DisplayName
   )
   #Get HaloPSA Token based on the config we have.
   $Table = Get-CIPPTable -TableName Extensionsconfig
   $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
   $TicketTable = Get-CIPPTable -TableName 'PSATickets'
   $token = Get-HaloToken -configuration $Configuration
-  # sha hash title
-  $TitleHash = Get-StringHash -String $title
+
+  # Resolve affected user to a HaloPSA contact when the integration is configured for it.
+  # Unmatched users fall through to userlookup.id = -1 (the client's General User contact).
+  $MatchedUserId = $null
+  $UserLinkActive = $Configuration.LinkTicketsToUsers -and ($UserUPN -or $AzureOID)
+  if ($UserLinkActive) {
+    $MatchedUserId = Get-HaloUser -AzureOID $AzureOID -Email $UserUPN -ClientId $client -Configuration $Configuration -Token $token
+    if (-not $MatchedUserId) {
+      $UnmatchedLabel = if ($DisplayName) { "$DisplayName ($UserUPN)" } else { $UserUPN }
+      Write-LogMessage -API 'HaloPSATicket' -message "No HaloPSA contact match for $UserUPN in client $client - falling back to General User" -sev Warning
+      $description = "$description<p><em>Affected user: $UnmatchedLabel - no matching HaloPSA contact found, ticket assigned to General User.</em></p>"
+    }
+  }
+
+  # When linking is active, include UPN in the consolidation key so per-user tickets don't
+  # collapse onto each other when the same alert title fires for multiple users.
+  $HashInput = if ($UserLinkActive -and $UserUPN) { "$title|$UserUPN" } else { $title }
+  $TitleHash = Get-StringHash -String $HashInput
 
   if ($Configuration.ConsolidateTickets) {
     $ExistingTicket = Get-CIPPAzDataTableEntity @TicketTable -Filter "PartitionKey eq 'HaloPSA' and RowKey eq '$($client)-$($TitleHash)'"
@@ -62,17 +81,29 @@ function New-HaloPSATicket {
     }
   }
 
+  $UserLookupId = if ($MatchedUserId) { $MatchedUserId } else { -1 }
+  $UserLookupDisplay = if ($MatchedUserId) {
+    if ($DisplayName) { $DisplayName } else { $UserUPN }
+  } else {
+    'Enter Details Manually'
+  }
+  $UserNameValue = if ($MatchedUserId) {
+    if ($DisplayName) { $DisplayName } else { $UserUPN }
+  } else {
+    $null
+  }
+
   $Object = [PSCustomObject]@{
     files                      = $null
     usertype                   = 1
     userlookup                 = @{
-      id            = -1
-      lookupdisplay = 'Enter Details Manually'
+      id            = $UserLookupId
+      lookupdisplay = $UserLookupDisplay
     }
     client_id                  = ($client | Select-Object -Last 1)
     _forcereassign             = $true
     site_id                    = $null
-    user_name                  = $null
+    user_name                  = $UserNameValue
     reportedby                 = $null
     summary                    = $title
     details_html               = $description
