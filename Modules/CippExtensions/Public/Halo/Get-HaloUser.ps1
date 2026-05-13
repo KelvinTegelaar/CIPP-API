@@ -42,7 +42,7 @@ function Get-HaloUser {
             return $Response
         } catch {
             $Message = if ($_.ErrorDetails.Message) { Get-NormalizedError -Message $_.ErrorDetails.Message } else { $_.Exception.Message }
-            Write-LogMessage -API 'HaloPSATicket' -message "Halo user search failed for term '$Term' in client $ClientId: $Message" -sev Warning
+            Write-LogMessage -API 'HaloPSATicket' -message "Halo user search failed for term '$Term' in client ${ClientId}: $Message" -sev Warning
             return @()
         }
     }
