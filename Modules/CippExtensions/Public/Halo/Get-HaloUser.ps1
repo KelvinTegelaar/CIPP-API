@@ -4,8 +4,9 @@ function Get-HaloUser {
         Look up a HaloPSA user/contact for a Microsoft 365 end-user.
     .DESCRIPTION
         Searches the HaloPSA /Users endpoint scoped to a specific client. Matches first by Azure
-        Object ID (HaloPSA contact field 'azureoid'), then falls back to email address. Returns the
-        matched HaloPSA user object's id, or $null when no match is found.
+        Object ID (HaloPSA contact field 'azureoid'), then falls back to email address. Returns a
+        small object containing the matched user's id and site_id (Halo requires both when a
+        specific user is set on a ticket), or $null when no match is found.
     .PARAMETER AzureOID
         The Microsoft Entra (Azure AD) Object ID of the user to match. Preferred when present.
     .PARAMETER Email
@@ -47,16 +48,24 @@ function Get-HaloUser {
         }
     }
 
+    $BuildResult = {
+        param($MatchedUser)
+        [pscustomobject]@{
+            id      = $MatchedUser.id
+            site_id = $MatchedUser.site_id
+        }
+    }
+
     if ($AzureOID) {
         $Results = & $TrySearch $AzureOID
         $Match = $Results | Where-Object { $_.azureoid -and ($_.azureoid -eq $AzureOID) } | Select-Object -First 1
-        if ($Match) { return $Match.id }
+        if ($Match) { return & $BuildResult $Match }
     }
 
     if ($Email) {
         $Results = & $TrySearch $Email
         $Match = $Results | Where-Object { $_.emailaddress -and ($_.emailaddress -ieq $Email) } | Select-Object -First 1
-        if ($Match) { return $Match.id }
+        if ($Match) { return & $BuildResult $Match }
     }
 
     return $null

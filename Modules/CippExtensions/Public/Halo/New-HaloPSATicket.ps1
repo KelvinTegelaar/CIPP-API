@@ -16,11 +16,11 @@ function New-HaloPSATicket {
 
   # Resolve affected user to a HaloPSA contact when the integration is configured for it.
   # Unmatched users fall through to userlookup.id = -1 (the client's General User contact).
-  $MatchedUserId = $null
+  $MatchedUser = $null
   $UserLinkActive = $Configuration.LinkTicketsToUsers -and ($UserUPN -or $AzureOID)
   if ($UserLinkActive) {
-    $MatchedUserId = Get-HaloUser -AzureOID $AzureOID -Email $UserUPN -ClientId $client -Configuration $Configuration -Token $token
-    if (-not $MatchedUserId) {
+    $MatchedUser = Get-HaloUser -AzureOID $AzureOID -Email $UserUPN -ClientId $client -Configuration $Configuration -Token $token
+    if (-not $MatchedUser) {
       $UnmatchedLabel = if ($DisplayName) { "$DisplayName ($UserUPN)" } else { $UserUPN }
       Write-LogMessage -API 'HaloPSATicket' -message "No HaloPSA contact match for $UserUPN in client $client - falling back to General User" -sev Warning
       $description = "$description<p><em>Affected user: $UnmatchedLabel - no matching HaloPSA contact found, ticket assigned to General User.</em></p>"
@@ -31,6 +31,11 @@ function New-HaloPSATicket {
   # collapse onto each other when the same alert title fires for multiple users.
   $HashInput = if ($UserLinkActive -and $UserUPN) { "$title|$UserUPN" } else { $title }
   $TitleHash = Get-StringHash -String $HashInput
+
+  # Halo requires a site_id whenever a specific user is set on the ticket; pull it from the
+  # matched user record. When no user is matched, leave site_id null and let Halo resolve it
+  # from the General User (id = -1).
+  $SiteId = if ($MatchedUser) { $MatchedUser.site_id } else { $null }
 
   if ($Configuration.ConsolidateTickets) {
     $ExistingTicket = Get-CIPPAzDataTableEntity @TicketTable -Filter "PartitionKey eq 'HaloPSA' and RowKey eq '$($client)-$($TitleHash)'"
@@ -81,13 +86,13 @@ function New-HaloPSATicket {
     }
   }
 
-  $UserLookupId = if ($MatchedUserId) { $MatchedUserId } else { -1 }
-  $UserLookupDisplay = if ($MatchedUserId) {
+  $UserLookupId = if ($MatchedUser) { $MatchedUser.id } else { -1 }
+  $UserLookupDisplay = if ($MatchedUser) {
     if ($DisplayName) { $DisplayName } else { $UserUPN }
   } else {
     'Enter Details Manually'
   }
-  $UserNameValue = if ($MatchedUserId) {
+  $UserNameValue = if ($MatchedUser) {
     if ($DisplayName) { $DisplayName } else { $UserUPN }
   } else {
     $null
@@ -102,7 +107,7 @@ function New-HaloPSATicket {
     }
     client_id                  = ($client | Select-Object -Last 1)
     _forcereassign             = $true
-    site_id                    = $null
+    site_id                    = $SiteId
     user_name                  = $UserNameValue
     reportedby                 = $null
     summary                    = $title
