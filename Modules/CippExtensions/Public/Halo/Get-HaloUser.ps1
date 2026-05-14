@@ -4,9 +4,11 @@ function Get-HaloUser {
         Look up a HaloPSA user/contact for a Microsoft 365 end-user.
     .DESCRIPTION
         Searches the HaloPSA /Users endpoint scoped to a specific client. Matches first by Azure
-        Object ID (HaloPSA contact field 'azureoid'), then falls back to email address. Returns a
-        small object containing the matched user's id and site_id (Halo requires both when a
-        specific user is set on a ticket), or $null when no match is found.
+        Object ID (against the HaloPSA contact fields 'azureoid' and 'aaduserid'), then falls back
+        to the user's email/UPN (against 'emailaddress', 'networklogin' and 'aaduserid' - Halo's
+        AD-sync contacts often store the UPN in any of these). Returns a small object containing
+        the matched user's id and site_id (Halo requires both when a specific user is set on a
+        ticket), or $null when no match is found.
     .PARAMETER AzureOID
         The Microsoft Entra (Azure AD) Object ID of the user to match. Preferred when present.
     .PARAMETER Email
@@ -58,15 +60,31 @@ function Get-HaloUser {
         }
     }
 
+    # HaloPSA contacts can carry the user identity in several fields depending on how AD/Azure AD
+    # sync is set up. Match against all known candidates so partial integrations still resolve.
+    $AzureIdFields = @('azureoid', 'aaduserid')
+    $EmailFields   = @('emailaddress', 'networklogin', 'aaduserid')
+
+    $MatchAny = {
+        param($Results, $Term, $Fields)
+        foreach ($Result in $Results) {
+            foreach ($Field in $Fields) {
+                $Value = $Result.$Field
+                if ($Value -and ($Value -ieq $Term)) { return $Result }
+            }
+        }
+        return $null
+    }
+
     if ($AzureOID) {
         $Results = & $TrySearch $AzureOID
-        $Match = $Results | Where-Object { $_.azureoid -and ($_.azureoid -eq $AzureOID) } | Select-Object -First 1
+        $Match = & $MatchAny $Results $AzureOID $AzureIdFields
         if ($Match) { return & $BuildResult $Match }
     }
 
     if ($Email) {
         $Results = & $TrySearch $Email
-        $Match = $Results | Where-Object { $_.emailaddress -and ($_.emailaddress -ieq $Email) } | Select-Object -First 1
+        $Match = & $MatchAny $Results $Email $EmailFields
         if ($Match) { return & $BuildResult $Match }
     }
 
