@@ -26,38 +26,13 @@ function Remove-CIPPTravelCAPolicy {
             }
         }
 
-        # Wait for policy deletion to propagate before removing Named Location
-        Start-Sleep -Seconds 15
-
-        # Find and delete the associated country Named Location if it exists (non-fatal)
-        try {
-            $CountryLocationName = $PolicyName -replace 'CIPP_TravelPolicy_', 'CIPP_Travel_'
-            $CountryLocationName = "${CountryLocationName}_Countries"
-            $Locations = New-GraphGetRequest `
-                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?`$filter=displayName eq '$CountryLocationName'&`$select=id,displayName" `
-                -tenantid $TenantFilter -asApp $true
-            foreach ($Loc in $Locations) {
-                $null = New-GraphPOSTRequest `
-                    -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$($Loc.id)" `
-                    -tenantid $TenantFilter -type DELETE -body '' -asApp $true
-                Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                    -message "Deleted country Named Location: $($Loc.displayName)" `
-                    -Sev 'Info' -tenant $TenantFilter
-            }
-        } catch {
-            Write-Information "Non-fatal: Could not delete Named Location: $($_.Exception.Message)"
-            Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                -message "Could not delete Named Location (non-fatal): $($_.Exception.Message)" `
-                -Sev 'Warning' -tenant $TenantFilter
-        }
-
-        # Remove users from CIPP_TravelingUsers group only if not active in other travel policies
+        # Remove users from TravelingUsers group only if not active in other travel policies
         if ($Users -and $Users.Count -gt 0) {
             $ActivePolicies = New-GraphGetRequest `
-                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies?`$filter=startsWith(displayName,'CIPP_TravelPolicy_')&`$select=id,displayName,conditions" `
+                -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies?`$filter=startsWith(displayName,'TravelPolicy_')&`$select=id,displayName,conditions" `
                 -tenantid $TenantFilter -asApp $true
             $TravelGroup = New-GraphGetRequest `
-                -uri "https://graph.microsoft.com/beta/groups?`$filter=displayName eq 'CIPP_TravelingUsers'&`$select=id" `
+                -uri "https://graph.microsoft.com/beta/groups?`$filter=displayName eq 'TravelingUsers'&`$select=id" `
                 -tenantid $TenantFilter -asApp $true -ComplexFilter
             $TravelGroupId = $TravelGroup[0].id
             foreach ($User in $Users) {
@@ -72,14 +47,14 @@ function Remove-CIPPTravelCAPolicy {
                             -uri "https://graph.microsoft.com/beta/groups/$TravelGroupId/members/$User/`$ref" `
                             -tenantid $TenantFilter -type DELETE -body '' -asApp $true
                         Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                            -message "Removed user $User from CIPP_TravelingUsers (no other active travel policies)" `
+                            -message "Removed user $User from TravelingUsers (no other active travel policies)" `
                             -Sev 'Info' -tenant $TenantFilter
                     } catch {
                         Write-Information "Could not remove user $User from group (may already be removed): $($_.Exception.Message)"
                     }
                 } else {
                     Write-LogMessage -headers $Headers -API 'Remove-CIPPTravelCAPolicy' `
-                        -message "User $User kept in CIPP_TravelingUsers - still active in: $($StillActive.displayName -join ', ')" `
+                        -message "User $User kept in TravelingUsers - still active in: $($StillActive.displayName -join ', ')" `
                         -Sev 'Info' -tenant $TenantFilter
                 }
             }
