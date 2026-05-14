@@ -65,27 +65,42 @@ function Get-HaloUser {
     $AzureIdFields = @('azureoid', 'aaduserid')
     $EmailFields   = @('emailaddress', 'networklogin', 'aaduserid')
 
-    $MatchAny = {
-        param($Results, $Term, $Fields)
-        foreach ($Result in $Results) {
-            foreach ($Field in $Fields) {
-                $Value = $Result.$Field
-                if ($Value -and ($Value -ieq $Term)) { return $Result }
+    # Halo's /Users?search= parameter doesn't search the azureoid field, so a search by Object ID
+    # alone returns zero rows even when a contact has that exact OID set. Strategy:
+    # 1. Run a search per supplied term and combine the results into a deduped candidate pool.
+    # 2. Filter the pool client-side, preferring AzureOID matches (most reliable) over email.
+    $Candidates = @{}
+    foreach ($Term in @($AzureOID, $Email) | Where-Object { $_ }) {
+        foreach ($Result in (& $TrySearch $Term)) {
+            if ($Result.id -and -not $Candidates.ContainsKey([string]$Result.id)) {
+                $Candidates[[string]$Result.id] = $Result
             }
         }
-        return $null
+    }
+
+    $MatchOnAnyField = {
+        param($User, $Term, $Fields)
+        foreach ($Field in $Fields) {
+            $Value = $User.$Field
+            if ($Value -and ($Value -ieq $Term)) { return $true }
+        }
+        return $false
     }
 
     if ($AzureOID) {
-        $Results = & $TrySearch $AzureOID
-        $Match = & $MatchAny $Results $AzureOID $AzureIdFields
-        if ($Match) { return & $BuildResult $Match }
+        foreach ($User in $Candidates.Values) {
+            if (& $MatchOnAnyField $User $AzureOID $AzureIdFields) {
+                return & $BuildResult $User
+            }
+        }
     }
 
     if ($Email) {
-        $Results = & $TrySearch $Email
-        $Match = & $MatchAny $Results $Email $EmailFields
-        if ($Match) { return & $BuildResult $Match }
+        foreach ($User in $Candidates.Values) {
+            if (& $MatchOnAnyField $User $Email $EmailFields) {
+                return & $BuildResult $User
+            }
+        }
     }
 
     return $null
