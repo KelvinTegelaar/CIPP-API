@@ -105,7 +105,7 @@ function New-HaloPSATicket {
       id            = $UserLookupId
       lookupdisplay = $UserLookupDisplay
     }
-    client_id                  = ($client | Select-Object -Last 1)
+    client_id                  = [int]($client | Select-Object -Last 1)
     _forcereassign             = $true
     site_id                    = $SiteId
     user_name                  = $UserNameValue
