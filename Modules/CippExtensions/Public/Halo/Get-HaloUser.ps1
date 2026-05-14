@@ -36,6 +36,38 @@ function Get-HaloUser {
     $Headers = @{ Authorization = "Bearer $($Token.access_token)" }
     $BaseUri = "$($Configuration.ResourceURL)/Users?client_id=$ClientId&includeinactive=false&pageinate=false"
 
+    $BuildResult = {
+        param($MatchedUser)
+        # Cast to [int] so PowerShell's default [double] deserialisation of JSON numbers
+        # doesn't serialise back as e.g. "95.0", which Halo rejects.
+        [pscustomobject]@{
+            id      = [int]$MatchedUser.id
+            site_id = [int]$MatchedUser.site_id
+        }
+    }
+
+    # Halo's basic ?search= parameter only searches a fixed set of indexed fields (name, email,
+    # logins...) and notably NOT azureoid. Use ?advanced_search= with filter_type=2 (=) for an
+    # exact-match query against a specific field.
+    $TryAdvancedSearch = {
+        param($FilterName, $FilterValue)
+        try {
+            $Filter = ConvertTo-Json -Compress -InputObject @(@{
+                filter_name  = $FilterName
+                filter_type  = 2  # 2 = exact equality
+                filter_value = $FilterValue
+            })
+            $EncodedFilter = [System.Uri]::EscapeDataString($Filter)
+            $Response = Invoke-RestMethod -Uri "$BaseUri&advanced_search=$EncodedFilter" -ContentType 'application/json' -Method GET -Headers $Headers
+            if ($Response.users) { return $Response.users }
+            return $Response
+        } catch {
+            $Message = if ($_.ErrorDetails.Message) { Get-NormalizedError -Message $_.ErrorDetails.Message } else { $_.Exception.Message }
+            Write-LogMessage -API 'HaloPSATicket' -message "Halo advanced_search failed for $FilterName='$FilterValue' in client ${ClientId}: $Message" -sev Warning
+            return @()
+        }
+    }
+
     $TrySearch = {
         param($Term)
         try {
@@ -50,55 +82,36 @@ function Get-HaloUser {
         }
     }
 
-    $BuildResult = {
-        param($MatchedUser)
-        # Cast to [int] so PowerShell's default [double] deserialisation of JSON numbers
-        # doesn't serialise back as e.g. "95.0", which Halo rejects.
-        [pscustomobject]@{
-            id      = [int]$MatchedUser.id
-            site_id = [int]$MatchedUser.site_id
-        }
-    }
-
     # HaloPSA contacts can carry the user identity in several fields depending on how AD/Azure AD
     # sync is set up. Match against all known candidates so partial integrations still resolve.
     $AzureIdFields = @('azureoid', 'aaduserid')
     $EmailFields   = @('emailaddress', 'networklogin', 'aaduserid')
 
-    # Halo's /Users?search= parameter doesn't search the azureoid field, so a search by Object ID
-    # alone returns zero rows even when a contact has that exact OID set. Strategy:
-    # 1. Run a search per supplied term and combine the results into a deduped candidate pool.
-    # 2. Filter the pool client-side, preferring AzureOID matches (most reliable) over email.
-    $Candidates = @{}
-    foreach ($Term in @($AzureOID, $Email) | Where-Object { $_ }) {
-        foreach ($Result in (& $TrySearch $Term)) {
-            if ($Result.id -and -not $Candidates.ContainsKey([string]$Result.id)) {
-                $Candidates[[string]$Result.id] = $Result
-            }
-        }
-    }
-
-    $MatchOnAnyField = {
-        param($User, $Term, $Fields)
-        foreach ($Field in $Fields) {
-            $Value = $User.$Field
-            if ($Value -and ($Value -ieq $Term)) { return $true }
-        }
-        return $false
-    }
-
+    # Try AzureOID first via advanced_search - exact-match on each AD identifier field, returning
+    # the first hit. This is the most reliable path because Halo's azureoid field is the cleanest
+    # link back to the Entra user.
     if ($AzureOID) {
-        foreach ($User in $Candidates.Values) {
-            if (& $MatchOnAnyField $User $AzureOID $AzureIdFields) {
-                return & $BuildResult $User
-            }
+        foreach ($Field in $AzureIdFields) {
+            $Match = (& $TryAdvancedSearch $Field $AzureOID) | Where-Object { $_.id } | Select-Object -First 1
+            if ($Match) { return & $BuildResult $Match }
         }
     }
 
+    # Fall back to email: the basic search indexes email-shaped fields and returns candidates;
+    # filter client-side against any of the email-bearing fields, and also re-check the AzureOID
+    # against returned records (handy when a contact has azureoid set but blank email fields).
     if ($Email) {
-        foreach ($User in $Candidates.Values) {
-            if (& $MatchOnAnyField $User $Email $EmailFields) {
-                return & $BuildResult $User
+        $Results = & $TrySearch $Email
+        foreach ($User in $Results) {
+            if ($AzureOID) {
+                foreach ($Field in $AzureIdFields) {
+                    $Value = $User.$Field
+                    if ($Value -and ($Value -ieq $AzureOID)) { return & $BuildResult $User }
+                }
+            }
+            foreach ($Field in $EmailFields) {
+                $Value = $User.$Field
+                if ($Value -and ($Value -ieq $Email)) { return & $BuildResult $User }
             }
         }
     }
