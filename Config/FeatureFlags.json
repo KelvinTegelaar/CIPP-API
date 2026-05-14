@@ -33,12 +33,14 @@
       "ExecCIPPUsers",
       "ListCIPPUsers",
       "ExecSSOSetup",
-      "ExecContainerManagement"
+      "ExecContainerManagement",
+      "ListContainerLogs"
     ],
     "Pages": [
       "/cipp/advanced/super-admin/cipp-users",
       "/cipp/advanced/super-admin/sso",
-      "/cipp/advanced/super-admin/container"
+      "/cipp/advanced/super-admin/container",
+      "/cipp/advanced/container-logs"
     ],
     "Hidden": true
   }
