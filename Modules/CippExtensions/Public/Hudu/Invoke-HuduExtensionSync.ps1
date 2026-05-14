@@ -152,22 +152,32 @@ function Invoke-HuduExtensionSync {
                 URL   = 'https://portal.azure.com/{0}' -f $Tenant.defaultDomainName
                 Icon  = 'fas fa-server'
             }
-            @{
+        )
+        if($Configuration.IncludeDefenderLink)
+        {
+            $Links += @{
                 Title = 'Defender Portal'
                 URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
                 Icon  = 'fas fa-shield'
             }
-            @{
+        }
+        if($Configuration.IncludeComplianceLink)
+        {
+            $Links += @{
                 Title = 'Compliance Portal'
                 URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
                 Icon  = 'fas fa-caret-up'
             }
-            @{
+        }
+        if($Configuration.IncludeParterCenterLink)
+        {
+            $Links += @{
                 Title = 'Partner Center Portals'
                 URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
                 Icon  = 'fas fa-arrow-up-right-from-square'
             }
-        )
+        }
+
         $FormattedLinks = foreach ($Link in $Links) {
             Get-HuduLinkBlock @Link
         }
@@ -198,6 +208,11 @@ function Invoke-HuduExtensionSync {
 			 </header>"
 
         $post = '</div>'
+
+        if($Configuration.HideEmptyRoles) {
+            $Roles = $Roles | Where-Object { $_.ParsedMembers }
+        }
+
         $RolesHtml = $Roles | Select-Object DisplayName, Description, ParsedMembers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
 
         $AdminUsers = (($Roles | Where-Object { $_.displayName -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href='https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($_.Id)'>$($_.displayName) - $($_.userPrincipalName)</a>" } } -Unique).name -join '<br/>'
