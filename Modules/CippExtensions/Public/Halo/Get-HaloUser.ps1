@@ -63,7 +63,12 @@ function Get-HaloUser {
             return $Response
         } catch {
             $Message = if ($_.ErrorDetails.Message) { Get-NormalizedError -Message $_.ErrorDetails.Message } else { $_.Exception.Message }
-            Write-LogMessage -API 'HaloPSATicket' -message "Halo advanced_search failed for $FilterName='$FilterValue' in client ${ClientId}: $Message" -sev Warning
+            # Some Halo instances don't whitelist these fields for advanced_search even though they
+            # exist on the user record. That's expected - the email-search fallback handles it. Only
+            # log unexpected failures.
+            if ($Message -notmatch 'Invalid advanced search parameter') {
+                Write-LogMessage -API 'HaloPSATicket' -message "Halo advanced_search failed for $FilterName='$FilterValue' in client ${ClientId}: $Message" -sev Warning
+            }
             return @()
         }
     }

@@ -59,12 +59,13 @@ function New-HaloPSATicket {
           }
   
           $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
+          $NoteAdded = $false
           try {
             if ($PSCmdlet.ShouldProcess('Add note to HaloPSA ticket', 'Add note')) {
               $Action = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/actions" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
               Write-Information "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
+              $NoteAdded = $true
             }
-            return "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
           }
           catch {
             $Message = if ($_.ErrorDetails.Message) {
@@ -73,10 +74,15 @@ function New-HaloPSATicket {
             else {
               $_.Exception.message
             }
-            Write-LogMessage -message "Failed to add note to HaloPSA ticket: $Message" -API 'HaloPSATicket' -sev Error -LogData (Get-CippException -Exception $_)
-            Write-Information "Failed to add note to HaloPSA ticket: $Message"
+            # Don't return here - if appending a note failed (e.g. permissions on the action,
+            # invalid outcome_id) we still want to create a fresh ticket so the alert isn't lost.
+            Write-LogMessage -message "Failed to add note to HaloPSA ticket $($ExistingTicket.TicketID): $Message - falling back to creating a new ticket" -API 'HaloPSATicket' -sev Warning -LogData (Get-CippException -Exception $_)
+            Write-Information "Failed to add note to HaloPSA ticket: $Message; creating a new ticket instead"
             Write-Information "Body we tried to ship: $body"
-            return "Failed to add note to HaloPSA ticket: $Message"
+          }
+
+          if ($NoteAdded) {
+            return "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
           }
         }
       }
