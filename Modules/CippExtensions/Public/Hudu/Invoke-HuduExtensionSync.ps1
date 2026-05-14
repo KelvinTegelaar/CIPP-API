@@ -152,6 +152,21 @@ function Invoke-HuduExtensionSync {
                 URL   = 'https://portal.azure.com/{0}' -f $Tenant.defaultDomainName
                 Icon  = 'fas fa-server'
             }
+            @{
+                Title = 'Defender Portal'
+                URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
+                Icon  = 'fas fa-shield'
+            }
+            @{
+                Title = 'Compliance Portal'
+                URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                Icon  = 'fas fa-caret-up'
+            }
+            @{
+                Title = 'Partner Center Portals'
+                URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
+                Icon  = 'fas fa-arrow-up-right-from-square'
+            }
         )
         $FormattedLinks = foreach ($Link in $Links) {
             Get-HuduLinkBlock @Link
