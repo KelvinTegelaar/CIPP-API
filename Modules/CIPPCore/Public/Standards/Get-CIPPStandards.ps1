@@ -22,6 +22,9 @@ function Get-CIPPStandards {
     # 1. Get all JSON-based templates from the "templates" table
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
+    # Always load ALL templates so the three-tier merge (AllTenants → Group → Tenant-Specific)
+    # can compute correct precedence. The $TemplateId filter is applied after merge so that
+    # manual runs of a single template don't bypass tenant-specific overrides.
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
     ForEach-Object {
         try {
@@ -31,7 +34,7 @@ function Get-CIPPStandards {
         } catch {}
     } |
     Where-Object {
-        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
+        $_.runManually -eq $runManually
     }
 
     # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
@@ -128,7 +131,7 @@ function Get-CIPPStandards {
     # 3. If -ListAllTenants, build standards for "AllTenants" only
     if ($ListAllTenants.IsPresent) {
         $AllTenantsTemplates = $Templates | Where-Object {
-            $_.tenantFilter.value -contains 'AllTenants'
+            $_.tenantFilter.value -contains 'AllTenants' -and $_.GUID -like $TemplateId
         }
 
         foreach ($Template in $AllTenantsTemplates) {
@@ -505,6 +508,15 @@ function Get-CIPPStandards {
                 $StandardName = $Key -replace '\|.*$', ''
                 # Preserve TemplateId before removing
                 $PreservedTemplateId = $Standard.TemplateId
+
+                # When a specific TemplateId was requested, only emit standards that
+                # this template actually won after the three-tier merge. This prevents
+                # a group template manual run from executing standards that a
+                # tenant-specific template has overridden.
+                if ($TemplateId -ne '*' -and $PreservedTemplateId -notlike $TemplateId) {
+                    continue
+                }
+
                 $Standard.PSObject.Properties.Remove('TemplateId') | Out-Null
 
                 $Normalized = ConvertTo-CippStandardObject $Standard
