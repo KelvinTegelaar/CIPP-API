@@ -121,7 +121,7 @@ function Invoke-HuduExtensionSync {
         }
 
         $HuduRelations = Get-HuduRelations
-        $Links = @(
+        [System.Collections.ArrayList]$Links = @(
             @{
                 Title = 'M365 Admin Portal'
                 URL   = 'https://admin.cloud.microsoft?delegatedOrg={0}' -f $Tenant.initialDomainName
@@ -155,27 +155,27 @@ function Invoke-HuduExtensionSync {
         )
         if($Configuration.IncludeDefenderLink)
         {
-            $Links += @{
+            $Links.Add(@{
                 Title = 'Defender Portal'
                 URL   = 'https://security.microsoft.com/?tid={0}' -f $Tenant.customerId
                 Icon  = 'fas fa-shield'
-            }
+            })
         }
         if($Configuration.IncludeComplianceLink)
         {
-            $Links += @{
+            $Links.Add(@{
                 Title = 'Compliance Portal'
                 URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
                 Icon  = 'fas fa-caret-up'
-            }
+            })
         }
         if($Configuration.IncludeParterCenterLink)
         {
-            $Links += @{
+            $Links.Add(@{
                 Title = 'Partner Center Portals'
                 URL   = 'https://partner.microsoft.com/dashboard/v2/customers/{0}/servicemanagementpage' -f $Tenant.customerId
                 Icon  = 'fas fa-arrow-up-right-from-square'
-            }
+            })
         }
 
         $FormattedLinks = foreach ($Link in $Links) {
