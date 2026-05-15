@@ -22,12 +22,12 @@ function Invoke-ListUsersAndGroups {
             @{
                 id     = 'groups'
                 method = 'GET'
-                url    = "groups?`$select=id,displayName&`$top=999"
+                url    = "groups?`$select=id,displayName,groupTypes,mailEnabled,securityEnabled&`$top=999"
             }
         )
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
         $Users = ($BulkResults | Where-Object { $_.id -eq 'users' }).body.value | Select-Object *, @{Name = '@odata.type'; Expression = { '#microsoft.graph.user' } }
-        $Groups = ($BulkResults | Where-Object { $_.id -eq 'groups' }).body.value | Select-Object id, displayName, @{Name = 'userPrincipalName'; Expression = { $null } }, @{Name = '@odata.type'; Expression = { '#microsoft.graph.group' } }
+        $Groups = ($BulkResults | Where-Object { $_.id -eq 'groups' }).body.value | Where-Object { $_.groupTypes -notcontains 'Unified' } | Select-Object id, displayName, mailEnabled, securityEnabled, @{Name = 'userPrincipalName'; Expression = { $null } }, @{Name = '@odata.type'; Expression = { '#microsoft.graph.group' } }
         $GraphRequest = @($Users) + @($Groups) | Sort-Object displayName
         $StatusCode = [HttpStatusCode]::OK
     } catch {
@@ -37,6 +37,6 @@ function Invoke-ListUsersAndGroups {
     }
     return [HttpResponseContext]@{
         StatusCode = $StatusCode
-        Body       = @($GraphRequest)
+        Body       = @{ Results = @($GraphRequest) }
     }
 }
