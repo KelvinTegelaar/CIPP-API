@@ -148,7 +148,18 @@ function Send-CIPPScheduledTaskAlert {
                         $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
                         $HaloConfig = $ExtConfig.HaloPSA
 
-                        if ($HaloConfig -and $HaloConfig.Enabled -and $HaloConfig.LinkTicketsToUsers) {
+                        # Per-task PsaTicketStrategy (configured on the alert) overrides the global
+                        # HaloPSA.LinkTicketsToUsers toggle. Lets MSPs decide on a per-alert basis
+                        # whether a wide alert (e.g. "users without MFA") should produce one ticket
+                        # per user or one consolidated ticket per tenant.
+                        $TaskStrategy = $TaskInfo.PsaTicketStrategy
+                        $ShouldSplit = switch ($TaskStrategy) {
+                            'split' { $true }
+                            'consolidated' { $false }
+                            default { [bool]$HaloConfig.LinkTicketsToUsers }
+                        }
+
+                        if ($HaloConfig -and $HaloConfig.Enabled -and $ShouldSplit) {
                             $UpnFieldCandidates = @('UserPrincipalName', 'userPrincipalName', 'UPN', 'userId', 'Userkey')
                             $RowProperties = $Results[0].PSObject.Properties.Name
                             $UpnField = $UpnFieldCandidates | Where-Object { $_ -in $RowProperties } | Select-Object -First 1
