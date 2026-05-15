@@ -42,10 +42,7 @@ function Start-CIPPOrchestrator {
         if (-not $InputObject.Batch -and $InputObject.QueueFunction) {
             $QueueFuncName = "Push-$($InputObject.QueueFunction.FunctionName)"
             Write-Information "Craft: Calling QueueFunction '$QueueFuncName' to build batch for '$OrchestratorName'"
-            $QueueItem = [PSCustomObject]@{}
-            if ($InputObject.QueueFunction.Parameters) {
-                $QueueItem = [PSCustomObject]$InputObject.QueueFunction.Parameters
-            }
+            $QueueItem = [PSCustomObject]$InputObject.QueueFunction
             $BatchResult = & $QueueFuncName -Item $QueueItem
             $QueueBatch = @($BatchResult | Where-Object { $null -ne $_ })
             if ($QueueBatch.Count -eq 0) {
@@ -78,7 +75,8 @@ function Start-CIPPOrchestrator {
             $BatchJson,
             4,
             $PostExecFunctionName,
-            $PostExecParametersJson
+            $PostExecParametersJson,
+            $InputObject.Reference
         )
         return "Craft-$OrchestratorName"
     }

@@ -30,7 +30,7 @@ function Invoke-CIPPStandardMailContacts {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -106,13 +106,13 @@ function Invoke-CIPPStandardMailContacts {
     }
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object)
-            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Sort-Object)
+            marketingNotificationEmails = @($CurrentInfo.marketingNotificationEmails | Sort-Object -Unique)
+            technicalNotificationMails  = @($CurrentInfo.technicalNotificationMails | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
             contactEmail                = $CurrentInfo.privacyProfile.contactEmail
         }
         $ExpectedValue = @{
-            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object)
-            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { $_ -ne $null } | Select-Object -Unique | Sort-Object)
+            marketingNotificationEmails = @($Contacts.MarketingContact | Sort-Object -Unique)
+            technicalNotificationMails  = @(@($Contacts.SecurityContact, $Contacts.TechContact) | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false } | Sort-Object -Unique)
             contactEmail                = $Contacts.GeneralContact
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $tenant

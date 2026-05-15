@@ -202,13 +202,42 @@ function Test-CIPPAccess {
             $Permissions = Get-CippAllowedPermissions -UserRoles $User.userRoles
             $swPermsMe.Stop()
             $AccessTimings['GetPermissions(me)'] = $swPermsMe.Elapsed.TotalMilliseconds
+
+            # Include SSO migration status for admins with AppSettings permissions
+            $MeResponse = @{
+                'clientPrincipal' = $User
+                'permissions'     = $Permissions
+            }
+
+            # Forced SSO migration: non-dismissible prompt when migration env var is set
+            if ($env:CIPP_SSO_MIGRATION_APPID -and $Permissions -contains 'CIPP.AppSettings.ReadWrite') {
+                $MeResponse['forceSsoMigration'] = @{
+                    appId  = $env:CIPP_SSO_MIGRATION_APPID
+                    status = 'pending'
+                }
+            }
+
+            if ($Permissions -contains 'CIPP.AppSettings.ReadWrite' -and $env:CIPPNG -ne 'true' -and $env:CIPP_SSO_MIGRATION_PROMPT -eq 'true') {
+                try {
+                    $SSOTable = Get-CIPPTable -tablename 'SSOMigration'
+                    $SSOMigration = Get-CIPPAzDataTableEntity @SSOTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
+                    if ($SSOMigration) {
+                        $MeResponse['ssoMigration'] = @{
+                            status      = $SSOMigration.Status
+                            appId       = $SSOMigration.AppId
+                            multiTenant = [bool]($SSOMigration.MultiTenant -eq 'true' -or $SSOMigration.MultiTenant -eq 'True')
+                        }
+                    } else {
+                        $MeResponse['ssoMigration'] = @{ status = 'none' }
+                    }
+                } catch {
+                    $MeResponse['ssoMigration'] = @{ status = 'none' }
+                }
+            }
+
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
-                    Body       = (
-                        @{
-                            'clientPrincipal' = $User
-                            'permissions'     = $Permissions
-                        } | ConvertTo-Json -Depth 5)
+                    Body       = ($MeResponse | ConvertTo-Json -Depth 5)
                 })
         }
 

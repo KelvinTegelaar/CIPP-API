@@ -40,6 +40,13 @@ function Invoke-CippTestCustomScripts {
 
             $TestId = "CustomScript-$($Script.ScriptGuid)"
             $ScriptName = if ([string]::IsNullOrWhiteSpace($Script.ScriptName)) { $TestId } else { $Script.ScriptName }
+
+            $AlertStatuses = @('Failed')
+            if ($Script.PSObject.Properties['AlertStatuses'] -and
+                -not [string]::IsNullOrWhiteSpace($Script.AlertStatuses)) {
+                $AlertStatuses = $Script.AlertStatuses | ConvertFrom-Json
+            }
+
             try {
                 $Result = New-CippCustomScriptExecution -ScriptGuid $Script.ScriptGuid -TenantFilter $Tenant -Parameters @{}
 
@@ -68,7 +75,7 @@ function Invoke-CippTestCustomScripts {
 
                 # Auto-detected status from output, then apply explicit override if present
                 $AutoStatus = if ($FailedRows.Count -gt 0) { 'Failed' } else { 'Passed' }
-                $ValidExplicitStatuses = @('Passed', 'Failed', 'Info')
+                $ValidExplicitStatuses = @('Passed', 'Failed', 'Info', 'Investigate')
                 if ($ExplicitStatus -and $ExplicitStatus -in $ValidExplicitStatuses) {
                     $AutoStatus = $ExplicitStatus
                 }
@@ -76,13 +83,14 @@ function Invoke-CippTestCustomScripts {
                 $FinalStatus = switch ($ResultMode) {
                     'AlwaysPass' { 'Passed' }
                     'AlwaysInfo' { 'Info' }
+                    'AlwaysInvestigate' { 'Investigate' }
                     default { $AutoStatus }
                 }
 
                 $ResultMarkdown = if (-not [string]::IsNullOrWhiteSpace($ExplicitMarkdown)) { $ExplicitMarkdown } else { '' }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultDataJson $ResultDataJson -ResultMarkdown $ResultMarkdown -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
 
-                if ($ShouldAlert -and $AutoStatus -eq 'Failed') {
+                if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
                     Write-AlertMessage -tenant $Tenant -message "Custom script test failed: $ScriptName ($($Script.ScriptGuid))"
                 }
             } catch {
@@ -90,16 +98,17 @@ function Invoke-CippTestCustomScripts {
                 $FinalStatus = switch ($ResultMode) {
                     'AlwaysPass' { 'Passed' }
                     'AlwaysInfo' { 'Info' }
+                    'AlwaysInvestigate' { 'Investigate' }
                     default { 'Failed' }
                 }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultMarkdown "Custom script execution failed: $($ErrorMessage.NormalizedError)" -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
-                if ($ShouldAlert -and $ResultMode -eq 'Auto') {
+                if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
                     Write-AlertMessage -tenant $Tenant -message "Custom script execution failed: $ScriptName ($($Script.ScriptGuid)) - $($ErrorMessage.NormalizedError)"
                 }
             }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run custom script tests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -API 'CustomTests' -tenant $Tenant -message "Failed to run custom script tests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

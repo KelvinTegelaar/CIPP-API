@@ -12,7 +12,7 @@
     RootModule        = 'DNSHealth.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.1.6'
+    ModuleVersion     = '1.1.8'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@
     # NestedModules = @()
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = @('Read-DmarcPolicy','Read-MtaStsPolicy','Add-MailProvider','Get-MailProvider','Read-DkimRecord','Read-MtaStsRecord','Read-MXRecord','Read-NSRecord','Read-SPFRecord','Read-TlsRptRecord','Read-WhoisRecord','Remove-MailProvider','Resolve-DnsHttpsQuery','Set-DnsResolver','Test-DNSSEC','Test-HttpsCertificate','Test-MtaSts')
+    FunctionsToExport = @('Read-DmarcPolicy','Read-MtaStsPolicy','Add-MailProvider','Get-MailProvider','Read-AutoDiscoverRecord','Read-DkimRecord','Read-MtaStsRecord','Read-MXRecord','Read-NSRecord','Read-SPFRecord','Read-TlsRptRecord','Read-WhoisRecord','Remove-MailProvider','Resolve-DnsHttpsQuery','Set-DnsResolver','Test-DNSSEC','Test-HttpsCertificate','Test-MtaSts')
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     #CmdletsToExport = '*'

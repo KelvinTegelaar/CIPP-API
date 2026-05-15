@@ -63,7 +63,7 @@ function Invoke-GetCippAlerts {
             })
         Write-LogMessage -message ('CIPP API is running PowerShell {0}. PowerShell 7.4 or later is required.' -f $PSVersionTable.PSVersion) -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
-    if (!(![string]::IsNullOrEmpty($env:WEBSITE_RUN_FROM_PACKAGE) -or ![string]::IsNullOrEmpty($env:DEPLOYMENT_STORAGE_CONNECTION_STRING)) -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:NonLocalHostAzurite -ne 'true') {
+    if (${env:CIPPNG} -ne 'true' -and !(![string]::IsNullOrEmpty($env:WEBSITE_RUN_FROM_PACKAGE) -or ![string]::IsNullOrEmpty($env:DEPLOYMENT_STORAGE_CONNECTION_STRING)) -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true' -and $env:NonLocalHostAzurite -ne 'true') {
         $Alerts.Add(
             @{
                 title = 'Function App in Write Mode'

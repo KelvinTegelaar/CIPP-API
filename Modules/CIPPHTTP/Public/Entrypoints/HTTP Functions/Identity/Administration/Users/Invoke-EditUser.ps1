@@ -242,13 +242,13 @@ function Invoke-EditUser {
     }
 
     if ($Request.body.setManager.value) {
-        $ManagerResult = Set-CIPPManager -User $UserPrincipalName -Manager $Request.body.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
-        $Results.Add($ManagerResult)
+        $ManagerResults = Set-CIPPManager -Users $UserPrincipalName -Manager $Request.body.setManager.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($ManagerResults.Result)
     }
 
     if ($Request.body.setSponsor.value) {
-        $SponsorResult = Set-CIPPSponsor -User $UserPrincipalName -Sponsor $Request.body.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
-        $Results.Add($SponsorResult)
+        $SponsorResults = Set-CIPPSponsor -Users $UserPrincipalName -Sponsor $Request.body.setSponsor.value -TenantFilter $UserObj.tenantFilter -Headers $Headers
+        $Results.Add($SponsorResults.Result)
     }
 
     return ([HttpResponseContext]@{

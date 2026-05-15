@@ -19,11 +19,16 @@ function Invoke-ListCSPsku {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $GraphRequest = [PSCustomObject]@{
-            name = @(@{value = 'Error getting catalog' })
-            sku  = $_.Exception.Message
+        if ($_.Exception.Message -eq 'No Sherweb mapping found') {
+            $GraphRequest = @()
+            $StatusCode = [HttpStatusCode]::OK
+        } else {
+            $GraphRequest = [PSCustomObject]@{
+                name = @(@{value = 'Error getting catalog' })
+                sku  = $_.Exception.Message
+            }
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
-        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{

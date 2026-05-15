@@ -19,6 +19,7 @@ function Push-UploadApplication {
         }
         $assignTo = $AppConfig.assignTo
         $AssignToIntent = $AppConfig.InstallationIntent
+        $ExcludeGroup = $AppConfig.excludeGroup
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($AppConfig.tenant -ne 'AllTenants') {
             $null = Remove-AzDataTableEntity -Force @Table -Entity $clearRow
@@ -165,7 +166,7 @@ function Push-UploadApplication {
                             default { 'Win32Lob' }
                         }
                         Start-Sleep -Milliseconds 200
-                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $tenant -groupName $assignTo -Intent $intent -AppType $AppTypeForAssignment -APIName 'AppUpload'
+                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $tenant -groupName $assignTo -ExcludeGroup $ExcludeGroup -Intent $intent -AppType $AppTypeForAssignment -APIName 'AppUpload'
                     }
                 }
             } catch {

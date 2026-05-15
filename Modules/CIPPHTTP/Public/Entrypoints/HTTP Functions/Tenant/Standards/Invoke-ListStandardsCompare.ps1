@@ -13,6 +13,26 @@ function Invoke-ListStandardsCompare {
     $TenantFilter = $Request.Query.tenantFilter
     $TemplateFilter = $Request.Query.templateId
 
+    # Get-CIPPStandards is the authoritative source for what is currently in scope.
+    $StandardParams = @{}
+    if ($TemplateFilter) { $StandardParams.TemplateId = $TemplateFilter }
+    if ($TenantFilter) { $StandardParams.TenantFilter = $TenantFilter }
+    $StandardList = Get-CIPPStandards @StandardParams
+
+    $ScopedTemplateGuids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $ScopedQuarantineNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Entry in $StandardList) {
+        switch ($Entry.Standard) {
+            { $_ -in @('IntuneTemplate', 'ConditionalAccessTemplate') } {
+                if ($Entry.Settings.TemplateList.value) { $null = $ScopedTemplateGuids.Add($Entry.Settings.TemplateList.value) }
+            }
+            'QuarantineTemplate' {
+                $DisplayName = $Entry.Settings.displayName.value ?? $Entry.Settings.displayName
+                if ($DisplayName) { $null = $ScopedQuarantineNames.Add($DisplayName) }
+            }
+        }
+    }
+
     $Filters = [system.collections.generic.list[string]]::new()
     if ($TenantFilter) {
         $Filters.Add("PartitionKey eq '{0}'" -f $TenantFilter)
@@ -33,6 +53,20 @@ function Invoke-ListStandardsCompare {
         $FieldName = $Standard.RowKey
         $FieldValue = $Standard.Value
         $Tenant = $Standard.PartitionKey
+
+        # Skip rows for template types no longer in scope per the current standard list.
+        if ($FieldName -match '^standards\.(IntuneTemplate|ConditionalAccessTemplate)\.(.+)$') {
+            if (-not $ScopedTemplateGuids.Contains($Matches[2])) { continue }
+        } elseif ($ScopedQuarantineNames.Count -gt 0 -and $FieldName -match '^standards\.QuarantineTemplate\.(.+)$') {
+            # Decode hex-encoded display name and check if it's still in scope
+            $HexEncoded = $Matches[1]
+            $Chars = [System.Collections.Generic.List[char]]::new()
+            for ($i = 0; $i -lt $HexEncoded.Length; $i += 2) {
+                $Chars.Add([char][Convert]::ToInt32($HexEncoded.Substring($i, 2), 16))
+            }
+            $DecodedName = -join $Chars
+            if (-not $ScopedQuarantineNames.Contains($DecodedName)) { continue }
+        }
 
         # decode field names that are hex encoded (e.g. QuarantineTemplates)
         if ($FieldName -match '^(standards\.QuarantineTemplate\.)(.+)$') {

@@ -15,6 +15,7 @@ function Invoke-CIPPTestCollection {
         - EIDSCA           → Invoke-CippTestEIDSCA*
         - CISA             → Invoke-CippTestCISA*
         - CIS              → Invoke-CippTestCIS_*
+        - SMB1001          → Invoke-CippTestSMB1001_*
         - CopilotReadiness → Invoke-CippTestCopilotReady*
         - Custom           → Special: enumerates enabled ScriptGuids from DB and calls
                              Invoke-CippTestCustomScripts once per guid (the function
@@ -32,7 +33,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'CopilotReadiness', 'GenericTests', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]
@@ -47,6 +48,7 @@ function Invoke-CIPPTestCollection {
         EIDSCA           = 'Invoke-CippTestEIDSCA*'
         CISA             = 'Invoke-CippTestCISA*'
         CIS              = 'Invoke-CippTestCIS_*'
+        SMB1001          = 'Invoke-CippTestSMB1001_*'
         CopilotReadiness = 'Invoke-CippTestCopilotReady*'
         GenericTests     = 'Invoke-CippTestGenericTest*'
     }
@@ -144,7 +146,7 @@ function Invoke-CIPPTestCollection {
 
     # Standard suites: discover functions by name pattern via Get-Command
     $Pattern = $SuitePatterns[$SuiteName]
-    $TestFunctions = @(Get-Command -Name $Pattern -ErrorAction SilentlyContinue)
+    $TestFunctions = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"
         return @{

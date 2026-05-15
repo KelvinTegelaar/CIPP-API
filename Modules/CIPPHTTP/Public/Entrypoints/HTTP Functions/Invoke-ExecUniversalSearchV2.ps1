@@ -28,6 +28,9 @@ function Invoke-ExecUniversalSearchV2 {
         'Groups' {
             $Results = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'Groups' -Limit $Limit -Properties 'id', 'displayName', 'mail', 'mailEnabled', 'securityEnabled', 'groupTypes', 'description' -TenantFilter $TenantFilter
         }
+        'Applications' {
+            $Results = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'Apps', 'ServicePrincipals' -Limit $Limit -Properties 'id', 'appId', 'displayName', 'publisherName', 'appOwnerOrganizationId' -TenantFilter $TenantFilter
+        }
         default {
             $Results = Search-CIPPDbData -SearchTerms $SearchTerms -Types 'Users' -Limit $Limit -Properties 'id', 'userPrincipalName', 'displayName' -TenantFilter $TenantFilter
         }

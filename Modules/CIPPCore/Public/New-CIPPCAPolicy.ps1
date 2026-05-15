@@ -167,6 +167,19 @@ function New-CIPPCAPolicy {
         }
     }
 
+    # Get authentication context class references once if needed
+    $AllAuthContexts = $null
+    if ($JSONobj.AuthContextInfo) {
+        try {
+            Write-Information 'Fetching authentication context class references...'
+            $AllAuthContexts = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationContextClassReferences' -tenantid $TenantFilter -asApp $true
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Error fetching authentication context class references: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            throw "Failed to fetch authentication context class references: $($ErrorMessage.NormalizedError)"
+        }
+    }
+
     # Get service principals once if needed
     $AllServicePrincipals = $null
     if (($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') -or ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All')) {
@@ -215,6 +228,75 @@ function New-CIPPCAPolicy {
                 }
             }
             $JSONobj.conditions.applications.includeApplications = $ValidInclusions
+        }
+    }
+
+    # Handle authentication context class references - create if missing, replace displayNames with IDs
+    if ($JSONobj.AuthContextInfo) {
+        $AuthContextLookupTable = foreach ($authContext in $JSONobj.AuthContextInfo) {
+            if (-not $authContext.displayName) { continue }
+            $ExistingContext = $AllAuthContexts | Where-Object -Property displayName -EQ $authContext.displayName
+            if ($ExistingContext) {
+                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Matched authentication context: $($authContext.displayName)" -Sev 'Info'
+                [pscustomobject]@{
+                    id          = $ExistingContext.id
+                    displayName = $ExistingContext.displayName
+                    templateId  = $authContext.id
+                }
+            } else {
+                # Find the next available ID (c1-c99)
+                $UsedIds = @($AllAuthContexts.id)
+                $NewId = $null
+                for ($i = 1; $i -le 99; $i++) {
+                    $candidateId = "c$i"
+                    if ($candidateId -notin $UsedIds) {
+                        $NewId = $candidateId
+                        break
+                    }
+                }
+                if (-not $NewId) {
+                    throw "No available authentication context IDs (c1-c99) in tenant $TenantFilter"
+                }
+                $Body = @{
+                    id          = $NewId
+                    displayName = $authContext.displayName
+                    description = if ($authContext.description) { $authContext.description } else { '' }
+                    isAvailable = $true
+                } | ConvertTo-Json -Compress
+                try {
+                    $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationContextClassReferences' -body $Body -Type POST -tenantid $TenantFilter -asApp $true
+                    Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Created new Authentication Context: $($authContext.displayName) with ID $NewId" -Sev 'Info'
+                    # Add to the list so subsequent contexts can see it
+                    $AllAuthContexts = @($AllAuthContexts) + @([pscustomobject]@{ id = $NewId; displayName = $authContext.displayName })
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-Information "Error creating authentication context: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                    throw "Failed to create authentication context '$($authContext.displayName)': $($ErrorMessage.NormalizedError)"
+                }
+                [pscustomobject]@{
+                    id          = $NewId
+                    displayName = $authContext.displayName
+                    templateId  = $authContext.id
+                }
+            }
+        }
+
+        Write-Information 'Auth Context Lookup Table:'
+        Write-Information ($AuthContextLookupTable | ConvertTo-Json -Depth 10)
+
+        # Replace display names with actual IDs in the policy
+        if ($AuthContextLookupTable -and $JSONobj.conditions.applications.includeAuthenticationContextClassReferences) {
+            $ResolvedContextIds = [System.Collections.Generic.List[string]]::new()
+            foreach ($ref in $JSONobj.conditions.applications.includeAuthenticationContextClassReferences) {
+                $lookup = $AuthContextLookupTable | Where-Object { $_.displayName -eq $ref -or $_.templateId -eq $ref } | Select-Object -First 1
+                if ($lookup) {
+                    $ResolvedContextIds.Add($lookup.id)
+                } else {
+                    # Keep the original value if no match found (might already be an ID)
+                    $ResolvedContextIds.Add($ref)
+                }
+            }
+            $JSONobj.conditions.applications.includeAuthenticationContextClassReferences = @($ResolvedContextIds)
         }
     }
 
@@ -386,6 +468,7 @@ function New-CIPPCAPolicy {
         }
     }
     $JSONobj.PSObject.Properties.Remove('LocationInfo')
+    $JSONobj.PSObject.Properties.Remove('AuthContextInfo')
     foreach ($condition in $JSONobj.conditions.users.PSObject.Properties.Name) {
         $value = $JSONobj.conditions.users.$condition
         if ($null -eq $value) {
@@ -451,7 +534,7 @@ function New-CIPPCAPolicy {
                 # Preserve any exclusion groups named "Vacation Exclusion - <PolicyDisplayName>" from existing policy
                 try {
                     $ExistingVacationGroup = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=startsWith(displayName,'Vacation Exclusion')&`$select=id,displayName&`$top=999&`$count=true" -ComplexFilter -tenantid $TenantFilter -asApp $true |
-                        Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
+                    Where-Object { $CheckExisting.conditions.users.excludeGroups -contains $_.id }
                     if ($ExistingVacationGroup) {
                         if (-not ($JSONobj.conditions.users.PSObject.Properties.Name -contains 'excludeGroups')) {
                             $JSONobj.conditions.users | Add-Member -NotePropertyName 'excludeGroups' -NotePropertyValue @() -Force
