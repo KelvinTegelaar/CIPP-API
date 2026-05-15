@@ -34,13 +34,15 @@
       "ListCIPPUsers",
       "ExecSSOSetup",
       "ExecContainerManagement",
-      "ListContainerLogs"
+      "ListContainerLogs",
+      "ListWorkerHealth"
     ],
     "Pages": [
       "/cipp/advanced/super-admin/cipp-users",
       "/cipp/advanced/super-admin/sso",
       "/cipp/advanced/super-admin/container",
-      "/cipp/advanced/container-logs"
+      "/cipp/advanced/container-logs",
+      "/cipp/advanced/worker-health"
     ],
     "Hidden": true
   }
