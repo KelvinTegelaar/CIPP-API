@@ -108,7 +108,58 @@ function Initialize-CIPPAuth {
         }
     }
 
-    # 5. Post-migration cleanup: if CIPP_SSO_MIGRATION_APPID is still set but EasyAuth
+    # 5. Reconcile EasyAuth issuer with SSOMultiTenant setting: if EasyAuth is already
+    #    configured, check whether the issuer URL matches the current SSOMultiTenant value
+    #    from Key Vault. If it changed (e.g. toggled from single to multi-tenant), update
+    #    the EasyAuth config via ARM and restart.
+    if ($EasyAuthEnabled -and $AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID) {
+        try {
+            $AuthConfigJson = $env:WEBSITE_AUTH_V2_CONFIG_JSON
+            if ($AuthConfigJson) {
+                $AuthConfig = $AuthConfigJson | ConvertFrom-Json -ErrorAction Stop
+                $CurrentIssuer = $AuthConfig.identityProviders.azureActiveDirectory.registration.openIdIssuer
+                $ConfiguredAppId = $AuthConfig.identityProviders.azureActiveDirectory.registration.clientId
+
+                if ($CurrentIssuer -and $ConfiguredAppId) {
+                    # Read SSOMultiTenant from KV/DevSecrets
+                    $SSOMultiTenant = $false
+                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                        try {
+                            $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+                            $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'" -ErrorAction SilentlyContinue
+                            $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
+                        } catch { }
+                    } elseif ($KVName) {
+                        try {
+                            $MtVal = Get-CippKeyVaultSecret -VaultName $KVName -Name 'SSOMultiTenant' -AsPlainText -ErrorAction Stop
+                            $SSOMultiTenant = $MtVal -eq 'True'
+                        } catch { }
+                    }
+
+                    $ExpectedIssuer = if ($SSOMultiTenant) {
+                        'https://login.microsoftonline.com/common/v2.0'
+                    } else {
+                        "https://login.microsoftonline.com/$($env:TenantID)/v2.0"
+                    }
+
+                    if ($CurrentIssuer -ne $ExpectedIssuer) {
+                        Write-Information "[Auth-Init] EasyAuth issuer mismatch: current=$CurrentIssuer expected=$ExpectedIssuer — updating"
+                        $Configured = Set-CIPPSSOEasyAuth -AppId $ConfiguredAppId -MultiTenant $SSOMultiTenant -TenantId $env:TenantID
+                        if ($Configured) {
+                            Write-Information '[Auth-Init] EasyAuth issuer updated — requesting container restart'
+                            [Craft.Services.AppLifecycleBridge]::RequestRestart('EasyAuth issuer updated to match SSOMultiTenant setting during warmup')
+                        }
+                    } else {
+                        Write-Information "[Auth-Init] EasyAuth issuer matches SSOMultiTenant setting ($SSOMultiTenant) — no update needed"
+                    }
+                }
+            }
+        } catch {
+            Write-Information "[Auth-Init] EasyAuth issuer reconciliation failed (non-fatal): $_"
+        }
+    }
+
+    # 6. Post-migration cleanup: if CIPP_SSO_MIGRATION_APPID is still set but EasyAuth
     #    is now configured, check whether the EasyAuth clientId still matches the migration
     #    app. If it differs, the customer's own CIPP-SSO app is active and we can remove
     #    the migration trigger env var.
