@@ -7,7 +7,8 @@ function Add-CIPPDelegatedPermission {
         $NoTranslateRequired,
         $TenantFilter
     )
-    Write-Host 'Adding Delegated Permissions'
+    Write-Information 'Adding Delegated Permissions'
+    $ApplicationId = $ApplicationId ?? $env:ApplicationID
     Set-Location (Get-Item $PSScriptRoot).FullName
 
     if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
@@ -69,11 +70,18 @@ function Add-CIPPDelegatedPermission {
         }
     }
 
-    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-    $Translator = Get-Content (Join-Path $ModuleBase 'lib\data\PermissionsTranslator.json') | ConvertFrom-Json
+    $Translator = Get-Content (Join-Path $env:CIPPRootPath 'Config\PermissionsTranslator.json') | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
-    $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property appId -EQ $ApplicationId
     $Results = [System.Collections.Generic.List[string]]::new()
+
+    $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId | Select-Object -First 1
+    if (!$ourSVCPrincipal) {
+        $ourSvcPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+    }
+    if (!$ourSVCPrincipal) {
+        $Results.Add("Failed to find service principal for application $ApplicationId in tenant $TenantFilter")
+        return $Results
+    }
 
     $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
 

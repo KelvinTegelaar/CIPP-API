@@ -14,7 +14,7 @@ function Get-CippSamPermissions {
     Internal
     #>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
-    Param(
+    param(
         [Parameter(ParameterSetName = 'ManifestOnly')]
         [switch]$ManifestOnly,
         [Parameter(ParameterSetName = 'Default')]
@@ -24,11 +24,18 @@ function Get-CippSamPermissions {
     )
 
     if (!$SavedOnly.IsPresent) {
-        $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-        $SamManifestFile = Get-Item (Join-Path $ModuleBase 'lib\data\SAMManifest.json')
-        $AdditionalPermissions = Get-Item (Join-Path $ModuleBase 'lib\data\AdditionalPermissions.json')
+        # Return cached result if available and less than 5 minutes old (avoids duplicate partner-tenant Graph calls within same invocation)
+        if ($NoDiff.IsPresent -and $script:CippSamPermissionsCache -and
+            $script:CippSamPermissionsCacheTime -and
+            ((Get-Date) - $script:CippSamPermissionsCacheTime).TotalMinutes -lt 5) {
+            return $script:CippSamPermissionsCache
+        }
+
+        $SamManifestFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\SAMManifest.json')
+        $AdditionalPermissions = Get-Item (Join-Path $env:CIPPRootPath 'Config\AdditionalPermissions.json')
 
         $ServicePrincipalList = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=id,appId,displayName' -tenantid $env:TenantID -NoAuthCheck $true
+
         $SAMManifest = Get-Content -Path $SamManifestFile.FullName | ConvertFrom-Json
         $AdditionalPermissions = Get-Content -Path $AdditionalPermissions.FullName | ConvertFrom-Json
 
@@ -190,6 +197,11 @@ function Get-CippSamPermissions {
     }
 
     $SamAppPermissions = $SamAppPermissions | ConvertTo-Json -Depth 10 -Compress | ConvertFrom-Json
+
+    if ($NoDiff.IsPresent) {
+        $script:CippSamPermissionsCache = $SamAppPermissions
+        $script:CippSamPermissionsCacheTime = Get-Date
+    }
 
     return $SamAppPermissions
 }

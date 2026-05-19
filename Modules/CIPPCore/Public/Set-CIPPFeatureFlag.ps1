@@ -22,8 +22,7 @@ function Set-CIPPFeatureFlag {
 
     try {
         # Get feature flags from JSON to validate
-        $FeatureFlagsPath = Join-Path -Path $PSScriptRoot -ChildPath '../lib/data/FeatureFlags.json'
-        $FeatureFlags = Get-Content -Path $FeatureFlagsPath -Raw | ConvertFrom-Json
+        $FeatureFlags = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\FeatureFlags.json')) | ConvertFrom-Json
 
         # Find the requested feature flag in JSON
         $FeatureFlag = $FeatureFlags | Where-Object { $_.Id -eq $Id }
@@ -50,7 +49,7 @@ function Set-CIPPFeatureFlag {
                 LastModified = (Get-Date).ToUniversalTime().ToString('o')
             }
 
-            $Result = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+            $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
             Write-Information "Feature flag '$Id' set to $Enabled"
             return $true

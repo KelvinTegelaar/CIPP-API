@@ -62,6 +62,12 @@ function Add-CIPPScheduledTask {
                 }
             }
 
+            $RequestedCommand = $task.Command.value ?? $task.Command
+            if ($RequestedCommand -in (Get-CIPPSchedulerBlockedCommands)) {
+                Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule restricted command: $RequestedCommand" -Sev 'Warning'
+                return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
+            }
+
             $propertiesToCheck = @('Webhook', 'Email', 'PSA')
             $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
             $PostExecution = $PostExecutionObject ? @($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
@@ -197,6 +203,10 @@ function Add-CIPPScheduledTask {
                 CustomSubject        = [string]$task.CustomSubject
             }
 
+
+            if ($task.Tag) {
+                $entity['Tag'] = [string]$task.Tag
+            }
 
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {

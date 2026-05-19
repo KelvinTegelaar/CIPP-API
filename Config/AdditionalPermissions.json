@@ -1,0 +1,64 @@
+[
+  {
+    "resourceAppId": "00000006-0000-0ff1-ce00-000000000000",
+    "resourceAccess": [
+      {
+        "id": "M365AdminPortal.IntegratedApps.ReadWrite",
+        "type": "Scope"
+      },
+      {
+        "id": "user_impersonation",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
+    "resourceAppId": "c9d36ed4-91b3-4c87-b8d7-68d92826c96c",
+    "resourceAccess": [
+      {
+        "id": "user_impersonation",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
+    "resourceAppId": "00000002-0000-0ff1-ce00-000000000000",
+    "resourceAccess": [
+      {
+        "id": "Group.ReadWrite.All.Sdp",
+        "type": "Scope"
+      },
+      {
+        "id": "User-OnPremisesSyncBehavior.ReadWrite.All.Sdp",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
+    "resourceAppId": "507bc9da-c4e2-40cb-96a7-ac90df92685c",
+    "resourceAccess": [
+      {
+        "id": "user_impersonation",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
+    "resourceAppId": "00000003-0000-0ff1-ce00-000000000000",
+    "resourceAccess": [
+      {
+        "id": "AllProfiles.Manage",
+        "type": "Scope"
+      }
+    ]
+  },
+  {
+    "resourceAppId": "fc780465-2017-40d4-a0c5-307022471b92",
+    "resourceAccess": [
+      {
+        "id": "user_impersonation",
+        "type": "Scope"
+      }
+    ]
+  }
+]

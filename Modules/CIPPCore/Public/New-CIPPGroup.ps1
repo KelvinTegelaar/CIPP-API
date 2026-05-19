@@ -41,6 +41,23 @@ function New-CIPPGroup {
     )
 
     try {
+        $GroupCacheTable = Get-CIPPTable -tablename 'CacheGroupCreation'
+        $SafeDisplayName = $GroupObject.displayName -replace '[^a-zA-Z0-9-]', '_'
+        $CacheRowKey = '{0}_{1}' -f $TenantFilter, $SafeDisplayName
+        $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $CachedGroup = Get-CIPPAzDataTableEntity @GroupCacheTable -Filter "PartitionKey eq 'GroupCreation' and RowKey eq '$CacheRowKey' and Timestamp ge datetime'$TenMinutesAgo'"
+        if ($CachedGroup -and $CachedGroup.GroupId) {
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message "Group '$($GroupObject.displayName)' was recently created (cached id: $($CachedGroup.GroupId)), skipping duplicate creation" -Sev Info -User $ExecutingUser
+            return [PSCustomObject]@{
+                Success      = $true
+                Message      = "Group $($GroupObject.displayName) already exists (from cache)"
+                GroupId      = $CachedGroup.GroupId
+                GroupType    = $CachedGroup.GroupType
+                Email        = $CachedGroup.Email
+                AlreadyExist = $true
+            }
+        }
+
         # Normalize group type for consistent handling (accept camelCase from templates)
         $NormalizedGroupType = switch -Wildcard ($GroupObject.groupType.ToLower()) {
             'mail-enabled security' { 'Security'; break }
@@ -78,13 +95,16 @@ function New-CIPPGroup {
         }
 
         # Determine if we should generate a mailNickname with a GUID, or use the username field
-        if (-not $GroupObject.Username) {
+        if (-not $GroupObject.Username -or $NormalizedGroupType -in @('Generic', 'AzureRole')) {
             $MailNickname = (New-Guid).guid.substring(0, 10)
         } else {
-            $MailNickname = $GroupObject.Username
+            $MailNickname = ($GroupObject.Username -split '@')[0] -replace '[^a-zA-Z0-9_-]', ''
+            if ([String]::IsNullOrEmpty($MailNickname)) {
+                $MailNickname = (New-Guid).guid
+            }
         }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Creating group $($GroupObject.displayName) of type $NormalizedGroupType$(if ($NeedsEmail) { " with email $Email" })" -Sev Info -User $ExecutingUser
 
         # Handle Graph API groups (Security, Generic, AzureRole, Dynamic, M365)
         if ($NormalizedGroupType -in @('Generic', 'AzureRole', 'Dynamic', 'M365')) {
@@ -157,6 +177,20 @@ function New-CIPPGroup {
                 GroupId   = $GraphRequest.id
                 GroupType = $NormalizedGroupType
                 Email     = if ($NeedsEmail) { $Email } else { $null }
+            }
+            try {
+                $CacheEntity = @{
+                    PartitionKey = 'GroupCreation'
+                    RowKey       = $CacheRowKey
+                    GroupId      = [string]$GraphRequest.id
+                    DisplayName  = [string]$GroupObject.displayName
+                    GroupType    = [string]$NormalizedGroupType
+                    Email        = [string]$(if ($NeedsEmail) { $Email } else { '' })
+                    Tenant       = [string]$TenantFilter
+                }
+                Add-CIPPAzDataTableEntity @GroupCacheTable -Entity $CacheEntity -Force
+            } catch {
+                Write-Warning "Failed to write group creation cache for $($GroupObject.displayName): $($_.Exception.Message)"
             }
             if ($GroupObject.subscribeMembers) {
                 #Waiting for group to become available in Exo.
@@ -237,14 +271,28 @@ function New-CIPPGroup {
                 GroupType = $NormalizedGroupType
                 Email     = $Email
             }
+            try {
+                $CacheEntity = @{
+                    PartitionKey = 'GroupCreation'
+                    RowKey       = $CacheRowKey
+                    GroupId      = [string]$GraphRequest.Identity
+                    DisplayName  = [string]$GroupObject.displayName
+                    GroupType    = [string]$NormalizedGroupType
+                    Email        = [string]$Email
+                    Tenant       = [string]$TenantFilter
+                }
+                Add-CIPPAzDataTableEntity @GroupCacheTable -Entity $CacheEntity -Force
+            } catch {
+                Write-Warning "Failed to write group creation cache for $($GroupObject.displayName): $($_.Exception.Message)"
+            }
         }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Created group $($GroupObject.displayName) with id $($Result.GroupId)" -Sev Info
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Created group $($GroupObject.displayName) with id $($Result.GroupId)" -Sev Info -User $ExecutingUser
         return $Result
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Group creation failed for $($GroupObject.displayName): $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Group creation failed for $($GroupObject.displayName): $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage -User $ExecutingUser
 
         return [PSCustomObject]@{
             Success   = $false

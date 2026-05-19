@@ -1,5 +1,6 @@
 Write-Host 'Initializing development environment...' -ForegroundColor Green
 $CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
+$env:CIPPRootPath = $CippRoot
 ### Read the local.settings.json file and convert to a PowerShell object.
 $CIPPSettings = Get-Content (Join-Path $CippRoot 'local.settings.json') | ConvertFrom-Json | Select-Object -ExpandProperty Values
 ### Loop through the settings and set environment variables for each.
@@ -17,6 +18,11 @@ if ($IsWindows) {
         Write-Information "Loading PowerShell Worker from $PowerShellWorkerRoot"
         Add-Type -Path $PowerShellWorkerRoot
     }
+}
+
+$CIPPSharpDllPath = Join-Path $CippRoot 'Shared\CIPPSharp\bin\CIPPSharp.dll'
+if ((Test-Path $CIPPSharpDllPath) -and !('CIPP.CIPPRestClient' -as [type])) {
+    [Reflection.Assembly]::LoadFile($CIPPSharpDllPath) | Out-Null
 }
 
 # Remove previously loaded modules to force reloading if new code changes were made

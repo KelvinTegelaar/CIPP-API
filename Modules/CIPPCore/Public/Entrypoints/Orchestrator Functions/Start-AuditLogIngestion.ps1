@@ -35,38 +35,38 @@ function Start-AuditLogIngestion {
             $ConfigEntry
         }
 
-    $TenantList = Get-Tenants -IncludeErrors
-    $TenantsToProcess = [System.Collections.Generic.List[object]]::new()
+        $TenantList = Get-Tenants -IncludeErrors
+        $TenantsToProcess = [System.Collections.Generic.List[object]]::new()
 
-    foreach ($Tenant in $TenantList) {
-      # Check if tenant has any webhook rules and collect content types
-      $TenantInConfig = $false
-      $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
+        foreach ($Tenant in $TenantList) {
+            # Check if tenant has any webhook rules and collect content types
+            $TenantInConfig = $false
+            $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
 
-      foreach ($ConfigEntry in $ConfigEntries) {
-        if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
-          continue
-        }
-        $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)
-        if ($TenantsList.value -contains $Tenant.defaultDomainName -or $TenantsList.value -contains 'AllTenants') {
-          $TenantInConfig = $true
-          $MatchingConfigs.Add($ConfigEntry)
-        }
-      }
+            foreach ($ConfigEntry in $ConfigEntries) {
+                if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
+                    continue
+                }
+                $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)
+                if ($TenantsList.value -contains $Tenant.defaultDomainName -or $TenantsList.value -contains 'AllTenants') {
+                    $TenantInConfig = $true
+                    $MatchingConfigs.Add($ConfigEntry)
+                }
+            }
 
-      if ($TenantInConfig -and $MatchingConfigs.Count -gt 0) {
-        # Extract unique content types from webhook rules (e.g., Audit.Exchange, Audit.SharePoint)
-        $ContentTypes = @($MatchingConfigs | Select-Object -Property type | Where-Object { $_.type } | Sort-Object -Property type -Unique | ForEach-Object { $_.type })
+            if ($TenantInConfig -and $MatchingConfigs.Count -gt 0) {
+                # Extract unique content types from webhook rules (e.g., Audit.Exchange, Audit.SharePoint)
+                $ContentTypes = @($MatchingConfigs | Select-Object -Property type | Where-Object { $_.type } | Sort-Object -Property type -Unique | ForEach-Object { $_.type })
 
-        if ($ContentTypes.Count -gt 0) {
-          $TenantsToProcess.Add([PSCustomObject]@{
-            defaultDomainName = $Tenant.defaultDomainName
-            customerId = $Tenant.customerId
-            ContentTypes = $ContentTypes
-          })
-        }
-      }
-    }        if ($TenantsToProcess.Count -eq 0) {
+                if ($ContentTypes.Count -gt 0) {
+                    $TenantsToProcess.Add([PSCustomObject]@{
+                            defaultDomainName = $Tenant.defaultDomainName
+                            customerId        = $Tenant.customerId
+                            ContentTypes      = $ContentTypes
+                        })
+                }
+            }
+        }        if ($TenantsToProcess.Count -eq 0) {
             Write-Information 'No tenants configured for audit log ingestion'
             return
         }
@@ -74,14 +74,14 @@ function Start-AuditLogIngestion {
         Write-Information "Audit Log Ingestion: Processing $($TenantsToProcess.Count) tenants"
 
         if ($PSCmdlet.ShouldProcess('Start-AuditLogIngestion', 'Starting Audit Log Ingestion')) {
-      $Queue = New-CippQueueEntry -Name 'Audit Logs Ingestion' -Reference 'AuditLogsIngestion' -TotalTasks $TenantsToProcess.Count
-      $Batch = $TenantsToProcess | Select-Object @{Name = 'TenantFilter'; Expression = { $_.defaultDomainName } }, @{Name = 'TenantId'; Expression = { $_.customerId } }, @{Name = 'ContentTypes'; Expression = { $_.ContentTypes } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogIngestion' } }
-      $InputObject = [PSCustomObject]@{
+            $Queue = New-CippQueueEntry -Name 'Audit Logs Ingestion' -Reference 'AuditLogsIngestion' -TotalTasks $TenantsToProcess.Count
+            $Batch = $TenantsToProcess | Select-Object @{Name = 'TenantFilter'; Expression = { $_.defaultDomainName } }, @{Name = 'TenantId'; Expression = { $_.customerId } }, @{Name = 'ContentTypes'; Expression = { $_.ContentTypes } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogIngestion' } }
+            $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'AuditLogsIngestion'
                 Batch            = @($Batch)
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-CIPPOrchestrator -InputObject $InputObject
             Write-Information "Started audit log ingestion orchestration for $($TenantsToProcess.Count) tenants"
         }
     } catch {

@@ -80,7 +80,8 @@ function Get-GraphRequestList {
         [string]$ReverseTenantLookupProperty = 'tenantId',
         [boolean]$AsApp = $false,
         [string]$Caller = 'Get-GraphRequestList',
-        [switch]$UseBatchExpand
+        [switch]$UseBatchExpand,
+        [switch]$RawJsonArray
     )
 
     $SingleTenantThreshold = 8000
@@ -97,6 +98,19 @@ function Get-GraphRequestList {
     }
 
     $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+
+    # Resolve variable placeholders in Parameters before building the query string.
+    # Supported: {DaysAgo:N} → ISO 8601 date N days in the past (UTC)
+    $Keys = @($Parameters.Keys)
+    foreach ($Key in $Keys) {
+        if ($Parameters[$Key] -is [string]) {
+            $Parameters[$Key] = [regex]::Replace($Parameters[$Key], '\{DaysAgo:(\d+)\}', {
+                    param($m)
+                    (Get-Date).ToUniversalTime().AddDays( - [int]$m.Groups[1].Value).ToString('yyyy-MM-dd')
+                })
+        }
+    }
+
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
     foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
         if ($Item.Value -is [System.Boolean]) {
@@ -166,10 +180,13 @@ function Get-GraphRequestList {
             $GraphRequest.uri = $GraphQuery.ToString()
         }
 
-        if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
+        if ($Parameters.'$count' -and -not $ManualPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
             if ($CountOnly.IsPresent) { return $Count }
             Write-Information "Total results (`$count): $Count"
+        } elseif ($CountOnly.IsPresent) {
+            $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
+            return $Count
         }
     }
     #Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
@@ -182,7 +199,7 @@ function Get-GraphRequestList {
             $Type = 'Queue'
             Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-            $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+            $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' -and $_.Reference -eq $QueueReference }
         } elseif (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent) {
             if ($TenantFilter -eq 'AllTenants' -or $Count -gt $SingleTenantThreshold) {
                 $Table = Get-CIPPTable -TableName $TableName
@@ -197,7 +214,7 @@ function Get-GraphRequestList {
                 $Type = 'Cache'
                 Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-                $RunningQueue = Invoke-ListCippQueue -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+                $RunningQueue = Get-CIPPQueueData -Reference $QueueReference | Where-Object { $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' -and $_.Reference -eq $QueueReference }
             }
         }
     } catch {
@@ -277,6 +294,7 @@ function Get-GraphRequestList {
                             $InputObject = @{
                                 OrchestratorName = 'GraphRequestOrchestrator'
                                 Batch            = @($Batch)
+                                Reference        = $QueueReference
                             }
                             #Write-Information  ($InputObject | ConvertTo-Json -Depth 5)
                             $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
@@ -407,6 +425,22 @@ function Get-GraphRequestList {
             }
         }
     } else {
+        if ($RawJsonArray.IsPresent) {
+            # Fast path: concatenate raw JSON strings without deserialization. This is much faster and uses less memory when no post-processing is needed, especially for large datasets.
+            $JsonParts = [System.Collections.Generic.List[string]]::new()
+            foreach ($Row in $Rows) {
+                if ($Row.Data) {
+                    $d = $Row.Data.Trim()
+                    if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {
+                        $JsonParts.Add($d.Substring(1, $d.Length - 2))
+                    } elseif ($d.Length -gt 0 -and $d -ne '[]') {
+                        $JsonParts.Add($d)
+                    }
+                }
+            }
+            return '[' + ($JsonParts -join ',') + ']'
+        }
+
         foreach ($Row in $Rows) {
             if ($Row.Data) {
                 try {

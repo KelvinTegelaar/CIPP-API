@@ -46,10 +46,13 @@ function Remove-CIPPUserTeamsPhoneDIDs {
         # Prepare bulk requests for all DIDs
         $RemoveRequests = foreach ($DID in $UserDIDs) {
             @{
-                id     = $DID.telephoneNumber
-                method = 'POST'
-                url    = "admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber"
-                body   = @{
+                id      = $DID.telephoneNumber
+                method  = 'POST'
+                url     = "admin/teams/telephoneNumberManagement/numberAssignments/unassignNumber"
+                headers = @{
+                    'Content-Type' = 'application/json'
+                }
+                body    = @{
                     telephoneNumber = $DID.telephoneNumber
                     numberType      = $DID.numberType
                 }
@@ -63,7 +66,7 @@ function Remove-CIPPUserTeamsPhoneDIDs {
         $RemoveResults | ForEach-Object {
             $PhoneNumber = $_.id
 
-            if ($_.status -eq 204) {
+            if ($_.status -in (202, 204)) {
                 $SuccessResult = "Successfully removed Teams Phone DID: '$PhoneNumber' from: '$Username' - '$UserID'"
                 Write-LogMessage -headers $Headers -API $APIName -message $SuccessResult -Sev 'Info' -tenant $TenantFilter
                 $Results.Add($SuccessResult)

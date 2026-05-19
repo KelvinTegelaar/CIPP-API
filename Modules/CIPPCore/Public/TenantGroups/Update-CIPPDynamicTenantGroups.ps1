@@ -62,169 +62,92 @@ function Update-CIPPDynamicTenantGroups {
             try {
                 Write-LogMessage -API 'TenantGroups' -message "Processing dynamic group: $($Group.Name)" -sev Info
                 $Rules = @($Group.DynamicRules | ConvertFrom-Json)
-                # Build a single Where-Object string for AND logic
-                $WhereConditions = foreach ($Rule in $Rules) {
-                    $Property = $Rule.property
-                    $Operator = $Rule.operator
-                    $Value = $Rule.value
-
-                    switch ($Property) {
-                        'delegatedAccessStatus' {
-                            "`$_.delegatedPrivilegeStatus -$Operator '$($Value.value)'"
-                        }
-                        'availableLicense' {
-                            if ($Operator -in @('in', 'notin')) {
-                                $arrayValues = if ($Value -is [array]) { $Value.guid } else { @($Value.guid) }
-                                $arrayAsString = $arrayValues | ForEach-Object { "'$_'" }
-                                if ($Operator -eq 'in') {
-                                    "(`$_.skuId | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
-                                } else {
-                                    "(`$_.skuId | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -eq 0"
-                                }
-                            } else {
-                                "`$_.skuId -$Operator '$($Value.guid)'"
-                            }
-                        }
-                        'availableServicePlan' {
-                            if ($Operator -in @('in', 'notin')) {
-                                $arrayValues = if ($Value -is [array]) { $Value.value } else { @($Value.value) }
-                                $arrayAsString = $arrayValues | ForEach-Object { "'$_'" }
-                                if ($Operator -eq 'in') {
-                                    # Keep tenants with ANY of the provided plans
-                                    "(`$_.servicePlans | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -gt 0"
-                                } else {
-                                    # Exclude tenants with ANY of the provided plans
-                                    "(`$_.servicePlans | Where-Object { `$_ -in @($($arrayAsString -join ', ')) }).Count -eq 0"
-                                }
-                            } else {
-                                "`$_.servicePlans -$Operator '$($Value.value)'"
-                            }
-                        }
-                        'tenantGroupMember' {
-                            # Get members of the referenced tenant group(s)
-                            if ($Operator -in @('in', 'notin')) {
-                                # Handle array of group IDs
-                                $ReferencedGroupIds = @($Value.value)
-
-                                # Collect all unique member customerIds from all referenced groups
-                                $AllMembers = [System.Collections.Generic.HashSet[string]]::new()
-                                foreach ($GroupId in $ReferencedGroupIds) {
-                                    if ($script:TenantGroupMembersCache.ContainsKey($GroupId)) {
-                                        foreach ($MemberId in $script:TenantGroupMembersCache[$GroupId]) {
-                                            [void]$AllMembers.Add($MemberId)
-                                        }
-                                    }
-                                }
-
-                                # Convert to array string for condition
-                                $MemberArray = $AllMembers | ForEach-Object { "'$_'" }
-                                $MemberArrayString = $MemberArray -join ', '
-
-                                if ($Operator -eq 'in') {
-                                    "`$_.customerId -in @($MemberArrayString)"
-                                } else {
-                                    "`$_.customerId -notin @($MemberArrayString)"
-                                }
-                            } else {
-                                # Single value with other operators
-                                $ReferencedGroupId = $Value.value
-                                "`$_.customerId -$Operator `$script:TenantGroupMembersCache['$ReferencedGroupId']"
-                            }
-                        }
-                        'customVariable' {
-                            # Custom variable matching - value contains variable name and expected value
-                            # Handle case where variableName might be an object (autocomplete option) or a string
-                            $VariableName = if ($Value.variableName -is [string]) {
-                                $Value.variableName
-                            } elseif ($Value.variableName.value) {
-                                $Value.variableName.value
-                            } else {
-                                $Value.variableName
-                            }
-                            $ExpectedValue = $Value.value
-                            # Escape single quotes in expected value for the condition string
-                            $EscapedExpectedValue = $ExpectedValue -replace "'", "''"
-
-                            switch ($Operator) {
-                                'eq' {
-                                    "(`$_.customVariables.ContainsKey('$VariableName') -and `$_.customVariables['$VariableName'].Value -eq '$EscapedExpectedValue')"
-                                }
-                                'ne' {
-                                    "(-not `$_.customVariables.ContainsKey('$VariableName') -or `$_.customVariables['$VariableName'].Value -ne '$EscapedExpectedValue')"
-                                }
-                                'like' {
-                                    "(`$_.customVariables.ContainsKey('$VariableName') -and `$_.customVariables['$VariableName'].Value -like '*$EscapedExpectedValue*')"
-                                }
-                                'notlike' {
-                                    "(-not `$_.customVariables.ContainsKey('$VariableName') -or `$_.customVariables['$VariableName'].Value -notlike '*$EscapedExpectedValue*')"
-                                }
-                            }
-                        }
-                        default {
-                            Write-LogMessage -API 'TenantGroups' -message "Unknown property type: $Property" -sev Warning
-                            $null
-                        }
-                    }
-
+                if (!$Rules -or $Rules.Count -eq 0) {
+                    throw 'No rules found for dynamic group.'
                 }
-                if (!$WhereConditions) {
-                    throw 'Generating the conditions failed. The conditions seem to be empty.'
-                }
-                Write-Information "Generated where conditions: $($WhereConditions | ConvertTo-Json )"
-                $TenantObj = $AllTenants | ForEach-Object {
-                    if ($Rules.property -contains 'availableLicense') {
-                        if ($SkuHashtable.ContainsKey($_.customerId)) {
-                            Write-Information "Using cached licenses for tenant $($_.defaultDomainName)"
-                            $LicenseInfo = $SkuHashtable[$_.customerId]
+
+                $RequiresLicense = $Rules.property -contains 'availableLicense'
+                $RequiresCustomVariables = $Rules.property -contains 'customVariable'
+                $RequiresServicePlans = $Rules.property -contains 'availableServicePlan'
+                Write-Information "Processing $($Rules.Count) rules for group '$($Group.Name)'"
+
+                $TenantObj = foreach ($Tenant in $AllTenants) {
+                    $LicenseInfo = $null
+                    $SKUId = @()
+                    $ServicePlans = @()
+                    $TenantVariables = @{}
+
+                    if ($RequiresLicense) {
+                        if ($SkuHashtable.ContainsKey($Tenant.customerId)) {
+                            Write-Information "Using cached licenses for tenant $($Tenant.defaultDomainName)"
+                            $LicenseInfo = $SkuHashtable[$Tenant.customerId]
                         } else {
-                            Write-Information "Fetching licenses for tenant $($_.defaultDomainName)"
+                            Write-Information "Fetching licenses for tenant $($Tenant.defaultDomainName)"
                             try {
-                                $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $_.defaultDomainName
+                                $LicenseInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -TenantId $Tenant.defaultDomainName
                                 # Cache the result
                                 $CacheEntity = @{
                                     PartitionKey = 'sku'
-                                    RowKey       = [string]$_.customerId
+                                    RowKey       = [string]$Tenant.customerId
                                     JSON         = [string]($LicenseInfo | ConvertTo-Json -Depth 5 -Compress)
                                 }
                                 Add-CIPPAzDataTableEntity @LicenseCacheTable -Entity $CacheEntity -Force
                             } catch {
-                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                                Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                             }
                         }
                     }
 
                     # Fetch custom variables for this tenant if any rules use customVariable
-                    $TenantVariables = @{}
-                    if ($Rules.property -contains 'customVariable') {
+                    if ($RequiresCustomVariables) {
                         try {
-                            $TenantVariables = Get-CIPPTenantVariables -TenantFilter $_.customerId -IncludeGlobal
+                            $TenantVariables = Get-CIPPTenantVariables -TenantFilter $Tenant.customerId -IncludeGlobal
                         } catch {
-                            Write-Information "Error fetching custom variables for tenant $($_.defaultDomainName): $($_.Exception.Message)"
-                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                            Write-Information "Error fetching custom variables for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
+                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                         }
                     }
 
-                    try {
-                        $SKUId = $LicenseInfo.SKUId ?? @()
-                        $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $_.defaultDomainName).psobject.properties.name
-                    } catch {
-                        Write-Information "Error fetching capabilities for tenant $($_.defaultDomainName): $($_.Exception.Message)"
-                        Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $_.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                    $SKUId = $LicenseInfo.SKUId ?? @()
+                    if ($RequiresServicePlans) {
+                        try {
+                            $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $Tenant.defaultDomainName).psobject.properties.name
+                        } catch {
+                            Write-Information "Error fetching capabilities for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
+                            Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
+                        }
                     }
+
                     [pscustomobject]@{
-                        customerId               = $_.customerId
-                        defaultDomainName        = $_.defaultDomainName
-                        displayName              = $_.displayName
+                        customerId               = $Tenant.customerId
+                        defaultDomainName        = $Tenant.defaultDomainName
+                        displayName              = $Tenant.displayName
                         skuId                    = $SKUId
                         servicePlans             = $ServicePlans
-                        delegatedPrivilegeStatus = $_.delegatedPrivilegeStatus
+                        delegatedPrivilegeStatus = $Tenant.delegatedPrivilegeStatus
                         customVariables          = $TenantVariables
                     }
                 }
-                # Combine all conditions with the specified logic (AND or OR)
-                $LogicOperator = if ($Group.RuleLogic -eq 'or') { ' -or ' } else { ' -and ' }
+                # Evaluate rules safely using Test-CIPPDynamicGroupFilter with AND/OR logic
+                $RuleLogic = if ($Group.RuleLogic -eq 'or') { 'or' } else { 'and' }
+
+                # Build sanitized condition strings from validated rules
+                $WhereConditions = foreach ($rule in $Rules) {
+                    $condition = Test-CIPPDynamicGroupFilter -Rule $rule -TenantGroupMembersCache $script:TenantGroupMembersCache
+                    if ($null -eq $condition) {
+                        Write-Warning "Skipping invalid rule: $($rule | ConvertTo-Json -Compress)"
+                        continue
+                    }
+                    $condition
+                }
+
+                if (!$WhereConditions) {
+                    throw 'Generating the conditions failed. All rules were invalid or empty.'
+                }
+
+                $LogicOperator = if ($RuleLogic -eq 'or') { ' -or ' } else { ' -and ' }
                 $WhereString = $WhereConditions -join $LogicOperator
-                Write-Information "Evaluating tenants with condition: $WhereString"
+                Write-Information "Evaluating tenants with sanitized condition: $WhereString"
                 Write-LogMessage -API 'TenantGroups' -message "Evaluating tenants for group '$($Group.Name)' with condition: $WhereString" -sev Info
 
                 $ScriptBlock = [ScriptBlock]::Create($WhereString)
@@ -232,7 +155,7 @@ function Update-CIPPDynamicTenantGroups {
 
                 Write-Information "Found $($MatchingTenants.Count) matching tenants for group '$($Group.Name)'"
 
-                $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$($Group.RowKey)'"
+                $CurrentMembers = @($AllGroupMembers | Where-Object { $_.GroupId -eq $Group.RowKey })
                 $CurrentMemberIds = $CurrentMembers.customerId
                 $NewMemberIds = $MatchingTenants.customerId
 
@@ -272,6 +195,9 @@ function Update-CIPPDynamicTenantGroups {
         }
 
         Write-LogMessage -API 'TenantGroups' -message "Dynamic tenant group update completed. Groups processed: $GroupsProcessed, Members added: $TotalMembersAdded, Members removed: $TotalMembersRemoved" -sev Info
+
+        # Bust the TenantGroups cache so subsequent calls reflect the changes made above
+        Get-TenantGroups -SkipCache | Out-Null
 
         return @{
             MembersAdded    = $TotalMembersAdded

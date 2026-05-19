@@ -63,7 +63,7 @@ function Start-UpdatePermissionsOrchestrator {
                 OrchestratorName = 'UpdatePermissionsOrchestrator'
                 Batch            = @($TenantBatch)
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-CIPPOrchestrator -InputObject $InputObject
         } else {
             Write-Information 'No tenants require permissions update'
         }

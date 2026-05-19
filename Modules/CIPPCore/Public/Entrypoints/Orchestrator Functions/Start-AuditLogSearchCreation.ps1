@@ -22,25 +22,59 @@ function Start-AuditLogSearchCreation {
         }
 
         $TenantList = Get-Tenants -IncludeErrors
+        $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
+        $DisabledAuditRows = @(Get-CIPPAzDataTableEntity @AuditDisabledTable -Filter "PartitionKey eq 'AuditDisabledTenant'")
+        $CurrentUnixTime = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
+        $AuditDisabledTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $ExpiredDisabledRows = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($DisabledRow in $DisabledAuditRows) {
+            [int64]$ExpiresAtUnix = 0
+            if (($null -eq $DisabledRow.ExpiresAtUnix) -or (-not [int64]::TryParse([string]$DisabledRow.ExpiresAtUnix, [ref]$ExpiresAtUnix))) {
+                $ExpiredDisabledRows.Add($DisabledRow)
+                continue
+            }
+
+            if ($ExpiresAtUnix -le $CurrentUnixTime) {
+                $ExpiredDisabledRows.Add($DisabledRow)
+                continue
+            }
+
+            [void]$AuditDisabledTenants.Add([string]$DisabledRow.RowKey)
+        }
+
+        if ($ExpiredDisabledRows.Count -gt 0) {
+            Remove-AzDataTableEntity @AuditDisabledTable -Entity $ExpiredDisabledRows -Force | Out-Null
+        }
+
         # Round time down to nearest minute
         $Now = Get-Date
         $StartTime = ($Now.AddSeconds(-$Now.Seconds)).AddHours(-1)
         $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
-        Write-Information 'Audit Logs: Creating new searches'
+        # Pre-expand tenant groups once per config entry to avoid repeated calls per tenant
+        foreach ($ConfigEntry in $ConfigEntries) {
+            $ConfigEntry | Add-Member -MemberType NoteProperty -Name 'ExpandedTenants' -Value (Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)).value -Force
+        }
+
+        Write-Information "Audit Logs: Building batch for $($TenantList.Count) tenants across $($ConfigEntries.Count) config entries"
+
+        $SkippedAuditDisabledCount = 0
 
         $Batch = foreach ($Tenant in $TenantList) {
-            Write-Information "Processing tenant $($Tenant.defaultDomainName) - $($Tenant.customerId)"
+            if ($AuditDisabledTenants.Contains($Tenant.defaultDomainName) -or $AuditDisabledTenants.Contains([string]$Tenant.customerId)) {
+                $SkippedAuditDisabledCount++
+                continue
+            }
+
             $TenantInConfig = $false
-            $MatchingConfigs = [System.Collections.Generic.List[object]]::new()
             foreach ($ConfigEntry in $ConfigEntries) {
                 if ($ConfigEntry.excludedTenants.value -contains $Tenant.defaultDomainName) {
                     continue
                 }
-                $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntry.Tenants)
-                if ($TenantsList.value -contains $Tenant.defaultDomainName -or $TenantsList.value -contains 'AllTenants') {
+                if ($ConfigEntry.ExpandedTenants -contains $Tenant.defaultDomainName -or $ConfigEntry.ExpandedTenants -contains 'AllTenants') {
                     $TenantInConfig = $true
-                    $MatchingConfigs.Add($ConfigEntry)
+                    break
                 }
             }
 
@@ -48,15 +82,16 @@ function Start-AuditLogSearchCreation {
                 continue
             }
 
-            if ($MatchingConfigs) {
-                [PSCustomObject]@{
-                    FunctionName   = 'AuditLogSearchCreation'
-                    Tenant         = $Tenant | Select-Object defaultDomainName, customerId, displayName
-                    StartTime      = $StartTime
-                    EndTime        = $EndTime
-                    ServiceFilters = @($MatchingConfigs | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] })
-                }
+            [PSCustomObject]@{
+                FunctionName = 'AuditLogSearchCreation'
+                Tenant       = $Tenant | Select-Object defaultDomainName, customerId, displayName
+                StartTime    = $StartTime
+                EndTime      = $EndTime
             }
+        }
+
+        if ($SkippedAuditDisabledCount -gt 0) {
+            Write-Information "Audit Logs: Skipped $SkippedAuditDisabledCount tenants due to cached AuditingDisabledTenant status"
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
@@ -65,7 +100,7 @@ function Start-AuditLogSearchCreation {
                 OrchestratorName = 'AuditLogSearchCreation'
                 SkipLog          = $true
             }
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Start-CIPPOrchestrator -InputObject $InputObject
             Write-Information "Started Audit Log search creation orchestrator with $($Batch.Count) tenants"
         } else {
             Write-Information 'No tenants found for Audit Log search creation'

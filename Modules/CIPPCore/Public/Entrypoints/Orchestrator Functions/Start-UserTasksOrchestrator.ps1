@@ -61,8 +61,48 @@ function Start-UserTasksOrchestrator {
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 if (!$task.Parameters) { $task.Parameters = @{} }
 
+                if ($task.Command -in (Get-CIPPSchedulerBlockedCommands)) {
+                    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Blocked execution of restricted command '$($task.Command)' in task $($task.Name)" -Sev 'Warning'
+                    $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey = $task.PartitionKey
+                        RowKey       = $task.RowKey
+                        Results      = "Task blocked: '$($task.Command)' is not permitted to run as a scheduled task."
+                        TaskState    = 'Failed'
+                    }
+                    continue
+                }
+
                 # Cache Get-Command result to avoid repeated expensive reflection calls
-                $CommandInfo = Get-Command $task.Command
+                $CommandInfo = Get-Command -Name $task.Command -ErrorAction SilentlyContinue
+                if (-not $CommandInfo) {
+                    # Resolve the required module from standardised command name patterns
+                    $ModuleToImport = switch -Wildcard ($task.Command) {
+                        'Invoke-CIPPStandard*' { 'CIPPStandards' }
+                        'Get-CIPPAlert*' { 'CIPPAlerts' }
+                        default { $null }
+                    }
+
+                    if ($ModuleToImport) {
+                        Write-Information "Command '$($task.Command)' not found. Attempting import of '$ModuleToImport' module."
+                        $ImportedModule = $false
+                        try {
+                            if (-not (Get-Module -Name $ModuleToImport)) {
+                                Import-Module $ModuleToImport -ErrorAction Stop
+                                $ImportedModule = $true
+                                Write-Information "Imported module '$ModuleToImport' for command resolution retry."
+                            }
+                            $CommandInfo = Get-Command -Name $task.Command -ErrorAction Stop
+                        } catch {
+                            throw "Unable to resolve command '$($task.Command)' for scheduled task '$($task.Name)' after importing '$ModuleToImport'. $($_.Exception.Message)"
+                        } finally {
+                            if ($ImportedModule) {
+                                Remove-Module $ModuleToImport -ErrorAction SilentlyContinue
+                            }
+                        }
+                    } else {
+                        throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
+                    }
+                }
                 $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
 
                 $ScheduledCommand = [pscustomobject]@{
@@ -89,7 +129,7 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange($AllTenantCommands)
+                    $Batch.AddRange(@($AllTenantCommands))
                 } elseif ($task.TenantGroup) {
                     # Handle tenant groups - expand group to individual tenants
                     try {
@@ -123,7 +163,7 @@ function Start-UserTasksOrchestrator {
                                 FunctionName = 'ExecScheduledCommand'
                             }
                         }
-                        $Batch.AddRange($GroupTenantCommands)
+                        $Batch.AddRange(@($GroupTenantCommands))
                     } catch {
                         Write-Host "Error expanding tenant group: $($_.Exception.Message)"
                         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
@@ -198,7 +238,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Single-tenant orchestrator started for $TenantName with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start single-tenant orchestrator for $TenantName : $($_.Exception.Message)"
@@ -257,7 +297,7 @@ function Start-UserTasksOrchestrator {
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Multi-Tenant Task Orchestrator')) {
                     try {
-                        $OrchestratorId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
+                        $OrchestratorId = Start-CIPPOrchestrator -InputObject $InputObject
                         Write-Information "Multi-tenant orchestrator started for $($ParentTask.Name) with ID: $OrchestratorId"
                     } catch {
                         Write-Warning "Failed to start multi-tenant orchestrator for $($ParentTask.Name): $($_.Exception.Message)"

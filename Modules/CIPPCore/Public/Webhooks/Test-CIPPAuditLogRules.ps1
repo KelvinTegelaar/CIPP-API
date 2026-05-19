@@ -149,12 +149,13 @@ function Test-CIPPAuditLogRules {
             # Check if the TenantFilter matches any tenant in the expanded list or AllTenants
             if ($ExpandedTenants.value -contains $TenantFilter -or $ExpandedTenants.value -contains 'AllTenants') {
                 [pscustomobject]@{
-                    Tenants      = $Tenants
-                    Excluded     = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                    Conditions   = $ConfigEntry.Conditions
-                    Actions      = $ConfigEntry.Actions
-                    LogType      = $ConfigEntry.Type
-                    AlertComment = $ConfigEntry.AlertComment
+                    Tenants       = $Tenants
+                    Excluded      = ($ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                    Conditions    = $ConfigEntry.Conditions
+                    Actions       = $ConfigEntry.Actions
+                    LogType       = $ConfigEntry.Type
+                    AlertComment  = $ConfigEntry.AlertComment
+                    CustomSubject = $ConfigEntry.CustomSubject
                 }
             }
         }
@@ -187,34 +188,54 @@ function Test-CIPPAuditLogRules {
         }
 
         if (!$Lookups -or $NeedsRefresh) {
-            # Collect bulk data for users/groups/devices/applications
-            $Requests = @(
-                @{
-                    id     = 'users'
-                    url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
-                    method = 'GET'
-                }
-                @{
-                    id     = 'groups'
-                    url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
-                    method = 'GET'
-                }
-                @{
-                    id     = 'devices'
-                    url    = '/devices?$select=id,displayName,deviceId&$top=999'
-                    method = 'GET'
-                }
-                @{
-                    id     = 'servicePrincipals'
-                    url    = '/servicePrincipals?$select=id,displayName&$top=999'
-                    method = 'GET'
-                }
-            )
-            $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
-            $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
-            $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
-            $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-            $ServicePrincipals = ($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value ?? @()
+            # Try CippReportingDB first (pre-populated by timer, same pattern as Add-CIPPApplicationPermission)
+            Write-Information "Checking CippReportingDB for directory data for tenant $TenantFilter"
+            try {
+                $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users') | Select-Object id, displayName, userPrincipalName, accountEnabled
+                $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups') | Select-Object id, displayName, mailEnabled, securityEnabled
+                $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices') | Select-Object id, displayName, deviceId
+                $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals') | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
+                Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
+            } catch {
+                Write-Information "CippReportingDB query failed for ${TenantFilter}: $($_.Exception.Message)"
+                $Users = @()
+                $Groups = @()
+                $Devices = @()
+                $ServicePrincipals = @()
+            }
+
+            if (!$Users -or !$ServicePrincipals) {
+                # DB cache is empty or unavailable, fall back to Graph bulk request
+                Write-Information "CippReportingDB has no data for $TenantFilter, falling back to Graph bulk request"
+                $Requests = @(
+                    @{
+                        id     = 'users'
+                        url    = '/users?$select=id,displayName,userPrincipalName,accountEnabled&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'groups'
+                        url    = '/groups?$select=id,displayName,mailEnabled,securityEnabled&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'devices'
+                        url    = '/devices?$select=id,displayName,deviceId&$top=999'
+                        method = 'GET'
+                    }
+                    @{
+                        id     = 'servicePrincipals'
+                        url    = '/servicePrincipals?$select=id,displayName&$top=999'
+                        method = 'GET'
+                    }
+                )
+                $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
+                $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
+                $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
+                $ServicePrincipals = @(($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value) | Select-Object id, displayName
+                $Response = $null
+            }
 
             # Build hashtables for O(1) GUID lookups
             Write-Information "Building hashtable lookups for tenant $TenantFilter"
@@ -297,15 +318,28 @@ function Test-CIPPAuditLogRules {
                 $UserLookup = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
                 $GroupLookup = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
                 $DeviceLookup = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
-                $ServicePrincipalLookup = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                $ServicePrincipalLookup = @{}
+                $RawSPLookup = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+                foreach ($key in $RawSPLookup.Keys) {
+                    $sp = $RawSPLookup[$key]
+                    $ServicePrincipalLookup[$key] = [ordered]@{
+                        id                   = $sp.id
+                        appId                = $sp.appId
+                        displayName          = $sp.displayName
+                        appDisplayName       = $sp.appDisplayName
+                        accountEnabled       = $sp.accountEnabled
+                        servicePrincipalType = $sp.servicePrincipalType
+                        tags                 = $sp.tags
+                    }
+                }
                 Write-Information "Loaded hashtables: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
             } else {
                 # Old format (array) - convert to hashtables
                 Write-Information "Converting legacy array cache to hashtables for tenant $TenantFilter"
-                $Users = ($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $Groups = ($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $Devices = ($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
-                $ServicePrincipals = ($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @()
+                $Users = @(($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, userPrincipalName, accountEnabled
+                $Groups = @(($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, mailEnabled, securityEnabled
+                $Devices = @(($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, deviceId
+                $ServicePrincipals = @(($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
 
                 # Build hashtables
                 $UserLookup = @{}
@@ -342,17 +376,28 @@ function Test-CIPPAuditLogRules {
             }
         }
 
-        # partner users
-        $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
-
-        # Build partner user hashtable
-        $PartnerUserLookup = @{}
-        foreach ($PartnerUser in $PartnerUsers) {
-            if (![string]::IsNullOrEmpty($PartnerUser.id)) {
-                $PartnerUserLookup[$PartnerUser.id] = $PartnerUser
+        # Partner users - cache in cacheauditloglookups (PartitionKey '_partner') to avoid a fresh Graph fetch every invocation
+        $PartnerUsersCache = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '_partner' and RowKey eq 'users' and Timestamp gt datetime'$1dayago'"
+        if ($PartnerUsersCache -and $PartnerUsersCache.Format -eq 'hashtable') {
+            Write-Information 'Loading partner user hashtable from cache'
+            $PartnerUserLookup = ($PartnerUsersCache.Data | ConvertFrom-Json -ErrorAction SilentlyContinue -AsHashtable) ?? @{}
+        } else {
+            $PartnerUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,displayName,userPrincipalName,accountEnabled&`$top=999" -AsApp $true -NoAuthCheck $true
+            $PartnerUserLookup = @{}
+            foreach ($PartnerUser in $PartnerUsers) {
+                if (![string]::IsNullOrEmpty($PartnerUser.id)) {
+                    $PartnerUserLookup[$PartnerUser.id] = $PartnerUser
+                }
             }
+            Add-CIPPAzDataTableEntity @Table -Entity @{
+                PartitionKey = '_partner'
+                RowKey       = 'users'
+                Data         = [string]($PartnerUserLookup | ConvertTo-Json -Compress)
+                Format       = 'hashtable'
+            } -Force
+            $PartnerUsers = $null
         }
-        Write-Information "Built partner user hashtable: $($PartnerUserLookup.Count) partner users"
+        Write-Information "Partner user hashtable: $($PartnerUserLookup.Count) partner users"
 
         Write-Warning '## Audit Log Configuration ##'
         Write-Information ($Configuration | ConvertTo-Json -Depth 10)
@@ -390,7 +435,7 @@ function Test-CIPPAuditLogRules {
                     Add-CIPPGuidMappings -DataObject $RootProperties -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup
 
                     if ($Data.ExtendedProperties) {
-                        $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress -Depth 10)
                         $Data.ExtendedProperties | ForEach-Object {
                             if ($_.Value -in $ExtendedPropertiesIgnoreList) {
                                 #write-warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation):$($_.Value) - $($TenantFilter)"
@@ -400,15 +445,15 @@ function Test-CIPPAuditLogRules {
                         }
                     }
                     if ($Data.DeviceProperties) {
-                        $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress -Depth 10)
                         $Data.DeviceProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.parameters) {
-                        $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress)
+                        $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress -Depth 10)
                         $Data.parameters | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.ModifiedProperties) {
-                        $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress)
+                        $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress -Depth 10)
                         try {
                             $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
                         } catch {
@@ -486,11 +531,11 @@ function Test-CIPPAuditLogRules {
                             $Data.CIPPBadRepIP = $Proxy
                             $Data.CIPPHostedIP = $hosting
                             $Data.CIPPIPDetected = $IP
-                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress)
+                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress -Depth 10)
                             $HasLocationData = $true
                         }
                     }
-                    $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress)
+                    $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress -Depth 10)
                     $Data | Select-Object *,
                     @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
                 } catch {
@@ -520,73 +565,100 @@ function Test-CIPPAuditLogRules {
                     if ($TenantFilter -in $Config.Excluded.value) {
                         continue
                     }
-                    $conditions = $Config.Conditions | ConvertFrom-Json | Where-Object { $Config.Input.value -ne '' }
+                    $conditions = $Config.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
                     $actions = $Config.Actions
-                    $conditionStrings = [System.Collections.Generic.List[string]]::new()
                     $CIPPClause = [System.Collections.Generic.List[string]]::new()
-                    $AddedLocationCondition = $false
-                    foreach ($condition in $conditions) {
-                        if ($condition.Property.label -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
-                            $conditionStrings.Add("`$_.HasLocationData -eq `$true")
-                            $CIPPClause.Add('HasLocationData is true')
-                            $ExcludedUsers = $ExcludedUsers | Where-Object { $_.Type -eq 'Location' }
-                            # Build single -notin condition against all excluded user keys
-                            $ExcludedUserKeys = @($ExcludedUsers.RowKey)
-                            if ($ExcludedUserKeys.Count -gt 0) {
-                                $conditionStrings.Add("`$(`$_.CIPPUserKey) -notin @('$($ExcludedUserKeys -join "', '")')")
-                                $CIPPClause.Add("CIPPUserKey not in [$($ExcludedUserKeys -join ', ')]")
-                            }
-                            $AddedLocationCondition = $true
-                        }
-                        $value = if ($condition.Input.value -is [array]) {
-                            $arrayAsString = $condition.Input.value | ForEach-Object {
-                                "'$_'"
-                            }
-                            "@($($arrayAsString -join ', '))"
-                        } else { "'$($condition.Input.value)'" }
 
-                        $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
-                        $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
+                    # Build excluded user keys for location-based conditions
+                    $LocationExcludedUserKeys = @()
+                    $HasGeoCondition = $false
+                    foreach ($condition in $conditions) {
+                        if ($condition.Property.label -eq 'CIPPGeoLocation') {
+                            $HasGeoCondition = $true
+                            $LocationExcludedUsers = $ExcludedUsers | Where-Object { $_.Type -eq 'Location' }
+                            $LocationExcludedUserKeys = @($LocationExcludedUsers.RowKey)
+                        }
+                        $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $($condition.Input.value)")
                     }
-                    $finalCondition = $conditionStrings -join ' -AND '
 
                     [PSCustomObject]@{
-                        clause         = $finalCondition
-                        expectedAction = $actions
-                        CIPPClause     = $CIPPClause
-                        AlertComment   = $Config.AlertComment
+                        conditions       = $conditions
+                        expectedAction   = $actions
+                        CIPPClause       = $CIPPClause
+                        AlertComment     = $Config.AlertComment
+                        CustomSubject    = $Config.CustomSubject
+                        HasGeoCondition  = $HasGeoCondition
+                        ExcludedUserKeys = $LocationExcludedUserKeys
                     }
                 }
             } catch {
                 Write-Warning "Error creating where clause: $($_.Exception.Message)"
                 Write-Information $_.InvocationInfo.PositionMessage
-                #Write-LogMessage -API 'Webhooks' -message 'Error creating where clause' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
                 throw $_
             }
 
             $MatchedRules = [System.Collections.Generic.List[string]]::new()
+            $UnsafeValueRegex = [regex]'[;|`\$\{\}]'
             $DataToProcess = foreach ($clause in $Where) {
                 try {
                     $ClauseStartTime = Get-Date
-                    Write-Warning "Webhook: Processing clause: $($clause.clause)"
+                    Write-Warning "Webhook: Processing conditions: $($clause.CIPPClause -join ' and ')"
                     Write-Information "Webhook: Available operations in data: $(($ProcessedData.Operation | Select-Object -Unique) -join ', ')"
-                    $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
+
+                    # Build sanitized condition strings instead of direct evaluation
+                    $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                    $validClause = $true
+                    foreach ($condition in $clause.conditions) {
+                        # Add geo-location prerequisites before the condition itself
+                        if ($condition.Property.label -eq 'CIPPGeoLocation') {
+                            $conditionStrings.Add('$_.HasLocationData -eq $true')
+                            if ($clause.ExcludedUserKeys.Count -gt 0) {
+                                $sanitizedKeys = foreach ($key in $clause.ExcludedUserKeys) {
+                                    $keyStr = [string]$key
+                                    if ($UnsafeValueRegex.IsMatch($keyStr)) {
+                                        Write-Warning "Blocked unsafe excluded user key: '$keyStr'"
+                                        $validClause = $false
+                                        break
+                                    }
+                                    "'{0}'" -f ($keyStr -replace "'", "''")
+                                }
+                                if (-not $validClause) { break }
+                                $conditionStrings.Add("`$_.CIPPUserKey -notin @($($sanitizedKeys -join ', '))")
+                            }
+                        }
+                        $sanitized = Test-CIPPConditionFilter -Condition $condition
+                        if ($null -eq $sanitized) {
+                            Write-Warning "Skipping rule due to invalid condition for property '$($condition.Property.label)'"
+                            $validClause = $false
+                            break
+                        }
+                        $conditionStrings.Add($sanitized)
+                    }
+
+                    if (-not $validClause -or $conditionStrings.Count -eq 0) {
+                        continue
+                    }
+
+                    $WhereString = $conditionStrings -join ' -and '
+                    $WhereBlock = [ScriptBlock]::Create($WhereString)
+                    $ReturnedData = $ProcessedData | Where-Object $WhereBlock
                     if ($ReturnedData) {
                         Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
                         $ReturnedData = foreach ($item in $ReturnedData) {
                             $item.CIPPAction = $clause.expectedAction
                             $item.CIPPClause = $clause.CIPPClause -join ' and '
                             $item | Add-Member -NotePropertyName 'CIPPAlertComment' -NotePropertyValue $clause.AlertComment -Force -ErrorAction SilentlyContinue
+                            $item | Add-Member -NotePropertyName 'CIPPCustomSubject' -NotePropertyValue $clause.CustomSubject -Force -ErrorAction SilentlyContinue
                             $MatchedRules.Add($clause.CIPPClause -join ' and ')
                             $item
                         }
                     }
                     $ClauseEndTime = Get-Date
                     $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
-                    Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
+                    Write-Warning "Task took $ClauseSeconds seconds for conditions: $($clause.CIPPClause -join ' and ')"
                     $ReturnedData
                 } catch {
-                    Write-Warning "Error processing clause: $($clause.clause): $($_.Exception.Message)"
+                    Write-Warning "Error processing conditions: $($clause.CIPPClause -join ' and '): $($_.Exception.Message)"
                 }
             }
             $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)

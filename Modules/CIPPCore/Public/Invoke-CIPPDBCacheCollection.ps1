@@ -31,7 +31,7 @@ function Invoke-CIPPDBCacheCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune')]
+        [ValidateSet('Graph', 'ExchangeConfig', 'ExchangeData', 'ConditionalAccess', 'IdentityProtection', 'Intune', 'Compliance', 'CopilotUsage', 'SharePoint', 'Teams')]
         [string]$CollectionType,
 
         [Parameter(Mandatory = $true)]
@@ -80,10 +80,6 @@ function Invoke-CIPPDBCacheCollection {
             'ExoAcceptedDomains'
             'ExoHostedContentFilterPolicy'
             'ExoHostedOutboundSpamFilterPolicy'
-            'ExoAntiPhishPolicy'
-            'ExoSafeLinksPolicy'
-            'ExoSafeAttachmentPolicy'
-            'ExoMalwareFilterPolicy'
             'ExoAtpPolicyForO365'
             'ExoQuarantinePolicy'
             'ExoRemoteDomain'
@@ -91,11 +87,15 @@ function Invoke-CIPPDBCacheCollection {
             'ExoAdminAuditLogConfig'
             'ExoPresetSecurityPolicy'
             'ExoTenantAllowBlockList'
+            'OwaMailboxPolicy'
+            'ReportSubmissionPolicy'
         )
         ExchangeData       = @(
             'CASMailboxes'
             'MailboxUsage'
             'OneDriveUsage'
+            'SharePointSiteUsage'
+            'OfficeActivations'
         )
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'
@@ -117,6 +117,29 @@ function Invoke-CIPPDBCacheCollection {
             'ManagedDeviceEncryptionStates'
             'IntuneAppProtectionPolicies'
             'DetectedApps'
+            'MDEOnboarding'
+        )
+        Compliance         = @(
+            'SensitivityLabels'
+            'DlpCompliancePolicies'
+        )
+        CopilotUsage       = @(
+            'CopilotUsageUserDetail'
+            'CopilotUserCountSummary'
+            'CopilotUserCountTrend'
+            'CopilotReadinessActivity'
+        )
+        SharePoint         = @(
+            'SPOTenant'
+            'SPOTenantSyncClientRestriction'
+        )
+        Teams              = @(
+            'CsTeamsMeetingPolicy'
+            'CsTeamsClientConfiguration'
+            'CsExternalAccessPolicy'
+            'CsTenantFederationConfiguration'
+            'CsTeamsMessagingPolicy'
+            'CsTeamsAppPermissionPolicy'
         )
     }
 

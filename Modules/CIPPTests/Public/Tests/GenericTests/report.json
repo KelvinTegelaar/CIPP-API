@@ -1,0 +1,19 @@
+{
+  "name": "Generic Tenant Tests",
+  "description": "Executive-level informational reports covering licensing, MFA posture, secure score trends, and tenant capabilities. These tests provide a clear snapshot of your tenant's current state without pass/fail criteria.",
+  "version": "1.0",
+  "category": "Tenant Overview",
+  "IdentityTests": [
+    "GenericTest001",
+    "GenericTest002",
+    "GenericTest003",
+    "GenericTest004",
+    "GenericTest005",
+    "GenericTest006",
+    "GenericTest007",
+    "GenericTest008",
+    "GenericTest009",
+    "GenericTest010",
+    "GenericTest011"
+  ]
+}

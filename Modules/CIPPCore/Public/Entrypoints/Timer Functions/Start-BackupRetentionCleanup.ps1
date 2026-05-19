@@ -6,7 +6,10 @@ function Start-BackupRetentionCleanup {
     This function cleans up old CIPP and Tenant backups based on the retention policy
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$ConnectionString = $env:AzureWebJobsStorage
+    )
 
     try {
         # Get retention settings
@@ -64,7 +67,7 @@ function Start-BackupRetentionCleanup {
                             $BlobDeletedCount++
                             Write-Host "Deleted blob: $BlobPath"
                         } catch {
-                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warn'
+                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warning'
                         }
                     }
                 }
@@ -124,7 +127,7 @@ function Start-BackupRetentionCleanup {
                             $BlobDeletedCount++
                             Write-Host "Deleted blob: $BlobPath"
                         } catch {
-                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warn'
+                            Write-LogMessage -API 'BackupRetentionCleanup' -message "Failed to delete blob $($Backup.Backup): $($_.Exception.Message)" -sev 'Warning'
                         }
                     }
                 }

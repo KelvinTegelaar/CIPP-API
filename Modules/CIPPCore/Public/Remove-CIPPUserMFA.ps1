@@ -4,7 +4,7 @@ function Remove-CIPPUserMFA {
     Remove MFA methods for a user
 
     .DESCRIPTION
-    Remove MFA methods for a user using bulk requests to the Microsoft Graph API
+    Remove MFA methods for a user using individual requests to the Microsoft Graph API
 
     .PARAMETER UserPrincipalName
     UserPrincipalName of the user to remove MFA methods for
@@ -17,7 +17,7 @@ function Remove-CIPPUserMFA {
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$UserPrincipalName,
         [Parameter(Mandatory = $true)]
@@ -38,42 +38,49 @@ function Remove-CIPPUserMFA {
         throw $Message
     }
 
-    $Requests = [System.Collections.Generic.List[object]]::new()
-    foreach ($Method in $AuthMethods) {
-        if ($Method.'@odata.type' -and $Method.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod') {
-            $MethodType = ($Method.'@odata.type' -split '\.')[-1] -replace 'Authentication', ''
-            $Requests.Add(@{
-                    id     = "$MethodType-$($Method.id)"
-                    method = 'DELETE'
-                    url    = ('users/{0}/authentication/{1}s/{2}' -f $UserPrincipalName, $MethodType, $Method.id)
-                })
-        }
-    }
+    $RemovableMethods = $AuthMethods | Where-Object { $_.'@odata.type' -and $_.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod' }
 
-    if (($Requests | Measure-Object).Count -eq 0) {
+    if (($RemovableMethods | Measure-Object).Count -eq 0) {
         $Results = "No MFA methods found for user $UserPrincipalName"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -sev 'Info'
         return $Results
-    } else {
-        if ($PSCmdlet.ShouldProcess("Remove MFA methods for $UserPrincipalName")) {
-            try {
-                $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -ErrorAction Stop
-                if ($Results.status -eq 204) {
-                    $Message = "Successfully removed MFA methods for user $UserPrincipalName. User must supply MFA at next logon"
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Info'
-                    return $Message
-                } else {
-                    $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
-                    $Message = "Failed to remove MFA methods for $FailedAuthMethods on user $UserPrincipalName"
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error'
-                    throw $Message
+    }
+
+    if ($PSCmdlet.ShouldProcess("Remove MFA methods for $UserPrincipalName")) {
+        $Failed = [System.Collections.Generic.List[string]]::new()
+        $Succeeded = [System.Collections.Generic.List[string]]::new()
+        foreach ($Method in $RemovableMethods) {
+            $MethodType = ($Method.'@odata.type' -split '\.')[-1] -replace 'Authentication', ''
+            switch ($MethodType) {
+                'qrCodePinMethod' {
+                    $Uri = 'https://graph.microsoft.com/beta/users/{0}/authentication/{1}' -f $UserPrincipalName, $MethodType
+                    break
                 }
+                default {
+                    $Uri = 'https://graph.microsoft.com/v1.0/users/{0}/authentication/{1}s/{2}' -f $UserPrincipalName, $MethodType, $Method.id
+                }
+            }
+            try {
+                $null = New-GraphPOSTRequest -uri $Uri -tenantid $TenantFilter -type DELETE -AsApp $true
+                $Succeeded.Add($MethodType)
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $Message = "Failed to remove MFA methods for user $UserPrincipalName. Error: $($ErrorMessage.NormalizedError)"
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Error' -LogData $ErrorMessage
-                throw $Message
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to remove $MethodType for $UserPrincipalName. Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
+                $Failed.Add($MethodType)
             }
         }
+
+        if ($Failed.Count -gt 0) {
+            $Message = if ($Succeeded.Count -gt 0) {
+                "Successfully removed MFA methods ($($Succeeded -join ', ')) for user $UserPrincipalName. However, failed to remove ($($Failed -join ', ')). User may still have MFA methods assigned."
+            } else {
+                "Failed to remove MFA methods ($($Failed -join ', ')) for user $UserPrincipalName"
+            }
+            throw $Message
+        }
+
+        $Message = "Successfully removed MFA methods ($($Succeeded -join ', ')) for user $UserPrincipalName. User must supply MFA at next logon"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -sev 'Info'
+        return $Message
     }
 }

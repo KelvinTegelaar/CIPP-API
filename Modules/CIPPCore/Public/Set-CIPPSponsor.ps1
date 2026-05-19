@@ -1,22 +1,49 @@
 function Set-CIPPSponsor {
     [CmdletBinding()]
     param (
-        $User,
-        $Sponsor,
+        [Alias('User')]
+        [string[]] $Users,
+        [string] $Sponsor,
         $TenantFilter,
         $APIName = 'Set Sponsor',
         $Headers
     )
 
-    try {
-        $SponsorBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Sponsor)" }
-        $SponsorBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $SponsorBody
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($User)/sponsors/`$ref" -tenantid $TenantFilter -type PUT -body $SponsorBodyJSON
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Set $User's sponsor to $Sponsor" -Sev 'Info'
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to Set Sponsor. Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $_
-        throw "Failed to set sponsor: $($_.Exception.Message)"
+    if ($Users.Count -eq 0) {
+        return @()
     }
-    return "Set $user's sponsor to $Sponsor"
+
+    $RequestId = 0
+    $Requests = foreach ($User in $Users) {
+        @{
+            id      = ($RequestId++).ToString()
+            method  = 'PUT'
+            url     = "users/$User/sponsors/`$ref"
+            body    = @{ '@odata.id' = "https://graph.microsoft.com/beta/users/$Sponsor" }
+            headers = @{ 'Content-Type' = 'application/json' }
+        }
+    }
+
+    $Responses = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($Requests)
+
+    $Results = foreach ($Response in @($Responses)) {
+        $ResponseIndex = [int]$Response.id
+        $User = $Users[$ResponseIndex]
+        $Success = [int]$Response.status -in @(200, 204)
+        $ErrorMessage = if ($Response.body.error.message) { $Response.body.error.message } else { "Unknown error (Status: $($Response.status))" }
+        $Result = if ($Success) { "Set $User's sponsor to $Sponsor" } else { "Failed to set $User's sponsor: $ErrorMessage" }
+        $Severity = if ($Success) { 'Info' } else { 'Error' }
+
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev $Severity
+
+        [pscustomobject]@{
+            User    = $User
+            Sponsor = $Sponsor
+            Success = $Success
+            Result  = $Result
+            Status  = $Response.status
+        }
+    }
+
+    return @($Results)
 }

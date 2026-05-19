@@ -8,6 +8,20 @@ function Get-CIPPTimerFunctions {
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
+    $TimeSettings = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'TimeSettings' and RowKey eq 'TimeSettings'"
+    $ScheduleTimeZone = [TimeZoneInfo]::Utc
+    if ($TimeSettings.Timezone) {
+        try {
+            $ScheduleTimeZone = [TimeZoneInfo]::FindSystemTimeZoneById($TimeSettings.Timezone)
+            Write-Information "Timezone: $($TimeSettings.Timezone)"
+        } catch {
+            Write-Warning "Invalid timezone '$($TimeSettings.Timezone)' in TimeSettings config, falling back to UTC"
+            $ScheduleTimeZone = [TimeZoneInfo]::Utc
+        }
+    } else {
+        Write-Information 'Timezone: UTC (default) - no timezone specified in TimeSettings config'
+    }
+
     # Check running nodes
     $VersionTable = Get-CIPPTable -tablename 'Version'
     $Nodes = Get-CIPPAzDataTableEntity @VersionTable -Filter "PartitionKey eq 'Version' and RowKey ne 'Version' and RowKey ne 'frontend'"
@@ -30,17 +44,15 @@ function Get-CIPPTimerFunctions {
         }
     }
 
-    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $CippTimers = Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\CIPPTimers.json')
 
-    if (!('NCronTab.Advanced.CrontabSchedule' -as [type])) {
+    if (!('Cronos.CronExpression' -as [type])) {
         try {
-            $NCronTab = Join-Path -Path $CIPPCoreModuleRoot -ChildPath 'lib\NCrontab.Advanced.dll'
-            Add-Type -Path $NCronTab
-        } catch {}
+            Add-Type -Path (Join-Path $env:CIPPRootPath 'Shared\Cronos\Cronos.dll')
+        } catch {
+            Write-Warning "Failed to load Cronos.dll from '$Cronos': $_"
+        }
     }
-
-    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $CippTimers = Get-Content -Path $CIPPRoot\CIPPTimers.json
 
     # Get all feature flags to filter disabled features
     $FeatureFlags = Get-CIPPFeatureFlag
@@ -77,9 +89,9 @@ function Get-CIPPTimerFunctions {
 
             $CronCount = ($CronString -split ' ' | Measure-Object).Count
             if ($CronCount -eq 5) {
-                $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString)
+                $Cron = [Cronos.CronExpression]::Parse($CronString)
             } elseif ($CronCount -eq 6) {
-                $Cron = [Ncrontab.Advanced.CrontabSchedule]::Parse($CronString, [Ncrontab.Advanced.Enumerations.CronStringFormat]::WithSeconds)
+                $Cron = [Cronos.CronExpression]::Parse($CronString, [Cronos.CronFormat]::IncludeSeconds)
             } else {
                 Write-Warning "Invalid cron expression for $($Orchestrator.Command): $($Orchestrator.Cron)"
                 continue
@@ -95,20 +107,21 @@ function Get-CIPPTimerFunctions {
                 }
             }
 
-            $Now = Get-Date
+            $Now = [DateTime]::UtcNow
             if ($ListAllTasks.IsPresent) {
-                $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
+                $DueOccurrence = $Cron.GetNextOccurrence($Now, $ScheduleTimeZone)
             } else {
-                $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
+                $NextOccurrences = $Cron.GetOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15), $ScheduleTimeZone)
                 if (!$Status -or $Status.LastOccurrence -eq 'Never') {
-                    $NextOccurrence = $NextOccurrences | Where-Object { $_ -le (Get-Date) } | Select-Object -First 1
+                    $DueOccurrence = $NextOccurrences | Where-Object { $_ -le [DateTime]::UtcNow } | Select-Object -First 1
                 } else {
-                    $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime.ToLocalTime() -and $_ -le (Get-Date) } | Select-Object -First 1
+                    $DueOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.UtcDateTime -and $_ -le [DateTime]::UtcNow } | Select-Object -First 1
                 }
             }
 
-
-            if ($NextOccurrence -or $ListAllTasks.IsPresent) {
+            if ($DueOccurrence -or $ListAllTasks.IsPresent) {
+                $NextFutureOccurrence = $Cron.GetNextOccurrence([DateTime]::UtcNow, $ScheduleTimeZone)
+                $NextOccurrenceUtc = if ($NextFutureOccurrence) { [DateTimeOffset]::new($NextFutureOccurrence.ToUniversalTime()) } else { $null }
                 if (!$Status) {
                     $Status = [pscustomobject]@{
                         PartitionKey       = 'Timer'
@@ -116,7 +129,7 @@ function Get-CIPPTimerFunctions {
                         Command            = $Orchestrator.Command
                         Cron               = $CronString
                         LastOccurrence     = 'Never'
-                        NextOccurrence     = $NextOccurrence.ToUniversalTime()
+                        NextOccurrence     = $NextOccurrenceUtc
                         Status             = 'Not Scheduled'
                         OrchestratorId     = ''
                         RunOnProcessor     = $RunOnProcessor
@@ -129,7 +142,7 @@ function Get-CIPPTimerFunctions {
                     if ($Orchestrator.IsSystem -eq $true -or $ResetToDefault.IsPresent) {
                         $Status.Cron = $Orchestrator.Cron
                     }
-                    $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
+                    $Status.NextOccurrence = $NextOccurrenceUtc
                     $PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
                     if ($Status.PSObject.Properties.Name -notcontains 'PreferredProcessor') {
                         $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $PreferredProcessor -Force
@@ -145,7 +158,7 @@ function Get-CIPPTimerFunctions {
                     Command            = $Orchestrator.Command
                     Parameters         = $Orchestrator.Parameters ?? @{}
                     Cron               = $CronString
-                    NextOccurrence     = $NextOccurrence.ToUniversalTime()
+                    NextOccurrence     = $NextOccurrenceUtc
                     LastOccurrence     = $Status.LastOccurrence
                     Status             = $Status.Status
                     OrchestratorId     = $Status.OrchestratorId

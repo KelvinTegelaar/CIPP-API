@@ -4,7 +4,50 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
     Internal
     #>
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
+    if (!$tenantid) { $tenantid = $env:TenantID }
 
+    $UseSharedTokenCache = ($SkipCache -ne $true) -and ($null -ne ('CIPP.CIPPTokenCache' -as [type]))
+
+    # ── Fast path: check shared .NET token cache before any table lookups ──
+    if ($UseSharedTokenCache) {
+        $CacheClientId = if ($AppID) { [string]$AppID } else { [string]$env:ApplicationID }
+        $GrantType = if ($asApp -eq $true -or ($null -ne $AppID -and $null -ne $AppSecret)) { 'client_credentials' } else { 'refresh_token' }
+        $SharedTokenCacheKey = [CIPP.CIPPTokenCache]::BuildKey([string]$tenantid, [string]$scope, [bool]$asApp, $CacheClientId, $GrantType)
+        $SharedCacheEntry = [CIPP.CIPPTokenCache]::Lookup($SharedTokenCacheKey, 120)
+        if ($SharedCacheEntry.Found -and -not [string]::IsNullOrWhiteSpace($SharedCacheEntry.TokenPayloadJson)) {
+            try {
+                $AccessToken = $SharedCacheEntry.TokenPayloadJson | ConvertFrom-Json -ErrorAction Stop
+                if ($ReturnRefresh) { return $AccessToken }
+                return @{ Authorization = "Bearer $($AccessToken.access_token)" }
+            } catch {
+                [CIPP.CIPPTokenCache]::Remove($SharedTokenCacheKey)
+            }
+        }
+    }
+
+    # ── Slow path: need a new token — do table lookups + token acquisition ──
+    # Acquire per-key lock to prevent thundering herd (multiple runspaces
+    # all missing cache and independently fetching the same token).
+    $LockAcquired = $false
+    if ($UseSharedTokenCache -and $SharedTokenCacheKey) {
+        $LockAcquired = [CIPP.CIPPTokenCache]::AcquireLock($SharedTokenCacheKey, 30000)
+        if ($LockAcquired) {
+            # Double-check: another thread may have stored the token while we waited
+            $SharedCacheEntry = [CIPP.CIPPTokenCache]::Lookup($SharedTokenCacheKey, 120)
+            if ($SharedCacheEntry.Found -and -not [string]::IsNullOrWhiteSpace($SharedCacheEntry.TokenPayloadJson)) {
+                try {
+                    $AccessToken = $SharedCacheEntry.TokenPayloadJson | ConvertFrom-Json -ErrorAction Stop
+                    [CIPP.CIPPTokenCache]::ReleaseLock($SharedTokenCacheKey)
+                    $LockAcquired = $false
+                    if ($ReturnRefresh) { return $AccessToken }
+                    return @{ Authorization = "Bearer $($AccessToken.access_token)" }
+                } catch {
+                    [CIPP.CIPPTokenCache]::Remove($SharedTokenCacheKey)
+                }
+            }
+        }
+    }
+    try {
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $ConfigTable = Get-CippTable -tablename 'Config'
     $Filter = "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
@@ -15,7 +58,6 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
         $CIPPAuth = Get-CIPPAuthentication
     }
     $refreshToken = $env:RefreshToken
-    if (!$tenantid) { $tenantid = $env:TenantID }
     #Get list of tenants that have 'directTenant' set to true
     #get directtenants directly from table, avoid get-tenants due to performance issues
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -89,24 +131,31 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
         }
     }
 
-
-    $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
+    # Rebuild cache key after credential loading (env vars may have been set by Get-CIPPAuthentication)
+    if ($UseSharedTokenCache) {
+        $CacheClientId = if ($AppID) { [string]$AppID } else { [string]$env:ApplicationID }
+        $GrantType = if ($asApp -eq $true -or ($null -ne $AppID -and $null -ne $AppSecret)) { 'client_credentials' } else { 'refresh_token' }
+        $SharedTokenCacheKey = [CIPP.CIPPTokenCache]::BuildKey([string]$tenantid, [string]$scope, [bool]$asApp, $CacheClientId, $GrantType)
+    }
 
     try {
-        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on -and $SkipCache -ne $true) {
-            #Write-Host 'Graph: cached token'
-            $AccessToken = $script:AccessTokens.$TokenKey
-        } else {
-            #Write-Host 'Graph: new token'
-            $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        $AccessToken = (Invoke-CIPPRestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop)
+        if ($null -eq $AccessToken.expires_on -and $AccessToken.expires_in) {
             $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
-            Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
-            if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
-            $script:AccessTokens.$TokenKey = $AccessToken
+            Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn -Force
         }
 
-        if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
-        return $header
+        if ($UseSharedTokenCache -and $SharedTokenCacheKey) {
+            try {
+                $TokenPayloadJson = $AccessToken | ConvertTo-Json -Depth 20 -Compress
+                [CIPP.CIPPTokenCache]::Store($SharedTokenCacheKey, $TokenPayloadJson, [int64]$AccessToken.expires_on)
+            } catch {
+                # Ignore shared cache write failures
+            }
+        }
+
+        if ($ReturnRefresh) { return $AccessToken }
+        return @{ Authorization = "Bearer $($AccessToken.access_token)" }
     } catch {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
@@ -136,5 +185,11 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
 
         if (!$donotset) { Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant }
         throw "Could not get token: $($Tenant.LastGraphError)"
+    }
+    } finally {
+        # Always release the per-key lock if we acquired it
+        if ($LockAcquired -and $SharedTokenCacheKey) {
+            [CIPP.CIPPTokenCache]::ReleaseLock($SharedTokenCacheKey)
+        }
     }
 }
