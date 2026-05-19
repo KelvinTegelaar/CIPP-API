@@ -66,7 +66,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
         }
 
         $AdminUsers = @($DirectAdminUPNs) + @($GroupMemberUPNs) | Where-Object { $_ } | Select-Object -Unique
-        $UsersWithPowerShell = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-User' -Select 'userPrincipalName, identity, guid, remotePowerShellEnabled' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.userPrincipalName -notin $AdminUsers }
+        $UsersWithPowerShell = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Mailboxes' | Where-Object { $_.RemotePowerShellEnabled -eq $true -and $_.UPN -notin $AdminUsers }
         $PowerShellEnabledCount = ($UsersWithPowerShell | Measure-Object).Count
         $StateIsCorrect = $PowerShellEnabledCount -eq 0
     } catch {
@@ -83,7 +83,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
                 @{
                     CmdletInput = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $User.Guid; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $User.Guid ?? $User.UPN; RemotePowerShellEnabled = $false }
                     }
                 }
             }
