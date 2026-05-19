@@ -61,6 +61,16 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache authentication strengths: $($_.Exception.Message)" -sev Warning
         }
 
+        try {
+            $SecurityDefaults = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter -AsApp $true
+            if ($SecurityDefaults) {
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SecurityDefaults' -Data @($SecurityDefaults)
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached Security Defaults policy (isEnabled=$($SecurityDefaults.isEnabled))" -sev Debug
+            }
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Security Defaults: $($_.Exception.Message)" -sev Warning
+        }
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CA data successfully' -sev Debug
 
     } catch {
