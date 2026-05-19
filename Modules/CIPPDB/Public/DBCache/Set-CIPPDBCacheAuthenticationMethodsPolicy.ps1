@@ -19,8 +19,7 @@ function Set-CIPPDBCacheAuthenticationMethodsPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching authentication methods policy' -sev Debug
         $AuthMethodsPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationMethodsPolicy' -Data @($AuthMethodsPolicy)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationMethodsPolicy' -Data @($AuthMethodsPolicy) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationMethodsPolicy' -Data @($AuthMethodsPolicy) -AddCount
         $AuthMethodsPolicy = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached authentication methods policy successfully' -sev Debug

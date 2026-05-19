@@ -74,12 +74,9 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
         if (-not $Groups) { $Groups = @() }
         if (-not $MobileAppConfigs) { $MobileAppConfigs = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -Count
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -Count
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -AddCount
 
         $TotalCount = (($ManagedAppPoliciesWithAssignments | Measure-Object).Count + ($MobileAppConfigs | Measure-Object).Count)
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $TotalCount app protection/configuration policies" -sev Debug

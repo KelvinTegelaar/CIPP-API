@@ -29,8 +29,7 @@ function Set-CIPPDBCacheSensitivityLabels {
         $Labels = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/informationProtection/sensitivityLabels' -tenantid $TenantFilter -AsApp $true
 
         if ($Labels) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Labels.Count) sensitivity labels" -sev Debug
         }
 

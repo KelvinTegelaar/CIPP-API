@@ -56,11 +56,9 @@ function Set-CIPPDBCacheOneDriveUsage {
                 })
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveSiteListing' -Data @($OneDriveListing)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveSiteListing' -Data @($OneDriveListing) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveSiteListing' -Data @($OneDriveListing) -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveUsage' -Data @($OneDriveUsage)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveUsage' -Data @($OneDriveUsage) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OneDriveUsage' -Data @($OneDriveUsage) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached OneDrive site listing and usage successfully' -sev Debug
 
