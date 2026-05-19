@@ -17,8 +17,7 @@ function Set-CIPPDBCacheIntuneAssignmentFilters {
         $AssignmentFilters = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $TenantFilter
         if (-not $AssignmentFilters) { $AssignmentFilters = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAssignmentFilters' -Data @($AssignmentFilters)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAssignmentFilters' -Data @($AssignmentFilters) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAssignmentFilters' -Data @($AssignmentFilters) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(($AssignmentFilters | Measure-Object).Count) assignment filters" -sev Debug
     } catch {

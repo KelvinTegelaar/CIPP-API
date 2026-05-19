@@ -59,8 +59,7 @@ function Set-CIPPDBCacheGroups {
                 $Group
             }
 
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $GroupsWithMembers
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $GroupsWithMembers -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $GroupsWithMembers -AddCount
             $Groups = $null
             $GroupsWithMembers = $null
         } else {
@@ -82,8 +81,7 @@ function Set-CIPPDBCacheGroups {
                 $Group | Add-Member -NotePropertyName 'calculatedGroupType' -NotePropertyValue $calculatedGroupType -Force
                 $Group
             }
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $Groups
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $Groups -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' -Data $Groups -AddCount
             $Groups = $null
         }
 

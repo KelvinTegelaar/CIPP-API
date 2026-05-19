@@ -34,10 +34,8 @@ function Set-CIPPDBCacheIntuneApplications {
         if (-not $Groups) { $Groups = @() }
         if (-not $Apps) { $Apps = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @($Groups)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @($Groups) -Count
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @($Apps)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @($Apps) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @($Groups) -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @($Apps) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(($Apps | Measure-Object).Count) Intune applications" -sev Debug
     } catch {

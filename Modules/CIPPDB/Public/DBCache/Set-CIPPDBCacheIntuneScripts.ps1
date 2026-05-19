@@ -46,8 +46,7 @@ function Set-CIPPDBCacheIntuneScripts {
         $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
         if (-not $Groups) { $Groups = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneScriptGroups' -Data @($Groups)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneScriptGroups' -Data @($Groups) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneScriptGroups' -Data @($Groups) -AddCount
 
         $TypeMap = @{
             Windows     = 'IntuneWindowsScripts'
@@ -75,8 +74,7 @@ function Set-CIPPDBCacheIntuneScripts {
                     })
             }
 
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type $TypeMap[$scriptId] -Data @($Scripts)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type $TypeMap[$scriptId] -Data @($Scripts) -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type $TypeMap[$scriptId] -Data @($Scripts) -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(($Scripts | Measure-Object).Count) $scriptId scripts" -sev Debug
         }
     } catch {

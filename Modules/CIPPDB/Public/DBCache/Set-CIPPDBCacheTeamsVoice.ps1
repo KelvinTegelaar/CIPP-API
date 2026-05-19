@@ -37,8 +37,7 @@ function Set-CIPPDBCacheTeamsVoice {
         } while ($Data.Count -eq 999)
 
         $PhoneNumbers = @($AllNumbers | Where-Object { $_.TelephoneNumber })
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsVoice' -Data $PhoneNumbers
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsVoice' -Data $PhoneNumbers -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsVoice' -Data $PhoneNumbers -AddCount
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Teams Voice phone numbers: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }

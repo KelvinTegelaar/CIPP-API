@@ -18,8 +18,7 @@ function Set-CIPPDBCacheTeamsActivity {
         @{ Name = 'MeetingCount'; Expression = { $_.'Meeting Count' } }
 
         $DbType = "TeamsActivity$Type"
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type $DbType -Data @($TeamsActivity)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type $DbType -Data @($TeamsActivity) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type $DbType -Data @($TeamsActivity) -AddCount
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Teams activity: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
