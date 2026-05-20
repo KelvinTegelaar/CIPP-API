@@ -18,7 +18,8 @@ function Invoke-ExecTenantGroup {
     $groupId = $Request.Body.groupId ?? [guid]::NewGuid().ToString()
     $groupName = $Request.Body.groupName
     $groupDescription = $Request.Body.groupDescription
-    $members = $Request.Body.members
+    $membersProvided = $Request.Body.PSObject.Properties.Name -contains 'members'
+    $members = @($Request.Body.members)
     $groupType = $Request.Body.groupType ?? 'static'
     $dynamicRules = $Request.Body.dynamicRules
     $ruleLogic = $Request.Body.ruleLogic ?? 'and'
@@ -96,6 +97,8 @@ function Invoke-ExecTenantGroup {
 
                 # Add members
                 foreach ($member in $members) {
+                    if (-not $member.value) { continue }
+
                     if ($CurrentMembers) {
                         $CurrentMember = $CurrentMembers | Where-Object { $_.customerId -eq $member.value }
                         if ($CurrentMember) {
@@ -112,7 +115,7 @@ function Invoke-ExecTenantGroup {
                     $Adds.Add('Added member {0}' -f $member.label)
                 }
 
-                if ($CurrentMembers -and $members) {
+                if ($CurrentMembers -and $membersProvided) {
                     foreach ($CurrentMember in $CurrentMembers) {
                         if ($members.value -notcontains $CurrentMember.customerId) {
                             Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
