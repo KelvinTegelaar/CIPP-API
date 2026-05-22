@@ -26,6 +26,24 @@ function Invoke-ListWorkerHealth {
                 $Pool = [Craft.Services.WorkerMetricsBridge]::GetPoolMetrics($PoolType)
                 $Body = @{ Results = $Pool }
             }
+            'History' {
+                $Minutes = if ($Request.Query.Minutes) { [int]$Request.Query.Minutes } else { 60 }
+                $MaxPoints = if ($Request.Query.MaxPoints) { [int]$Request.Query.MaxPoints } else { $null }
+                $History = [Craft.Services.StatsHistoryBridge]::GetHistory($Minutes, $MaxPoints)
+                $Count = [Craft.Services.StatsHistoryBridge]::GetCount()
+                $Body = @{
+                    Results = @{
+                        TotalPoints    = $Count
+                        ReturnedPoints = $History.Count
+                        RangeMinutes   = $Minutes
+                        Data           = $History
+                    }
+                }
+            }
+            'Startup' {
+                $StartupInfo = [Craft.Services.StartupInfoBridge]::GetInfo()
+                $Body = @{ Results = $StartupInfo }
+            }
             'Jobs' {
                 $RunName = $Request.Query.RunName
                 $Status = $Request.Query.Status
