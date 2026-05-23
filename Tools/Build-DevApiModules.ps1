@@ -5,7 +5,7 @@ $repoRoot = Split-Path -Parent $toolsRoot
 $modulesRoot = Join-Path $repoRoot 'Modules'
 $outputRoot = Join-Path $repoRoot 'Output'
 
-Install-Module -Name ModuleBuilder -Scope CurrentUser -Force -AllowClobber
+Install-Module -Name ModuleBuilder -MaximumVersion 3.1.9 -Scope CurrentUser -Force -AllowClobber
 Import-Module -Name ModuleBuilder -Force
 
 Write-Host "Repo root: $repoRoot"
