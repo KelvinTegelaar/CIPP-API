@@ -209,6 +209,14 @@ function Test-CIPPAccess {
                 'permissions'     = $Permissions
             }
 
+            # Hosted payment status checks — shown to all users (no permission gating)
+            if ($env:cipp_hosted_subscription_ended) {
+                $MeResponse['hostedSubscriptionEnded'] = $true
+            }
+            if ($env:cipp_hosted_failed_payments) {
+                $MeResponse['hostedFailedPayments'] = $true
+            }
+
             # Forced SSO migration: non-dismissible prompt when migration env var is set
             if ($env:CIPP_SSO_MIGRATION_APPID -and $Permissions -contains 'CIPP.AppSettings.ReadWrite') {
                 $MeResponse['forceSsoMigration'] = @{

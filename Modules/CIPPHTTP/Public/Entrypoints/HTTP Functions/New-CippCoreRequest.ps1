@@ -58,6 +58,15 @@ function New-CippCoreRequest {
             })
     }
 
+    # Block all API calls except /api/me when subscription has ended
+    if ($env:cipp_hosted_subscription_ended -and $Request.Params.CIPPEndpoint -ne 'me') {
+        $HttpTotalStopwatch.Stop()
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = 'Your CIPP subscription has ended. Access to this instance is no longer available.'
+            })
+    }
+
     if ($Request.Headers.'X-CIPP-Version') {
         $Table = Get-CippTable -tablename 'Version'
         $FrontendVer = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'frontend'"
