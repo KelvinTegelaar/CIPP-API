@@ -4,7 +4,7 @@ function Get-CIPPAlertAppSecretExpiry {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
