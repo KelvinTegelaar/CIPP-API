@@ -32,7 +32,6 @@
     "Endpoints": [
       "ExecCIPPUsers",
       "ListCIPPUsers",
-      "ExecSSOSetup",
       "ExecContainerManagement",
       "ListContainerLogs",
       "ListWorkerHealth"
