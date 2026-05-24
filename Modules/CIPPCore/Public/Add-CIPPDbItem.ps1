@@ -72,7 +72,7 @@ function Add-CIPPDbItem {
         }
 
         # Clean up orphaned rows (entities that no longer exist in the new dataset)
-        if (-not $Count.IsPresent -and -not $Append.IsPresent -and $TotalProcessed -gt 0) {
+        if (-not $Count.IsPresent -and -not $Append.IsPresent) {
             $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ETag, OriginalEntityId
             if ($Existing) {

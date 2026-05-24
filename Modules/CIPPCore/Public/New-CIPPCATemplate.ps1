@@ -38,6 +38,12 @@ function New-CIPPCATemplate {
         }
     }
 
+    # Fetch authentication context class references if the policy uses them
+    $authContexts = $null
+    if ($JSON.conditions.applications.includeAuthenticationContextClassReferences) {
+        $authContexts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationContextClassReferences' -tenantid $TenantFilter
+    }
+
     $AllLocations = [system.collections.generic.list[object]]::new()
 
     $includelocations = [system.collections.generic.list[object]]::new()
@@ -113,6 +119,24 @@ function New-CIPPCATemplate {
     # Remove duplicates based on displayName to avoid Select-Object -Unique issues with complex objects
     $UniqueLocations = $AllLocations | Group-Object -Property displayName | ForEach-Object { $_.Group[0] }
     $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($UniqueLocations) -Force
+
+    # Convert authentication context class reference IDs to display names and store full objects
+    if ($authContexts -and $JSON.conditions.applications.includeAuthenticationContextClassReferences) {
+        $AllAuthContexts = [System.Collections.Generic.List[object]]::new()
+        $authContextDisplayNames = [System.Collections.Generic.List[object]]::new()
+        foreach ($acr in $JSON.conditions.applications.includeAuthenticationContextClassReferences) {
+            $acrInfo = $authContexts | Where-Object -Property id -EQ $acr | Select-Object id, displayName, description, isAvailable
+            if ($acrInfo) {
+                $authContextDisplayNames.Add($acrInfo.displayName)
+                $AllAuthContexts.Add($acrInfo)
+            } else {
+                $authContextDisplayNames.Add($acr)
+            }
+        }
+        $JSON.conditions.applications.includeAuthenticationContextClassReferences = @($authContextDisplayNames)
+        $JSON | Add-Member -NotePropertyName 'AuthContextInfo' -NotePropertyValue @($AllAuthContexts) -Force
+    }
+
     $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject $JSON)
     return $JSON
 }

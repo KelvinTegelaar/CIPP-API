@@ -25,12 +25,12 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":true,"creatable":false,"required":true,"name":"TemplateList","label":"Select Reusable Settings Template","api":{"queryKey":"ListIntuneReusableSettingTemplates","url":"/api/ListIntuneReusableSettingTemplates","labelField":"displayName","valueField":"GUID","showRefresh":true,"templateView":{"title":"Reusable Settings","property":"RawJSON","type":"intune"}}}
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
     param($Tenant, $Settings)
 
@@ -62,8 +62,7 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
         return $InputObject
     }
 
-    $RequiredCapabilities = @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ReusableSettingsTemplate_general' -TenantFilter $Tenant -RequiredCapabilities $RequiredCapabilities
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ReusableSettingsTemplate_general' -TenantFilter $Tenant -Preset Intune
     if ($TestResult -eq $false) {
         $settings.TemplateList | ForEach-Object {
             $MissingLicenseMessage = "This tenant is missing one or more required licenses for this standard: $($RequiredCapabilities -join ', ')."

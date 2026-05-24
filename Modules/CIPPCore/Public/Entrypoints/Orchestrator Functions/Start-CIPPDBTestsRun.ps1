@@ -69,12 +69,16 @@ function Start-CIPPDBTestsRun {
         Write-Information "Built batch of $($Batch.Count) tenant test list activities"
 
         # Phase 2 via PostExecution: Aggregate all task lists and start flat execution orchestrator
+        $NameSuffix = if ($TenantFilter -ne 'allTenants') { "-$TenantFilter" } else { '' }
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'TestsList'
+            OrchestratorName = "TestsList$NameSuffix"
             Batch            = @($Batch)
             SkipLog          = $true
             PostExecution    = @{
                 FunctionName = 'CIPPTestsApplyBatch'
+                Parameters   = @{
+                    TenantFilter = $TenantFilter
+                }
             }
         }
 

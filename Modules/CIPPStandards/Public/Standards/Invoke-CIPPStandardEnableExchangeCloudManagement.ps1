@@ -34,12 +34,12 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableExchangeCloudManagement' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnableExchangeCloudManagement' -TenantFilter $Tenant -Preset Exchange
 
     if ($TestResult -eq $false) {
         Write-Host "We're exiting as the correct license is not present for this standard."

@@ -60,8 +60,7 @@ function Set-CIPPDBCacheDetectedApps {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Retrieved $($DetectedApps.Count) detected apps (expected $TotalCount)" -sev Debug
 
         if ($DetectedApps.Count -eq 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data @()
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data @() -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data @() -AddCount
             return
         }
 
@@ -85,13 +84,11 @@ function Set-CIPPDBCacheDetectedApps {
                 $App
             }
 
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedAppsWithDevices
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedAppsWithDevices -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedAppsWithDevices -AddCount
             $DetectedApps = $null
             $DetectedAppsWithDevices = $null
         } else {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -AddCount
             $DetectedApps = $null
         }
 

@@ -146,7 +146,7 @@ function Invoke-CIPPTestCollection {
 
     # Standard suites: discover functions by name pattern via Get-Command
     $Pattern = $SuitePatterns[$SuiteName]
-    $TestFunctions = @(Get-Command -Name $Pattern -ErrorAction SilentlyContinue)
+    $TestFunctions = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"
         return @{

@@ -21,8 +21,7 @@ function Set-CIPPDBCacheExoRemoteDomain {
 
         $RemoteDomains = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RemoteDomain'
         if ($RemoteDomains) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRemoteDomain' -Data $RemoteDomains
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRemoteDomain' -Data $RemoteDomains -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoRemoteDomain' -Data $RemoteDomains -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RemoteDomains.Count) Remote Domains" -sev Debug
         }
         $RemoteDomains = $null

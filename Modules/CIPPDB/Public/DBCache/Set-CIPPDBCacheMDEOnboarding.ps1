@@ -37,8 +37,7 @@ function Set-CIPPDBCacheMDEOnboarding {
             )
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MDEOnboarding' -Data @($Result)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MDEOnboarding' -Data @($Result) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MDEOnboarding' -Data @($Result) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached MDE onboarding status successfully' -sev Debug
     } catch {

@@ -12,7 +12,10 @@ function Get-CIPPGeoIPLocation {
         return ($GeoIP.Data | ConvertFrom-Json)
     }
     $location = Invoke-CIPPRestMethod -Uri "https://geoipdb.azurewebsites.net/api/GetIPInfo?IP=$IP"
-    if ($location.status -eq 'FAIL') { throw "Could not get location for $IP" }
+    if ($location.status -eq 'FAIL') {
+        Write-logMessage -API GeoIPLocation -message "Failed to get location for $IP. API returned status 'FAIL' with message: $($location.message)" -sev Warning
+        throw "Could not get location for $IP"
+    }
     $CacheGeo = @{
         PartitionKey = 'IP'
         RowKey       = $IP

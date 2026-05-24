@@ -13,6 +13,7 @@ function Invoke-ListIntuneReusableSettings {
 
     $TenantFilter = $Request.Query.tenantFilter
     $SettingId = $Request.Query.ID
+    $UseReportDB = $Request.Query.UseReportDB
 
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
@@ -22,6 +23,20 @@ function Invoke-ListIntuneReusableSettings {
     }
 
     try {
+        if (-not $SettingId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+            try {
+                $Settings = Get-CIPPIntuneReusableSettingsReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [System.Net.HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
+                $Settings = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($Settings)
+                })
+        }
+
         $baseUri = 'https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings'
         $selectFields = @(
             'id'

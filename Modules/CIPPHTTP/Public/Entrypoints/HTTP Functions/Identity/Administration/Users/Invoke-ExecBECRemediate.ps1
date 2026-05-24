@@ -180,6 +180,21 @@ function Invoke-ExecBECRemediate {
                 })
         }
 
+        # Step 6: Disable OneDrive Sharing
+        $Step = 'Disable OneDrive Sharing'
+        try {
+            $OneDriveResult = Set-CIPPOneDriveSharing -UserId $Username -TenantFilter $TenantFilter -SharingCapability 'Disabled' -APIName $APIName -Headers $Headers
+            $AllResults.Add([pscustomobject]@{
+                    resultText = $OneDriveResult
+                    state      = if ($OneDriveResult -like '*Successfully*') { 'success' } else { 'error' }
+                })
+        } catch {
+            $AllResults.Add([pscustomobject]@{
+                    resultText = "Failed to disable OneDrive sharing: $($_.Exception.Message)"
+                    state      = 'error'
+                })
+        }
+
         $StatusCode = [HttpStatusCode]::OK
         Write-LogMessage -API 'BECRemediate' -tenant $TenantFilter -message "Executed Remediation for $Username" -sev 'Info' -LogData @($AllResults)
 

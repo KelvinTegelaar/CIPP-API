@@ -29,8 +29,8 @@ function Get-CIPPDrift {
         [switch]$AllTenants
     )
 
-    $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
-    $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneTemplate_general' -TenantFilter $TenantFilter -Preset Intune
+    $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessTemplate_general' -TenantFilter $TenantFilter -Preset Entra
     $IntuneTable = Get-CippTable -tablename 'templates'
 
     # Load only IntuneTemplate partition for tag resolution and display name lookup
@@ -274,7 +274,17 @@ function Get-CIPPDrift {
                     }
                 }
                 if ($Alignment.standardSettings.ConditionalAccessTemplate) {
-                    $CATemplateIds = $Alignment.standardSettings.ConditionalAccessTemplate.TemplateList | ForEach-Object { $_.value }
+                    $CATemplateIds = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Template in $Alignment.standardSettings.ConditionalAccessTemplate) {
+                        if ($Template.TemplateList.value) {
+                            $CATemplateIds.Add($Template.TemplateList.value)
+                        }
+                        if ($Template.'TemplateList-Tags'.rawData.templates) {
+                            foreach ($TagTemplate in $Template.'TemplateList-Tags'.rawData.templates) {
+                                $CATemplateIds.Add($TagTemplate.GUID)
+                            }
+                        }
+                    }
                 }
             }
 
