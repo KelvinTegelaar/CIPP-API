@@ -39,9 +39,31 @@ function Invoke-ListCIPPUsers {
                 }
             }
 
+            $ParsedManualRoles = @()
+            if ($User.ManualRoles) {
+                try {
+                    $ParsedManualRoles = @($User.ManualRoles | ConvertFrom-Json -ErrorAction Stop)
+                } catch {
+                    $ParsedManualRoles = @()
+                }
+            }
+
+            $ParsedAutoRoles = @()
+            if ($User.AutoRoles) {
+                try {
+                    $ParsedAutoRoles = @($User.AutoRoles | ConvertFrom-Json -ErrorAction Stop)
+                } catch {
+                    $ParsedAutoRoles = @()
+                }
+            }
+
             $UserList.Add([pscustomobject]@{
-                UPN   = $User.RowKey
-                Roles = $ParsedRoles
+                UPN         = $User.RowKey
+                Roles       = $ParsedRoles
+                ManualRoles = $ParsedManualRoles
+                AutoRoles   = $ParsedAutoRoles
+                Source      = $User.Source
+                LastSync    = $User.LastSync
             })
         }
 
