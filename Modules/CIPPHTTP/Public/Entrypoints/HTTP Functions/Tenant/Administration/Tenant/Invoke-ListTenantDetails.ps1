@@ -24,7 +24,7 @@ Function Invoke-ListTenantDetails {
         $customProperties = Get-TenantProperties -customerId $TenantFilter
         $org | Add-Member -MemberType NoteProperty -Name 'customProperties' -Value $customProperties
 
-        $Groups = (Get-TenantGroups -TenantFilter $TenantFilter) ?? @()
+        $Groups = (Get-TenantGroups -TenantFilter $TenantFilter -SkipCache) ?? @()
         $org | Add-Member -MemberType NoteProperty -Name 'Groups' -Value @($Groups)
         $StatusCode = [HttpStatusCode]::OK
 
