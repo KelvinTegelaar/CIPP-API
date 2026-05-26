@@ -6,10 +6,10 @@ function Invoke-CippTestCIS_6_5_4 {
     param($Tenant)
 
     try {
-        $Org = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoOrganizationConfig'
+        $Org = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoTransportConfig'
 
         if (-not $Org) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_5_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoOrganizationConfig cache not found.' -Risk 'High' -Name 'SMTP AUTH is disabled' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_5_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoTransportConfig cache not found.' -Risk 'High' -Name 'SMTP AUTH is disabled' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication'
             return
         }
 

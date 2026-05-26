@@ -363,5 +363,10 @@
     "type": "CopilotUserCountTrend",
     "friendlyName": "Copilot User Count Trend",
     "description": "Daily Copilot active user count trend (7-day period)"
+  },
+  {
+    "type": "ExoTransportConfig",
+    "friendlyName": "Exchange Transport Config",
+    "description": "Exchange Online transport configuration including SMTP authentication settings"
   }
 ]
