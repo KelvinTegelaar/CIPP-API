@@ -89,6 +89,7 @@ function Invoke-CIPPDBCacheCollection {
             'ExoTenantAllowBlockList'
             'OwaMailboxPolicy'
             'ReportSubmissionPolicy'
+            'ExoTransportConfig'
         )
         ExchangeData       = @(
             'CASMailboxes'
