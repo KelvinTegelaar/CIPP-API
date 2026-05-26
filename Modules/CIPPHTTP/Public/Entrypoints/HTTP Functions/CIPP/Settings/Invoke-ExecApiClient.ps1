@@ -228,6 +228,40 @@ function Invoke-ExecApiClient {
             }
             $Body = @($Results)
         }
+        'RepairUri' {
+            $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
+            if (!$Client) {
+                $Results = @{
+                    resultText = 'API client not found'
+                    state      = 'error'
+                }
+            } else {
+                try {
+                    $RepairResult = Repair-CippApiIdentifierUri -AppId $Request.Body.ClientId
+
+                    if ($RepairResult.Fixed) {
+                        Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Repaired identifier URI for $($Client.AppName) $($RepairResult.Message)" -Sev 'Info'
+                        $Results = @{
+                            resultText = "Identifier URI fixed for $($Client.AppName). $($RepairResult.Message)"
+                            state      = 'success'
+                        }
+                    } else {
+                        $Results = @{
+                            resultText = "Identifier URI already correct for $($Client.AppName). $($RepairResult.Message)"
+                            state      = 'info'
+                        }
+                    }
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to repair identifier URI for $($Client.AppName) $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                    $Results = @{
+                        resultText = "Failed to repair identifier URI for $($Client.AppName) $($ErrorMessage.NormalizedError)"
+                        state      = 'error'
+                    }
+                }
+            }
+            $Body = @($Results)
+        }
         'Delete' {
             try {
                 if ($Request.Body.ClientId) {
