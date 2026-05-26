@@ -121,13 +121,13 @@ function Invoke-CIPPStandardsharingDomainRestriction {
 
         $CurrentValue = @{
             sharingDomainRestrictionMode = $CurrentState.sharingDomainRestrictionMode
-            sharingAllowedDomainList     = $CurrentState.sharingAllowedDomainList
-            sharingBlockedDomainList     = $CurrentState.sharingBlockedDomainList
+            sharingAllowedDomainList     = @($CurrentState.sharingAllowedDomainList ?? @())
+            sharingBlockedDomainList     = @($CurrentState.sharingBlockedDomainList ?? @())
         }
         $ExpectedValue = @{
             sharingDomainRestrictionMode = $mode
-            sharingAllowedDomainList     = if ($mode -eq 'allowList') { $SelectedDomains } else { @() }
-            sharingBlockedDomainList     = if ($mode -eq 'blockList') { $SelectedDomains } else { @() }
+            sharingAllowedDomainList     = @(if ($mode -eq 'allowList') { $SelectedDomains } else { @() })
+            sharingBlockedDomainList     = @(if ($mode -eq 'blockList') { $SelectedDomains } else { @() })
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.sharingDomainRestriction' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
