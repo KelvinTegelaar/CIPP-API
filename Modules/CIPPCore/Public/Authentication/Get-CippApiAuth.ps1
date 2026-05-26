@@ -41,9 +41,12 @@ function Get-CippApiAuth {
             }
         }
 
+        $ExtractedTenantId = $Issuer -replace 'https://sts.windows.net/', '' -replace 'https://login.microsoftonline.com/', '' -replace '/v2.0', ''
+        $TenantId = if ($ExtractedTenantId -eq 'common') { $env:TenantID } else { $ExtractedTenantId }
+
         [PSCustomObject]@{
             ApiUrl    = "https://$($env:WEBSITE_HOSTNAME)"
-            TenantID  = $Issuer -replace 'https://sts.windows.net/', '' -replace 'https://login.microsoftonline.com/', '' -replace '/v2.0', ''
+            TenantID  = $TenantId
             ClientIDs = $AllowedApps
             Enabled   = $AAD.enabled
         }

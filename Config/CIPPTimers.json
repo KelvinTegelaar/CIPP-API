@@ -273,5 +273,14 @@
     "Priority": 30,
     "RunOnProcessor": false,
     "IsSystem": true
+  },
+  {
+    "Id": "7e2a9b4c-1d5f-4a8e-b3c6-0f9d2e7a4b1c",
+    "Command": "Start-UserSyncTimer",
+    "Description": "Sync partner tenant users and group-based roles into allowedUsers table",
+    "Cron": "0 */15 * * * *",
+    "Priority": 11,
+    "RunOnProcessor": false,
+    "IsSystem": true
   }
 ]
