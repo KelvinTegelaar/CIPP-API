@@ -13,7 +13,7 @@ function Invoke-ExecStandardsRun {
 
 
     $TenantFilter = $Request.Query.tenantFilter ?? 'allTenants'
-    $TemplateId = $Request.Query.templateId ?? '*'
+    $TemplateId = $Request.Query.templateId ?? $Request.Query.TemplateId ?? '*'
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ForEach-Object {
