@@ -123,7 +123,6 @@ function Invoke-CIPPStandardSPOVersionControl {
                         try {
                             Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Site.webUrl -Properties $SiteProperties
                         } catch {
-                            Write-Host "Failed to set version policy for site $($Site.webUrl). Exception" -ForegroundColor Red
                             $SiteError = Get-CippException -Exception $_
                             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($Site.webUrl): $($SiteError.NormalizedError)" -sev Error -LogData $SiteError
                         }
