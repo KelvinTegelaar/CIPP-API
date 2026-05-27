@@ -54,7 +54,7 @@ function Invoke-CIPPStandardSPOVersionControl {
     $DesiredExpireVersionsAfterDays = [int]($Settings.ExpireVersionsAfterDays ?? 0)
 
     try {
-        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |  Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAutoExpirationVersionTrim, MajorVersionLimit, ExpireVersionsAfterDays
+        $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAutoExpirationVersionTrim, MajorVersionLimit, ExpireVersionsAfterDays
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Could not get the SPOVersionControl state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -123,12 +123,12 @@ function Invoke-CIPPStandardSPOVersionControl {
                         try {
                             Set-CIPPSPOSite -TenantFilter $Tenant -SiteUrl $Site.webUrl -Properties $SiteProperties
                         } catch {
-                            write-host "Failed to set version policy for site $($Site.webUrl). Exception" -ForegroundColor Red
+                            Write-Host "Failed to set version policy for site $($Site.webUrl). Exception" -ForegroundColor Red
                             $SiteError = Get-CippException -Exception $_
                             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set version policy for site $($Site.webUrl): $($SiteError.NormalizedError)" -sev Error -LogData $SiteError
                         }
                     }
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Finished applying version policy to existing sites" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Finished applying version policy to existing sites' -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
