@@ -46,19 +46,30 @@ function Invoke-CippTestCopilotReady003 {
 
         # For each licensed user, check if they have a desktop activation in the activation report.
         # Users absent from the report entirely are counted as unactivated.
+        # The Graph API returns activation counts nested inside userActivationCounts[] per product type,
+        # so we sum windows/mac across all product types to get the total desktop activation count.
         $NoDesktopUsers = [System.Collections.Generic.List[object]]::new()
         $DesktopCount = 0
         foreach ($User in $LicensedUsers) {
             $Activation = $ActivationLookup[$User.userPrincipalName.ToLower()]
-            if ($Activation -and (([int]($Activation.windows ?? 0) + [int]($Activation.mac ?? 0)) -gt 0)) {
+            $TotalWindows = 0
+            $TotalMac = 0
+            $TotalAndroid = 0
+            $TotalIos = 0
+            if ($Activation.userActivationCounts) {
+                $TotalWindows = ($Activation.userActivationCounts | Measure-Object -Property windows -Sum).Sum
+                $TotalMac = ($Activation.userActivationCounts | Measure-Object -Property mac -Sum).Sum
+                $TotalAndroid = ($Activation.userActivationCounts | Measure-Object -Property android -Sum).Sum
+                $TotalIos = ($Activation.userActivationCounts | Measure-Object -Property ios -Sum).Sum
+            }
+            if ($Activation -and (($TotalWindows + $TotalMac) -gt 0)) {
                 $DesktopCount++
             } else {
                 $NoDesktopUsers.Add([pscustomobject]@{
                     displayName       = $User.displayName
                     userPrincipalName = $User.userPrincipalName
-                    web               = if ($Activation) { $Activation.web } else { 0 }
-                    android           = if ($Activation) { $Activation.android } else { 0 }
-                    ios               = if ($Activation) { $Activation.ios } else { 0 }
+                    android           = if ($Activation) { $TotalAndroid } else { 0 }
+                    ios               = if ($Activation) { $TotalIos } else { 0 }
                     neverActivated    = ($null -eq $Activation)
                 })
             }
@@ -83,7 +94,6 @@ function Invoke-CippTestCopilotReady003 {
                         $PlatformStr = ' (never activated)'
                     } else {
                         $Platforms = @()
-                        if ([int]($User.web ?? 0) -gt 0) { $Platforms += 'Web' }
                         if ([int]($User.android ?? 0) -gt 0 -or [int]($User.ios ?? 0) -gt 0) { $Platforms += 'Mobile' }
                         $PlatformStr = if ($Platforms) { " ($(($Platforms -join ', ')) only)" } else { ' (no activations)' }
                     }
@@ -93,7 +103,7 @@ function Invoke-CippTestCopilotReady003 {
                 $NeverActivated = @($NoDesktopUsers | Where-Object { $_.neverActivated }).Count
                 $Result += "**$($NoDesktopUsers.Count) users** have no desktop M365 Apps activation"
                 if ($NeverActivated -gt 0) { $Result += " ($NeverActivated have never activated on any platform)" }
-                $Result += '.`n'
+                $Result += ".`n"
             }
         }
 
