@@ -78,10 +78,10 @@ function Invoke-CIPPStandardSmartLockout {
     }
 
     $StateIsCorrect = $null -ne $ExistingSettings -and
-        $CurrentLockoutDuration -eq $DesiredLockoutDuration -and
-        $CurrentLockoutThreshold -eq $DesiredLockoutThreshold -and
-        $CurrentEnableOnPrem -eq $DesiredEnableOnPrem -and
-        $CurrentOnPremMode -eq $DesiredOnPremMode
+    $CurrentLockoutDuration -eq $DesiredLockoutDuration -and
+    $CurrentLockoutThreshold -eq $DesiredLockoutThreshold -and
+    $CurrentEnableOnPrem -eq $DesiredEnableOnPrem -and
+    $CurrentOnPremMode -eq $DesiredOnPremMode
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect) {
@@ -135,14 +135,14 @@ function Invoke-CIPPStandardSmartLockout {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Smart Lockout is compliant.' -sev Info
         } else {
             $AlertObject = @{
-                LockoutDurationInSeconds             = $CurrentLockoutDuration ?? 'Not Configured'
-                LockoutThreshold                     = $CurrentLockoutThreshold ?? 'Not Configured'
-                EnableBannedPasswordCheckOnPremises   = $CurrentEnableOnPrem ?? 'Not Configured'
-                BannedPasswordCheckOnPremisesMode     = $CurrentOnPremMode ?? 'Not Configured'
-                DesiredLockoutDurationInSeconds       = $DesiredLockoutDuration
-                DesiredLockoutThreshold               = $DesiredLockoutThreshold
-                DesiredEnableOnPrem                   = $DesiredEnableOnPrem
-                DesiredOnPremMode                     = $DesiredOnPremMode
+                LockoutDurationInSeconds            = $CurrentLockoutDuration ?? 'Not Configured'
+                LockoutThreshold                    = $CurrentLockoutThreshold ?? 'Not Configured'
+                EnableBannedPasswordCheckOnPremises = $CurrentEnableOnPrem ?? 'Not Configured'
+                BannedPasswordCheckOnPremisesMode   = $CurrentOnPremMode ?? 'Not Configured'
+                DesiredLockoutDurationInSeconds     = $DesiredLockoutDuration
+                DesiredLockoutThreshold             = $DesiredLockoutThreshold
+                DesiredEnableOnPrem                 = $DesiredEnableOnPrem
+                DesiredOnPremMode                   = $DesiredOnPremMode
             }
             Write-StandardsAlert -message 'Smart Lockout is not configured correctly' -object $AlertObject -tenant $Tenant -standardName 'SmartLockout' -standardId $Settings.standardId
         }
@@ -150,14 +150,14 @@ function Invoke-CIPPStandardSmartLockout {
 
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            LockoutDurationInSeconds           = $CurrentLockoutDuration ?? 'Not Configured'
-            LockoutThreshold                   = $CurrentLockoutThreshold ?? 'Not Configured'
+            LockoutDurationInSeconds            = $CurrentLockoutDuration ?? 'Not Configured'
+            LockoutThreshold                    = $CurrentLockoutThreshold ?? 'Not Configured'
             EnableBannedPasswordCheckOnPremises = $CurrentEnableOnPrem ?? 'Not Configured'
             BannedPasswordCheckOnPremisesMode   = $CurrentOnPremMode ?? 'Not Configured'
         }
         $ExpectedValue = @{
-            LockoutDurationInSeconds           = $DesiredLockoutDuration
-            LockoutThreshold                   = $DesiredLockoutThreshold
+            LockoutDurationInSeconds            = $DesiredLockoutDuration
+            LockoutThreshold                    = $DesiredLockoutThreshold
             EnableBannedPasswordCheckOnPremises = $DesiredEnableOnPrem
             BannedPasswordCheckOnPremisesMode   = $DesiredOnPremMode
         }
