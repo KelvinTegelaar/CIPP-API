@@ -48,6 +48,7 @@ function New-HaloPSATicket {
     donotapplytemplateintheapi = $true
     attachments                = @()
     _novalidate                = $true
+    source                     = 14
   }
 
   if ($Configuration.TicketType) {
