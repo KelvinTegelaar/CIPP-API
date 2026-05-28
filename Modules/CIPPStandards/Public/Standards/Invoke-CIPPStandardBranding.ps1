@@ -49,7 +49,7 @@ function Invoke-CIPPStandardBranding {
 
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Branding'
 
-    $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
+    $TenantId = Get-Tenants -TenantFilter $Tenant
 
     $Localizations = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations" -tenantID $Tenant -AsApp $true
     # Get layoutTemplateType value using null-coalescing operator

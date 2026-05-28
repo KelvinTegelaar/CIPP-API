@@ -1,84 +1,387 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 
 namespace CIPP
 {
     /// <summary>
-    /// Process-scoped, thread-safe cache for test data lookups.
-    /// Backed by a static ConcurrentDictionary so it is shared across
-    /// all PowerShell runspaces within the Azure Functions worker.
-    /// Expired entries are swept every 500 access calls to prevent unbounded growth.
-    /// TTL is 30 minutes as a safety net.
+    /// Process-scoped, thread-safe LRU cache for test data lookups.
+    /// Shared across all PowerShell runspaces. Bounded by both a byte-size
+    /// cap (default 50 MB) and a short TTL (default 1 minute) so that test
+    /// suites running against a single tenant get fast cache hits without
+    /// accumulating stale Gen2 roots that cause GC thrashing.
     /// </summary>
     public static class TestDataCache
     {
+        // ── Configuration ──
+        private static long _maxBytes = 50L * 1024 * 1024;   // 50 MB default
+        private static TimeSpan _ttl = TimeSpan.FromMinutes(1);
+
+        // ── State ──
         private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
-        private static readonly TimeSpan _ttl = TimeSpan.FromMinutes(30);
+        private static readonly LinkedList<string> _lruOrder = new();          // head = oldest
+        private static readonly Dictionary<string, LinkedListNode<string>> _lruIndex = new(); // key → node
+        private static readonly object _lruLock = new();
+        private static long _currentBytes;
         private static int _accessCount;
-        private const int SweepInterval = 500;
+        private static long _hits;
+        private static long _misses;
+        private static long _evictions;
 
         private sealed class CacheEntry
         {
             public object? Value { get; }
+            public long SizeBytes { get; }
             public DateTime ExpiresUtc { get; }
+            public DateTime CreatedUtc { get; }
 
-            public CacheEntry(object? value, DateTime expiresUtc)
+            public CacheEntry(object? value, long sizeBytes, DateTime expiresUtc)
             {
                 Value = value;
+                SizeBytes = sizeBytes;
                 ExpiresUtc = expiresUtc;
+                CreatedUtc = DateTime.UtcNow;
             }
 
             public bool IsExpired => DateTime.UtcNow >= ExpiresUtc;
         }
 
-        private static void SweepIfDue()
+        /// <summary>Configure the cache limits. Call before first use or between test runs.</summary>
+        public static void Configure(long maxBytes = 50 * 1024 * 1024, int ttlSeconds = 60)
         {
-            var count = Interlocked.Increment(ref _accessCount);
-            if (count % SweepInterval == 0)
-            {
-                foreach (var kvp in _cache)
-                {
-                    if (kvp.Value.IsExpired)
-                    {
-                        _cache.TryRemove(kvp.Key, out _);
-                    }
-                }
-            }
+            _maxBytes = maxBytes;
+            _ttl = TimeSpan.FromSeconds(ttlSeconds);
         }
 
         public static bool TryGet(string key, out object? value)
         {
-            SweepIfDue();
+            Interlocked.Increment(ref _accessCount);
 
             if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired)
             {
+                // Promote to most-recently-used
+                lock (_lruLock)
+                {
+                    if (_lruIndex.TryGetValue(key, out var node))
+                    {
+                        _lruOrder.Remove(node);
+                        _lruOrder.AddLast(node);
+                    }
+                }
+                Interlocked.Increment(ref _hits);
                 value = entry.Value;
                 return true;
             }
 
             // Remove expired entry if present
             if (entry != null)
-            {
-                _cache.TryRemove(key, out _);
-            }
+                RemoveEntry(key);
 
+            Interlocked.Increment(ref _misses);
             value = null;
             return false;
         }
 
         public static void Set(string key, object? value)
         {
-            SweepIfDue();
-            _cache[key] = new CacheEntry(value, DateTime.UtcNow + _ttl);
+            Interlocked.Increment(ref _accessCount);
+
+            // Estimate size before taking lock
+            int itemCount = value is ICollection col ? col.Count : 0;
+            long sizeBytes = EstimateValueSize(value, itemCount);
+
+            // If a single entry exceeds the cap, don't cache it at all
+            if (sizeBytes > _maxBytes)
+                return;
+
+            // Remove existing entry for this key first
+            if (_cache.ContainsKey(key))
+                RemoveEntry(key);
+
+            // Evict LRU entries until we have room
+            while (Interlocked.Read(ref _currentBytes) + sizeBytes > _maxBytes)
+            {
+                string? victim;
+                lock (_lruLock)
+                {
+                    if (_lruOrder.First == null) break;
+                    victim = _lruOrder.First.Value;
+                }
+                RemoveEntry(victim);
+                Interlocked.Increment(ref _evictions);
+            }
+
+            var entry = new CacheEntry(value, sizeBytes, DateTime.UtcNow + _ttl);
+            if (_cache.TryAdd(key, entry))
+            {
+                Interlocked.Add(ref _currentBytes, sizeBytes);
+                lock (_lruLock)
+                {
+                    var node = _lruOrder.AddLast(key);
+                    _lruIndex[key] = node;
+                }
+            }
+        }
+
+        private static void RemoveEntry(string key)
+        {
+            if (_cache.TryRemove(key, out var removed))
+            {
+                Interlocked.Add(ref _currentBytes, -removed.SizeBytes);
+                lock (_lruLock)
+                {
+                    if (_lruIndex.TryGetValue(key, out var node))
+                    {
+                        _lruOrder.Remove(node);
+                        _lruIndex.Remove(key);
+                    }
+                }
+            }
         }
 
         public static void Clear()
         {
-            _cache.Clear();
+            lock (_lruLock)
+            {
+                _cache.Clear();
+                _lruOrder.Clear();
+                _lruIndex.Clear();
+            }
+            Interlocked.Exchange(ref _currentBytes, 0);
             Interlocked.Exchange(ref _accessCount, 0);
+            Interlocked.Exchange(ref _hits, 0);
+            Interlocked.Exchange(ref _misses, 0);
+            Interlocked.Exchange(ref _evictions, 0);
         }
 
         public static int Count => _cache.Count;
+        public static long CurrentBytes => Interlocked.Read(ref _currentBytes);
+        public static double CurrentMB => Math.Round(Interlocked.Read(ref _currentBytes) / (1024.0 * 1024.0), 2);
+        public static long MaxBytes => _maxBytes;
+        public static int TtlSeconds => (int)_ttl.TotalSeconds;
+        public static long Hits => Interlocked.Read(ref _hits);
+        public static long Misses => Interlocked.Read(ref _misses);
+        public static long Evictions => Interlocked.Read(ref _evictions);
+        public static double HitRate => (_hits + _misses) > 0
+            ? Math.Round(_hits * 100.0 / (_hits + _misses), 1) : 0;
+
+        // ── PSObject reflection (cached, resolved once at first use) ──
+        private static readonly object s_reflectLock = new();
+        private static bool s_psResolved;
+        private static Type? s_psObjectType;
+        private static PropertyInfo? s_psPropsProp;   // PSObject.Properties
+        private static PropertyInfo? s_psPropName;     // PSPropertyInfo.Name
+        private static PropertyInfo? s_psPropValue;    // PSPropertyInfo.Value
+        private const int SampleSize = 5;
+        private const int MaxDepth = 4;
+
+        private static void EnsurePSResolved()
+        {
+            if (s_psResolved) return;
+            lock (s_reflectLock)
+            {
+                if (s_psResolved) return;
+                try
+                {
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        var t = asm.GetType("System.Management.Automation.PSObject");
+                        if (t == null) continue;
+                        s_psObjectType = t;
+                        s_psPropsProp = t.GetProperty("Properties");
+                        var piType = asm.GetType("System.Management.Automation.PSPropertyInfo");
+                        if (piType != null)
+                        {
+                            s_psPropName = piType.GetProperty("Name");
+                            s_psPropValue = piType.GetProperty("Value");
+                        }
+                        break;
+                    }
+                }
+                catch { /* SMA not loaded */ }
+                s_psResolved = true;
+            }
+        }
+
+        /// <summary>
+        /// Estimate the serialized size of a cached value. For large collections,
+        /// samples a few items and extrapolates. Handles PSObject by unwrapping
+        /// NoteProperties into dictionaries via reflection.
+        /// </summary>
+        private static long EstimateValueSize(object? value, int itemCount)
+        {
+            if (value == null) return 0;
+            EnsurePSResolved();
+
+            try
+            {
+                // Large collection: sample a few items, extrapolate
+                if (itemCount > SampleSize && value is IEnumerable enumerable)
+                {
+                    var sample = new List<object?>();
+                    foreach (var item in enumerable)
+                    {
+                        sample.Add(Unwrap(item, 0));
+                        if (sample.Count >= SampleSize) break;
+                    }
+                    if (sample.Count == 0) return 0;
+                    var sampleBytes = JsonSerializer.SerializeToUtf8Bytes(sample).LongLength;
+                    return sampleBytes * itemCount / sample.Count;
+                }
+
+                // Small collection or single value: unwrap everything
+                var unwrapped = Unwrap(value, 0);
+                return JsonSerializer.SerializeToUtf8Bytes(unwrapped).LongLength;
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>
+        /// Recursively unwrap PSObject → Dictionary and IEnumerable → List
+        /// so System.Text.Json can serialize them.
+        /// </summary>
+        private static object? Unwrap(object? value, int depth)
+        {
+            if (value == null || depth > MaxDepth) return value;
+
+            // PSObject → extract NoteProperties as Dictionary
+            if (s_psObjectType != null && s_psObjectType.IsInstanceOfType(value))
+                return UnwrapPSObject(value, depth);
+
+            // Collection → unwrap each element
+            if (value is IEnumerable enumerable && value is not string && value is not byte[])
+            {
+                var list = new List<object?>();
+                foreach (var item in enumerable)
+                    list.Add(Unwrap(item, depth + 1));
+                return list;
+            }
+
+            return value;
+        }
+
+        private static Dictionary<string, object?> UnwrapPSObject(object psObj, int depth)
+        {
+            var dict = new Dictionary<string, object?>();
+            if (s_psPropsProp == null || s_psPropName == null || s_psPropValue == null)
+                return dict;
+
+            if (s_psPropsProp.GetValue(psObj) is not IEnumerable props) return dict;
+
+            foreach (var prop in props)
+            {
+                try
+                {
+                    var name = s_psPropName.GetValue(prop)?.ToString();
+                    if (name != null)
+                        dict[name] = Unwrap(s_psPropValue.GetValue(prop), depth + 1);
+                }
+                catch { /* skip properties that throw on access */ }
+            }
+            return dict;
+        }
+
+        /// <summary>
+        /// Returns a diagnostic snapshot of the cache: entry count, keys grouped
+        /// by data type, estimated serialized size, and expiry details.
+        /// Designed for the worker-health dashboard — call from PS via
+        /// [CIPP.TestDataCache]::GetDiagnostics() or from CRAFT metrics bridge.
+        /// </summary>
+        public static CacheDiagnostics GetDiagnostics()
+        {
+            var now = DateTime.UtcNow;
+            var entries = _cache.ToArray(); // snapshot
+
+            long totalBytes = 0;
+            var byType = new Dictionary<string, TypeBucket>();
+
+            foreach (var kvp in entries)
+            {
+                var parts = kvp.Key.Split('|', 2);
+                var dataType = parts.Length > 1 ? parts[1] : "?";
+
+                int itemCount = 0;
+                if (kvp.Value.Value is ICollection col)
+                    itemCount = col.Count;
+
+                long entryBytes = EstimateValueSize(kvp.Value.Value, itemCount);
+                totalBytes += entryBytes;
+
+                if (!byType.TryGetValue(dataType, out var bucket))
+                {
+                    bucket = new TypeBucket { Type = dataType };
+                    byType[dataType] = bucket;
+                }
+                bucket.EntryCount++;
+                bucket.TotalBytes += entryBytes;
+                bucket.TotalItems += itemCount;
+            }
+
+            int active = 0, expired = 0;
+            DateTime? earliestExpiry = null, latestExpiry = null;
+            foreach (var kvp in entries)
+            {
+                if (kvp.Value.IsExpired) { expired++; } else { active++; }
+                var exp = kvp.Value.ExpiresUtc;
+                if (earliestExpiry == null || exp < earliestExpiry) earliestExpiry = exp;
+                if (latestExpiry == null || exp > latestExpiry) latestExpiry = exp;
+            }
+
+            return new CacheDiagnostics
+            {
+                TotalEntries = entries.Length,
+                ActiveEntries = active,
+                ExpiredEntries = expired,
+                EstimatedTotalMB = Math.Round(totalBytes / (1024.0 * 1024.0), 2),
+                TrackedTotalMB = CurrentMB,
+                MaxMB = Math.Round(_maxBytes / (1024.0 * 1024.0), 2),
+                TtlSeconds = (int)_ttl.TotalSeconds,
+                Hits = Interlocked.Read(ref _hits),
+                Misses = Interlocked.Read(ref _misses),
+                HitRate = HitRate,
+                Evictions = Interlocked.Read(ref _evictions),
+                EarliestExpiryUtc = earliestExpiry,
+                LatestExpiryUtc = latestExpiry,
+                AccessCount = _accessCount,
+                TypeBreakdown = byType.Values
+                    .OrderByDescending(b => b.TotalBytes)
+                    .ToList(),
+            };
+        }
+    }
+
+    /// <summary>Diagnostic snapshot returned by TestDataCache.GetDiagnostics().</summary>
+    public class CacheDiagnostics
+    {
+        public int TotalEntries { get; set; }
+        public int ActiveEntries { get; set; }
+        public int ExpiredEntries { get; set; }
+        public double EstimatedTotalMB { get; set; }
+        public double TrackedTotalMB { get; set; }
+        public double MaxMB { get; set; }
+        public int TtlSeconds { get; set; }
+        public long Hits { get; set; }
+        public long Misses { get; set; }
+        public double HitRate { get; set; }
+        public long Evictions { get; set; }
+        public DateTime? EarliestExpiryUtc { get; set; }
+        public DateTime? LatestExpiryUtc { get; set; }
+        public int AccessCount { get; set; }
+        public List<TypeBucket> TypeBreakdown { get; set; } = new();
+    }
+
+    /// <summary>Per-data-type cache usage bucket.</summary>
+    public class TypeBucket
+    {
+        public string Type { get; set; } = "";
+        public int EntryCount { get; set; }
+        public long TotalBytes { get; set; }
+        public int TotalItems { get; set; }
+        public double TotalMB => Math.Round(TotalBytes / (1024.0 * 1024.0), 2);
     }
 }

@@ -30,6 +30,7 @@ function Invoke-ListMailboxes {
         }
 
         # Original live EXO logic
+        $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
         $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,IsDirSynced,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy'
         $ExoRequest = @{
             tenantid  = $TenantFilter
@@ -73,6 +74,7 @@ function Invoke-ListMailboxes {
         @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
         @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
         @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+        @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
         @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
         @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
         @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },

@@ -169,30 +169,24 @@ function Invoke-CIPPTestCollection {
     foreach ($TestFunction in $TestFunctions) {
         $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
-            Write-Information "  [$SuiteName] Running $($TestFunction.Name) for $TenantFilter"
-            $TestOutput = @(& $TestFunction.Name -Tenant $TenantFilter)
+            $TestOutput = @(& $TestFunction -Tenant $TenantFilter)
             foreach ($Entity in $TestOutput) {
-                if ($Entity -is [hashtable] -and $Entity.PartitionKey -and $Entity.RowKey) {
+                if ($Entity -is [hashtable] -and $Entity.PartitionKey) {
                     $ResultBatch.Add($Entity)
                 }
             }
             if ($ResultBatch.Count -ge 100) {
                 Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
-                Write-Information "  [$SuiteName] Flushed $($ResultBatch.Count) results to table"
                 $ResultBatch.Clear()
             }
             $ItemStopwatch.Stop()
-            $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
-            $Timings.Add("$($TestFunction.Name) : ${ElapsedSeconds}s")
-            Write-Information "  [$SuiteName] Completed $($TestFunction.Name) - ${ElapsedSeconds}s"
+            $Timings.Add("$($TestFunction.Name) : $([math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3))s")
             $SuccessCount++
         } catch {
             $ItemStopwatch.Stop()
-            $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
             $FailedCount++
             $Errors.Add("$($TestFunction.Name) : $($_.Exception.Message)")
-            $Timings.Add("$($TestFunction.Name) : ${ElapsedSeconds}s (FAILED)")
-            Write-Warning "  [$SuiteName] Failed $($TestFunction.Name) after ${ElapsedSeconds}s: $($_.Exception.Message)"
+            $Timings.Add("$($TestFunction.Name) : $([math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3))s (FAILED)")
         }
     }
 
