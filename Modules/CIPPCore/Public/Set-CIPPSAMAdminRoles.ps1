@@ -96,8 +96,10 @@ function Set-CIPPSAMAdminRoles {
             $Results | ForEach-Object {
                 if ($_.status -eq 204) {
                     $ActionLogs.Add("Added service principal to directory role $($_.id)")
+                } elseif ($_.status -eq 404) {
+                    $ActionLogs.Add("Directory role $($_.id) does not exist in tenant, skipping")
                 } else {
-                    $ActionLogs.Add("Failed to add service principal to directoryRole $($_.id)")
+                    $ActionLogs.Add("Failed to add service principal to directoryRole $($_.id):  $($_ | ConvertTo-Json -Depth 5)")
                     Write-Verbose ($_ | ConvertTo-Json -Depth 5)
                     $HasFailures = $true
                 }
