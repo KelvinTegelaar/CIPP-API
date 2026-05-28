@@ -105,6 +105,10 @@ function Invoke-ListWorkerHealth {
                 $Diag = [CIPP.TestDataCache]::GetDiagnostics()
                 $Body = @{ Results = $Diag }
             }
+            'MemoryDetail' {
+                $Breakdown = [Craft.Services.WorkerMetricsBridge]::GetMemoryBreakdown()
+                $Body = @{ Results = $Breakdown }
+            }
             default {
                 $Body = @{ Results = "Unknown action: $Action" }
                 return [HttpResponseContext]@{
