@@ -70,15 +70,15 @@ function Invoke-CIPPStandardAuthenticationMethods {
     # 'RemediationId' matches the Set-CIPPAuthenticationPolicy ValidateSet for PATCH calls
     $AuthMethods = @(
         @{ Id = 'MicrosoftAuthenticator'; RemediationId = 'MicrosoftAuthenticator'; SettingKey = 'MicrosoftAuthenticator'; Label = 'Microsoft Authenticator' }
-        @{ Id = 'Fido2';                  RemediationId = 'FIDO2';                  SettingKey = 'FIDO2';                  Label = 'FIDO2 Security Keys' }
-        @{ Id = 'TemporaryAccessPass';    RemediationId = 'TemporaryAccessPass';    SettingKey = 'TAP';                    Label = 'Temporary Access Pass' }
-        @{ Id = 'softwareOath';           RemediationId = 'softwareOath';           SettingKey = 'SoftwareOath';           Label = 'Software OATH Tokens' }
-        @{ Id = 'HardwareOath';           RemediationId = 'HardwareOATH';           SettingKey = 'HardwareOath';           Label = 'Hardware OATH Tokens' }
-        @{ Id = 'Sms';                    RemediationId = 'SMS';                    SettingKey = 'SMS';                    Label = 'SMS' }
-        @{ Id = 'Voice';                  RemediationId = 'Voice';                  SettingKey = 'Voice';                  Label = 'Voice Call' }
-        @{ Id = 'Email';                  RemediationId = 'Email';                  SettingKey = 'Email';                  Label = 'Email OTP' }
-        @{ Id = 'x509Certificate';        RemediationId = 'x509Certificate';        SettingKey = 'x509Certificate';        Label = 'Certificate-Based Authentication' }
-        @{ Id = 'QRCodePin';              RemediationId = 'QRCodePin';              SettingKey = 'QRCodePin';              Label = 'QR Code Pin' }
+        @{ Id = 'Fido2'; RemediationId = 'FIDO2'; SettingKey = 'FIDO2'; Label = 'FIDO2 Security Keys' }
+        @{ Id = 'TemporaryAccessPass'; RemediationId = 'TemporaryAccessPass'; SettingKey = 'TAP'; Label = 'Temporary Access Pass' }
+        @{ Id = 'softwareOath'; RemediationId = 'softwareOath'; SettingKey = 'SoftwareOath'; Label = 'Software OATH Tokens' }
+        @{ Id = 'HardwareOath'; RemediationId = 'HardwareOATH'; SettingKey = 'HardwareOath'; Label = 'Hardware OATH Tokens' }
+        @{ Id = 'Sms'; RemediationId = 'SMS'; SettingKey = 'SMS'; Label = 'SMS' }
+        @{ Id = 'Voice'; RemediationId = 'Voice'; SettingKey = 'Voice'; Label = 'Voice Call' }
+        @{ Id = 'Email'; RemediationId = 'Email'; SettingKey = 'Email'; Label = 'Email OTP' }
+        @{ Id = 'x509Certificate'; RemediationId = 'x509Certificate'; SettingKey = 'x509Certificate'; Label = 'Certificate-Based Authentication' }
+        @{ Id = 'QRCodePin'; RemediationId = 'QRCodePin'; SettingKey = 'QRCodePin'; Label = 'QR Code Pin' }
     )
 
     # Determine which methods the user has explicitly configured
@@ -373,8 +373,8 @@ function Invoke-CIPPStandardAuthenticationMethods {
                 } elseif ($Prop -eq 'includeTargets') {
                     # Normalize current targets to only targetType + id for comparison
                     $CurrentSnapshot[$Prop] = @($Result.CurrentConfig.includeTargets | ForEach-Object {
-                        @{ targetType = $_.targetType; id = $_.id }
-                    })
+                            @{ targetType = $_.targetType; id = $_.id }
+                        })
                 } else {
                     $CurrentSnapshot[$Prop] = $Result.CurrentConfig.$Prop
                 }
