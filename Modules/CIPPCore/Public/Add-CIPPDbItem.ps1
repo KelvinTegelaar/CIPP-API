@@ -101,6 +101,7 @@ function Add-CIPPDbItem {
                 PartitionKey = $TenantFilter
                 RowKey       = "$Type-Count"
                 DataCount    = [int]$NewCount
+                Type         = $Type
             } -Force
             $CountMs = $Stopwatch.ElapsedMilliseconds - $CntStart
         }
