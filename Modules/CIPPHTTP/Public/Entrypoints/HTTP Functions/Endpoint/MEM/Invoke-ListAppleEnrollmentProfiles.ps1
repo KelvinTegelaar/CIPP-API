@@ -3,7 +3,7 @@ function Invoke-ListAppleEnrollmentProfiles {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Endpoint.MEM.Read
+        Endpoint.Autopilot.Read
     .DESCRIPTION
         Lists Apple Automated Device Enrollment tokens and enrollment profiles.
     #>
