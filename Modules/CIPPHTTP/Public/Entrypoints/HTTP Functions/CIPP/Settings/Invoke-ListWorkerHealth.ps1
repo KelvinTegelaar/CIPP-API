@@ -15,6 +15,7 @@ function Invoke-ListWorkerHealth {
         switch ($Action) {
             'Snapshot' {
                 $Snapshot = [Craft.Services.WorkerMetricsBridge]::GetSnapshot()
+                try { $Snapshot.Memory | Add-Member -NotePropertyName 'TestDataCacheCount' -NotePropertyValue ([CIPP.TestDataCache]::Count) -ErrorAction SilentlyContinue } catch {}
                 $Body = @{ Results = $Snapshot }
             }
             'Summary' {
@@ -99,6 +100,10 @@ function Invoke-ListWorkerHealth {
                 }
                 $Result = [Craft.Services.WorkerMetricsBridge]::ChangePriority($JobId, [int]$NewPriority)
                 $Body = @{ Results = @{ Success = $Result; JobId = $JobId; NewPriority = [int]$NewPriority } }
+            }
+            'CacheDiag' {
+                $Diag = [CIPP.TestDataCache]::GetDiagnostics()
+                $Body = @{ Results = $Diag }
             }
             default {
                 $Body = @{ Results = "Unknown action: $Action" }
