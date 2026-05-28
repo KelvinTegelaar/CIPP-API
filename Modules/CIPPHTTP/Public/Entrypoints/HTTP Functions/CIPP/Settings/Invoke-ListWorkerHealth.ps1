@@ -88,10 +88,6 @@ function Invoke-ListWorkerHealth {
                 $Result = [Craft.Services.WorkerMetricsBridge]::DeleteJob($JobId)
                 $Body = @{ Results = @{ Success = $Result; JobId = $JobId } }
             }
-            'PurgeCompleted' {
-                $Purged = [Craft.Services.WorkerMetricsBridge]::PurgeCompleted()
-                $Body = @{ Results = @{ Success = $true; PurgedCount = $Purged } }
-            }
             'ChangePriority' {
                 $JobId = $Request.Query.JobId ?? $Request.Body.JobId
                 $NewPriority = $Request.Query.Priority ?? $Request.Body.Priority
