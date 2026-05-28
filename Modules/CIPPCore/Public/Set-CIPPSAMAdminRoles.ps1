@@ -17,21 +17,34 @@ function Set-CIPPSAMAdminRoles {
 
     $ActionLogs = [System.Collections.Generic.List[object]]::new()
 
+    # Default roles always assigned for all tenants
+    $DefaultRoles = @(
+        [PSCustomObject]@{ value = '17315797-102d-40b4-93e0-432062caca18'; label = 'Compliance Administrator' }
+    )
+
     $SAMRolesTable = Get-CIPPTable -tablename 'SAMRoles'
     $Roles = Get-CIPPAzDataTableEntity @SAMRolesTable
 
     try {
-        $SAMRoles = $Roles.Roles | ConvertFrom-Json -ErrorAction Stop
+        $SAMRoles = @($Roles.Roles | ConvertFrom-Json -ErrorAction Stop)
         $Tenants = $Roles.Tenants | ConvertFrom-Json -ErrorAction Stop
         if ($Tenants.value) {
             $Tenants = $Tenants.value
         }
     } catch {
-        $ActionLogs.Add('CIPP-SAM roles not configured')
-        return $ActionLogs
+        $SAMRoles = @()
+        $Tenants = @()
     }
 
-    if (($SAMRoles | Measure-Object).count -gt 0 -and $Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants') {
+    # Merge default roles with user-configured roles, avoiding duplicates
+    $ExistingValues = @($SAMRoles | ForEach-Object { $_.value })
+    foreach ($DefaultRole in $DefaultRoles) {
+        if ($DefaultRole.value -notin $ExistingValues) {
+            $SAMRoles = @($SAMRoles) + @($DefaultRole)
+        }
+    }
+
+    if (($SAMRoles | Measure-Object).Count -gt 0 -and ($Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants' -or ($Tenants | Measure-Object).Count -eq 0)) {
         $InitialRequests = @(
             [PSCustomObject]@{
                 id     = 'memberOf'
