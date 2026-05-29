@@ -161,6 +161,21 @@ function Push-ExecScheduledCommand {
         }
     }
 
+    $Command = Get-Command -Name $Item.Command -ErrorAction SilentlyContinue
+    if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB')) {
+        Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$RequestedCommand" -Sev 'Warning'
+        $Results = "Task blocked: The command '$RequestedCommand' is not permitted to run as a scheduled task."
+        if (!$IsMultiTenantExecution) {
+            Update-AzDataTableEntity -Force @Table -Entity @{
+                PartitionKey = $task.PartitionKey
+                RowKey       = $task.RowKey
+                Results      = "$Results"
+                TaskState    = $State
+            }
+        }
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+        return
+    }
     if ($Item.Command -in (Get-CIPPSchedulerBlockedCommands)) {
         $Results = "Task blocked: '$($Item.Command)' is not permitted to run as a scheduled task."
         $State = 'Failed'
