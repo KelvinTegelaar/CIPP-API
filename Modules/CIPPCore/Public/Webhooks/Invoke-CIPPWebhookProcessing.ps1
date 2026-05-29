@@ -79,7 +79,7 @@ function Invoke-CippWebhookProcessing {
                 "Completed BEC Remediate for $Username"
                 Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $Username" -sev 'Info'
             }
-            'cippcommand' {
+            <#'cippcommand' {
                 $CommandSplat = @{}
                 $action.parameters.psobject.properties | ForEach-Object { $CommandSplat.Add($_.name, $_.value) }
                 if ($CommandSplat['userid']) { $CommandSplat['userid'] = $Data.UserId }
@@ -88,6 +88,9 @@ function Invoke-CippWebhookProcessing {
                 if ($CommandSplat['user']) { $CommandSplat['user'] = $Data.UserId }
                 if ($CommandSplat['username']) { $CommandSplat['username'] = $Data.UserId }
                 & $action.command.value @CommandSplat
+            }#>
+            default {
+                Write-Host "Unknown action: $action"
             }
         }
     }
@@ -146,12 +149,12 @@ function Invoke-CippWebhookProcessing {
             }
             'generateWebhook' {
                 $CippAlert = @{
-                    Type         = 'webhook'
-                    Title        = $GenerateJSON.Title
-                    JSONContent  = $JsonContent
-                    TenantFilter = $TenantFilter
-                    APIName      = 'Audit Log Alerts'
-                    SchemaSource = 'Audit Log Alert'
+                    Type            = 'webhook'
+                    Title           = $GenerateJSON.Title
+                    JSONContent     = $JsonContent
+                    TenantFilter    = $TenantFilter
+                    APIName         = 'Audit Log Alerts'
+                    SchemaSource    = 'Audit Log Alert'
                     InvokingCommand = 'Start-AuditLogProcessingOrchestrator'
                 }
                 Write-Host 'Sending Webhook Content'

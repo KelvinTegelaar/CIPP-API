@@ -18,14 +18,6 @@
     "PreferredProcessor": "usertasks"
   },
   {
-    "Id": "168decf3-7ddd-471e-ab46-8b40be0f18ae",
-    "Command": "Start-CIPPProcessorQueue",
-    "Description": "Timer to handle user initiated tasks",
-    "Cron": "0 */15 * * * *",
-    "Priority": 1,
-    "RunOnProcessor": true
-  },
-  {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to download audit logs",

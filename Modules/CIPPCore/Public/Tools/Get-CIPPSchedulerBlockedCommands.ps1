@@ -18,9 +18,17 @@ function Get-CIPPSchedulerBlockedCommands {
         'Get-CIPPAzIdentityToken'
         'Get-CIPPAuthentication'
         'New-CIPPAzServiceSAS'
+        'New-GraphPOSTRequest'
+        'New-GraphGetRequest'
+        'New-GraphBulkRequest'
+        'New-ExoRequest'
+
+        # Env
+        'Set-CIPPEnvVarBackup'
 
         # Az Functions cmdlet
         'Get-CIPPAzFunctionAppSetting'
+        'Get-CIPPAzFunctionAppSubId'
         'Update-CIPPAzFunctionAppSetting'
 
         # Extension authentication tokens
@@ -32,6 +40,7 @@ function Get-CIPPSchedulerBlockedCommands {
 
         # Secret & key material
         'Get-CippKeyVaultSecret'
+        'Set-CippKeyVaultSecret'
         'Remove-CippKeyVaultSecret'
         'Get-ExtensionAPIKey'
         'Set-ExtensionAPIKey'
@@ -42,6 +51,7 @@ function Get-CIPPSchedulerBlockedCommands {
 
         # SAM permission enumeration - exposes which permissions the SAM app holds
         'Get-CippSamPermissions'
+        'Get-CIPPRolePermissions'
 
         # Direct storage access - bypasses CIPP data access controls
         'Get-CIPPTable'

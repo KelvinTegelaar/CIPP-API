@@ -68,7 +68,6 @@ function Invoke-ExecTokenExchange {
             $FormData['client_secret'] = $ClientSecret
         }
 
-        Write-Host "Posting this data: $($FormData | ConvertTo-Json -Depth 15)"
         $Results = Invoke-RestMethod -Uri $TokenUrl -Method Post -Body $FormData -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop -SkipHttpErrorCheck
     } catch {
         $ErrorMessage = $_.Exception
