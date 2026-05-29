@@ -203,7 +203,7 @@ function Add-CIPPScheduledTask {
                 Tenant               = [string]$tenantFilter
                 excludedTenants      = [string]$excludedTenants
                 Name                 = [string]$task.Name
-                Command              = [string]$task.Command.value
+                Command              = [string]$RequestedCommand
                 Parameters           = [string]$Parameters
                 ScheduledTime        = [string]$task.ScheduledTime
                 Recurrence           = [string]$Recurrence
