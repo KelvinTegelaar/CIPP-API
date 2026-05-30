@@ -15,8 +15,8 @@ function Invoke-CippTestCIS_5_3_1 {
             return
         }
 
-        $PrivRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
-        $EligibleAssignmentsForPriv = $Eligibility | Where-Object { $_.roleDefinitionId -in $PrivRoleIds }
+        $PrivRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
+        $EligibleAssignmentsForPriv = $Eligibility.Where({ $PrivRoleIds.Contains($_.roleDefinitionId) })
 
         if ($EligibleAssignmentsForPriv -and $EligibleAssignmentsForPriv.Count -gt 0) {
             $Status = 'Passed'

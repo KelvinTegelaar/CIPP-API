@@ -103,25 +103,38 @@ namespace CIPP
             if (_cache.ContainsKey(key))
                 RemoveEntry(key);
 
-            // Evict LRU entries until we have room
-            while (Interlocked.Read(ref _currentBytes) + sizeBytes > _maxBytes)
+            // Take the LRU lock once for both eviction and insertion. The previous
+            // implementation took _lruLock per eviction iteration plus another time
+            // for the AddLast, which under write contention turned every Set() into
+            // a stream of short critical sections instead of one bounded one.
+            var entry = new CacheEntry(value, sizeBytes, DateTime.UtcNow + _ttl);
+            lock (_lruLock)
             {
-                string? victim;
-                lock (_lruLock)
+                while (_currentBytes + sizeBytes > _maxBytes)
                 {
                     if (_lruOrder.First == null) break;
-                    victim = _lruOrder.First.Value;
+                    var victimKey = _lruOrder.First.Value;
+                    if (_cache.TryRemove(victimKey, out var victim))
+                    {
+                        Interlocked.Add(ref _currentBytes, -victim.SizeBytes);
+                        if (_lruIndex.TryGetValue(victimKey, out var vnode))
+                        {
+                            _lruOrder.Remove(vnode);
+                            _lruIndex.Remove(victimKey);
+                        }
+                        Interlocked.Increment(ref _evictions);
+                    }
+                    else
+                    {
+                        // Defensive: dictionary already pruned, drop the LRU node anyway.
+                        _lruOrder.RemoveFirst();
+                        _lruIndex.Remove(victimKey);
+                    }
                 }
-                RemoveEntry(victim);
-                Interlocked.Increment(ref _evictions);
-            }
 
-            var entry = new CacheEntry(value, sizeBytes, DateTime.UtcNow + _ttl);
-            if (_cache.TryAdd(key, entry))
-            {
-                Interlocked.Add(ref _currentBytes, sizeBytes);
-                lock (_lruLock)
+                if (_cache.TryAdd(key, entry))
                 {
+                    Interlocked.Add(ref _currentBytes, sizeBytes);
                     var node = _lruOrder.AddLast(key);
                     _lruIndex[key] = node;
                 }

@@ -29,25 +29,25 @@ function Invoke-CippTestGenericTest004 {
         $AdminCount = @($Users | Where-Object { $_.IsAdmin -eq $true }).Count
         $MFARegPct = if ($TotalUsers -gt 0) { [math]::Round(($MFARegistered / $TotalUsers) * 100, 1) } else { 0 }
 
-        $Result = "### Summary`n`n"
-        $Result += "| Metric | Count |`n"
-        $Result += "|--------|-------|`n"
-        $Result += "| Total Accounts | $TotalUsers |`n"
-        $Result += "| Admin Accounts | $AdminCount |`n"
-        $Result += "| Registered for MFA | $MFARegistered ($MFARegPct%) |`n"
-        $Result += "| MFA Capable | $MFACapable |`n"
-        $Result += "| Protected by Conditional Access | $CoveredByCA |`n"
-        $Result += "| Protected by Security Defaults | $CoveredBySD |`n"
-        $Result += "| Using Per-User MFA (Legacy) | $PerUserMFA |`n"
-        $Result += "| **Not Protected by Any MFA Policy** | **$NotProtected** |`n`n"
+        $Result = [System.Text.StringBuilder]::new("### Summary`n`n")
+        $null = $Result.Append("| Metric | Count |`n")
+        $null = $Result.Append("|--------|-------|`n")
+        $null = $Result.Append("| Total Accounts | $TotalUsers |`n")
+        $null = $Result.Append("| Admin Accounts | $AdminCount |`n")
+        $null = $Result.Append("| Registered for MFA | $MFARegistered ($MFARegPct%) |`n")
+        $null = $Result.Append("| MFA Capable | $MFACapable |`n")
+        $null = $Result.Append("| Protected by Conditional Access | $CoveredByCA |`n")
+        $null = $Result.Append("| Protected by Security Defaults | $CoveredBySD |`n")
+        $null = $Result.Append("| Using Per-User MFA (Legacy) | $PerUserMFA |`n")
+        $null = $Result.Append("| **Not Protected by Any MFA Policy** | **$NotProtected** |`n`n")
 
         if ($NotProtected -gt 0) {
-            $Result += "**⚠️ $NotProtected account(s) have no MFA enforcement.** These accounts are at significantly higher risk of compromise. Consider enabling Conditional Access policies to require MFA for all users.`n`n"
+            $null = $Result.Append("**⚠️ $NotProtected account(s) have no MFA enforcement.** These accounts are at significantly higher risk of compromise. Consider enabling Conditional Access policies to require MFA for all users.`n`n")
         }
 
-        $Result += "### All Accounts`n`n"
-        $Result += "| Display Name | MFA Registered | MFA Method | Protected By | Account Type |`n"
-        $Result += "|-------------|----------------|------------|--------------|--------------|`n"
+        $null = $Result.Append("### All Accounts`n`n")
+        $null = $Result.Append("| Display Name | MFA Registered | MFA Method | Protected By | Account Type |`n")
+        $null = $Result.Append("|-------------|----------------|------------|--------------|--------------|`n")
 
         $DisplayUsers = $Users | Sort-Object DisplayName | Select-Object -First 100
         foreach ($User in $DisplayUsers) {
@@ -64,11 +64,11 @@ function Invoke-CippTestGenericTest004 {
             elseif ($User.PerUser -in @('Enforced', 'Enabled')) { "Per-User MFA ($($User.PerUser))" }
             else { '❌ None' }
             $AcctType = if ($User.IsAdmin -eq $true) { '🔑 Admin' } else { 'User' }
-            $Result += "| $Name | $Registered | $Methods | $Protection | $AcctType |`n"
+            $null = $Result.Append("| $Name | $Registered | $Methods | $Protection | $AcctType |`n")
         }
 
         if ($Users.Count -gt 100) {
-            $Result += "`n*Showing 100 of $($Users.Count) accounts.*`n"
+            $null = $Result.Append("`n*Showing 100 of $($Users.Count) accounts.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest004' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Tenant MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

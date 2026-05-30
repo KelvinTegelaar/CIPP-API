@@ -94,13 +94,13 @@ function Invoke-CippTestZTNA21813 {
             $HasHighRatio = $true
         }
 
-        $MdInfo = "`n## Privileged role assignment summary`n`n"
-        $MdInfo += "**Global administrator role count:** $GARoleAssignmentCount ($GAPercentage%) - $StatusIndicator`n`n"
-        $MdInfo += "**Other privileged role count:** $PrivilegedRoleAssignmentCount ($OtherPercentage%)`n`n"
+        $MdInfo = [System.Text.StringBuilder]::new("`n## Privileged role assignment summary`n`n")
+        $null = $MdInfo.Append("**Global administrator role count:** $GARoleAssignmentCount ($GAPercentage%) - $StatusIndicator`n`n")
+        $null = $MdInfo.Append("**Other privileged role count:** $PrivilegedRoleAssignmentCount ($OtherPercentage%)`n`n")
 
-        $MdInfo += "## User privileged role assignments`n`n"
-        $MdInfo += "| User | Global administrator | Other Privileged Role(s) |`n"
-        $MdInfo += "| :--- | :------------------- | :------ |`n"
+        $null = $MdInfo.Append("## User privileged role assignments`n`n")
+        $null = $MdInfo.Append("| User | Global administrator | Other Privileged Role(s) |`n")
+        $null = $MdInfo.Append("| :--- | :------------------- | :------ |`n")
 
         $SortedUsers = $UserRoleMap.Values | Sort-Object @{Expression = { -not $_.IsGA } }, @{Expression = { $_.User.displayName } }
 
@@ -112,11 +112,11 @@ function Invoke-CippTestZTNA21813 {
             $RolesList = if ($OtherRoles.Count -gt 0) { ($OtherRoles -join ', ') } else { '-' }
 
             $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($User.id)/hidePreviewBanner~/true"
-            $MdInfo += "| [$($User.displayName)]($UserLink) | $IsGA | $RolesList |`n"
+            $null = $MdInfo.Append("| [$($User.displayName)]($UserLink) | $IsGA | $RolesList |`n")
         }
 
         if ($UserRoleMap.Count -eq 0) {
-            $MdInfo += "| No privileged users found | - | - |`n"
+            $null = $MdInfo.Append("| No privileged users found | - | - |`n")
         }
 
         if ($TotalPrivilegedRoleAssignmentCount -eq 0) {

@@ -18,19 +18,19 @@ function Invoke-CippTestCIS_1_1_4 {
         # SkuPartNumbers that are acceptable for admin accounts: Entra ID P1/P2 only
         $AcceptableSkus = @('AAD_PREMIUM', 'AAD_PREMIUM_P2', 'EMS', 'EMSPREMIUM')
 
-        $PrivilegedRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
-        $PrivilegedUserIds = ($RoleAssignments | Where-Object { $_.roleDefinitionId -in $PrivilegedRoleIds }).principalId | Select-Object -Unique
-        $PrivilegedUsers = $Users | Where-Object { $_.id -in $PrivilegedUserIds }
+        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
+        $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new([string[]]($RoleAssignments.Where({ $PrivilegedRoleIds.Contains($_.roleDefinitionId) }).principalId | Select-Object -Unique))
+        $PrivilegedUsers = $Users.Where({ $PrivilegedUserIds.Contains($_.id) })
 
-        $LicensedAdmins = $PrivilegedUsers | Where-Object {
+        $LicensedAdmins = $PrivilegedUsers.Where({
             $_.assignedLicenses -and $_.assignedLicenses.Count -gt 0
-        }
+        })
 
-        $NonCompliant = $LicensedAdmins | Where-Object {
-            $skus = ($_.assignedPlans | ForEach-Object { $_.servicePlanId }) -join ','
-            $hasProductivity = $_.assignedPlans | Where-Object { $_.service -in @('exchange', 'SharePoint', 'MicrosoftCommunicationsOnline', 'TeamspaceAPI') -and $_.capabilityStatus -eq 'Enabled' }
-            [bool]$hasProductivity
-        }
+        $ProductivityServices = [System.Collections.Generic.HashSet[string]]::new([string[]]@('exchange', 'SharePoint', 'MicrosoftCommunicationsOnline', 'TeamspaceAPI'))
+        $NonCompliant = $LicensedAdmins.Where({
+            $hasProductivity = $_.assignedPlans.Where({ $ProductivityServices.Contains($_.service) -and $_.capabilityStatus -eq 'Enabled' }, 'First', 1)
+            [bool]$hasProductivity.Count
+        })
 
         if (-not $LicensedAdmins) {
             $Status = 'Passed'

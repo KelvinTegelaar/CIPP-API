@@ -25,11 +25,11 @@ function Invoke-CippTestCIS_2_1_9 {
 
         if ($Failed.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "DKIM is enabled for all $($Sending.Count) sending domain(s)."
+            $Result = [System.Text.StringBuilder]::new("DKIM is enabled for all $($Sending.Count) sending domain(s).")
         } else {
             $Status = 'Failed'
-            $Result = "DKIM is not enabled for $($Failed.Count) sending domain(s):`n`n| Domain | DKIM Enabled |`n| :----- | :----------- |`n"
-            foreach ($F in $Failed) { $Result += "| $($F.Domain) | $($F.Enabled) |`n" }
+            $Result = [System.Text.StringBuilder]::new("DKIM is not enabled for $($Failed.Count) sending domain(s):`n`n| Domain | DKIM Enabled |`n| :----- | :----------- |`n")
+            foreach ($F in $Failed) { $null = $Result.Append("| $($F.Domain) | $($F.Enabled) |`n") }
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_9' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'DKIM is enabled for all Exchange Online Domains' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Authentication'

@@ -48,22 +48,22 @@ function Invoke-CippTestZTNA22124 {
         $Status = if ($HighPriorityIssues.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: All high priority Entra recommendations have been addressed.`n`n"
-            $ResultMarkdown += '[View recommendations](https://entra.microsoft.com/#view/Microsoft_Azure_SecureScore/OverviewBlade)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: All high priority Entra recommendations have been addressed.`n`n")
+            $null = $ResultMarkdown.Append('[View recommendations](https://entra.microsoft.com/#view/Microsoft_Azure_SecureScore/OverviewBlade)')
         } else {
-            $ResultMarkdown = "❌ **Fail**: There are $($HighPriorityIssues.Count) high priority recommendation(s) that have not been addressed.`n`n"
-            $ResultMarkdown += "## Outstanding high priority recommendations`n`n"
-            $ResultMarkdown += "| Display Name | Status | Insights |`n"
-            $ResultMarkdown += "| :----------- | :----- | :------- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: There are $($HighPriorityIssues.Count) high priority recommendation(s) that have not been addressed.`n`n")
+            $null = $ResultMarkdown.Append("## Outstanding high priority recommendations`n`n")
+            $null = $ResultMarkdown.Append("| Display Name | Status | Insights |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :----- | :------- |`n")
 
             foreach ($issue in $HighPriorityIssues) {
                 $displayName = if ($issue.displayName) { $issue.displayName } else { 'N/A' }
                 $status = if ($issue.status) { $issue.status } else { 'N/A' }
                 $insights = if ($issue.insights) { $issue.insights } else { 'N/A' }
-                $ResultMarkdown += "| $displayName | $status | $insights |`n"
+                $null = $ResultMarkdown.Append("| $displayName | $status | $insights |`n")
             }
 
-            $ResultMarkdown += "`n[Address recommendations](https://entra.microsoft.com/#view/Microsoft_Azure_SecureScore/OverviewBlade)"
+            $null = $ResultMarkdown.Append("`n[Address recommendations](https://entra.microsoft.com/#view/Microsoft_Azure_SecureScore/OverviewBlade)")
         }
 
         $TestParams = @{

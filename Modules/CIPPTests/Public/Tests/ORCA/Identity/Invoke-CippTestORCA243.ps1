@@ -18,16 +18,16 @@ function Invoke-CippTestORCA243 {
 
         if ($NonAuthDomains.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All domains are authoritative. No inbound connectors needed.`n`n"
-            $Result += "**Total Domains:** $($AcceptedDomains.Count)"
+            $Result = [System.Text.StringBuilder]::new("All domains are authoritative. No inbound connectors needed.`n`n")
+            $null = $Result.Append("**Total Domains:** $($AcceptedDomains.Count)")
         } else {
             $Status = 'Informational'
-            $Result = "Found $($NonAuthDomains.Count) non-authoritative domains.`n`n"
-            $Result += "**Domains Requiring Inbound Connectors:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("Found $($NonAuthDomains.Count) non-authoritative domains.`n`n")
+            $null = $Result.Append("**Domains Requiring Inbound Connectors:**`n`n")
             foreach ($Domain in $NonAuthDomains) {
-                $Result += "- $($Domain.DomainName) (Type: $($Domain.DomainType))`n"
+                $null = $Result.Append("- $($Domain.DomainName) (Type: $($Domain.DomainType))`n")
             }
-            $Result += "`n**Action Required:** Verify inbound connectors are configured with proper authentication for these domains"
+            $null = $Result.Append("`n**Action Required:** Verify inbound connectors are configured with proper authentication for these domains")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA243' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Authenticated Receive Chain for non-EOP domains' -UserImpact 'Medium' -ImplementationEffort 'High' -Category 'Configuration'

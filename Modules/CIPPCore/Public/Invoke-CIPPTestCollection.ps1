@@ -53,6 +53,21 @@ function Invoke-CIPPTestCollection {
         GenericTests     = 'Invoke-CippTestGenericTest*'
     }
 
+    # Process-scoped cache of Get-Command lookups so each (tenant × suite) invocation
+    # doesn't pay the module command-table walk again. The CIPPTests module is loaded
+    # once per worker process and its exported function set does not change at runtime.
+    if (-not $script:CIPPTestSuiteFunctionCache) {
+        $script:CIPPTestSuiteFunctionCache = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        Write-Information "[CacheInit] CIPPTestSuiteFunctionCache initialized in PID $PID"
+    }
+    if (-not $script:CIPPTestCustomFunctionResolved) {
+        Write-Information "[CacheMiss] CIPPTestCustomFunction PID=$PID - resolving Invoke-CippTestCustomScripts via Get-Command"
+        $script:CIPPTestCustomFunction = Get-Command -Name 'Invoke-CippTestCustomScripts' -ErrorAction SilentlyContinue
+        $script:CIPPTestCustomFunctionResolved = $true
+    } else {
+        Write-Information "[CacheHit] CIPPTestCustomFunction PID=$PID Resolved=$([bool]$script:CIPPTestCustomFunction)"
+    }
+
     $SuiteStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $SuccessCount = 0
     $FailedCount = 0
@@ -62,8 +77,7 @@ function Invoke-CIPPTestCollection {
     # Custom suite: Invoke-CippTestCustomScripts now requires a ScriptGuid parameter.
     # Enumerate distinct enabled script guids from the DB and call once per guid.
     if ($SuiteName -eq 'Custom') {
-        $CustomFunction = Get-Command -Name 'Invoke-CippTestCustomScripts' -ErrorAction SilentlyContinue
-        if (-not $CustomFunction) {
+        if (-not $script:CIPPTestCustomFunction) {
             Write-Information 'Invoke-CippTestCustomScripts not found — skipping Custom suite'
             return @{ SuiteName = $SuiteName; TenantFilter = $TenantFilter; Success = 0; Failed = 0; Total = 0; TotalSeconds = 0; Timings = @(); Errors = @() }
         }
@@ -71,12 +85,30 @@ function Invoke-CIPPTestCollection {
         $Table = Get-CippTable -TableName 'CustomPowershellScripts'
         $AllScripts = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CustomScript'")
 
-        # Get the latest version of each script guid, filter to enabled only
-        $EnabledGuids = $AllScripts | Group-Object -Property ScriptGuid | ForEach-Object {
-            $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
-        } | Where-Object {
-            -not $_.PSObject.Properties['Enabled'] -or [bool]$_.Enabled
-        } | Select-Object -ExpandProperty ScriptGuid
+        # Single-pass "latest enabled version per ScriptGuid".
+        # The previous Group-Object | ForEach-Object { Sort-Object | Select -First 1 }
+        # pipeline allocated a Group container per guid and ran an O(n log n) sort per group;
+        # this hashtable walk is O(n) total and avoids the pipeline overhead entirely.
+        $LatestByGuid = @{}
+        foreach ($Script in $AllScripts) {
+            $Guid = $Script.ScriptGuid
+            if (-not $Guid) { continue }
+            $Existing = $LatestByGuid[$Guid]
+            if (-not $Existing -or [int]$Script.Version -gt [int]$Existing.Version) {
+                $LatestByGuid[$Guid] = $Script
+            }
+        }
+
+        $EnabledGuidsList = [System.Collections.Generic.List[string]]::new()
+        foreach ($Latest in $LatestByGuid.Values) {
+            # Cache the property lookup — calling .PSObject.Properties[''] reflects through
+            # the PSObject member set on every invocation in the original code.
+            $EnabledProp = $Latest.PSObject.Properties['Enabled']
+            if (-not $EnabledProp -or [bool]$EnabledProp.Value) {
+                $EnabledGuidsList.Add($Latest.ScriptGuid)
+            }
+        }
+        $EnabledGuids = $EnabledGuidsList.ToArray()
 
         if ($EnabledGuids.Count -eq 0) {
             Write-Information 'No enabled custom scripts found — skipping Custom suite'
@@ -104,13 +136,13 @@ function Invoke-CIPPTestCollection {
                     $ResultBatch.Clear()
                 }
                 $ItemStopwatch.Stop()
-                $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
+                $ElapsedSeconds = '{0:N3}' -f $ItemStopwatch.Elapsed.TotalSeconds
                 $Timings.Add("CustomScript-$Guid : ${ElapsedSeconds}s")
                 Write-Information "  [Custom] Completed CustomScript-$Guid - ${ElapsedSeconds}s"
                 $SuccessCount++
             } catch {
                 $ItemStopwatch.Stop()
-                $ElapsedSeconds = [math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3)
+                $ElapsedSeconds = '{0:N3}' -f $ItemStopwatch.Elapsed.TotalSeconds
                 $FailedCount++
                 $Errors.Add("CustomScript-$Guid : $($_.Exception.Message)")
                 $Timings.Add("CustomScript-$Guid : ${ElapsedSeconds}s (FAILED)")
@@ -125,7 +157,7 @@ function Invoke-CIPPTestCollection {
         }
 
         $SuiteStopwatch.Stop()
-        $TotalElapsed = [math]::Round($SuiteStopwatch.Elapsed.TotalSeconds, 3)
+        $TotalElapsed = '{0:N3}' -f $SuiteStopwatch.Elapsed.TotalSeconds
         $Summary = "Custom suite for $TenantFilter completed in ${TotalElapsed}s — $SuccessCount/$($EnabledGuids.Count) ran, $FailedCount errored"
         Write-Information $Summary
         Write-Information "  Timings: $($Timings -join ' | ')"
@@ -144,9 +176,17 @@ function Invoke-CIPPTestCollection {
         }
     }
 
-    # Standard suites: discover functions by name pattern via Get-Command
+    # Standard suites: discover functions by name pattern via Get-Command.
+    # Cache the function list per suite so repeated activity invocations in the same
+    # process don't pay the module command-table walk again (item 7).
     $Pattern = $SuitePatterns[$SuiteName]
-    $TestFunctions = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
+    if ($script:CIPPTestSuiteFunctionCache.ContainsKey($SuiteName)) {
+        Write-Information "[CacheHit] CIPPTestSuiteFunctionCache PID=$PID Suite=$SuiteName Size=$($script:CIPPTestSuiteFunctionCache.Count)"
+    } else {
+        Write-Information "[CacheMiss] CIPPTestSuiteFunctionCache PID=$PID Suite=$SuiteName Size=$($script:CIPPTestSuiteFunctionCache.Count) - resolving pattern '$Pattern' via Get-Command"
+        $script:CIPPTestSuiteFunctionCache[$SuiteName] = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
+    }
+    $TestFunctions = $script:CIPPTestSuiteFunctionCache[$SuiteName]
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"
         return @{
@@ -180,13 +220,13 @@ function Invoke-CIPPTestCollection {
                 $ResultBatch.Clear()
             }
             $ItemStopwatch.Stop()
-            $Timings.Add("$($TestFunction.Name) : $([math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3))s")
+            $Timings.Add(('{0} : {1:N3}s' -f $TestFunction.Name, $ItemStopwatch.Elapsed.TotalSeconds))
             $SuccessCount++
         } catch {
             $ItemStopwatch.Stop()
             $FailedCount++
             $Errors.Add("$($TestFunction.Name) : $($_.Exception.Message)")
-            $Timings.Add("$($TestFunction.Name) : $([math]::Round($ItemStopwatch.Elapsed.TotalSeconds, 3))s (FAILED)")
+            $Timings.Add(('{0} : {1:N3}s (FAILED)' -f $TestFunction.Name, $ItemStopwatch.Elapsed.TotalSeconds))
         }
     }
 
@@ -197,7 +237,7 @@ function Invoke-CIPPTestCollection {
     }
 
     $SuiteStopwatch.Stop()
-    $TotalElapsed = [math]::Round($SuiteStopwatch.Elapsed.TotalSeconds, 3)
+    $TotalElapsed = '{0:N3}' -f $SuiteStopwatch.Elapsed.TotalSeconds
     $TestCount = $TestFunctions.Count
     $Summary = "$SuiteName suite for $TenantFilter completed in ${TotalElapsed}s — $SuccessCount/$TestCount ran, $FailedCount errored"
     Write-Information $Summary
