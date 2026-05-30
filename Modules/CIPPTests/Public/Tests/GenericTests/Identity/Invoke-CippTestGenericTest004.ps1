@@ -20,13 +20,25 @@ function Invoke-CippTestGenericTest004 {
         }
 
         $TotalUsers = $Users.Count
-        $MFARegistered = @($Users | Where-Object { $_.MFARegistration -eq $true }).Count
-        $MFACapable = @($Users | Where-Object { $_.MFACapable -eq $true }).Count
-        $CoveredByCA = @($Users | Where-Object { $_.CoveredByCA -like 'Enforced*' }).Count
-        $CoveredBySD = @($Users | Where-Object { $_.CoveredBySD -eq $true }).Count
-        $PerUserMFA = @($Users | Where-Object { $_.PerUser -in @('Enforced', 'Enabled') }).Count
-        $NotProtected = @($Users | Where-Object { $_.CoveredByCA -notlike 'Enforced*' -and $_.CoveredBySD -ne $true -and $_.PerUser -notin @('Enforced', 'Enabled') }).Count
-        $AdminCount = @($Users | Where-Object { $_.IsAdmin -eq $true }).Count
+        $MFARegistered = 0
+        $MFACapable = 0
+        $CoveredByCA = 0
+        $CoveredBySD = 0
+        $PerUserMFA = 0
+        $NotProtected = 0
+        $AdminCount = 0
+        foreach ($u in $Users) {
+            if ($u.MFARegistration -eq $true) { $MFARegistered++ }
+            if ($u.MFACapable -eq $true) { $MFACapable++ }
+            $isCA = $u.CoveredByCA -like 'Enforced*'
+            $isSD = $u.CoveredBySD -eq $true
+            $isPerUser = $u.PerUser -in @('Enforced', 'Enabled')
+            if ($isCA) { $CoveredByCA++ }
+            if ($isSD) { $CoveredBySD++ }
+            if ($isPerUser) { $PerUserMFA++ }
+            if (-not $isCA -and -not $isSD -and -not $isPerUser) { $NotProtected++ }
+            if ($u.IsAdmin -eq $true) { $AdminCount++ }
+        }
         $MFARegPct = if ($TotalUsers -gt 0) { [math]::Round(($MFARegistered / $TotalUsers) * 100, 1) } else { 0 }
 
         $Result = [System.Text.StringBuilder]::new("### Summary`n`n")

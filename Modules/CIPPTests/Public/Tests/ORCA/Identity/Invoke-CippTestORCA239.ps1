@@ -14,27 +14,27 @@ function Invoke-CippTestORCA239 {
             return
         }
 
-        $FailedPolicies = @()
-        $Issues = @()
+        $FailedPolicies = [System.Collections.Generic.List[object]]::new()
+        $Issues = [System.Collections.Generic.List[string]]::new()
 
         # Check Anti-Phish policies for exclusions
         if ($AntiPhishPolicies) {
             foreach ($Policy in $AntiPhishPolicies) {
                 $HasExclusions = $false
-                $ExclusionDetails = @()
+                $ExclusionDetails = [System.Collections.Generic.List[string]]::new()
 
                 if ($Policy.ExcludedSenders -and $Policy.ExcludedSenders.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "ExcludedSenders: $($Policy.ExcludedSenders.Count)"
+                    $ExclusionDetails.Add("ExcludedSenders: $($Policy.ExcludedSenders.Count)")
                 }
 
                 if ($Policy.ExcludedDomains -and $Policy.ExcludedDomains.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "ExcludedDomains: $($Policy.ExcludedDomains.Count)"
+                    $ExclusionDetails.Add("ExcludedDomains: $($Policy.ExcludedDomains.Count)")
                 }
 
                 if ($HasExclusions) {
-                    $Issues += "Anti-Phish Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')"
+                    $Issues.Add("Anti-Phish Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')")
                 }
             }
         }
@@ -43,20 +43,20 @@ function Invoke-CippTestORCA239 {
         if ($ContentFilterPolicies) {
             foreach ($Policy in $ContentFilterPolicies) {
                 $HasExclusions = $false
-                $ExclusionDetails = @()
+                $ExclusionDetails = [System.Collections.Generic.List[string]]::new()
 
                 if ($Policy.AllowedSenders -and $Policy.AllowedSenders.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "AllowedSenders: $($Policy.AllowedSenders.Count)"
+                    $ExclusionDetails.Add("AllowedSenders: $($Policy.AllowedSenders.Count)")
                 }
 
                 if ($Policy.AllowedSenderDomains -and $Policy.AllowedSenderDomains.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "AllowedSenderDomains: $($Policy.AllowedSenderDomains.Count)"
+                    $ExclusionDetails.Add("AllowedSenderDomains: $($Policy.AllowedSenderDomains.Count)")
                 }
 
                 if ($HasExclusions) {
-                    $Issues += "Anti-Spam Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')"
+                    $Issues.Add("Anti-Spam Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')")
                 }
             }
         }

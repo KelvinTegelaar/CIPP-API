@@ -14,12 +14,14 @@ function Invoke-CippTestCIS_2_1_9 {
             return
         }
 
-        $Sending = $Accepted | Where-Object { -not $_.SendingFromDomainDisabled -and $_.DomainName -notlike '*onmicrosoft.com' }
-        $Failed = @()
+        $Sending = $Accepted.Where({ -not $_.SendingFromDomainDisabled -and $_.DomainName -notlike '*onmicrosoft.com' })
+        $DkimByDomain = $Dkim | Group-Object Domain -AsHashTable -AsString
+        $Failed = [System.Collections.Generic.List[object]]::new()
         foreach ($D in $Sending) {
-            $Cfg = $Dkim | Where-Object { $_.Domain -eq $D.DomainName } | Select-Object -First 1
+            $Cfg = $null
+            if ($DkimByDomain.ContainsKey($D.DomainName)) { $Cfg = @($DkimByDomain[$D.DomainName])[0] }
             if (-not $Cfg -or $Cfg.Enabled -ne $true) {
-                $Failed += [PSCustomObject]@{ Domain = $D.DomainName; Enabled = $Cfg.Enabled }
+                $Failed.Add([PSCustomObject]@{ Domain = $D.DomainName; Enabled = $Cfg.Enabled })
             }
         }
 
