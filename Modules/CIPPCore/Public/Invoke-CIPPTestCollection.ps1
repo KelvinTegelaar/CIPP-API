@@ -53,21 +53,6 @@ function Invoke-CIPPTestCollection {
         GenericTests     = 'Invoke-CippTestGenericTest*'
     }
 
-    # Process-scoped cache of Get-Command lookups so each (tenant × suite) invocation
-    # doesn't pay the module command-table walk again. The CIPPTests module is loaded
-    # once per worker process and its exported function set does not change at runtime.
-    if (-not $script:CIPPTestSuiteFunctionCache) {
-        $script:CIPPTestSuiteFunctionCache = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        Write-Information "[CacheInit] CIPPTestSuiteFunctionCache initialized in PID $PID"
-    }
-    if (-not $script:CIPPTestCustomFunctionResolved) {
-        Write-Information "[CacheMiss] CIPPTestCustomFunction PID=$PID - resolving Invoke-CippTestCustomScripts via Get-Command"
-        $script:CIPPTestCustomFunction = Get-Command -Name 'Invoke-CippTestCustomScripts' -ErrorAction SilentlyContinue
-        $script:CIPPTestCustomFunctionResolved = $true
-    } else {
-        Write-Information "[CacheHit] CIPPTestCustomFunction PID=$PID Resolved=$([bool]$script:CIPPTestCustomFunction)"
-    }
-
     $SuiteStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     $SuccessCount = 0
     $FailedCount = 0
@@ -77,7 +62,7 @@ function Invoke-CIPPTestCollection {
     # Custom suite: Invoke-CippTestCustomScripts now requires a ScriptGuid parameter.
     # Enumerate distinct enabled script guids from the DB and call once per guid.
     if ($SuiteName -eq 'Custom') {
-        if (-not $script:CIPPTestCustomFunction) {
+        if (-not (Get-Command -Name 'Invoke-CippTestCustomScripts' -ErrorAction SilentlyContinue)) {
             Write-Information 'Invoke-CippTestCustomScripts not found — skipping Custom suite'
             return @{ SuiteName = $SuiteName; TenantFilter = $TenantFilter; Success = 0; Failed = 0; Total = 0; TotalSeconds = 0; Timings = @(); Errors = @() }
         }
@@ -177,16 +162,8 @@ function Invoke-CIPPTestCollection {
     }
 
     # Standard suites: discover functions by name pattern via Get-Command.
-    # Cache the function list per suite so repeated activity invocations in the same
-    # process don't pay the module command-table walk again (item 7).
     $Pattern = $SuitePatterns[$SuiteName]
-    if ($script:CIPPTestSuiteFunctionCache.ContainsKey($SuiteName)) {
-        Write-Information "[CacheHit] CIPPTestSuiteFunctionCache PID=$PID Suite=$SuiteName Size=$($script:CIPPTestSuiteFunctionCache.Count)"
-    } else {
-        Write-Information "[CacheMiss] CIPPTestSuiteFunctionCache PID=$PID Suite=$SuiteName Size=$($script:CIPPTestSuiteFunctionCache.Count) - resolving pattern '$Pattern' via Get-Command"
-        $script:CIPPTestSuiteFunctionCache[$SuiteName] = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
-    }
-    $TestFunctions = $script:CIPPTestSuiteFunctionCache[$SuiteName]
+    $TestFunctions = @(Get-Command -Name $Pattern -Module CIPPTests -ErrorAction SilentlyContinue)
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"
         return @{
