@@ -28,17 +28,17 @@ function Invoke-CippTestORCA118_1 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No anti-spam policies have allowed sender domains configured.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("No anti-spam policies have allowed sender domains configured.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies have allowed sender domains configured.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Allowed Sender Domains Count |`n"
-            $Result += "|------------|------------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies have allowed sender domains configured.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Allowed Sender Domains Count |`n")
+            $null = $Result.Append("|------------|------------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
                 $Count = if ($Policy.AllowedSenderDomains) { $Policy.AllowedSenderDomains.Count } else { 0 }
-                $Result += "| $($Policy.Identity) | $Count |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $Count |`n")
             }
         }
 

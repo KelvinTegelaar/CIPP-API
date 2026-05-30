@@ -63,13 +63,13 @@ function Invoke-CippTestORCA239 {
 
         if ($Issues.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No exclusions found in built-in protection policies."
+            $Result = [System.Text.StringBuilder]::new("No exclusions found in built-in protection policies.")
         } else {
             $Status = 'Failed'
-            $Result = "Found $($Issues.Count) policies with exclusions that bypass built-in protection.`n`n"
-            $Result += "**Issues Found:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("Found $($Issues.Count) policies with exclusions that bypass built-in protection.`n`n")
+            $null = $Result.Append("**Issues Found:**`n`n")
             foreach ($Issue in $Issues) {
-                $Result += "- $Issue`n"
+                $null = $Result.Append("- $Issue`n")
             }
         }
 

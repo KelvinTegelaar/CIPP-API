@@ -26,16 +26,16 @@ function Invoke-CippTestORCA236 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Links policies have email protection enabled.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Links policies have email protection enabled.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Links policies do not have email protection enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Enable Safe Links For Email |`n"
-            $Result += "|------------|----------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Links policies do not have email protection enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Enable Safe Links For Email |`n")
+            $null = $Result.Append("|------------|----------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.EnableSafeLinksForEmail) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.EnableSafeLinksForEmail) |`n")
             }
         }
 

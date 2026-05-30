@@ -43,10 +43,10 @@ function Invoke-CippTestCopilotReady015 {
         $DisplayUsers = $ActiveUsers | Sort-Object lastActivityDate -Descending | Select-Object -First 50
         foreach ($User in $DisplayUsers) {
             $LastActive = if ($User.lastActivityDate) { $User.lastActivityDate } else { 'N/A' }
-            $Row = "| $($User.userPrincipalName) | $LastActive |"
+            $Row = [System.Text.StringBuilder]::new("| $($User.userPrincipalName) | $LastActive |")
             foreach ($Col in $AppColumns) {
                 $Val = $User.$Col
-                $Row += " $Val |"
+                $null = $Row.Append(" $Val |")
             }
             $Result += "$Row`n"
         }

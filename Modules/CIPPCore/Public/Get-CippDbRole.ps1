@@ -11,7 +11,7 @@ function Get-CippDbRole {
         [switch]$CisaHighlyPrivilegedRoles
     )
 
-    $Roles = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Roles'
+    $Roles = Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Roles'
 
     if ($IncludePrivilegedRoles) {
         $PrivilegedRoleTemplateIds = @(

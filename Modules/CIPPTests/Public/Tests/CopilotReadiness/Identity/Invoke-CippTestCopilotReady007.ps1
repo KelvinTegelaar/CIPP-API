@@ -59,19 +59,19 @@ function Invoke-CippTestCopilotReady007 {
 
         if ($ChannelPercent -ge $ChannelThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$QualifiedCount of $TotalUsers M365 Apps licensed users ($ChannelPercent%)** are on Current Channel or Monthly Enterprise Channel — above the $ChannelThresholdPercent% threshold.`n`n"
-            $Result += 'These users will receive Copilot feature updates for desktop Word, Excel, PowerPoint, Outlook, and OneNote.'
+            $Result = [System.Text.StringBuilder]::new("**$QualifiedCount of $TotalUsers M365 Apps licensed users ($ChannelPercent%)** are on Current Channel or Monthly Enterprise Channel — above the $ChannelThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('These users will receive Copilot feature updates for desktop Word, Excel, PowerPoint, Outlook, and OneNote.')
         } else {
             $Status = 'Failed'
-            $Result = "Only **$QualifiedCount of $TotalUsers M365 Apps licensed users ($ChannelPercent%)** are on a qualified update channel — below the $ChannelThresholdPercent% threshold.`n`n"
-            $Result += 'Copilot in M365 desktop apps requires **Current Channel** or **Monthly Enterprise Channel**. '
-            $Result += "Users on Semi-Annual Enterprise Channel or other update rings will not receive Copilot features.`n`n"
-            $Result += "To remediate, update the Microsoft 365 Apps update channel via Microsoft Intune, Microsoft 365 admin center, or Group Policy.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$QualifiedCount of $TotalUsers M365 Apps licensed users ($ChannelPercent%)** are on a qualified update channel — below the $ChannelThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('Copilot in M365 desktop apps requires **Current Channel** or **Monthly Enterprise Channel**. ')
+            $null = $Result.Append("Users on Semi-Annual Enterprise Channel or other update rings will not receive Copilot features.`n`n")
+            $null = $Result.Append("To remediate, update the Microsoft 365 Apps update channel via Microsoft Intune, Microsoft 365 admin center, or Group Policy.`n`n")
             if ($NotQualifiedUsers.Count -gt 0 -and $NotQualifiedUsers.Count -le 20) {
-                $Result += "**Users not on a qualified update channel:**`n"
-                foreach ($Upn in $NotQualifiedUsers) { $Result += "- $Upn`n" }
+                $null = $Result.Append("**Users not on a qualified update channel:**`n")
+                foreach ($Upn in $NotQualifiedUsers) { $null = $Result.Append("- $Upn`n") }
             } elseif ($NotQualifiedUsers.Count -gt 20) {
-                $Result += "**$($NotQualifiedUsers.Count) users** are not on a qualified update channel."
+                $null = $Result.Append("**$($NotQualifiedUsers.Count) users** are not on a qualified update channel.")
             }
         }
 
