@@ -16,15 +16,12 @@ function Invoke-CippTestZTNA21782 {
 
         $PhishResistantMethods = @('passKeyDeviceBound', 'passKeyDeviceBoundAuthenticator', 'windowsHelloForBusiness')
 
-        # Join user registration details with role assignments
-        $results = $UserRegistrationDetails | Where-Object {
-            $userId = $_.id
-            $RoleAssignments | Where-Object { $_.principalId -eq $userId }
-        } | ForEach-Object {
-            $user = $_
-            $userRoles = $RoleAssignments | Where-Object { $_.principalId -eq $user.id }
+        $RoleAssignmentsByPrincipal = $RoleAssignments | Group-Object principalId -AsHashTable -AsString
+        $results = [System.Collections.Generic.List[object]]::new()
+        foreach ($user in $UserRegistrationDetails) {
+            if (-not $RoleAssignmentsByPrincipal.ContainsKey($user.id)) { continue }
+            $userRoles = $RoleAssignmentsByPrincipal[$user.id]
             $hasPhishResistant = $false
-
             if ($user.methodsRegistered) {
                 foreach ($method in $PhishResistantMethods) {
                     if ($user.methodsRegistered -contains $method) {
@@ -33,21 +30,20 @@ function Invoke-CippTestZTNA21782 {
                     }
                 }
             }
-
-            [PSCustomObject]@{
+            $results.Add([PSCustomObject]@{
                 id                       = $user.id
                 userDisplayName          = $user.userDisplayName
                 roleDisplayName          = ($userRoles.roleDefinitionName -join ', ')
                 methodsRegistered        = $user.methodsRegistered
                 phishResistantAuthMethod = $hasPhishResistant
-            }
+            })
         }
 
-        $totalUserCount = $results.Length
-        $phishResistantPrivUsers = $results | Where-Object { $_.phishResistantAuthMethod }
-        $phishablePrivUsers = $results | Where-Object { !$_.phishResistantAuthMethod }
+        $totalUserCount = $results.Count
+        $phishResistantPrivUsers = $results.Where({ $_.phishResistantAuthMethod })
+        $phishablePrivUsers = $results.Where({ !$_.phishResistantAuthMethod })
 
-        $phishResistantPrivUserCount = $phishResistantPrivUsers.Length
+        $phishResistantPrivUserCount = $phishResistantPrivUsers.Count
 
         $passed = $totalUserCount -eq $phishResistantPrivUserCount
 

@@ -22,8 +22,12 @@ function Invoke-CippTestGenericTest006 {
         }
 
         $TotalUsers = $StandardUsers.Count
-        $MFARegistered = @($StandardUsers | Where-Object { $_.MFARegistration -eq $true }).Count
-        $NotProtected = @($StandardUsers | Where-Object { $_.CoveredByCA -notlike 'Enforced*' -and $_.CoveredBySD -ne $true -and $_.PerUser -notin @('Enforced', 'Enabled') }).Count
+        $MFARegistered = 0
+        $NotProtected = 0
+        foreach ($u in $StandardUsers) {
+            if ($u.MFARegistration -eq $true) { $MFARegistered++ }
+            if ($u.CoveredByCA -notlike 'Enforced*' -and $u.CoveredBySD -ne $true -and $u.PerUser -notin @('Enforced', 'Enabled')) { $NotProtected++ }
+        }
         $MFARegPct = if ($TotalUsers -gt 0) { [math]::Round(($MFARegistered / $TotalUsers) * 100, 1) } else { 0 }
 
         $Result = [System.Text.StringBuilder]::new("**Total Users:** $TotalUsers | **MFA Registered:** $MFARegistered ($MFARegPct%)")

@@ -13,15 +13,14 @@ function Invoke-CippTestORCA104 {
             return
         }
 
-        $FailedPolicies = @()
-        $PassedPolicies = @()
+        $FailedPolicies = [System.Collections.Generic.List[object]]::new()
+        $PassedPolicies = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Policy in $AntiPhishPolicies) {
-            # Check if HighConfidencePhishAction is set to Quarantine
             if ($Policy.HighConfidencePhishAction -eq 'Quarantine') {
-                $PassedPolicies += $Policy
+                $PassedPolicies.Add($Policy)
             } else {
-                $FailedPolicies += $Policy
+                $FailedPolicies.Add($Policy)
             }
         }
 

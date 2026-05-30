@@ -155,11 +155,11 @@ function Invoke-CippTestGenericTest011 {
                 continue
             }
 
-            # Split into categories
-            $CompliantItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Compliant' })
-            $NonCompliantItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' })
-            $LicenseMissingItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'License Missing' })
-            $ReportingDisabledItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Reporting Disabled' })
+            $ByStatus = $Details | Group-Object ComplianceStatus -AsHashTable -AsString
+            $CompliantItems = @($ByStatus['Compliant'])
+            $NonCompliantItems = @($ByStatus['Non-Compliant'])
+            $LicenseMissingItems = @($ByStatus['License Missing'])
+            $ReportingDisabledItems = @($ByStatus['Reporting Disabled'])
 
             # Helper to resolve and skip unresolvable template items
             $TemplateSettings = $Template.standardSettings

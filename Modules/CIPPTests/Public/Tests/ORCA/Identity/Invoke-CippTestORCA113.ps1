@@ -13,15 +13,14 @@ function Invoke-CippTestORCA113 {
             return
         }
 
-        $FailedPolicies = @()
-        $PassedPolicies = @()
+        $FailedPolicies = [System.Collections.Generic.List[object]]::new()
+        $PassedPolicies = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Policy in $SafeLinksPolicies) {
-            # Check if DoNotAllowClickThrough is set to true (which means AllowClickThrough is disabled)
             if ($Policy.DoNotAllowClickThrough -eq $true) {
-                $PassedPolicies += $Policy
+                $PassedPolicies.Add($Policy)
             } else {
-                $FailedPolicies += $Policy
+                $FailedPolicies.Add($Policy)
             }
         }
 

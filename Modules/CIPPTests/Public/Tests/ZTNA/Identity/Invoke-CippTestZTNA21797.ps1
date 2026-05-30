@@ -33,7 +33,7 @@ function Invoke-CippTestZTNA21797 {
         }
 
         $passwordlessEnabled = $false
-        $passwordlessAuthMethods = @()
+        $passwordlessAuthMethods = [System.Collections.Generic.List[object]]::new()
 
         if ($authMethodsPolicy.authenticationMethodConfigurations) {
             foreach ($method in $authMethodsPolicy.authenticationMethodConfigurations) {
@@ -55,11 +55,11 @@ function Invoke-CippTestZTNA21797 {
 
                 if ($isPasswordless) {
                     $passwordlessEnabled = $true
-                    $passwordlessAuthMethods += [PSCustomObject]@{
+                    $passwordlessAuthMethods.Add([PSCustomObject]@{
                         Name           = $methodName
                         State          = $methodState
                         AdditionalInfo = $additionalInfo
-                    }
+                    })
                 }
             }
         }

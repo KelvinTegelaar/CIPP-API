@@ -25,9 +25,14 @@ function Invoke-CippTestGenericTest008 {
             return
         }
 
-        $EnforcedCount = @($PerUserMFAUsers | Where-Object { $_.PerUser -eq 'Enforced' }).Count
-        $EnabledCount = @($PerUserMFAUsers | Where-Object { $_.PerUser -eq 'Enabled' }).Count
-        $AdminsAffected = @($PerUserMFAUsers | Where-Object { $_.IsAdmin -eq $true }).Count
+        $EnforcedCount = 0
+        $EnabledCount = 0
+        $AdminsAffected = 0
+        foreach ($u in $PerUserMFAUsers) {
+            if ($u.PerUser -eq 'Enforced') { $EnforcedCount++ }
+            if ($u.PerUser -eq 'Enabled') { $EnabledCount++ }
+            if ($u.IsAdmin -eq $true) { $AdminsAffected++ }
+        }
 
         $null = $Result.Append("### Current Status`n`n")
         $null = $Result.Append("**⚠️ $($PerUserMFAUsers.Count) account(s) are still using legacy Per-User MFA.**`n`n")
