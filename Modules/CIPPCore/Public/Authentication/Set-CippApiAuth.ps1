@@ -128,15 +128,15 @@ function Set-CippApiAuth {
             } -Force
         }
 
-        $AuthSettings.properties.globalValidation = @{
+        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'globalValidation' -Value @{
             unauthenticatedClientAction = 'Return401'
-        }
-        $AuthSettings.properties.login = @{
+        } -Force
+        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'login' -Value @{
             tokenStore = @{
                 enabled                    = $true
                 tokenRefreshExtensionHours = 72
             }
-        }
+        } -Force
 
         if ($PSCmdlet.ShouldProcess('Update auth settings')) {
             $putUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
