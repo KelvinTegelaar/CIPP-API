@@ -28,17 +28,17 @@ $FailedPolicies = [System.Collections.Generic.List[object]]::new()
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No anti-spam policies have IP allow lists configured.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("No anti-spam policies have IP allow lists configured.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies have IP allow lists configured.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | IP Allow List Count |`n"
-            $Result += "|------------|-------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies have IP allow lists configured.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | IP Allow List Count |`n")
+            $null = $Result.Append("|------------|-------------------|`n")
             foreach ($Policy in $FailedPolicies) {
                 $IPCount = if ($Policy.IPAllowList) { $Policy.IPAllowList.Count } else { 0 }
-                $Result += "| $($Policy.Identity) | $IPCount |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $IPCount |`n")
             }
         }
 

@@ -24,18 +24,32 @@ function Invoke-CippTestZTNA21816 {
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
         $Groups = Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups'
 
-        $EligibleGAs = $RoleEligibilitySchedules | Where-Object { $_.roleDefinitionId -eq $GlobalAdminRoleId }
+        $EligibleGAs = $RoleEligibilitySchedules.Where({ $_.roleDefinitionId -eq $GlobalAdminRoleId })
         $EligibleGAUsers = 0
 
+        # Build id-keyed lookups once to avoid O(N*M) Where-Object scans
+        $UsersById = @{}
+        foreach ($U in $Users) { $UsersById[$U.id] = $U }
+        $GroupsById = @{}
+        foreach ($G in $Groups) { $GroupsById[$G.id] = $G }
+        # Composite-key lookup: principalId|roleDefinitionId
+        $AssignmentByPrincipalRole = @{}
+        foreach ($A in $RoleAssignmentScheduleInstances) {
+            $key = '{0}|{1}' -f $A.principalId, $A.roleDefinitionId
+            if (-not $AssignmentByPrincipalRole.ContainsKey($key)) {
+                $AssignmentByPrincipalRole[$key] = $A
+            }
+        }
+
         foreach ($EligibleGA in $EligibleGAs) {
-            $Principal = $Users | Where-Object { $_.id -eq $EligibleGA.principalId } | Select-Object -First 1
+            $Principal = $UsersById[$EligibleGA.principalId]
             if ($Principal) {
                 $EligibleGAUsers++
             } else {
-                $GroupPrincipal = $Groups | Where-Object { $_.id -eq $EligibleGA.principalId } | Select-Object -First 1
-                if ($GroupPrincipal) {
-                    $GroupMembers = $Users | Where-Object { $_.id -in $GroupPrincipal.members }
-                    $EligibleGAUsers = $EligibleGAUsers + $GroupMembers.Count
+                $GroupPrincipal = $GroupsById[$EligibleGA.principalId]
+                if ($GroupPrincipal -and $GroupPrincipal.members) {
+                    $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$GroupPrincipal.members)
+                    foreach ($U in $Users) { if ($MemberSet.Contains($U.id)) { $EligibleGAUsers++ } }
                 }
             }
         }
@@ -46,9 +60,7 @@ function Invoke-CippTestZTNA21816 {
             $RoleMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $Role.RoletemplateId
 
             foreach ($Member in $RoleMembers) {
-                $Assignment = $RoleAssignmentScheduleInstances | Where-Object {
-                    $_.principalId -eq $Member.id -and $_.roleDefinitionId -eq $Role.RoletemplateId
-                } | Select-Object -First 1
+                $Assignment = $AssignmentByPrincipalRole['{0}|{1}' -f $Member.id, $Role.RoletemplateId]
 
                 if (-not $Assignment -or ($Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime)) {
                     $MemberInfo = [PSCustomObject]@{
@@ -72,9 +84,7 @@ function Invoke-CippTestZTNA21816 {
         $GAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $GlobalAdminRoleId
 
         foreach ($Member in $GAMembers) {
-            $Assignment = $RoleAssignmentScheduleInstances | Where-Object {
-                $_.principalId -eq $Member.id -and $_.roleDefinitionId -eq $GlobalAdminRoleId
-            } | Select-Object -First 1
+            $Assignment = $AssignmentByPrincipalRole['{0}|{1}' -f $Member.id, $GlobalAdminRoleId]
 
             if (-not $Assignment -or ($Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime)) {
                 $MemberInfo = [PSCustomObject]@{
@@ -88,7 +98,7 @@ function Invoke-CippTestZTNA21816 {
                 }
 
                 if ($Member.'@odata.type' -eq '#microsoft.graph.user') {
-                    $UserDetail = $Users | Where-Object { $_.id -eq $Member.id } | Select-Object -First 1
+                    $UserDetail = $UsersById[$Member.id]
                     if ($UserDetail) {
                         $MemberInfo.onPremisesSyncEnabled = $UserDetail.onPremisesSyncEnabled
                     }
@@ -96,10 +106,11 @@ function Invoke-CippTestZTNA21816 {
                 } elseif ($Member.'@odata.type' -eq '#microsoft.graph.group') {
                     $PermanentGAGroupList.Add($MemberInfo)
 
-                    $Group = $Groups | Where-Object { $_.id -eq $Member.id } | Select-Object -First 1
-                    if ($Group) {
-                        $GroupMembers = $Users | Where-Object { $_.id -in $Group.members }
-                        foreach ($GroupMember in $GroupMembers) {
+                    $Group = $GroupsById[$Member.id]
+                    if ($Group -and $Group.members) {
+                        $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$Group.members)
+                        foreach ($GroupMember in $Users) {
+                            if (-not $MemberSet.Contains($GroupMember.id)) { continue }
                             $GroupMemberInfo = [PSCustomObject]@{
                                 displayName           = $GroupMember.displayName
                                 userPrincipalName     = $GroupMember.userPrincipalName
@@ -123,53 +134,53 @@ function Invoke-CippTestZTNA21816 {
 
         if (-not $HasPIMUsage) {
             $Passed = $false
-            $ResultMarkdown = 'No eligible Global Administrator assignments found. PIM usage cannot be confirmed.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('No eligible Global Administrator assignments found. PIM usage cannot be confirmed.')
         } elseif ($HasNonPIMPrivileged) {
             $Passed = $false
-            $ResultMarkdown = 'Found Microsoft Entra privileged role assignments that are not managed with PIM.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Found Microsoft Entra privileged role assignments that are not managed with PIM.')
         } elseif ($PermanentGACount -gt 2) {
             $Passed = $false
             $CustomStatus = 'Investigate'
-            $ResultMarkdown = 'Three or more accounts are permanently assigned the Global Administrator role. Review to determine whether these are emergency access accounts.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Three or more accounts are permanently assigned the Global Administrator role. Review to determine whether these are emergency access accounts.')
         } else {
             $Passed = $true
-            $ResultMarkdown = 'All Microsoft Entra privileged role assignments are managed with PIM with the exception of up to two standing Global Administrator accounts.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('All Microsoft Entra privileged role assignments are managed with PIM with the exception of up to two standing Global Administrator accounts.')
         }
 
-        $ResultMarkdown += "`n`n## Assessment summary`n`n"
-        $ResultMarkdown += "| Metric | Count |`n"
-        $ResultMarkdown += "| :----- | :---- |`n"
-        $ResultMarkdown += "| Privileged roles found | $($PrivilegedRoles.Count) |`n"
-        $ResultMarkdown += "| Eligible Global Administrators | $EligibleGAUsers |`n"
-        $ResultMarkdown += "| Non-PIM privileged users | $($NonPIMPrivilegedUsers.Count) |`n"
-        $ResultMarkdown += "| Non-PIM privileged groups | $($NonPIMPrivilegedGroups.Count) |`n"
-        $ResultMarkdown += "| Permanent Global Administrator users | $($PermanentGAUserList.Count) |`n"
+        $null = $ResultMarkdown.Append("`n`n## Assessment summary`n`n")
+        $null = $ResultMarkdown.Append("| Metric | Count |`n")
+        $null = $ResultMarkdown.Append("| :----- | :---- |`n")
+        $null = $ResultMarkdown.Append("| Privileged roles found | $($PrivilegedRoles.Count) |`n")
+        $null = $ResultMarkdown.Append("| Eligible Global Administrators | $EligibleGAUsers |`n")
+        $null = $ResultMarkdown.Append("| Non-PIM privileged users | $($NonPIMPrivilegedUsers.Count) |`n")
+        $null = $ResultMarkdown.Append("| Non-PIM privileged groups | $($NonPIMPrivilegedGroups.Count) |`n")
+        $null = $ResultMarkdown.Append("| Permanent Global Administrator users | $($PermanentGAUserList.Count) |`n")
 
         if ($NonPIMPrivilegedUsers.Count -gt 0 -or $NonPIMPrivilegedGroups.Count -gt 0) {
-            $ResultMarkdown += "`n## Non-PIM managed privileged role assignments`n`n"
-            $ResultMarkdown += "| Display name | User principal name | Role name | Assignment type |`n"
-            $ResultMarkdown += "| :----------- | :------------------ | :-------- | :-------------- |`n"
+            $null = $ResultMarkdown.Append("`n## Non-PIM managed privileged role assignments`n`n")
+            $null = $ResultMarkdown.Append("| Display name | User principal name | Role name | Assignment type |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :------------------ | :-------- | :-------------- |`n")
 
             foreach ($User in $NonPIMPrivilegedUsers) {
                 $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($User.id)/hidePreviewBanner~/true"
-                $ResultMarkdown += "| [$($User.displayName)]($UserLink) | $($User.userPrincipalName) | $($User.roleName) | $($User.assignmentType) |`n"
+                $null = $ResultMarkdown.Append("| [$($User.displayName)]($UserLink) | $($User.userPrincipalName) | $($User.roleName) | $($User.assignmentType) |`n")
             }
 
             foreach ($Group in $NonPIMPrivilegedGroups) {
                 $GroupLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/RolesAndAdministrators/groupId/$($Group.id)/menuId/"
-                $ResultMarkdown += "| [$($Group.displayName)]($GroupLink) | N/A (Group) | $($Group.roleName) | $($Group.assignmentType) |`n"
+                $null = $ResultMarkdown.Append("| [$($Group.displayName)]($GroupLink) | N/A (Group) | $($Group.roleName) | $($Group.assignmentType) |`n")
             }
         }
 
         if ($PermanentGAUserList.Count -gt 0) {
-            $ResultMarkdown += "`n## Permanent Global Administrator assignments`n`n"
-            $ResultMarkdown += "| Display name | User principal name | Assignment type | On-Premises synced |`n"
-            $ResultMarkdown += "| :----------- | :------------------ | :-------------- | :----------------- |`n"
+            $null = $ResultMarkdown.Append("`n## Permanent Global Administrator assignments`n`n")
+            $null = $ResultMarkdown.Append("| Display name | User principal name | Assignment type | On-Premises synced |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :------------------ | :-------------- | :----------------- |`n")
 
             foreach ($User in $PermanentGAUserList) {
                 $SyncStatus = if ($null -ne $User.onPremisesSyncEnabled) { $User.onPremisesSyncEnabled } else { 'N/A' }
                 $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($User.id)/hidePreviewBanner~/true"
-                $ResultMarkdown += "| [$($User.displayName)]($UserLink) | $($User.userPrincipalName) | $($User.assignmentType) | $SyncStatus |`n"
+                $null = $ResultMarkdown.Append("| [$($User.displayName)]($UserLink) | $($User.userPrincipalName) | $($User.assignmentType) | $SyncStatus |`n")
             }
         }
 

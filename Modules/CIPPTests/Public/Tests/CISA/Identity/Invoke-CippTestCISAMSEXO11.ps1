@@ -26,14 +26,14 @@ function Invoke-CippTestCISAMSEXO11 {
         $ForwardingEnabledDomains = $RemoteDomains | Where-Object { $_.AutoForwardEnabled -eq $true }
 
         if (($ForwardingEnabledDomains | Measure-Object).Count -eq 0) {
-            $Result = '✅ **Pass**: Automatic forwarding to external domains is disabled for all remote domains.'
+            $Result = [System.Text.StringBuilder]::new('✅ **Pass**: Automatic forwarding to external domains is disabled for all remote domains.')
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($ForwardingEnabledDomains.Count) domain(s) have automatic forwarding enabled:`n`n"
-            $Result += "| Domain Name | Auto Forward |`n"
-            $Result += "| :---------- | :----------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($ForwardingEnabledDomains.Count) domain(s) have automatic forwarding enabled:`n`n")
+            $null = $Result.Append("| Domain Name | Auto Forward |`n")
+            $null = $Result.Append("| :---------- | :----------- |`n")
             foreach ($Domain in $ForwardingEnabledDomains) {
-                $Result += "| $($Domain.DomainName) | $($Domain.AutoForwardEnabled) |`n"
+                $null = $Result.Append("| $($Domain.DomainName) | $($Domain.AutoForwardEnabled) |`n")
             }
             $Status = 'Failed'
         }

@@ -32,31 +32,31 @@ function Invoke-CippTestGenericTest009 {
         $ScoreChange = [math]::Round($CurrentScore - $OldestScore, 1)
         $TrendIcon = if ($ScoreChange -gt 0) { "📈 +$ScoreChange" } elseif ($ScoreChange -lt 0) { "📉 $ScoreChange" } else { '➡️ No change' }
 
-        $Result = "### Current Score`n`n"
-        $Result += "| Metric | Value |`n"
-        $Result += "|--------|-------|`n"
-        $Result += "| Current Score | **$CurrentScore** out of $MaxScore ($ScorePct%) |`n"
-        $Result += "| 14-Day Trend | $TrendIcon |`n"
-        $Result += "| Data Points | $($SortedScores.Count) days |`n`n"
+        $Result = [System.Text.StringBuilder]::new("### Current Score`n`n")
+        $null = $Result.Append("| Metric | Value |`n")
+        $null = $Result.Append("|--------|-------|`n")
+        $null = $Result.Append("| Current Score | **$CurrentScore** out of $MaxScore ($ScorePct%) |`n")
+        $null = $Result.Append("| 14-Day Trend | $TrendIcon |`n")
+        $null = $Result.Append("| Data Points | $($SortedScores.Count) days |`n`n")
 
         if ($ScorePct -ge 80) {
-            $Result += "**✅ Strong security posture.** Your score is in the top tier. Keep monitoring to maintain this level.`n`n"
+            $null = $Result.Append("**✅ Strong security posture.** Your score is in the top tier. Keep monitoring to maintain this level.`n`n")
         } elseif ($ScorePct -ge 50) {
-            $Result += "**🟡 Moderate security posture.** There's room for improvement. Review the recommended actions in your Microsoft 365 Security portal.`n`n"
+            $null = $Result.Append("**🟡 Moderate security posture.** There's room for improvement. Review the recommended actions in your Microsoft 365 Security portal.`n`n")
         } else {
-            $Result += "**🔴 Low security posture.** Significant improvements are recommended. Focus on the high-impact actions first.`n`n"
+            $null = $Result.Append("**🔴 Low security posture.** Significant improvements are recommended. Focus on the high-impact actions first.`n`n")
         }
 
-        $Result += "### 14-Day Score Trend`n`n"
-        $Result += "| Date | Score | Max Score | Percentage |`n"
-        $Result += "|------|-------|-----------|------------|`n"
+        $null = $Result.Append("### 14-Day Score Trend`n`n")
+        $null = $Result.Append("| Date | Score | Max Score | Percentage |`n")
+        $null = $Result.Append("|------|-------|-----------|------------|`n")
 
         foreach ($Score in $SortedScores) {
             $DateStr = if ($Score.createdDateTime) { ([datetime]$Score.createdDateTime).ToString('yyyy-MM-dd') } else { 'Unknown' }
             $DayScore = [math]::Round([double]$Score.currentScore, 1)
             $DayMax = [math]::Round([double]$Score.maxScore, 1)
             $DayPct = if ($DayMax -gt 0) { [math]::Round(($DayScore / $DayMax) * 100, 1) } else { 0 }
-            $Result += "| $DateStr | $DayScore | $DayMax | $DayPct% |`n"
+            $null = $Result.Append("| $DateStr | $DayScore | $DayMax | $DayPct% |`n")
         }
 
         # Show top improvable controls if available
@@ -79,12 +79,12 @@ function Invoke-CippTestGenericTest009 {
             } | Where-Object { $_.Gap -gt 0 } | Sort-Object Gap -Descending | Select-Object -First 10)
 
             if ($ImprovableControls.Count -gt 0) {
-                $Result += "`n### Top Improvement Opportunities`n`n"
-                $Result += "| Control | Current | Max | Points Available |`n"
-                $Result += "|---------|---------|-----|-----------------|`n"
+                $null = $Result.Append("`n### Top Improvement Opportunities`n`n")
+                $null = $Result.Append("| Control | Current | Max | Points Available |`n")
+                $null = $Result.Append("|---------|---------|-----|-----------------|`n")
 
                 foreach ($Control in $ImprovableControls) {
-                    $Result += "| $($Control.Name) | $($Control.Score) | $($Control.MaxScore) | +$($Control.Gap) |`n"
+                    $null = $Result.Append("| $($Control.Name) | $($Control.Score) | $($Control.MaxScore) | +$($Control.Gap) |`n")
                 }
             }
         }

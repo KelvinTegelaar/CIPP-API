@@ -17,12 +17,12 @@ function Invoke-CippTestORCA240 {
 
         if ($Config.ExternalInOutlook -ne 'Disabled') {
             $Status = 'Passed'
-            $Result = "Outlook external tags are configured.`n`n"
-            $Result += "**ExternalInOutlook:** $($Config.ExternalInOutlook)"
+            $Result = [System.Text.StringBuilder]::new("Outlook external tags are configured.`n`n")
+            $null = $Result.Append("**ExternalInOutlook:** $($Config.ExternalInOutlook)")
         } else {
             $Status = 'Failed'
-            $Result = "Outlook external tags are NOT configured.`n`n"
-            $Result += "**ExternalInOutlook:** $($Config.ExternalInOutlook)"
+            $Result = [System.Text.StringBuilder]::new("Outlook external tags are NOT configured.`n`n")
+            $null = $Result.Append("**ExternalInOutlook:** $($Config.ExternalInOutlook)")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA240' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Outlook external tags are configured' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Configuration'

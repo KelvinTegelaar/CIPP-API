@@ -17,7 +17,7 @@ function Invoke-CippTestGenericTest010 {
         $CapabilityProperties = $Capabilities.PSObject.Properties | Where-Object { $_.Value -eq $true }
 
         if (-not $CapabilityProperties -or $CapabilityProperties.Count -eq 0) {
-            $Result = "No active service plans were found for this tenant. This is unusual and may indicate a licensing issue."
+            $Result = [System.Text.StringBuilder]::new("No active service plans were found for this tenant. This is unusual and may indicate a licensing issue.")
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest010' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Tenant Capabilities Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
         }
@@ -33,7 +33,7 @@ function Invoke-CippTestGenericTest010 {
             }
         }
 
-        $Result = "**Total Active Capabilities:** $($CapabilityProperties.Count)`n`n"
+        $Result = [System.Text.StringBuilder]::new("**Total Active Capabilities:** $($CapabilityProperties.Count)`n`n")
 
         # Categorize capabilities into logical groups
         $Categories = [ordered]@{
@@ -54,9 +54,9 @@ function Invoke-CippTestGenericTest010 {
             $CategoryPlans = @($AllPlanNames | Where-Object { $_ -in $Categories[$CategoryName] })
             if ($CategoryPlans.Count -eq 0) { continue }
 
-            $Result += "### $CategoryName`n`n"
-            $Result += "| Capability | Service Plan |`n"
-            $Result += "|------------|-------------|`n"
+            $null = $Result.Append("### $CategoryName`n`n")
+            $null = $Result.Append("| Capability | Service Plan |`n")
+            $null = $Result.Append("|------------|-------------|`n")
 
             foreach ($Plan in ($CategoryPlans | Sort-Object)) {
                 $FriendlyName = if ($FriendlyNameMap.ContainsKey($Plan)) {
@@ -65,17 +65,17 @@ function Invoke-CippTestGenericTest010 {
                     # Convert raw plan name to readable format
                     $Plan -replace '_', ' ' -replace '([a-z])([A-Z])', '$1 $2' -replace ' S ', ' ' -replace ' O365 ', ' ' -replace ' P\d$', '' -replace ' ENTERPRISE', '' -replace ' PREMIUM', ' Premium' -replace ' STANDARD', ''
                 }
-                $Result += "| $FriendlyName | $Plan |`n"
+                $null = $Result.Append("| $FriendlyName | $Plan |`n")
             }
-            $Result += "`n"
+            $null = $Result.Append("`n")
         }
 
         # Any uncategorized plans
         $Uncategorized = @($AllPlanNames | Where-Object { $_ -notin $CategorizedPlanNames })
         if ($Uncategorized.Count -gt 0) {
-            $Result += "### Other Capabilities`n`n"
-            $Result += "| Capability | Service Plan |`n"
-            $Result += "|------------|-------------|`n"
+            $null = $Result.Append("### Other Capabilities`n`n")
+            $null = $Result.Append("| Capability | Service Plan |`n")
+            $null = $Result.Append("|------------|-------------|`n")
 
             foreach ($Plan in ($Uncategorized | Sort-Object)) {
                 $FriendlyName = if ($FriendlyNameMap.ContainsKey($Plan)) {
@@ -83,7 +83,7 @@ function Invoke-CippTestGenericTest010 {
                 } else {
                     $Plan -replace '_', ' ' -replace '([a-z])([A-Z])', '$1 $2' -replace ' S ', ' ' -replace ' O365 ', ' ' -replace ' P\d$', '' -replace ' ENTERPRISE', '' -replace ' PREMIUM', ' Premium' -replace ' STANDARD', ''
                 }
-                $Result += "| $FriendlyName | $Plan |`n"
+                $null = $Result.Append("| $FriendlyName | $Plan |`n")
             }
         }
 

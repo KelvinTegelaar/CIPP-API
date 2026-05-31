@@ -58,11 +58,14 @@ function Start-CIPPDBTestsRun {
             return
         }
 
-        # Phase 1: Build per-tenant list activities (discover tests per tenant)
+        # Phase 1: Build per-tenant list activities (discover tests per tenant).
+        # The tenants below were already filtered by data presence above, so we pass
+        # SkipDbCheck=$true to avoid a redundant CountsOnly round-trip per tenant.
         $Batch = foreach ($Tenant in $AllTenantsList) {
             @{
                 FunctionName = 'CIPPTestsList'
                 TenantFilter = $Tenant
+                SkipDbCheck  = $true
             }
         }
 
