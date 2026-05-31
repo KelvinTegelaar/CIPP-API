@@ -95,7 +95,7 @@ function Set-CIPPSSOEasyAuth {
 
         # Safely navigate to AAD registration
         if (-not $Current.ContainsKey('identityProviders') -or $null -eq $Current.identityProviders) { $Current.identityProviders = @{} }
-        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders.azureActiveDirectory = @{} }
+        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{} -Force }
         $AAD = $Current.identityProviders.azureActiveDirectory
 
         if (-not $AAD.ContainsKey('registration') -or $null -eq $AAD.registration) { $AAD.registration = @{} }
@@ -131,10 +131,10 @@ function Set-CIPPSSOEasyAuth {
         # Full overwrite: initial setup — build the entire authsettingsV2 from scratch
         $AuthConfig = @{
             properties = @{
-                platform         = @{ enabled = $true }
-                globalValidation = @{
+                platform          = @{ enabled = $true }
+                globalValidation  = @{
                     unauthenticatedClientAction = 'RedirectToLoginPage'
-                    redirectToProvider           = 'azureactivedirectory'
+                    redirectToProvider          = 'azureactivedirectory'
                     excludedPaths               = @(
                         '/api/Public*'
                         '/api/setup/health'
@@ -144,17 +144,17 @@ function Set-CIPPSSOEasyAuth {
                     azureActiveDirectory = @{
                         enabled      = $true
                         registration = $(if ($ImplicitAuth) {
-                            @{
-                                clientId     = $AppId
-                                openIdIssuer = $IssuerUrl
-                            }
-                        } else {
-                            @{
-                                clientId               = $AppId
-                                clientSecretSettingName = 'AUTH_SECRET'
-                                openIdIssuer           = $IssuerUrl
-                            }
-                        })
+                                @{
+                                    clientId     = $AppId
+                                    openIdIssuer = $IssuerUrl
+                                }
+                            } else {
+                                @{
+                                    clientId                = $AppId
+                                    clientSecretSettingName = 'AUTH_SECRET'
+                                    openIdIssuer            = $IssuerUrl
+                                }
+                            })
                         validation   = @{
                             allowedAudiences           = @("api://$AppId")
                             defaultAuthorizationPolicy = @{
@@ -164,7 +164,7 @@ function Set-CIPPSSOEasyAuth {
                         }
                     }
                 }
-                login = @{
+                login             = @{
                     tokenStore = @{
                         enabled                    = $true
                         tokenRefreshExtensionHours = 72
