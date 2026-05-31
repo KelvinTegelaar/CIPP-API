@@ -41,7 +41,7 @@ function Set-CippApiAuth {
         # The env var has the raw config (identityProviders at top level, no properties wrapper)
         # Safely navigate/create the full path — any level may be null
         if (-not $Current.ContainsKey('identityProviders') -or $null -eq $Current.identityProviders) { $Current.identityProviders = @{} }
-        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders.azureActiveDirectory = @{} }
+        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{} -Force }
 
         $AAD = $Current.identityProviders.azureActiveDirectory
         Write-Information "[ApiAuth] AAD keys: $($AAD.Keys -join ', ')"
@@ -89,7 +89,7 @@ function Set-CippApiAuth {
             $PutUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
             $PutResult = New-CIPPAzRestRequest -Uri $PutUri -Method PUT -Body $PutBody -ContentType 'application/json' -ErrorAction Stop
             Write-Information "[ApiAuth] PUT result: $($PutResult | ConvertTo-Json -Depth 10 -Compress)"
-            Write-Information "[ApiAuth] Updated EasyAuth successfully"
+            Write-Information '[ApiAuth] Updated EasyAuth successfully'
         }
     } else {
         # Full overwrite path (no SSO EasyAuth config to preserve)
@@ -106,7 +106,7 @@ function Set-CippApiAuth {
         if (!$ClientIds) { $ClientIds = @() }
 
         if (($ClientIds | Measure-Object).Count -gt 0) {
-            $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
+            $AuthSettings.properties.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{
                 enabled      = $true
                 registration = @{
                     clientId     = $ClientIds[0] ?? $ClientIds
@@ -118,24 +118,25 @@ function Set-CippApiAuth {
                         allowedApplications = @($ClientIds)
                     }
                 }
-            }
+            } -Force
         } else {
-            $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
+            #Replaced with add-member -force
+            $AuthSettings.properties.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{
                 enabled      = $false
                 registration = @{}
                 validation   = @{}
-            }
+            } -Force
         }
 
-        $AuthSettings.properties.globalValidation = @{
+        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'globalValidation' -Value @{
             unauthenticatedClientAction = 'Return401'
-        }
-        $AuthSettings.properties.login = @{
+        } -Force
+        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'login' -Value @{
             tokenStore = @{
                 enabled                    = $true
                 tokenRefreshExtensionHours = 72
             }
-        }
+        } -Force
 
         if ($PSCmdlet.ShouldProcess('Update auth settings')) {
             $putUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
