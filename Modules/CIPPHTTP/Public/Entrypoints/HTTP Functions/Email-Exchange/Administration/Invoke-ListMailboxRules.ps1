@@ -9,6 +9,9 @@ function Invoke-ListMailboxRules {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    if (-not [string]::IsNullOrEmpty($TenantFilter) -and $TenantFilter -ne 'AllTenants') {
+        $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+    }
     $UseReportDB = $Request.Query.UseReportDB
 
     try {

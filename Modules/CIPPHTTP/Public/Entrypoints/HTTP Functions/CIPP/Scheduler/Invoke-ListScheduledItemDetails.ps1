@@ -21,9 +21,11 @@ function Invoke-ListScheduledItemDetails {
         return
     }
 
+    $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $RowKey -Type String
+
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$SafeRowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
         return ([HttpResponseContext]@{
@@ -95,7 +97,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Get the results if available
     $ResultsTable = Get-CIPPTable -TableName 'ScheduledTaskResults'
-    $ResultsFilter = "PartitionKey eq '$RowKey'"
+    $ResultsFilter = "PartitionKey eq '$SafeRowKey'"
 
     $Results = Get-CIPPAzDataTableEntity @ResultsTable -Filter $ResultsFilter
 
