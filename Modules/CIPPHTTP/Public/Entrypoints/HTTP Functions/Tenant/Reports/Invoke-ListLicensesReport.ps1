@@ -1,4 +1,4 @@
-function Invoke-ListLicenses {
+function Invoke-ListLicensesReport {
     <#
     .FUNCTIONALITY
         Entrypoint
