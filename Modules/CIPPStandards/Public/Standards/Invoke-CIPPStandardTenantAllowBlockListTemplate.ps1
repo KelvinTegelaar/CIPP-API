@@ -121,4 +121,46 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
             }
         }
     }
+
+    $MissingByTemplate = @(foreach ($TemplateData in $ResolvedTemplates) {
+        $Entries = @($TemplateData.entries -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+        $ExistingItems = try { New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{ ListType = $TemplateData.listType } } catch { @() }
+        $ExistingValues = @($ExistingItems | Select-Object -ExpandProperty Value)
+        $MissingEntries = @($Entries | Where-Object { $ExistingValues -notcontains $_ })
+        if ($MissingEntries.Count -gt 0) {
+            [PSCustomObject]@{
+                TemplateName   = $TemplateData.templateName
+                ListType       = $TemplateData.listType
+                Action         = $TemplateData.listMethod
+                MissingEntries = $MissingEntries
+            }
+        }
+    })
+
+    $StateIsCorrect = $MissingByTemplate.Count -eq 0
+
+    if ($Settings.alert -eq $true) {
+        if ($StateIsCorrect) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All Tenant Allow/Block List template entries are present' -sev Info
+        } else {
+            $MissingSummary = ($MissingByTemplate | ForEach-Object { "$($_.TemplateName) [$($_.ListType)/$($_.Action)]: $($_.MissingEntries -join ', ')" }) -join '; '
+            Write-StandardsAlert -message "Tenant Allow/Block List entries are missing: $MissingSummary" -object $MissingByTemplate -tenant $Tenant -standardName 'TenantAllowBlockListTemplate' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Tenant Allow/Block List entries are missing: $MissingSummary" -sev Info
+        }
+    }
+
+    if ($Settings.report -eq $true) {
+        if ($StateIsCorrect) {
+            $CurrentValue = 'All template entries are present'
+            $ExpectedValue = 'All template entries are present'
+        } else {
+            $ExpectedValue = ($ResolvedTemplates | ForEach-Object {
+                $Entries = @($_.entries -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+                "$($_.templateName) [$($_.listType)/$($_.listMethod)]: $($Entries -join ', ')"
+            }) -join '; '
+            $CurrentValue = ($MissingByTemplate | ForEach-Object { "$($_.TemplateName) [$($_.ListType)/$($_.Action)] - Missing: $($_.MissingEntries -join ', ')" }) -join '; '
+        }
+        Add-CIPPBPAField -FieldName 'TenantAllowBlockListTemplate' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.TenantAllowBlockListTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+    }
 }

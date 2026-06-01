@@ -160,7 +160,7 @@ function Test-CIPPAccess {
                     }
                 }
 
-                if (-not $IPAllowed -and -not $Request.Params.CIPPEndpoint -eq 'me') {
+                if ((-not $IPAllowed) -and ($Request.Params.CIPPEndpoint -ne 'me')) {
                     throw "Access to this CIPP API endpoint is not allowed, your IP address ($IPAddress) is not in the allowed range for your role(s)"
                 }
             } else {
@@ -320,7 +320,6 @@ function Test-CIPPAccess {
                     $PermissionsFound = $true
                 } catch {
                     Write-Information $_.Exception.Message
-                    continue
                 }
             }
             $swRolePerms.Stop()
@@ -477,38 +476,12 @@ function Test-CIPPAccess {
             } else {
                 # No permissions found for any roles
                 if ($TenantList.IsPresent) {
-                    return @('AllTenants')
+                    return @()
                 }
-                return $true
-                if ($APIAllowed) {
-                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId ?? $env:TenantID
-                    # Check tenant level access
-                    if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
-                        $TenantAllowed = $true
-                    } elseif ($TenantFilter -eq 'AllTenants') {
-                        $TenantAllowed = $false
-                    } else {
-                        $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
-
-                        if ($Role.AllowedTenants -contains 'AllTenants') {
-                            $AllowedTenants = $Tenants.customerId
-                        } else {
-                            $AllowedTenants = $Role.AllowedTenants
-                        }
-                        if ($Tenant) {
-                            $TenantAllowed = $AllowedTenants -contains $Tenant -and $Role.BlockedTenants -notcontains $Tenant
-                            if (!$TenantAllowed) { continue }
-                            break
-                        } else {
-                            $TenantAllowed = $true
-                            break
-                        }
-                    }
-                }
+                throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
             }
 
             if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
-
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
@@ -519,14 +492,13 @@ function Test-CIPPAccess {
                 } else {
                     return $true
                 }
-
             }
         } else {
             # No permissions found for any roles
             if ($TenantList.IsPresent) {
-                return @('AllTenants')
+                return @()
             }
-            return $true
+            throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
         }
         $swUserBranch.Stop()
         $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds

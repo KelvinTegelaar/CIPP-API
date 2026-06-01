@@ -19,14 +19,17 @@ function Invoke-AddChocoApp {
     $intuneBody.displayName = $ChocoApp.ApplicationName
     $intuneBody.installExperience.runAsAccount = if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $intuneBody.installExperience.deviceRestartBehavior = if ($ChocoApp.DisableRestart) { 'suppress' } else { 'allow' }
-    $intuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $($ChocoApp.PackageName)"
+    $PackageNameArg = ConvertTo-CIPPSafePwshArg -Value ([string]$ChocoApp.PackageName)
+    $intuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $PackageNameArg"
     if ($ChocoApp.customrepo) {
-        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomRepo $($ChocoApp.CustomRepo)"
+        $CustomRepoArg = ConvertTo-CIPPSafePwshArg -Value ([string]$ChocoApp.CustomRepo)
+        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomRepo $CustomRepoArg"
     }
     if ($ChocoApp.customArguments) {
-        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomArguments '$($ChocoApp.customArguments)'"
+        $CustomArgumentsArg = ConvertTo-CIPPSafePwshArg -Value ([string]$ChocoApp.customArguments)
+        $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomArguments $CustomArgumentsArg"
     }
-    $intuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $($ChocoApp.PackageName)"
+    $intuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $PackageNameArg"
     $intuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
     $intuneBody.detectionRules[0].fileOrFolderName = "$($ChocoApp.PackageName)"
 
