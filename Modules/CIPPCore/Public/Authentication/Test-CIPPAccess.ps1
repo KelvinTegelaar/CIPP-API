@@ -160,7 +160,7 @@ function Test-CIPPAccess {
                     }
                 }
 
-                if (-not $IPAllowed -and -not $Request.Params.CIPPEndpoint -eq 'me') {
+                if ((-not $IPAllowed) -and ($Request.Params.CIPPEndpoint -ne 'me')) {
                     throw "Access to this CIPP API endpoint is not allowed, your IP address ($IPAddress) is not in the allowed range for your role(s)"
                 }
             } else {
