@@ -92,21 +92,30 @@ function Set-CippApiAuth {
             Write-Information '[ApiAuth] Updated EasyAuth successfully'
         }
     } else {
-        # Full overwrite path (no SSO EasyAuth config to preserve)
+        # Resolve subscription ID via helper (managed identity environment assumed for ARM).
         $SubscriptionId = Get-CIPPAzFunctionAppSubId
-        $BaseUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$FunctionAppName"
 
-        $getUri = "$BaseUri/config/authsettingsV2/list?api-version=2020-06-01"
-        $AuthSettings = New-CIPPAzRestRequest -Uri $getUri -Method POST
+        # Get auth settings via ARM REST (managed identity)
+        $getUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
+        $resp = New-CIPPAzRestRequest -Uri $getUri -Method 'GET'
+        $AuthSettings = $resp | Select-Object -ExpandProperty Content -ErrorAction SilentlyContinue
+        if ($AuthSettings -is [string]) { $AuthSettings = $AuthSettings | ConvertFrom-Json }
+        else { $AuthSettings = $resp }
 
         Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
-        $AllowedAudiences = foreach ($ClientId in $ClientIds) { "api://$ClientId" }
+        # Set allowed audiences
+        $AllowedAudiences = foreach ($ClientId in $ClientIds) {
+            "api://$ClientId"
+        }
+
         if (!$AllowedAudiences) { $AllowedAudiences = @() }
         if (!$ClientIds) { $ClientIds = @() }
 
+        # Set auth settings
+
         if (($ClientIds | Measure-Object).Count -gt 0) {
-            $AuthSettings.properties.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{
+            $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
                 enabled      = $true
                 registration = @{
                     clientId     = $ClientIds[0] ?? $ClientIds
@@ -118,30 +127,29 @@ function Set-CippApiAuth {
                         allowedApplications = @($ClientIds)
                     }
                 }
-            } -Force
+            }
         } else {
-            #Replaced with add-member -force
-            $AuthSettings.properties.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{
+            $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
                 enabled      = $false
                 registration = @{}
                 validation   = @{}
-            } -Force
+            }
         }
 
-        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'globalValidation' -Value @{
+        $AuthSettings.properties.globalValidation = @{
             unauthenticatedClientAction = 'Return401'
-        } -Force
-        $AuthSettings.properties | Add-Member -MemberType NoteProperty -Name 'login' -Value @{
+        }
+        $AuthSettings.properties.login = @{
             tokenStore = @{
                 enabled                    = $true
                 tokenRefreshExtensionHours = 72
             }
-        } -Force
+        }
 
         if ($PSCmdlet.ShouldProcess('Update auth settings')) {
-            $putUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
-            $Body = $AuthSettings | ConvertTo-Json -Depth 20
-            $null = New-CIPPAzRestRequest -Uri $putUri -Method PUT -Body $Body -ContentType 'application/json'
+            # Update auth settings via ARM REST
+            $putUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01"
+            $null = New-CIPPAzRestRequest -Uri $putUri -Method 'PUT' -Body $AuthSettings -ContentType 'application/json'
         }
 
         if ($PSCmdlet.ShouldProcess('Update allowed tenants')) {
