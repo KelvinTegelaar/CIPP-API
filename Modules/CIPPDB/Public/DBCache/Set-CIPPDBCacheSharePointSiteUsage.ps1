@@ -51,6 +51,7 @@ function Set-CIPPDBCacheSharePointSiteUsage {
 
         # Ensure a stable row key for usage rows.
         foreach ($UsageRow in $UsageRows) {
+            if ($null -eq $UsageRow) { continue }
             $UsageRow | Add-Member -NotePropertyName 'id' -NotePropertyValue $UsageRow.siteId -Force
         }
 
