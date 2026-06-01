@@ -3,7 +3,7 @@ function Invoke-ListAndroidEnrollmentProfiles {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Endpoint.MEM.Read
+        Endpoint.Autopilot.Read
     .DESCRIPTION
         Lists Android Enterprise enrollment profiles and hydrates token fields when Graph omits them from the list response.
     #>
