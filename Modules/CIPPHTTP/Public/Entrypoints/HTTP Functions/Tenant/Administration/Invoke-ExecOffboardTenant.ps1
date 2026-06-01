@@ -135,6 +135,7 @@ function Invoke-ExecOffboardTenant {
                         Write-LogMessage -headers $Headers -API $APIName -message "App $($_.label) was removed" -Sev 'Info' -tenant $TenantFilter
                     } catch {
                         $Errors.Add("Failed to removed app $($_.label)")
+                        Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove app $($_.label)" -Sev 'Error' -tenant $TenantFilter
                     }
                 }
             }
