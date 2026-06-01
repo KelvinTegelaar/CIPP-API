@@ -34,11 +34,21 @@ function Set-CIPPDBCacheOneDriveUsage {
 
         $Result = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests) -asapp $true
         $Sites = @(($Result | Where-Object { $_.id -eq 'listAllSites' }).body.value)
-        $UsageBase64 = ($Result | Where-Object { $_.id -eq 'usage' }).body
-        $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBase64))
-        $OneDriveUsage = @(($UsageJson | ConvertFrom-Json).value)
+
+        $UsageResponse = $Result | Where-Object { $_.id -eq 'usage' }
+        if ($UsageResponse.status -and $UsageResponse.status -ne 200) {
+            throw ($UsageResponse.body.error.message ?? "Usage report request failed with status $($UsageResponse.status)")
+        }
+        $UsageBody = $UsageResponse.body
+        if ($UsageBody -is [string]) {
+            $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBody))
+            $OneDriveUsage = @(($UsageJson | ConvertFrom-Json).value)
+        } else {
+            $OneDriveUsage = @($UsageBody.value)
+        }
 
         foreach ($UsageRow in $OneDriveUsage) {
+            if ($null -eq $UsageRow) { continue }
             $UsageRow | Add-Member -NotePropertyName 'id' -NotePropertyValue $UsageRow.siteId -Force
             $UsageRow | Add-Member -NotePropertyName 'userPrincipalName' -NotePropertyValue $UsageRow.ownerPrincipalName -Force
         }
