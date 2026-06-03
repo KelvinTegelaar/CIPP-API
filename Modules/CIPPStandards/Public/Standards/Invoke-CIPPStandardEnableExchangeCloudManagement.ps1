@@ -46,7 +46,8 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
         return $true
     }
 
-    $DesiredState = [System.Convert]::ToBoolean($Settings.state)
+    $StateValue   = $Settings.state.value ?? $Settings.state
+    $DesiredState = [System.Convert]::ToBoolean($StateValue)
     $StateText = if ($DesiredState) { 'Cloud' } else { 'On-Premises' }
 
     try {
