@@ -19,6 +19,7 @@ function Set-CippApiAuth {
 
         Write-Information "[ApiAuth] SiteName=$SiteName, ResourceGroup=$ResourceGroup, SubscriptionId=$SubscriptionId"
         Write-Information "[ApiAuth] ClientIds to set: $($ClientIds -join ', ')"
+        Write-Information "[ApiAuth] MCP client IDs: $($McpClientIds -join ', ') | WEBSITE_HOSTNAME=$($env:WEBSITE_HOSTNAME)"
 
         if (-not $SiteName -or -not $ResourceGroup -or -not $SubscriptionId) {
             throw "[ApiAuth] Missing App Service env vars: WEBSITE_SITE_NAME=$SiteName, WEBSITE_RESOURCE_GROUP=$ResourceGroup, SubscriptionId=$SubscriptionId"
@@ -115,10 +116,19 @@ function Set-CippApiAuth {
 
         Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
-        # Set allowed audiences
-        $AllowedAudiences = foreach ($ClientId in $ClientIds) {
-            "api://$ClientId"
+        # Set allowed audiences (api://{id} for each, plus MCP resource URIs + bare appId for MCP clients)
+        $AudienceList = [System.Collections.Generic.List[string]]::new()
+        foreach ($ClientId in $ClientIds) {
+            $AudienceList.Add("api://$ClientId")
         }
+        if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)")
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+            foreach ($McpId in $McpClientIds) {
+                if (-not [string]::IsNullOrEmpty($McpId)) { $AudienceList.Add($McpId) }
+            }
+        }
+        $AllowedAudiences = @($AudienceList)
 
         if (!$AllowedAudiences) { $AllowedAudiences = @() }
         if (!$ClientIds) { $ClientIds = @() }

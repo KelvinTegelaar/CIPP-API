@@ -138,7 +138,7 @@ function Invoke-ExecApiClient {
                 if ([bool]($Request.Body.MCPAllowed ?? $false)) {
                     try {
                         $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
-                        $Results.Add('MCP resource URIs and v2 tokens configured on the app registration. Run Save to Azure to apply the audiences and PRM scope.')
+                        $Results.Add('MCP resource URIs and v2 tokens configured on the app registration. Run Save to Azure to apply the changes.')
                     } catch {
                         $Results.Add(@{
                                 resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
@@ -207,7 +207,9 @@ function Invoke-ExecApiClient {
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
-            $McpClientIds = @($AllClients | Where-Object { $_.MCPAllowed -eq $true } | ForEach-Object { $_.RowKey })
+            # MCPAllowed can round-trip from table storage as a bool or a string; compare on string form.
+            $McpClientIds = @($AllClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' } | ForEach-Object { $_.RowKey })
+            Write-Information "[ExecApiClient] MCP clients resolved for audiences/scope: $($McpClientIds -join ', ')"
             try {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 

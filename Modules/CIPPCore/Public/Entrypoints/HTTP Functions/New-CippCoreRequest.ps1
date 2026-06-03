@@ -43,6 +43,24 @@ function New-CippCoreRequest {
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
 
+    # For now, while we're in read-only we force the role of the MCP API cred.
+    # When we remove the feature flag, in NG, we move this to use the users role/ident.
+    if ($Request.Params.CIPPEndpoint -eq 'ExecMcp' -and
+        $Request.Headers.'x-ms-client-principal' -and
+        $Request.Headers.'x-ms-client-principal-name' -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+        try {
+            $McpPrincipal = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
+            $McpAppId = ($McpPrincipal.claims | Where-Object { $_.typ -in @('azp', 'appid') } | Select-Object -First 1).val
+            if ($McpAppId -and (Get-CippApiClient -AppId $McpAppId)) {
+                $Request.Headers | Add-Member -NotePropertyName 'x-ms-client-principal-name' -NotePropertyValue $McpAppId -Force
+                $Request.Headers | Add-Member -NotePropertyName 'x-ms-client-principal-idp' -NotePropertyValue 'aad' -Force
+                Write-Information "MCP request mapped to API client $McpAppId (running at the app's CIPP role)"
+            }
+        } catch {
+            Write-Information "MCP principal app resolution failed: $($_.Exception.Message)"
+        }
+    }
+
     # Check if endpoint is disabled via feature flags
     $FeatureFlags = Get-CIPPFeatureFlag
     $DisabledEndpoint = $FeatureFlags | Where-Object {
