@@ -4,7 +4,8 @@ function Set-CippApiAuth {
         [string]$RGName,
         [string]$FunctionAppName,
         [string]$TenantId,
-        [string[]]$ClientIds
+        [string[]]$ClientIds,
+        [string[]]$McpClientIds
     )
 
     if ($env:CIPPNG) {
@@ -61,6 +62,16 @@ function Set-CippApiAuth {
         $AllAudiences = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         foreach ($id in $AllAppIds) {
             [void]$AllAudiences.Add("api://$id")
+        }
+
+        # MCP resource clients also accept tokens whose audience is the host-based identifier URI or
+        # the bare appId (v2 tokens), so the Claude connector's token validates against EasyAuth.
+        if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+            [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
+            [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+            foreach ($McpId in $McpClientIds) {
+                if (-not [string]::IsNullOrEmpty($McpId)) { [void]$AllAudiences.Add($McpId) }
+            }
         }
 
         Write-Information "[ApiAuth] Merged allowedApplications: $($AllAppIds -join ', ')"
