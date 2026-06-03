@@ -150,7 +150,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 $Message = "Failed to process template $TemplateGUID, Error: $ErrorMessage"
                 Write-LogMessage -API $APIName -tenant $tenant -message $Message -sev 'Error'
-                return $Message
+                continue
             }
         }
 
@@ -356,10 +356,10 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 foreach ($Contact in $CompareList) {
                     if ($Contact.missing) {
                         $CurrentInfo = $Contact.Template | Select-Object -Property displayName, email, missing
-                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
+                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplates'
                     } else {
                         $CurrentInfo = $CurrentContacts | Where-Object -Property DisplayName -EQ $Contact.Template.displayName | Select-Object -Property DisplayName, ExternalEmailAddress, FirstName, LastName
-                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) will be updated to match template." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
+                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) will be updated to match template." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplates'
                     }
                 }
                 Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: $MissingContacts missing, $ExistingContacts to update" -sev Info
@@ -384,7 +384,7 @@ function Invoke-CIPPStandardDeployContactTemplates {
                     }
                 }
             }
-            Set-CIPPStandardsCompareField -FieldName 'standards.DeployContactTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+            Set-CIPPStandardsCompareField -FieldName 'standards.DeployContactTemplates' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
