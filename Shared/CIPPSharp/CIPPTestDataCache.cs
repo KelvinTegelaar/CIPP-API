@@ -19,8 +19,8 @@ namespace CIPP
     public static class TestDataCache
     {
         // ── Configuration ──
-        private static long _maxBytes = 50L * 1024 * 1024;   // 50 MB default
-        private static TimeSpan _ttl = TimeSpan.FromMinutes(1);
+        private static long _maxBytes = 100L * 1024 * 1024;  // 100 MB default
+        private static TimeSpan _ttl = TimeSpan.FromMinutes(5);
 
         // ── State ──
         private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
@@ -52,7 +52,7 @@ namespace CIPP
         }
 
         /// <summary>Configure the cache limits. Call before first use or between test runs.</summary>
-        public static void Configure(long maxBytes = 50 * 1024 * 1024, int ttlSeconds = 60)
+        public static void Configure(long maxBytes = 100L * 1024 * 1024, int ttlSeconds = 300)
         {
             _maxBytes = maxBytes;
             _ttl = TimeSpan.FromSeconds(ttlSeconds);
@@ -170,6 +170,25 @@ namespace CIPP
             Interlocked.Exchange(ref _hits, 0);
             Interlocked.Exchange(ref _misses, 0);
             Interlocked.Exchange(ref _evictions, 0);
+        }
+
+        /// <summary>
+        /// Remove all entries belonging to a single tenant. Cache keys are formatted
+        /// as "tenantFilter|type", so we match by the "tenantFilter|" prefix.
+        /// </summary>
+        public static int ClearTenant(string tenantFilter)
+        {
+            if (string.IsNullOrWhiteSpace(tenantFilter)) return 0;
+            var prefix = tenantFilter + "|";
+            int removed = 0;
+            // Snapshot keys to avoid mutating while iterating the concurrent dictionary
+            var matchingKeys = _cache.Keys.Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var key in matchingKeys)
+            {
+                RemoveEntry(key);
+                removed++;
+            }
+            return removed;
         }
 
         public static int Count => _cache.Count;
