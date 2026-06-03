@@ -195,12 +195,6 @@ function Invoke-ExecApiClient {
             $ClientIds = $AllClients.RowKey
             try {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds
-
-                # MCP OAuth Protected Resource Metadata is served by CIPP itself (Receive-CippWellKnownTrigger),
-                # so the App Service platform PRM must stay off to avoid serving a competing document at
-                # /.well-known/oauth-protected-resource. Clear the setting if a previous build enabled it.
-                $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
-
                 $Body = @{ Results = 'API clients saved to Azure' }
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message 'Saved API clients to Azure' -Sev 'Info'
             } catch {

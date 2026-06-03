@@ -19,9 +19,6 @@
       "defaultVersion": "10.4.5",
       "versionMatchStrategy": "Strict",
       "versionFailureStrategy": "Fail"
-    },
-    "http": {
-      "routePrefix": ""
     }
   }
 }

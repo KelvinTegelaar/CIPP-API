@@ -82,17 +82,6 @@ function Set-CippApiAuth {
             $AAD.validation.defaultAuthorizationPolicy.allowedPrincipals = @{}
         }
 
-        # Keep the MCP protected-resource metadata path anonymous so CIPP can serve it at the root
-        if (-not $Current.ContainsKey('globalValidation') -or $null -eq $Current.globalValidation) { $Current.globalValidation = @{} }
-        $ExcludedPaths = [System.Collections.Generic.List[string]]::new()
-        if ($Current.globalValidation.excludedPaths) {
-            foreach ($ExPath in $Current.globalValidation.excludedPaths) { $ExcludedPaths.Add($ExPath) }
-        }
-        if ($ExcludedPaths -notcontains '/.well-known/oauth-protected-resource*') {
-            $ExcludedPaths.Add('/.well-known/oauth-protected-resource*')
-        }
-        $Current.globalValidation.excludedPaths = @($ExcludedPaths)
-
         $PutBody = $ArmPayload | ConvertTo-Json -Depth 20
         Write-Information "[ApiAuth] PUT body: $PutBody"
 
