@@ -23,7 +23,9 @@ function New-CIPPAlertTemplate {
     $AfterButtonText = ''
     $RuleTable = ''
     $Table = ''
-    $LocationInfo = $LocationInfo ?? $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
+    $LocationInfo = $LocationInfo ?? ($Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp)
+    $LocationCountry = $LocationInfo.CountryOrRegion ?? $LocationInfo.countryCode ?? $LocationInfo.Country ?? 'Unknown'
+    $LocationCity = $LocationInfo.City ?? $LocationInfo.city ?? 'Unknown'
     if ($Data -is [string]) {
         $Data = @{ message = $Data }
     }
@@ -250,7 +252,7 @@ function New-CIPPAlertTemplate {
                 $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
                 $Title = "$($Tenant) - a user has logged on from a location you've set up to receive alerts for."
-                $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
+                $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $LocationCountry - $LocationCity. <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
                 if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
                 if ($LocationInfo) {
                     $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')

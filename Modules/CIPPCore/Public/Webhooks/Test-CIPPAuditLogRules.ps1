@@ -473,6 +473,13 @@ function Test-CIPPAuditLogRules {
 
                         $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
                         $Data.clientip = $Data.clientip -replace $IPRegex, '$1' -replace '[\[\]]', ''
+                        $IsIPv6Address = $false
+                        try {
+                            $IPAddress = [System.Net.IPAddress]::Parse($Data.clientip)
+                            $IsIPv6Address = $IPAddress.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetworkV6
+                        } catch {
+                            $IsIPv6Address = $false
+                        }
 
                         # Check if IP is on trusted IP list
                         $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
@@ -488,11 +495,18 @@ function Test-CIPPAuditLogRules {
                             Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
 
                             if ($Location) {
-                                $Country = $Location.CountryOrRegion
-                                $City = $Location.City
-                                $Proxy = $Location.Proxy
-                                $hosting = $Location.Hosting
-                                $ASName = $Location.ASName
+                                $CachedCountry = $Location.CountryOrRegion ?? $Location.countryCode ?? $Location.country
+                                if ($IsIPv6Address -and ([string]::IsNullOrWhiteSpace($CachedCountry) -or $CachedCountry -eq 'Unknown')) {
+                                    $Location = $null
+                                }
+                            }
+
+                            if ($Location) {
+                                $Country = if (-not [string]::IsNullOrWhiteSpace($Location.CountryOrRegion ?? $Location.countryCode ?? $Location.country)) { $Location.CountryOrRegion ?? $Location.countryCode ?? $Location.country } else { 'Unknown' }
+                                $City = if (-not [string]::IsNullOrWhiteSpace($Location.City ?? $Location.city)) { $Location.City ?? $Location.city } else { 'Unknown' }
+                                $Proxy = if ($null -ne ($Location.Proxy ?? $Location.proxy)) { $Location.Proxy ?? $Location.proxy } else { 'Unknown' }
+                                $Hosting = if ($null -ne ($Location.Hosting ?? $Location.hosting)) { $Location.Hosting ?? $Location.hosting } else { 'Unknown' }
+                                $ASName = if (-not [string]::IsNullOrWhiteSpace($Location.ASName ?? $Location.asname)) { $Location.ASName ?? $Location.asname } else { 'Unknown' }
                             } else {
                                 try {
                                     $IPLookupStartTime = Get-Date
@@ -501,38 +515,54 @@ function Test-CIPPAuditLogRules {
                                     $IPLookupSeconds = ($IPLookupEndTime - $IPLookupStartTime).TotalSeconds
                                     Write-Warning "IP lookup for $($Data.clientip) took $IPLookupSeconds seconds"
                                 } catch {
+                                    $Location = $null
+                                    Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                                     #write-warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                                 }
-                                $Country = if ($Location.countryCode) { $Location.countryCode } else { 'Unknown' }
-                                $City = if ($Location.city) { $Location.city } else { 'Unknown' }
-                                $Proxy = if ($Location.proxy -ne $null) { $Location.proxy } else { 'Unknown' }
-                                $hosting = if ($Location.hosting -ne $null) { $Location.hosting } else { 'Unknown' }
-                                $ASName = if ($Location.asname) { $Location.asname } else { 'Unknown' }
-                                $IP = $Data.ClientIP
-                                $LocationInfo = @{
+                                $Country = if (-not [string]::IsNullOrWhiteSpace($Location.countryCode ?? $Location.CountryOrRegion ?? $Location.country)) { $Location.countryCode ?? $Location.CountryOrRegion ?? $Location.country } else { 'Unknown' }
+                                $City = if (-not [string]::IsNullOrWhiteSpace($Location.city ?? $Location.City)) { $Location.city ?? $Location.City } else { 'Unknown' }
+                                $Proxy = if ($null -ne ($Location.proxy ?? $Location.Proxy)) { $Location.proxy ?? $Location.Proxy } else { 'Unknown' }
+                                $Hosting = if ($null -ne ($Location.hosting ?? $Location.Hosting)) { $Location.hosting ?? $Location.Hosting } else { 'Unknown' }
+                                $ASName = if (-not [string]::IsNullOrWhiteSpace($Location.asname ?? $Location.ASName)) { $Location.asname ?? $Location.ASName } else { 'Unknown' }
+                                $LocationCacheEntry = @{
                                     RowKey          = [string]$Data.clientip
                                     PartitionKey    = 'ip'
                                     Tenant          = [string]$TenantFilter
                                     CountryOrRegion = "$Country"
                                     City            = "$City"
                                     Proxy           = "$Proxy"
-                                    Hosting         = "$hosting"
+                                    Hosting         = "$Hosting"
                                     ASName          = "$ASName"
                                 }
 
-                                try {
-                                    $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
-                                } catch {
-                                    #write-warning "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
-
+                                $ShouldCacheLocation = @($Country, $City, $Proxy, $Hosting, $ASName) | Where-Object {
+                                    -not [string]::IsNullOrWhiteSpace([string]$_) -and [string]$_ -ne 'Unknown'
                                 }
+
+                                if ($ShouldCacheLocation) {
+                                    try {
+                                        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationCacheEntry -Force
+                                    } catch {
+                                        #write-warning "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
+
+                                    }
+                                }
+                            }
+
+                            $LocationInfo = [PSCustomObject]@{
+                                IP              = [string]$Data.clientip
+                                CountryOrRegion = "$Country"
+                                City            = "$City"
+                                Proxy           = "$Proxy"
+                                Hosting         = "$Hosting"
+                                ASName          = "$ASName"
                             }
                             $Data.CIPPGeoLocation = $Country
                             $Data.CIPPBadRepIP = $Proxy
-                            $Data.CIPPHostedIP = $hosting
-                            $Data.CIPPIPDetected = $IP
-                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress -Depth 10)
-                            $HasLocationData = $true
+                            $Data.CIPPHostedIP = $Hosting
+                            $Data.CIPPIPDetected = $Data.ClientIP
+                            $Data.CIPPLocationInfo = ($LocationInfo | ConvertTo-Json -Compress -Depth 10)
+                            $HasLocationData = -not [string]::IsNullOrWhiteSpace($Country) -and $Country -ne 'Unknown'
                         }
                     }
                     $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress -Depth 10)
