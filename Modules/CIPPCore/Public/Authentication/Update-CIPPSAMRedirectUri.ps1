@@ -29,7 +29,7 @@ function Update-CIPPSAMRedirectUri {
     )
 
     try {
-        $AppResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($env:ApplicationID)')?`$select=id,web" -tenantid $env:TenantID -NoAuthCheck $true
+        $AppResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($env:ApplicationID)')?`$select=id,web" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
         $ExistingUris = @($AppResponse.web.redirectUris)
         $MissingUris = $RequiredUris | Where-Object { $_ -notin $ExistingUris }
 
@@ -46,7 +46,7 @@ function Update-CIPPSAMRedirectUri {
             web = @{ redirectUris = $UpdatedUris }
         } | ConvertTo-Json -Depth 5
 
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $Body -tenantid $env:TenantID -type PATCH -NoAuthCheck $true
+        New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.id)" -body $Body -tenantid $env:TenantID -type PATCH -NoAuthCheck $true -AsApp $true
         Write-Information "[SAM-Redirect] Added redirect URIs: $($MissingUris -join ', ')"
         Write-LogMessage -API 'SAM-Redirect' -message "Added redirect URIs: $($MissingUris -join ', ')" -sev Info
     } catch {

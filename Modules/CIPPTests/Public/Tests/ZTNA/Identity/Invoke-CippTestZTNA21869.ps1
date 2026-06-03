@@ -26,25 +26,24 @@ function Invoke-CippTestZTNA21869 {
 
         $Status = 'Investigate'
 
-        $ResultLines = @(
-            "Found $($AppsWithoutAssignment.Count) enterprise application(s) without assignment requirements."
-            ''
-            '**Applications without user assignment requirements:**'
-        )
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        $ResultLines.Add("Found $($AppsWithoutAssignment.Count) enterprise application(s) without assignment requirements.")
+        $ResultLines.Add('')
+        $ResultLines.Add('**Applications without user assignment requirements:**')
 
         $Top10Apps = $AppsWithoutAssignment | Select-Object -First 10
         foreach ($App in $Top10Apps) {
-            $ResultLines += "- $($App.displayName) (SSO: $($App.preferredSingleSignOnMode))"
+            $ResultLines.Add("- $($App.displayName) (SSO: $($App.preferredSingleSignOnMode))")
         }
 
         if ($AppsWithoutAssignment.Count -gt 10) {
-            $ResultLines += "- ... and $($AppsWithoutAssignment.Count - 10) more application(s)"
+            $ResultLines.Add("- ... and $($AppsWithoutAssignment.Count - 10) more application(s)")
         }
 
-        $ResultLines += ''
-        $ResultLines += '**Note:** Full provisioning scope validation requires Graph API synchronization endpoint not available in cache.'
-        $ResultLines += ''
-        $ResultLines += '**Recommendation:** Enable user assignment requirements or configure scoped provisioning to limit application access.'
+        $ResultLines.Add('')
+        $ResultLines.Add('**Note:** Full provisioning scope validation requires Graph API synchronization endpoint not available in cache.')
+        $ResultLines.Add('')
+        $ResultLines.Add('**Recommendation:** Enable user assignment requirements or configure scoped provisioning to limit application access.')
 
         $Result = $ResultLines -join "`n"
 

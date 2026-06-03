@@ -24,8 +24,7 @@ function Set-CIPPDBCacheExoAdminAuditLogConfig {
         if ($AuditConfig) {
             # AdminAuditLogConfig returns a single object, wrap in array for consistency
             $AuditConfigArray = @($AuditConfig)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Admin Audit Log configuration' -sev Debug
         }
         $AuditConfig = $null

@@ -14,27 +14,27 @@ function Invoke-CippTestORCA239 {
             return
         }
 
-        $FailedPolicies = @()
-        $Issues = @()
+        $FailedPolicies = [System.Collections.Generic.List[object]]::new()
+        $Issues = [System.Collections.Generic.List[string]]::new()
 
         # Check Anti-Phish policies for exclusions
         if ($AntiPhishPolicies) {
             foreach ($Policy in $AntiPhishPolicies) {
                 $HasExclusions = $false
-                $ExclusionDetails = @()
+                $ExclusionDetails = [System.Collections.Generic.List[string]]::new()
 
                 if ($Policy.ExcludedSenders -and $Policy.ExcludedSenders.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "ExcludedSenders: $($Policy.ExcludedSenders.Count)"
+                    $ExclusionDetails.Add("ExcludedSenders: $($Policy.ExcludedSenders.Count)")
                 }
 
                 if ($Policy.ExcludedDomains -and $Policy.ExcludedDomains.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "ExcludedDomains: $($Policy.ExcludedDomains.Count)"
+                    $ExclusionDetails.Add("ExcludedDomains: $($Policy.ExcludedDomains.Count)")
                 }
 
                 if ($HasExclusions) {
-                    $Issues += "Anti-Phish Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')"
+                    $Issues.Add("Anti-Phish Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')")
                 }
             }
         }
@@ -43,33 +43,33 @@ function Invoke-CippTestORCA239 {
         if ($ContentFilterPolicies) {
             foreach ($Policy in $ContentFilterPolicies) {
                 $HasExclusions = $false
-                $ExclusionDetails = @()
+                $ExclusionDetails = [System.Collections.Generic.List[string]]::new()
 
                 if ($Policy.AllowedSenders -and $Policy.AllowedSenders.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "AllowedSenders: $($Policy.AllowedSenders.Count)"
+                    $ExclusionDetails.Add("AllowedSenders: $($Policy.AllowedSenders.Count)")
                 }
 
                 if ($Policy.AllowedSenderDomains -and $Policy.AllowedSenderDomains.Count -gt 0) {
                     $HasExclusions = $true
-                    $ExclusionDetails += "AllowedSenderDomains: $($Policy.AllowedSenderDomains.Count)"
+                    $ExclusionDetails.Add("AllowedSenderDomains: $($Policy.AllowedSenderDomains.Count)")
                 }
 
                 if ($HasExclusions) {
-                    $Issues += "Anti-Spam Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')"
+                    $Issues.Add("Anti-Spam Policy '$($Policy.Identity)': $($ExclusionDetails -join ', ')")
                 }
             }
         }
 
         if ($Issues.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No exclusions found in built-in protection policies."
+            $Result = [System.Text.StringBuilder]::new("No exclusions found in built-in protection policies.")
         } else {
             $Status = 'Failed'
-            $Result = "Found $($Issues.Count) policies with exclusions that bypass built-in protection.`n`n"
-            $Result += "**Issues Found:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("Found $($Issues.Count) policies with exclusions that bypass built-in protection.`n`n")
+            $null = $Result.Append("**Issues Found:**`n`n")
             foreach ($Issue in $Issues) {
-                $Result += "- $Issue`n"
+                $null = $Result.Append("- $Issue`n")
             }
         }
 

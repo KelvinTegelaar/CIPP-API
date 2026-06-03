@@ -41,14 +41,14 @@ function Invoke-CippTestCISAMSEXO62 {
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: No sharing policies allow detailed calendar sharing with all domains."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: No sharing policies allow detailed calendar sharing with all domains.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) sharing policy/policies allow detailed calendar sharing with all domains:`n`n"
-            $Result += "| Policy Name | Enabled | Issue |`n"
-            $Result += "| :---------- | :------ | :---- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) sharing policy/policies allow detailed calendar sharing with all domains:`n`n")
+            $null = $Result.Append("| Policy Name | Enabled | Issue |`n")
+            $null = $Result.Append("| :---------- | :------ | :---- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.'Policy Name') | $($Policy.Enabled) | $($Policy.Issue) |`n"
+                $null = $Result.Append("| $($Policy.'Policy Name') | $($Policy.Enabled) | $($Policy.Issue) |`n")
             }
             $Status = 'Failed'
         }

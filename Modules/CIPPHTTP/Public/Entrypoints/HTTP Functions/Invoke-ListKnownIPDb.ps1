@@ -1,4 +1,4 @@
-Function Invoke-ListKnownIPDb {
+function Invoke-ListKnownIPDb {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -9,6 +9,9 @@ Function Invoke-ListKnownIPDb {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    if (-not [string]::IsNullOrEmpty($TenantFilter)) {
+        $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+    }
 
 
     $Table = Get-CIPPTable -TableName 'knownlocationdbv2'
@@ -16,8 +19,8 @@ Function Invoke-ListKnownIPDb {
     $KnownIPDb = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     return [HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($KnownIPDb)
-        }
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($KnownIPDb)
+    }
 
 }

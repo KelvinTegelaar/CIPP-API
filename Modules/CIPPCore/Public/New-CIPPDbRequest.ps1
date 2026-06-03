@@ -39,7 +39,19 @@ function New-CIPPDbRequest {
 
         $Table = Get-CippTable -tablename 'CippReportingDB'
 
-        $Tenant = Get-Tenants -TenantFilter $TenantFilter | Select-Object -ExpandProperty defaultDomainName
+        if (-not $script:CIPPDbRequestTenantCache) {
+            $script:CIPPDbRequestTenantCache = @{}
+        }
+        $CacheNow = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $CachedTenant = $script:CIPPDbRequestTenantCache[$TenantFilter]
+        if ($CachedTenant -and ($CacheNow - $CachedTenant.Timestamp) -lt 300) {
+            $Tenant = $CachedTenant.DefaultDomain
+        } else {
+            $Tenant = (Get-Tenants -TenantFilter $TenantFilter).defaultDomainName
+            if ($Tenant) {
+                $script:CIPPDbRequestTenantCache[$TenantFilter] = @{ DefaultDomain = $Tenant; Timestamp = $CacheNow }
+            }
+        }
         if (-not $Tenant) {
             if ($TenantFilter -eq $env:TenantID) {
                 return $false

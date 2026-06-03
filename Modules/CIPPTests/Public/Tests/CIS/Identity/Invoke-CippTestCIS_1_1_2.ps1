@@ -19,16 +19,16 @@ function Invoke-CippTestCIS_1_1_2 {
             return
         }
 
-        $GA = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GA = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First', 1)[0]
         if (-not $GA) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Global Administrator role not found in tenant role definitions.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
-        $GAUserIds = ($RoleAssignments | Where-Object { $_.roleDefinitionId -eq $GA.id }).principalId
-        $GAUsers = $Users | Where-Object { $_.id -in $GAUserIds }
+        $GAUserIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$RoleAssignments.Where({ $_.roleDefinitionId -eq $GA.id }).principalId)
+        $GAUsers = $Users.Where({ $GAUserIds.Contains($_.id) })
         $BreakGlassPattern = 'breakglass|break-glass|emergency|cipp-bg|bg-admin'
-        $LikelyBG = $GAUsers | Where-Object { $_.userPrincipalName -match $BreakGlassPattern -and $_.onPremisesSyncEnabled -ne $true }
+        $LikelyBG = $GAUsers.Where({ $_.userPrincipalName -match $BreakGlassPattern -and $_.onPremisesSyncEnabled -ne $true })
 
         if ($LikelyBG.Count -ge 2) {
             $Status = 'Passed'

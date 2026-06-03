@@ -19,6 +19,12 @@ function Set-CIPPDBCacheExoPresetSecurityPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Preset Security Policies' -sev Debug
 
+        $MDOTestResult = Test-CIPPStandardLicense -StandardName 'ExoPresetSecurityPolicy' -TenantFilter $TenantFilter -Preset DefenderForOffice365 -SkipLog
+        if ($MDOTestResult -eq $false) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Preset Security Policy cache: tenant lacks Microsoft Defender for Office 365' -sev Debug
+            return
+        }
+
         $EOPRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-EOPProtectionPolicyRule'
         $ATPRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ATPProtectionPolicyRule'
 
@@ -32,8 +38,7 @@ function Set-CIPPDBCacheExoPresetSecurityPolicy {
         }
 
         if ($AllRules.Count -gt 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data $AllRules
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data $AllRules -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data $AllRules -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllRules.Count) Preset Security Policy rules" -sev Debug
         }
         $EOPRules = $null

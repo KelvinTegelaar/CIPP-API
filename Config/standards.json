@@ -344,7 +344,12 @@
   {
     "name": "standards.DisableBasicAuthSMTP",
     "cat": "Global Standards",
-    "tag": ["CIS M365 5.0 (6.5.4)", "NIST CSF 2.0 (PR.IR-01)", "ZTNA21799", "CISAMSEXO51"],
+    "tag": [
+      "CIS M365 5.0 (6.5.4)",
+      "NIST CSF 2.0 (PR.IR-01)",
+      "ZTNA21799",
+      "CISAMSEXO51"
+    ],
     "helpText": "Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)",
     "docsDescription": "Disables tenant-wide SMTP basic authentication, including for all explicitly enabled users, impacting POP and IMAP clients that rely on SMTP for sending emails. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).",
     "executiveText": "Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.",
@@ -410,7 +415,13 @@
   {
     "name": "standards.AuthMethodsSettings",
     "cat": "Entra (AAD) Standards",
-    "tag": ["EIDSCA.AG01", "EIDSCA.AG02", "EIDSCA.AG03", "EIDSCAAG02", "EIDSCAAG03"],
+    "tag": [
+      "EIDSCA.AG01",
+      "EIDSCA.AG02",
+      "EIDSCA.AG03",
+      "EIDSCAAG02",
+      "EIDSCAAG03"
+    ],
     "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",
     "docsDescription": "Controls the authentication methods policy settings for reporting suspicious activity and system credential preferences. These settings help enhance the security of authentication in your organization.",
     "executiveText": "Configures security settings that allow users to report suspicious login attempts and manages how the system handles authentication credentials. This enhances overall security by enabling early detection of potential security threats and optimizing authentication processes.",
@@ -724,7 +735,7 @@
     "tag": ["ZTNA21845", "ZTNA21846", "EIDSCAAT01", "EIDSCAAT02"],
     "helpText": "Enables TAP and sets the default TAP lifetime to 1 hour. This configuration also allows you to select if a TAP is single use or multi-logon.",
     "docsDescription": "Enables Temporary Password generation for the tenant.",
-    "executiveText": "Enables temporary access passwords that IT administrators can generate for employees who are locked out or need emergency access to systems. These time-limited passwords provide a secure way to restore access without compromising long-term security policies.",
+    "executiveText": "Enables temporary access passes that IT administrators can generate for employees who are locked out or need emergency access to systems. These time-limited passwords provide a secure way to restore access without compromising long-term security policies.",
     "addedComponent": [
       {
         "type": "autoComplete",
@@ -744,7 +755,7 @@
         ]
       }
     ],
-    "label": "Enable Temporary Access Passwords",
+    "label": "Enable Temporary Access Passes",
     "impact": "Low Impact",
     "impactColour": "info",
     "addedDate": "2022-03-15",
@@ -833,7 +844,12 @@
   {
     "name": "standards.DisableTenantCreation",
     "cat": "Entra (AAD) Standards",
-    "tag": ["CIS M365 5.0 (1.2.3)", "CISA (MS.AAD.6.1v1)", "ZTNA21772", "ZTNA21787"],
+    "tag": [
+      "CIS M365 5.0 (1.2.3)",
+      "CISA (MS.AAD.6.1v1)",
+      "ZTNA21772",
+      "ZTNA21787"
+    ],
     "helpText": "Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles.",
     "docsDescription": "Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.",
     "executiveText": "Prevents regular employees from creating new Microsoft 365 organizations, ensuring all new tenants are properly managed and controlled by IT administrators. This prevents unauthorized shadow IT environments and maintains centralized governance over Microsoft 365 resources.",
@@ -1160,7 +1176,11 @@
   {
     "name": "standards.StaleEntraDevices",
     "cat": "Entra (AAD) Standards",
-    "tag": ["Essential 8 (1501)", "NIST CSF 2.0 (ID.AM-08)", "NIST CSF 2.0 (PR.PS-03)"],
+    "tag": [
+      "Essential 8 (1501)",
+      "NIST CSF 2.0 (ID.AM-08)",
+      "NIST CSF 2.0 (PR.PS-03)"
+    ],
     "helpText": "**Remediate is currently not available**. Cleans up Entra devices that have not connected/signed in for the specified number of days.",
     "docsDescription": "Remediate is currently not available. Cleans up Entra devices that have not connected/signed in for the specified number of days. First disables and later deletes the devices. More info can be found in the [Microsoft documentation](https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices)",
     "executiveText": "Automatically identifies and removes inactive devices that haven't connected to company systems for a specified period, reducing security risks from abandoned or lost devices. This maintains a clean device inventory and prevents potential unauthorized access through dormant device registrations.",
@@ -1218,7 +1238,12 @@
   {
     "name": "standards.DisableSMS",
     "cat": "Entra (AAD) Standards",
-    "tag": ["CIS M365 5.0 (2.3.5)", "EIDSCA.AS04", "NIST CSF 2.0 (PR.AA-03)", "EIDSCAAS04"],
+    "tag": [
+      "CIS M365 5.0 (2.3.5)",
+      "EIDSCA.AS04",
+      "NIST CSF 2.0 (PR.AA-03)",
+      "EIDSCAAS04"
+    ],
     "helpText": "This blocks users from using SMS as an MFA method. If a user only has SMS as a MFA method, they will be unable to log in.",
     "docsDescription": "Disables SMS as an MFA method for the tenant. If a user only has SMS as a MFA method, they will be unable to sign in.",
     "executiveText": "Disables SMS text messages as a multi-factor authentication method due to security vulnerabilities like SIM swapping attacks. This forces users to adopt more secure authentication methods like authenticator apps or hardware tokens, significantly improving account security.",
@@ -1233,7 +1258,12 @@
   {
     "name": "standards.DisableVoice",
     "cat": "Entra (AAD) Standards",
-    "tag": ["CIS M365 5.0 (2.3.5)", "EIDSCA.AV01", "NIST CSF 2.0 (PR.AA-03)", "EIDSCAAV01"],
+    "tag": [
+      "CIS M365 5.0 (2.3.5)",
+      "EIDSCA.AV01",
+      "NIST CSF 2.0 (PR.AA-03)",
+      "EIDSCAAV01"
+    ],
     "helpText": "This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.",
     "docsDescription": "Disables Voice call as an MFA method for the tenant. If a user only has Voice call as a MFA method, they will be unable to sign in.",
     "executiveText": "Disables voice call authentication due to security vulnerabilities and social engineering risks. This forces users to adopt more secure authentication methods like authenticator apps, improving overall account security by eliminating phone-based attack vectors.",
@@ -2071,7 +2101,12 @@
   {
     "name": "standards.DisableExternalCalendarSharing",
     "cat": "Exchange Standards",
-    "tag": ["CIS M365 5.0 (1.3.3)", "exo_individualsharing", "ZTNA21803", "CISAMSEXO62"],
+    "tag": [
+      "CIS M365 5.0 (1.3.3)",
+      "exo_individualsharing",
+      "ZTNA21803",
+      "CISAMSEXO62"
+    ],
     "helpText": "Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.",
     "docsDescription": "Disables external calendar sharing for the entire tenant. This is not a widely used feature, and it's therefore unlikely that this will impact users. Only for the default policy, so exclusions can be made if needed by making a new policy and assigning it to users.",
     "executiveText": "Prevents employees from sharing their calendars with external parties, protecting sensitive meeting information and internal schedules from unauthorized access. This security measure helps maintain confidentiality of business activities while still allowing internal collaboration.",
@@ -2106,7 +2141,11 @@
   {
     "name": "standards.DisableAdditionalStorageProviders",
     "cat": "Exchange Standards",
-    "tag": ["CIS M365 5.0 (6.5.3)", "exo_storageproviderrestricted", "ZTNA21817"],
+    "tag": [
+      "CIS M365 5.0 (6.5.3)",
+      "exo_storageproviderrestricted",
+      "ZTNA21817"
+    ],
     "helpText": "Disables the ability for users to open files in Outlook on the Web, from other providers such as Box, Dropbox, Facebook, Google Drive, OneDrive Personal, etc.",
     "docsDescription": "Disables additional storage providers in OWA. This is to prevent users from using personal storage providers like Dropbox, Google Drive, etc. Usually this has little user impact.",
     "executiveText": "Prevents employees from accessing personal cloud storage services like Dropbox or Google Drive through Outlook on the web, reducing data security risks and ensuring company information stays within approved corporate systems. This helps maintain data governance and prevents accidental data leaks.",
@@ -2388,7 +2427,11 @@
   {
     "name": "standards.DisableSharedMailbox",
     "cat": "Exchange Standards",
-    "tag": ["CIS M365 5.0 (1.2.2)", "CISA (MS.AAD.10.1v1)", "NIST CSF 2.0 (PR.AA-01)"],
+    "tag": [
+      "CIS M365 5.0 (1.2.2)",
+      "CISA (MS.AAD.10.1v1)",
+      "NIST CSF 2.0 (PR.AA-01)"
+    ],
     "helpText": "Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes.",
     "docsDescription": "Shared mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for shared mailboxes. It would be a good idea to review the sign-in reports to establish potential impact.",
     "executiveText": "Prevents direct login to shared mailbox accounts (like info@company.com), ensuring they can only be accessed through authorized users' accounts. This security measure eliminates the risk of shared passwords and unauthorized access while maintaining proper access control and audit trails.",
@@ -3746,7 +3789,7 @@
         "type": "number",
         "name": "standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays",
         "label": "Compliance status validity period (days)",
-        "defaultValue": 130,
+        "defaultValue": 120,
         "validators": {
           "min": { "value": 1, "message": "Minimum value is 1" },
           "max": { "value": 120, "message": "Maximum value is 120" }
@@ -4286,7 +4329,12 @@
   {
     "name": "standards.SPDisallowInfectedFiles",
     "cat": "SharePoint Standards",
-    "tag": ["CIS M365 5.0 (7.3.1)", "CISA (MS.SPO.3.1v1)", "NIST CSF 2.0 (DE.CM-09)", "ZTNA21817"],
+    "tag": [
+      "CIS M365 5.0 (7.3.1)",
+      "CISA (MS.SPO.3.1v1)",
+      "NIST CSF 2.0 (DE.CM-09)",
+      "ZTNA21817"
+    ],
     "helpText": "Ensure Office 365 SharePoint infected files are disallowed for download",
     "executiveText": "Prevents employees from downloading files that have been identified as containing malware or viruses from SharePoint and OneDrive. This security measure protects against malware distribution through file sharing while maintaining access to clean, safe documents.",
     "addedComponent": [],
@@ -4328,7 +4376,13 @@
   {
     "name": "standards.SPExternalUserExpiration",
     "cat": "SharePoint Standards",
-    "tag": ["CIS M365 5.0 (7.2.9)", "CISA (MS.SPO.1.5v1)", "ZTNA21803", "ZTNA21804", "ZTNA21858"],
+    "tag": [
+      "CIS M365 5.0 (7.2.9)",
+      "CISA (MS.SPO.1.5v1)",
+      "ZTNA21803",
+      "ZTNA21804",
+      "ZTNA21858"
+    ],
     "helpText": "Ensure guest access to a site or OneDrive will expire automatically",
     "executiveText": "Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.",
     "addedComponent": [
@@ -4353,7 +4407,12 @@
   {
     "name": "standards.SPEmailAttestation",
     "cat": "SharePoint Standards",
-    "tag": ["CIS M365 5.0 (7.2.10)", "CISA (MS.SPO.1.6v1)", "ZTNA21803", "ZTNA21804"],
+    "tag": [
+      "CIS M365 5.0 (7.2.10)",
+      "CISA (MS.SPO.1.6v1)",
+      "ZTNA21803",
+      "ZTNA21804"
+    ],
     "helpText": "Ensure re-authentication with verification code is restricted",
     "executiveText": "Requires external users to periodically re-verify their identity through email verification codes when accessing SharePoint resources, adding an extra security layer for external collaboration. This helps ensure continued legitimacy of external access over time.",
     "addedComponent": [
@@ -4620,7 +4679,12 @@
   {
     "name": "standards.unmanagedSync",
     "cat": "SharePoint Standards",
-    "tag": ["CIS M365 5.0 (7.2.3)", "CISA (MS.SPO.2.1v1)", "NIST CSF 2.0 (PR.AA-05)", "ZTNA24824"],
+    "tag": [
+      "CIS M365 5.0 (7.2.3)",
+      "CISA (MS.SPO.2.1v1)",
+      "NIST CSF 2.0 (PR.AA-05)",
+      "ZTNA24824"
+    ],
     "helpText": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect.",
     "docsDescription": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect. 0 = Allow Access, 1 = Allow limited, web-only access, 2 = Block access. All information about this can be found in Microsofts documentation [here.](https://learn.microsoft.com/en-us/sharepoint/control-access-from-unmanaged-devices)",
     "executiveText": "Restricts access to company files from personal or unmanaged devices, ensuring corporate data can only be accessed from properly secured and monitored devices. This critical security control prevents data leaks while allowing controlled access through web browsers when necessary.",
@@ -4779,7 +4843,7 @@
           }
         ]
       },
-            {
+      {
         "type": "switch",
         "name": "standards.TeamsGlobalMeetingPolicy.AllowPSTNUsersToBypassLobby",
         "label": "Allow dial-in users to bypass lobby"
@@ -5106,10 +5170,7 @@
         "condition": {
           "field": "standards.TeamsFederationConfiguration.DomainControl.value",
           "compareType": "isOneOf",
-          "compareValue": [
-            "AllowSpecificExternal",
-            "BlockSpecificExternal"
-          ]
+          "compareValue": ["AllowSpecificExternal", "BlockSpecificExternal"]
         }
       }
     ],
@@ -5729,6 +5790,126 @@
     ]
   },
   {
+    "name": "standards.DlpCompliancePolicyTemplate",
+    "label": "DLP Compliance Policy Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates. Existing policies are overwritten in place.",
+    "executiveText": "Deploys Data Loss Prevention policies from a standardized template library. Ensures consistent DLP coverage across tenants for sensitive data such as financial, identity, and regulated content.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "dlpCompliancePolicyTemplate",
+        "label": "Select DLP Compliance Policy Templates",
+        "api": {
+          "url": "/api/ListDlpCompliancePolicyTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListDlpCompliancePolicyTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.RetentionCompliancePolicyTemplate",
+    "label": "Retention Compliance Policy Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview retention compliance policies from CIPP templates.",
+    "executiveText": "Deploys retention policies that govern how long content is preserved in Exchange, SharePoint, OneDrive, and Teams. Enforces consistent compliance retention across tenants for regulatory and legal hold needs.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "retentionCompliancePolicyTemplate",
+        "label": "Select Retention Compliance Policy Templates",
+        "api": {
+          "url": "/api/ListRetentionCompliancePolicyTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListRetentionCompliancePolicyTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.SensitivityLabelTemplate",
+    "label": "Sensitivity Label Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "impact": "Medium Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy Microsoft Purview sensitivity labels from CIPP templates.",
+    "executiveText": "Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "sensitivityLabelTemplate",
+        "label": "Select Sensitivity Label Templates",
+        "api": {
+          "url": "/api/ListSensitivityLabelTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListSensitivityLabelTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.SensitiveInfoTypeTemplate",
+    "label": "Sensitive Information Type Template",
+    "multi": true,
+    "cat": "Templates",
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "impact": "Low Impact",
+    "addedDate": "2026-05-10",
+    "helpText": "Deploy custom Microsoft Purview Sensitive Information Types from CIPP templates.",
+    "executiveText": "Deploys custom Sensitive Information Types so DLP policies can detect organization-specific identifiers — employee IDs, project codenames, internal account numbers — across tenants consistently.",
+    "addedComponent": [
+      {
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": false,
+        "name": "sensitiveInfoTypeTemplate",
+        "label": "Select Sensitive Information Type Templates",
+        "api": {
+          "url": "/api/ListSensitiveInfoTypeTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListSensitiveInfoTypeTemplates"
+        }
+      }
+    ]
+  },
+  {
     "name": "standards.AssignmentFilterTemplate",
     "label": "Assignment Filter Template",
     "multi": true,
@@ -6085,11 +6266,7 @@
   {
     "name": "standards.ColleagueImpersonationAlert",
     "cat": "Exchange Standards",
-    "tag": [
-      "Exchange",
-      "Security",
-      "Transport Rules"
-    ],
+    "tag": ["Exchange", "Security", "Transport Rules"],
     "helpText": "Creates/updates 5x Exchange Online transport rules (A-E, F-J, K-O, P-T, U-Z) that prepend an HTML disclaimer banner to inbound emails where the sender display name matches a mailbox in the organisation. Accepted tenant domains are always exempt automatically. Inactive users are removed and enabled users are added. Any manually configured sender or domain exemptions already present on existing rules are preserved.",
     "docsDescription": "Creates five Exchange Online transport rules grouped by the first letter of user display names (A-E, F-J, K-O, P-T, U-Z). Each rule fires when an external sender's From header matches a display name in that group, prepends a configurable HTML warning banner, and skips emails from accepted organisational domains. Any manually configured sender or domain exemptions on existing rules are preserved when the standard runs. The disclaimer HTML is fully customisable via the standard settings.",
     "executiveText": "Protects staff from display-name impersonation attacks by injecting a visible warning banner on emails that appear to come from a colleague but originate externally. Rules are maintained automatically across all letter groups and updated whenever the standard runs.",

@@ -49,13 +49,11 @@ function Set-CIPPDBCacheRoles {
                 }
             }
 
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $RolesWithMembers -AddCount
             $Roles = $null
             $RolesWithMembers = $null
         } else {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $Roles
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $Roles -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Roles' -Data $Roles -AddCount
             $Roles = $null
         }
 

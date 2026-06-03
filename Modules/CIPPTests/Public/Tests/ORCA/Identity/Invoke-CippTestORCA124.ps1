@@ -26,16 +26,16 @@ function Invoke-CippTestORCA124 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Attachments policies have unknown malware response set to Block.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Attachments policies have unknown malware response set to Block.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Attachments policies do not have unknown malware response set to Block.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Action |`n"
-            $Result += "|------------|--------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Attachments policies do not have unknown malware response set to Block.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Action |`n")
+            $null = $Result.Append("|------------|--------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.Action) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.Action) |`n")
             }
         }
 

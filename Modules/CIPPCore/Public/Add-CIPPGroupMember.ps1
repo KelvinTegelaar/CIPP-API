@@ -45,37 +45,54 @@ function Add-CIPPGroupMember {
         }
         $Users = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
 
-        if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+        $SuccessfulUsers = [System.Collections.Generic.List[string]]::new()
+        $FailedUsers = [System.Collections.Generic.List[string]]::new()
+
+        # Accept both human-readable labels (from Invoke-EditGroup / older callers) and
+        # camelCase calculatedGroupType values (from the user template / add-edit-user form)
+        $ExoGroupTypes = @('Distribution list', 'Distribution List', 'Mail-Enabled Security', 'distributionList', 'security')
+
+        if ($GroupType -in $ExoGroupTypes) {
             $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
-            $ExoLogs = [System.Collections.Generic.List[object]]::new()
+            $GuidToUpn = @{}
 
             foreach ($User in $Users) {
-                $Params = @{ Identity = $GroupId; Member = $User.body.userPrincipalName; BypassSecurityGroupManagerCheck = $true }
+                $UserUpn = $User.body.userPrincipalName
+                if (-not $UserUpn) { continue }
+                $OpGuid = [guid]::NewGuid().ToString()
+                $GuidToUpn[$OpGuid] = $UserUpn
+                $Params = @{ Identity = $GroupId; Member = $UserUpn; BypassSecurityGroupManagerCheck = $true }
                 $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
+                        OperationGuid = $OpGuid
+                        CmdletInput   = @{
                             CmdletName = 'Add-DistributionGroupMember'
                             Parameters = $Params
                         }
                     })
-                $ExoLogs.Add(@{
-                        message = "Added member $($User.body.userPrincipalName) to $($GroupId) group"
-                        target  = $User.body.userPrincipalName
-                    })
             }
 
             if ($ExoBulkRequests.Count -gt 0) {
-                $RawExoRequest = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests)
-                $LastError = $RawExoRequest | Select-Object -Last 1
+                $RawExoRequest = @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests))
 
-                foreach ($ExoError in $LastError.error) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoError -Sev 'Error'
-                    throw $ExoError
+                # Index responses by OperationGuid so each user is correlated by position, not by error.target
+                $ResponseByGuid = @{}
+                foreach ($Response in $RawExoRequest) {
+                    if ($Response.OperationGuid) {
+                        $ResponseByGuid[$Response.OperationGuid] = $Response
+                    }
                 }
 
-                foreach ($ExoLog in $ExoLogs) {
-                    $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
-                    if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
+                foreach ($OpGuid in $GuidToUpn.Keys) {
+                    $UserUpn = $GuidToUpn[$OpGuid]
+                    $Response = $ResponseByGuid[$OpGuid]
+
+                    if ($Response -and $Response.error) {
+                        $ErrorText = if ($Response.error -is [string]) { $Response.error } else { ($Response.error | Out-String).Trim() }
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($UserUpn) to $($GroupId): $ErrorText" -Sev 'Error'
+                        $FailedUsers.Add($UserUpn)
+                    } else {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Added member $($UserUpn) to $($GroupId) group" -Sev 'Info'
+                        $SuccessfulUsers.Add($UserUpn)
                     }
                 }
             }
@@ -91,19 +108,26 @@ function Add-CIPPGroupMember {
                 }
             }
             $AddResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($AddRequests)
-            $SuccessfulUsers = [system.collections.generic.list[string]]::new()
             foreach ($Result in $AddResults) {
+                $UserPrincipalName = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
                 if ($Result.status -lt 200 -or $Result.status -gt 299) {
-                    $FailedUsername = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($FailedUsername): $($Result.body.error.message)" -Sev 'Error'
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($UserPrincipalName): $($Result.body.error.message)" -Sev 'Error'
+                    $FailedUsers.Add($UserPrincipalName)
                 } else {
-                    $UserPrincipalName = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
                     $SuccessfulUsers.Add($UserPrincipalName)
                 }
             }
         }
-        $UserList = ($SuccessfulUsers -join ', ')
-        $Results = "Successfully added user $UserList to $($GroupId)."
+
+        if ($SuccessfulUsers.Count -eq 0 -and $FailedUsers.Count -gt 0) {
+            $Results = "Failed to add user $($FailedUsers -join ', ') to $($GroupId)."
+            throw $Results
+        }
+
+        $Results = "Successfully added user $($SuccessfulUsers -join ', ') to $($GroupId)."
+        if ($FailedUsers.Count -gt 0) {
+            $Results = "$Results Failed to add: $($FailedUsers -join ', ')."
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         return $Results
     } catch {

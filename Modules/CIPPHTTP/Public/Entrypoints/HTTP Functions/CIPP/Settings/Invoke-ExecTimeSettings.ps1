@@ -31,7 +31,8 @@ function Invoke-ExecTimeSettings {
         $ConfigTable = Get-CIPPTable -tablename Config
         Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force | Out-Null
         $env:CIPP_TIMEZONE = $Timezone
-
+        try { [Craft.Services.SchedulerBridge]::SetTimezone($Timezone) } catch { $null }
+        try { [Craft.Services.PowerShellRunnerService]::SetProcessEnvVar('CIPP_TIMEZONE', $Timezone) } catch { $null }
         Write-LogMessage -API 'ExecTimeSettings' -headers $Request.Headers -message "Updated time settings: Timezone=$Timezone" -Sev 'Info'
 
         return ([HttpResponseContext]@{

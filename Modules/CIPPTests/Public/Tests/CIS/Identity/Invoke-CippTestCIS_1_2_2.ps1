@@ -21,11 +21,19 @@ function Invoke-CippTestCIS_1_2_2 {
             return
         }
 
-        $EnabledShared = @()
+        $UsersById = @{}
+        $UsersByUpn = @{}
+        foreach ($U in $Users) {
+            if ($U.id) { $UsersById[$U.id] = $U }
+            if ($U.userPrincipalName) { $UsersByUpn[$U.userPrincipalName] = $U }
+        }
+        $EnabledShared = [System.Collections.Generic.List[object]]::new()
         foreach ($SM in $SharedMailboxes) {
-            $User = $Users | Where-Object { $_.userPrincipalName -eq $SM.UserPrincipalName -or $_.id -eq $SM.ExternalDirectoryObjectId } | Select-Object -First 1
+            $User = $null
+            if ($SM.UserPrincipalName -and $UsersByUpn.ContainsKey($SM.UserPrincipalName)) { $User = $UsersByUpn[$SM.UserPrincipalName] }
+            elseif ($SM.ExternalDirectoryObjectId -and $UsersById.ContainsKey($SM.ExternalDirectoryObjectId)) { $User = $UsersById[$SM.ExternalDirectoryObjectId] }
             if ($User -and $User.accountEnabled -eq $true) {
-                $EnabledShared += $User
+                $EnabledShared.Add($User)
             }
         }
 

@@ -21,11 +21,11 @@ function Invoke-CippTestCIS_4_2 {
             return
         }
 
-        $Failures = @()
+        $Failures = [System.Collections.Generic.List[string]]::new()
         foreach ($P in @('androidForWorkRestriction', 'androidRestriction', 'iosRestriction', 'macOSRestriction', 'windowsRestriction')) {
             $r = $DefaultPlatform.$P
             if ($r -and $r.personalDeviceEnrollmentBlocked -ne $true -and $r.platformBlocked -ne $true) {
-                $Failures += "$P : personal enrollment NOT blocked"
+                $Failures.Add("$P : personal enrollment NOT blocked")
             }
         }
 

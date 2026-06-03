@@ -112,7 +112,7 @@ function Invoke-ExecTenantGroup {
                     $Adds.Add('Added member {0}' -f $member.label)
                 }
 
-                if ($CurrentMembers -and $members) {
+                if ($CurrentMembers -and $null -ne $members) {
                     foreach ($CurrentMember in $CurrentMembers) {
                         if ($members.value -notcontains $CurrentMember.customerId) {
                             Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force

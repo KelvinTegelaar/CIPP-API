@@ -20,10 +20,9 @@ function Invoke-CippTestCIS_1_1_1 {
             return
         }
 
-        $PrivilegedRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
-        $PrivilegedAssignments = $RoleAssignments | Where-Object { $_.roleDefinitionId -in $PrivilegedRoleIds }
-        $PrivilegedUserIds = $PrivilegedAssignments.principalId | Select-Object -Unique
-        $PrivilegedUsers = $Users | Where-Object { $_.id -in $PrivilegedUserIds }
+        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
+        $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new([string[]]($RoleAssignments.Where({ $PrivilegedRoleIds.Contains($_.roleDefinitionId) }).principalId | Select-Object -Unique))
+        $PrivilegedUsers = $Users.Where({ $PrivilegedUserIds.Contains($_.id) })
 
         if (-not $PrivilegedUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No privileged users found.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
@@ -38,13 +37,13 @@ function Invoke-CippTestCIS_1_1_1 {
 
         if ($NonCompliant.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($PrivilegedUsers.Count) privileged users are cloud-only and unlicensed."
+            $Result = [System.Text.StringBuilder]::new("All $($PrivilegedUsers.Count) privileged users are cloud-only and unlicensed.")
         } else {
             $Status = 'Failed'
-            $Result = "$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) are not cloud-only or are licensed:`n`n"
-            $Result += "| UPN | Synced | Licensed |`n| :-- | :----- | :------- |`n"
+            $Result = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) are not cloud-only or are licensed:`n`n")
+            $null = $Result.Append("| UPN | Synced | Licensed |`n| :-- | :----- | :------- |`n")
             foreach ($U in ($NonCompliant | Select-Object -First 25)) {
-                $Result += "| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $([bool]($U.assignedLicenses.Count -gt 0)) |`n"
+                $null = $Result.Append("| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $([bool]($U.assignedLicenses.Count -gt 0)) |`n")
             }
         }
 

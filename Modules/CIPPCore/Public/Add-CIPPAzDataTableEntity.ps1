@@ -40,6 +40,7 @@ function Add-CIPPAzDataTableEntity {
     $MaxRowSize = 500000 - 100
     $MaxSize = 30kb
     $BatchQueue = [System.Collections.Generic.List[object]]::new()
+    $BatchKeys = [System.Collections.Generic.Dictionary[string,int]]::new()
 
     foreach ($SingleEnt in @($Entity)) {
         try {
@@ -90,8 +91,14 @@ function Add-CIPPAzDataTableEntity {
             $entityBytes = [System.Text.Encoding]::UTF8.GetByteCount($($SingleEnt | ConvertTo-Json -Compress))
 
             if ($entityBytes -lt $MaxSize) {
-                # Small entity - add to batch queue
-                $BatchQueue.Add($SingleEnt)
+                # Small entity - add to batch queue, dedup by PartitionKey+RowKey (last-in wins)
+                $batchKey = "$($SingleEnt.PartitionKey)|$($SingleEnt.RowKey)"
+                if ($BatchKeys.ContainsKey($batchKey)) {
+                    $BatchQueue[$BatchKeys[$batchKey]] = $SingleEnt
+                } else {
+                    $BatchKeys[$batchKey] = $BatchQueue.Count
+                    $BatchQueue.Add($SingleEnt)
+                }
                 if ($BatchQueue.Count -ge 100) {
                     try {
                         Add-AzDataTableEntity @Parameters -Entity $BatchQueue.ToArray() -ErrorAction Stop
@@ -103,6 +110,7 @@ function Add-CIPPAzDataTableEntity {
                         }
                     }
                     $BatchQueue.Clear()
+                    $BatchKeys.Clear()
                 }
                 continue
             }
@@ -118,6 +126,7 @@ function Add-CIPPAzDataTableEntity {
                     }
                 }
                 $BatchQueue.Clear()
+                $BatchKeys.Clear()
             }
 
             Add-AzDataTableEntity @Parameters -Entity $SingleEnt -ErrorAction Stop
@@ -284,5 +293,6 @@ function Add-CIPPAzDataTableEntity {
             }
         }
         $BatchQueue.Clear()
+        $BatchKeys.Clear()
     }
 }

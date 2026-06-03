@@ -20,15 +20,15 @@ function Invoke-CippTestZTNA21829 {
         $Passed = if ($FederatedDomains.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "All domains are using cloud authentication.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("All domains are using cloud authentication.`n`n")
         } else {
-            $ResultMarkdown = "Federated authentication is in use.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Federated authentication is in use.`n`n")
 
-            $ResultMarkdown += "`n## List of federated domains`n`n"
-            $ResultMarkdown += "| Domain Name |`n"
-            $ResultMarkdown += "| :--- |`n"
+            $null = $ResultMarkdown.Append("`n## List of federated domains`n`n")
+            $null = $ResultMarkdown.Append("| Domain Name |`n")
+            $null = $ResultMarkdown.Append("| :--- |`n")
             foreach ($Domain in $FederatedDomains) {
-                $ResultMarkdown += "| $($Domain.id) |`n"
+                $null = $ResultMarkdown.Append("| $($Domain.id) |`n")
             }
         }
 

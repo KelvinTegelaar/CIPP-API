@@ -1,4 +1,4 @@
-Function Invoke-ListGDAPInvite {
+function Invoke-ListGDAPInvite {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -12,7 +12,8 @@ Function Invoke-ListGDAPInvite {
 
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
     if (![string]::IsNullOrEmpty($RelationshipId)) {
-        $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($RelationshipId)'"
+        $SafeRelationshipId = ConvertTo-CIPPODataFilterValue -Value $RelationshipId -Type String
+        $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$SafeRelationshipId'"
     } else {
         $Invite = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
             $_.RoleMappings = @(try { $_.RoleMappings | ConvertFrom-Json } catch { $_.RoleMappings })

@@ -43,11 +43,11 @@ function Invoke-CippTestZTNA21955 {
         $Status = if ($GlobalAdminsEnabled) { 'Passed' } else { 'Failed' }
 
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: Global Administrators are automatically added as local administrators on Entra joined devices.`n`n"
-            $ResultMarkdown += '[Review settings](https://entra.microsoft.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId/)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Global Administrators are automatically added as local administrators on Entra joined devices.`n`n")
+            $null = $ResultMarkdown.Append('[Review settings](https://entra.microsoft.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId/)')
         } else {
-            $ResultMarkdown = "❌ **Fail**: Global Administrators are not automatically added as local administrators, which may limit emergency access capabilities.`n`n"
-            $ResultMarkdown += '[Configure settings](https://entra.microsoft.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId/)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: Global Administrators are not automatically added as local administrators, which may limit emergency access capabilities.`n`n")
+            $null = $ResultMarkdown.Append('[Configure settings](https://entra.microsoft.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId/)')
         }
 
         $TestParams = @{

@@ -54,32 +54,32 @@ function Invoke-CippTestZTNA21872 {
         # Determine pass/fail conditions
         if ($MfaRequiredInDeviceSettings) {
             $Passed = 'Failed'
-            $ResultMarkdown = "❌ **MFA is configured incorrectly.** Device Settings has 'Require Multi-Factor Authentication to register or join devices' set to Yes. According to best practices, this should be set to No, and MFA should be enforced through Conditional Access policies instead.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **MFA is configured incorrectly.** Device Settings has 'Require Multi-Factor Authentication to register or join devices' set to Yes. According to best practices, this should be set to No, and MFA should be enforced through Conditional Access policies instead.`n`n")
         } elseif ($DeviceRegistrationPolicies.Count -eq 0) {
             $Passed = 'Failed'
-            $ResultMarkdown = "❌ **No Conditional Access policies found** for device registration or device join. Create a policy that requires MFA for these user actions.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **No Conditional Access policies found** for device registration or device join. Create a policy that requires MFA for these user actions.`n`n")
         } elseif ($ValidPolicies.Count -eq 0) {
             $Passed = 'Failed'
-            $ResultMarkdown = "❌ **Conditional Access policies found**, but they're not correctly configured. Policies should require MFA or appropriate authentication strength.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Conditional Access policies found**, but they're not correctly configured. Policies should require MFA or appropriate authentication strength.`n`n")
         } else {
             $Passed = 'Passed'
-            $ResultMarkdown = "✅ **Properly configured Conditional Access policies found** that require MFA for device registration/join actions.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Properly configured Conditional Access policies found** that require MFA for device registration/join actions.`n`n")
         }
 
         # Add device settings information
-        $ResultMarkdown += "## Device Settings Configuration`n`n"
-        $ResultMarkdown += "| Setting | Value | Recommended Value | Status |`n"
-        $ResultMarkdown += "| :------ | :---- | :---------------- | :----- |`n"
+        $null = $ResultMarkdown.Append("## Device Settings Configuration`n`n")
+        $null = $ResultMarkdown.Append("| Setting | Value | Recommended Value | Status |`n")
+        $null = $ResultMarkdown.Append("| :------ | :---- | :---------------- | :----- |`n")
 
         $DeviceSettingStatus = if ($MfaRequiredInDeviceSettings) { '❌ Should be set to No' } else { '✅ Correctly configured' }
         $DeviceSettingValue = if ($MfaRequiredInDeviceSettings) { 'Yes' } else { 'No' }
-        $ResultMarkdown += "| Require Multi-Factor Authentication to register or join devices | $DeviceSettingValue | No | $DeviceSettingStatus |`n"
+        $null = $ResultMarkdown.Append("| Require Multi-Factor Authentication to register or join devices | $DeviceSettingValue | No | $DeviceSettingStatus |`n")
 
         # Add policies information if any found
         if ($DeviceRegistrationPolicies.Count -gt 0) {
-            $ResultMarkdown += "`n## Device Registration/Join Conditional Access Policies`n`n"
-            $ResultMarkdown += "| Policy Name | State | Requires MFA | Status |`n"
-            $ResultMarkdown += "| :---------- | :---- | :----------- | :----- |`n"
+            $null = $ResultMarkdown.Append("`n## Device Registration/Join Conditional Access Policies`n`n")
+            $null = $ResultMarkdown.Append("| Policy Name | State | Requires MFA | Status |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :---- | :----------- | :----- |`n")
 
             foreach ($Policy in $DeviceRegistrationPolicies) {
                 $PolicyName = $Policy.displayName
@@ -92,7 +92,7 @@ function Invoke-CippTestZTNA21872 {
                 $RequiresMfaText = if ($IsValid) { 'Yes' } else { 'No' }
                 $StatusText = if ($IsValid) { '✅ Properly configured' } else { '❌ Incorrectly configured' }
 
-                $ResultMarkdown += "| $PolicyNameLink | $PolicyState | $RequiresMfaText | $StatusText |`n"
+                $null = $ResultMarkdown.Append("| $PolicyNameLink | $PolicyState | $RequiresMfaText | $StatusText |`n")
             }
         }
 
