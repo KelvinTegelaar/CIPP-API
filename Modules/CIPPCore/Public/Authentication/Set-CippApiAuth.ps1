@@ -19,6 +19,7 @@ function Set-CippApiAuth {
 
         Write-Information "[ApiAuth] SiteName=$SiteName, ResourceGroup=$ResourceGroup, SubscriptionId=$SubscriptionId"
         Write-Information "[ApiAuth] ClientIds to set: $($ClientIds -join ', ')"
+        Write-Information "[ApiAuth] MCP client IDs: $($McpClientIds -join ', ') | WEBSITE_HOSTNAME=$($env:WEBSITE_HOSTNAME)"
 
         if (-not $SiteName -or -not $ResourceGroup -or -not $SubscriptionId) {
             throw "[ApiAuth] Missing App Service env vars: WEBSITE_SITE_NAME=$SiteName, WEBSITE_RESOURCE_GROUP=$ResourceGroup, SubscriptionId=$SubscriptionId"
