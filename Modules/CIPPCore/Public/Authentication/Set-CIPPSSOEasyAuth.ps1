@@ -125,6 +125,17 @@ function Set-CIPPSSOEasyAuth {
             $AAD.validation.defaultAuthorizationPolicy.allowedPrincipals = @{}
         }
 
+        # Ensure the MCP protected-resource metadata path stays anonymous so CIPP can serve it
+        if (-not $Current.ContainsKey('globalValidation') -or $null -eq $Current.globalValidation) { $Current.globalValidation = @{} }
+        $ExcludedPaths = [System.Collections.Generic.List[string]]::new()
+        if ($Current.globalValidation.excludedPaths) {
+            foreach ($ExPath in $Current.globalValidation.excludedPaths) { $ExcludedPaths.Add($ExPath) }
+        }
+        if ($ExcludedPaths -notcontains '/.well-known/oauth-protected-resource*') {
+            $ExcludedPaths.Add('/.well-known/oauth-protected-resource*')
+        }
+        $Current.globalValidation.excludedPaths = @($ExcludedPaths)
+
         $AuthConfig = $ArmPayload | ConvertTo-Json -Depth 20
         Write-Information "[SSO-EasyAuth] Read-modify-write: patching issuer to $IssuerUrl (preserving $(($ExistingAudiences).Count) audiences, $(($ExistingApps).Count) allowed apps)"
     } else {
@@ -138,6 +149,7 @@ function Set-CIPPSSOEasyAuth {
                     excludedPaths               = @(
                         '/api/Public*'
                         '/api/setup/health'
+                        '/.well-known/oauth-protected-resource*'
                     )
                 }
                 identityProviders = @{

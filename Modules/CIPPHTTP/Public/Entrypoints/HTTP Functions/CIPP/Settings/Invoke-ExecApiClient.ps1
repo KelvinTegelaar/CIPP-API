@@ -196,17 +196,10 @@ function Invoke-ExecApiClient {
             try {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds
 
-                # Advertise OAuth Protected Resource Metadata scopes for MCP-enabled API clients so that
-                # App Service's PRM endpoint (/.well-known/oauth-protected-resource) hands MCP clients
-                # (e.g. Claude) a token audience Entra/EasyAuth will accept. One delegated scope per
-                # MCP-allowed, enabled client (api://<clientId>/user_impersonation); cleared when none.
-                $McpScopes = @($AllClients | Where-Object { $_.MCPAllowed -eq $true } | ForEach-Object { "api://$($_.RowKey)/user_impersonation" }) -join ','
-                if ($McpScopes) {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = $McpScopes }
-                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Set MCP PRM scopes: $McpScopes" -Sev 'Info'
-                } else {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
-                }
+                # MCP OAuth Protected Resource Metadata is served by CIPP itself (Receive-CippWellKnownTrigger),
+                # so the App Service platform PRM must stay off to avoid serving a competing document at
+                # /.well-known/oauth-protected-resource. Clear the setting if a previous build enabled it.
+                $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
 
                 $Body = @{ Results = 'API clients saved to Azure' }
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message 'Saved API clients to Azure' -Sev 'Info'

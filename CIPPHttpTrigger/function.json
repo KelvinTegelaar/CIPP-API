@@ -15,7 +15,7 @@
         "delete",
         "options"
       ],
-      "route": "{*CIPPEndpoint}"
+      "route": "api/{*CIPPEndpoint}"
     },
     {
       "type": "http",
