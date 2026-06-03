@@ -27,6 +27,20 @@ function Invoke-ExecMcp {
             })
     }
 
+    # Per-client gate: the global 'MCPServer' feature flag lets this endpoint run at all (enforced
+    # upstream in New-CippCoreRequest); this narrows access to API clients explicitly flagged
+    # 'MCP Access Allowed'. A non-API-client caller, an unknown client, or one without the flag is denied.
+    $CallerAppId = $Request.Headers.'x-ms-client-principal-name'
+    $IsApiClient = $Request.Headers.'x-ms-client-principal-idp' -eq 'aad' -and $CallerAppId -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    $McpAllowed = if ($IsApiClient) { [bool](Get-CippApiClient -AppId $CallerAppId).MCPAllowed } else { $false }
+    if (-not $McpAllowed) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Headers    = @{ 'Content-Type' = 'application/json' }
+                Body       = (@{ jsonrpc = '2.0'; id = $null; error = @{ code = -32001; message = 'This API client is not permitted to use the MCP server. Enable "MCP Access Allowed" on the API client in CIPP.' } } | ConvertTo-Json -Compress)
+            })
+    }
+
     $Rpc = $Request.Body
     $RpcId = $Rpc.id
 

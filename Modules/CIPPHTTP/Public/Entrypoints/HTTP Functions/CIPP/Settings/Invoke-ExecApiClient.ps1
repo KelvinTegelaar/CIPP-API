@@ -103,6 +103,7 @@ function Invoke-ExecApiClient {
                     $Client.Role = [string]$Request.Body.Role.value
                     $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                     $Client.Enabled = $Request.Body.Enabled ?? $false
+                    $Client | Add-Member -NotePropertyName 'MCPAllowed' -NotePropertyValue ([bool]($Request.Body.MCPAllowed ?? $false)) -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
                     if ($APIConfig.ApplicationSecret) {
                         $Results.Add(@{
@@ -121,6 +122,7 @@ function Invoke-ExecApiClient {
                         'Role'         = [string]$Request.Body.Role.value
                         'IPRange'      = "$(@($IpRange) | ConvertTo-Json -Compress)"
                         'Enabled'      = $Request.Body.Enabled ?? $false
+                        'MCPAllowed'   = [bool]($Request.Body.MCPAllowed ?? $false)
                     }
                     $Results.Add(@{
                             resultText = "API Client created with the name '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the secret."
