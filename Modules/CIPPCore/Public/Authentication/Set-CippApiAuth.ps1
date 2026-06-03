@@ -116,10 +116,19 @@ function Set-CippApiAuth {
 
         Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
-        # Set allowed audiences
-        $AllowedAudiences = foreach ($ClientId in $ClientIds) {
-            "api://$ClientId"
+        # Set allowed audiences (api://{id} for each, plus MCP resource URIs + bare appId for MCP clients)
+        $AudienceList = [System.Collections.Generic.List[string]]::new()
+        foreach ($ClientId in $ClientIds) {
+            $AudienceList.Add("api://$ClientId")
         }
+        if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)")
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+            foreach ($McpId in $McpClientIds) {
+                if (-not [string]::IsNullOrEmpty($McpId)) { $AudienceList.Add($McpId) }
+            }
+        }
+        $AllowedAudiences = @($AudienceList)
 
         if (!$AllowedAudiences) { $AllowedAudiences = @() }
         if (!$ClientIds) { $ClientIds = @() }
