@@ -57,6 +57,9 @@ function Get-CIPPGeoIPLocation {
     }
 
     if (($null -eq $Location -or $Location.status -eq 'FAIL') -and -not $CountryFallbackUsed) {
+        if ($null -ne $Location -and $Location.status -eq 'FAIL') {
+            Write-LogMessage -API 'GeoIPLocation' -message "Failed to get location for $IP. API returned status 'FAIL' with message: $($Location.message)" -sev Warning
+        }
         throw "Could not get location for $IP"
     }
 
