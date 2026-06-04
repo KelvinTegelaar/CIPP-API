@@ -22,7 +22,15 @@ function Invoke-ListExcludedLicenses {
             $Rows = Get-CIPPAzDataTableEntity @Table
         }
 
-        $Results = @($Rows)
+        $Results = @($Rows | ForEach-Object {
+            # Normalize ExcludedEverywhere for legacy rows that don't have the property
+            if ($null -eq $_.ExcludedEverywhere) {
+                $_ | Add-Member -NotePropertyName 'ExcludedEverywhere' -NotePropertyValue $true -Force
+            }
+            $ExclusionType = if ($_.ExcludedEverywhere -eq $true) { 'Excluded Everywhere' } else { 'Excluded from Alerts Only' }
+            $_ | Add-Member -NotePropertyName 'ExclusionType' -NotePropertyValue $ExclusionType -Force
+            $_
+        })
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $StatusCode = [HttpStatusCode]::InternalServerError

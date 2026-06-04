@@ -180,13 +180,14 @@ function Get-TenantGroups {
             }
 
             $Results.Add([PSCustomObject]@{
-                    Id           = $Group.RowKey
-                    Name         = $Group.Name
-                    Description  = $Group.Description
-                    GroupType    = $Group.GroupType ?? 'static'
-                    RuleLogic    = $Group.RuleLogic ?? 'and'
-                    DynamicRules = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
-                    Members      = @($SortedMembers)
+                    Id                   = $Group.RowKey
+                    Name                 = $Group.Name
+                    Description          = $Group.Description
+                    GroupType            = $Group.GroupType ?? 'static'
+                    RuleLogic            = $Group.RuleLogic ?? 'and'
+                    ExcludePartnerTenant = [bool]($Group.ExcludePartnerTenant)
+                    DynamicRules         = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
+                    Members              = @($SortedMembers)
                 })
         }
 
