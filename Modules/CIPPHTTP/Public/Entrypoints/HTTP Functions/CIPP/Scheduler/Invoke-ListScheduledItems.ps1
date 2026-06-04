@@ -78,6 +78,10 @@ function Invoke-ListScheduledItems {
 
         if ($Task.Parameters) {
             $Task.Parameters = $Task.Parameters | ConvertFrom-Json -ErrorAction SilentlyContinue
+            # Remove headers from parameters for cleaner display, and because they may contain sensitive information. Headers are only used for execution, not needed for display.
+            if ($Task.Parameters.Headers) {
+                $Task.Parameters.PSObject.Properties.Remove('Headers')
+            }
         } else {
             $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
         }
