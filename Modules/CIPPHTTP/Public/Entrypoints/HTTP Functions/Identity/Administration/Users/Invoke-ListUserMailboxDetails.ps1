@@ -4,6 +4,8 @@ function Invoke-ListUserMailboxDetails {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Retrieves detailed Exchange Online mailbox properties for a specific user, including quotas, archive status, and protocols.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

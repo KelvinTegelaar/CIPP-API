@@ -4,6 +4,8 @@ function Invoke-ListUsersAndGroups {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists both users and groups for a tenant in a single batch call, returning ID and display name for selection/lookup purposes.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ListGraphReports {
         Entrypoint
     .ROLE
         Tenant.Reports.Read
+    .DESCRIPTION
+        Retrieves Microsoft 365 usage reports (Graph or Office reports) for a tenant, such as email activity, OneDrive usage, or Teams device usage.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

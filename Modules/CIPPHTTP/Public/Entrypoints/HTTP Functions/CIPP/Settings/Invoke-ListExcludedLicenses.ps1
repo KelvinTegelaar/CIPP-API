@@ -4,6 +4,8 @@ function Invoke-ListExcludedLicenses {
         Entrypoint
     .ROLE
         CIPP.AppSettings.Read
+    .DESCRIPTION
+        Lists license SKUs that have been excluded from CIPP license counts and reporting.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

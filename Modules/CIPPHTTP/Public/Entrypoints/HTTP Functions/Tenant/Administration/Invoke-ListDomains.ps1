@@ -4,6 +4,8 @@ Function Invoke-ListDomains {
         Entrypoint
     .ROLE
         Tenant.Administration.Read
+    .DESCRIPTION
+        Lists verified domains for a tenant, showing default and initial domain status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

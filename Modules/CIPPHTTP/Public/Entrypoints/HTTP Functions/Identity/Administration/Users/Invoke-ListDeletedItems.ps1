@@ -4,6 +4,8 @@ function Invoke-ListDeletedItems {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists soft-deleted directory objects in Entra ID, including users, groups, applications, service principals, and administrative units.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

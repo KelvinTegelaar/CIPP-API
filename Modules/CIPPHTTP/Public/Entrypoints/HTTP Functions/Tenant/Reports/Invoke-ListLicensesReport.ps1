@@ -4,6 +4,8 @@ function Invoke-ListLicensesReport {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists a detailed license overview across all tenants or a single tenant, including SKU breakdowns, costs, and availability.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

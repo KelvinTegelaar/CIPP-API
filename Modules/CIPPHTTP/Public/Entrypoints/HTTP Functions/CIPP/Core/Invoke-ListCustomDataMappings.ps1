@@ -4,6 +4,8 @@ function Invoke-ListCustomDataMappings {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists custom data mappings that define how external data sources map to CIPP directory objects, filterable by source type, directory object, and tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

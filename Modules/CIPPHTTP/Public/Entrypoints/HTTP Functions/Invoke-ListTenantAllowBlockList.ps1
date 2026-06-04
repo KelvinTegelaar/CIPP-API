@@ -4,6 +4,8 @@ function Invoke-ListTenantAllowBlockList {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists Tenant Allow/Block List entries (senders, URLs, file hashes, IPs) from Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

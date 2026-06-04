@@ -4,6 +4,8 @@ Function Invoke-ListTenantDetails {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Retrieves detailed organization information for a tenant, including addresses, assigned plans, sync status, and custom properties.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

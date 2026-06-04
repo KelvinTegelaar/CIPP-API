@@ -4,6 +4,8 @@ function Invoke-ListScheduledItems {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
+    .DESCRIPTION
+        Lists scheduled tasks in CIPP, filterable by tenant or task ID. Returns task name, command, schedule, and last execution status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ Function Invoke-ListSpamfilter {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists hosted content filter (anti-spam) policies and their rule states in Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

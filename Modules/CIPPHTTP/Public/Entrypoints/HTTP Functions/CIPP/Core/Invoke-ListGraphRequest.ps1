@@ -5,6 +5,8 @@ function Invoke-ListGraphRequest {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Proxies an arbitrary Microsoft Graph API GET request for a tenant. Supports custom endpoints, filters, pagination, and field selection via query parameters.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

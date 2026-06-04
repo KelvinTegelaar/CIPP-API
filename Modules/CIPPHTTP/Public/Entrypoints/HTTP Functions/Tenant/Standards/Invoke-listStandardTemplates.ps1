@@ -4,6 +4,8 @@ function Invoke-listStandardTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists saved standards templates that define sets of standards to apply to tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

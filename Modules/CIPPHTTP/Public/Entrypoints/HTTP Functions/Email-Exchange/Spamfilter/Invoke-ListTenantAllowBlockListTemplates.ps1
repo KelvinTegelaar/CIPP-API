@@ -4,6 +4,8 @@ Function Invoke-ListTenantAllowBlockListTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists saved Tenant Allow/Block List templates for Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

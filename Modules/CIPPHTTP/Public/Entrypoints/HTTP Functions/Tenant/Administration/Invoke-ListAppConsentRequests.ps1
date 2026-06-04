@@ -4,6 +4,8 @@ function Invoke-ListAppConsentRequests {
         Entrypoint
     .ROLE
         Tenant.Administration.Read
+    .DESCRIPTION
+        Lists pending application consent requests in a tenant, filterable by request status.
     #>
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.

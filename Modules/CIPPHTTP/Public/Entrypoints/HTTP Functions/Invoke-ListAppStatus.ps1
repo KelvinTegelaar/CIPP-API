@@ -4,6 +4,8 @@ Function Invoke-ListAppStatus {
         Entrypoint
     .ROLE
         Endpoint.Device.Read
+    .DESCRIPTION
+        Lists Intune application installation status across devices for a specific application, including install state and error codes.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

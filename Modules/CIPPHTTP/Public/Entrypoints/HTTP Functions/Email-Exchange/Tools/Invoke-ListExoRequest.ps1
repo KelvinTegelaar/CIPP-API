@@ -4,6 +4,8 @@ function Invoke-ListExoRequest {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Executes an arbitrary read-only Exchange Online cmdlet (Get-* or Search-*) for a tenant. Accepts cmdlet name and parameters in the request body.
     #>
     param($Request, $TriggerMetadata)
     try {

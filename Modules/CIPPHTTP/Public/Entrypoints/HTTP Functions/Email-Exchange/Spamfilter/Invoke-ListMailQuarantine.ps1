@@ -4,6 +4,8 @@ function Invoke-ListMailQuarantine {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists quarantined email messages in Exchange Online Protection for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

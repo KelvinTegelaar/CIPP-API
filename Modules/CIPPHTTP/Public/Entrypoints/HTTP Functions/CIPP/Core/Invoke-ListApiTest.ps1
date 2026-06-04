@@ -4,6 +4,8 @@ function Invoke-ListApiTest {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Returns debug information about the current API request, trigger metadata, and environment variables. Used for CIPP platform diagnostics.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

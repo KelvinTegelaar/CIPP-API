@@ -4,6 +4,8 @@ function Invoke-ListGDAPInvite {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Lists GDAP relationship invitations and their role mappings, optionally filtered by relationship ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
