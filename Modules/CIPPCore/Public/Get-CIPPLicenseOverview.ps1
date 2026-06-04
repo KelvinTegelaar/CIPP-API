@@ -5,7 +5,8 @@ function Get-CIPPLicenseOverview {
         $TenantFilter,
         $APIName = 'Get License Overview',
         $Headers,
-        [switch]$AlertMode
+        [switch]$AlertMode,
+        [switch]$IncludeExcluded
     )
 
     $Requests = @(
@@ -120,7 +121,7 @@ function Get-CIPPLicenseOverview {
     $GraphRequest = foreach ($singleReq in $RawGraphRequest) {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
-            if ($sku.skuId -in $EffectiveExcludedGuids) { continue }
+            if (!$IncludeExcluded -and $sku.skuId -in $EffectiveExcludedGuids) { continue }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
@@ -172,4 +173,3 @@ function Get-CIPPLicenseOverview {
     }
     return ($GraphRequest | Sort-Object -Property License)
 }
-
