@@ -19,8 +19,8 @@ function Invoke-ListHVEAccounts {
         if ($ListBillingPolicies -eq 'true') {
             # Return available HVE billing policies for the tenant
             $GraphRequest = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-BillingPolicy' -cmdParams @{
-                ResourceType = 'HVE'
-            })
+                    ResourceType = 'HVE'
+                })
 
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
@@ -106,17 +106,17 @@ function Invoke-ListHVEAccounts {
 
         # Live EXO query
         $GraphRequest = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailUser' -cmdParams @{
-            HVEAccount = $true
-        } -Select 'DisplayName,PrimarySmtpAddress,ExternalDirectoryObjectId,Alias,WhenCreated,EmailAddresses,HiddenFromAddressListsEnabled') | Select-Object `
-            @{ Name = 'displayName'; Expression = { $_.DisplayName } },
-            @{ Name = 'primarySmtpAddress'; Expression = { $_.PrimarySmtpAddress } },
-            @{ Name = 'recipientType'; Expression = { 'MailUser' } },
-            @{ Name = 'recipientTypeDetails'; Expression = { 'HVEAccount' } },
-            ExternalDirectoryObjectId,
-            Alias,
-            WhenCreated,
-            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-            HiddenFromAddressListsEnabled
+                HVEAccount = $true
+            } -Select 'DisplayName,PrimarySmtpAddress,ExternalDirectoryObjectId,Alias,WhenCreated,EmailAddresses,HiddenFromAddressListsEnabled') | Select-Object `
+        @{ Name = 'displayName'; Expression = { $_.DisplayName } },
+        @{ Name = 'primarySmtpAddress'; Expression = { $_.PrimarySmtpAddress } },
+        @{ Name = 'recipientType'; Expression = { 'MailUser' } },
+        @{ Name = 'recipientTypeDetails'; Expression = { 'HVEAccount' } },
+        ExternalDirectoryObjectId,
+        Alias,
+        WhenCreated,
+        @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+        HiddenFromAddressListsEnabled
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {

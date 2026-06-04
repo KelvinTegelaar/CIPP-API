@@ -1,4 +1,4 @@
-Function Invoke-ListOAuthApps {
+function Invoke-ListOAuthApps {
     <#
     .FUNCTIONALITY
         Entrypoint

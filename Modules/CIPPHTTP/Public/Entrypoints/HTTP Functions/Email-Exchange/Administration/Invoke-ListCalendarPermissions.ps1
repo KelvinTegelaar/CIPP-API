@@ -1,4 +1,4 @@
-Function Invoke-ListCalendarPermissions {
+function Invoke-ListCalendarPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
