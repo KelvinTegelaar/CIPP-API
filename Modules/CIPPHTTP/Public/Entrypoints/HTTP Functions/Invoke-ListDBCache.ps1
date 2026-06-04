@@ -14,7 +14,7 @@ function Invoke-ListDBCache {
     $TenantFilter = $Request.Query.tenantFilter
     $Type = $Request.Query.type
 
-    $Tenant = (Get-Tenants -TenantFilter $TenantFilter).defaultDomainName
+    $Tenant = if ($TenantFilter -ne 'AllTenants') { (Get-Tenants -TenantFilter $TenantFilter).defaultDomainName } else { $TenantFilter }
 
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
