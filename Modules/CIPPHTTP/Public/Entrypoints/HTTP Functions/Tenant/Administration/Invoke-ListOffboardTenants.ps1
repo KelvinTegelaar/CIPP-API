@@ -4,6 +4,8 @@ function Invoke-ListOffboardTenants {
         Entrypoint
     .ROLE
         Tenant.Administration.ReadWrite
+    .DESCRIPTION
+        Lists tenants available for offboarding, including tenants in error state.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ListMailboxCAS {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists Client Access Settings (CAS) for Exchange Online mailboxes, showing which protocols are enabled (OWA, IMAP, POP, MAPI, EWS, ActiveSync).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

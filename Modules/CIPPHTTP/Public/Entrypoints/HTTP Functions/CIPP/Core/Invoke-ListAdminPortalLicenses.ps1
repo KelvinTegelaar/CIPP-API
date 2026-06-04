@@ -4,6 +4,8 @@ function Invoke-ListAdminPortalLicenses {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Retrieves license information from the Microsoft 365 Admin Portal for a tenant, including low-friction trial allotments.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

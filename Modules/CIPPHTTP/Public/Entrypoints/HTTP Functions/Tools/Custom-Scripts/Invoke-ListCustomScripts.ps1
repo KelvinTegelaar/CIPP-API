@@ -4,6 +4,8 @@ function Invoke-ListCustomScripts {
         Entrypoint
     .ROLE
         CIPP.Tests.Read
+    .DESCRIPTION
+        Lists custom PowerShell scripts stored in CIPP, with optional filtering by script GUID and version history.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

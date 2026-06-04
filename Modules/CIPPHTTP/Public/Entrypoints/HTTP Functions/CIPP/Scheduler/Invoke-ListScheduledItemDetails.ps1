@@ -4,6 +4,8 @@ function Invoke-ListScheduledItemDetails {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
+    .DESCRIPTION
+        Retrieves detailed information about a specific scheduled task by its RowKey, including execution results and task parameters.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

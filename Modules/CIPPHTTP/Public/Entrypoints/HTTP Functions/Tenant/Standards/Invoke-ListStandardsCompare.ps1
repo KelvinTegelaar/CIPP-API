@@ -4,6 +4,8 @@ function Invoke-ListStandardsCompare {
         Entrypoint
     .ROLE
         Tenant.BestPracticeAnalyser.Read
+    .DESCRIPTION
+        Compares current tenant configuration against applied standards, showing compliance status and drift for each standard.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

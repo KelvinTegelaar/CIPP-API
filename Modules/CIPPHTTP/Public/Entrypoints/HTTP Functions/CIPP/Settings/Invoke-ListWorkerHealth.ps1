@@ -4,6 +4,8 @@ function Invoke-ListWorkerHealth {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Retrieves health status and diagnostics for CIPP background worker processes. Requires SuperAdmin access.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

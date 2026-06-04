@@ -4,6 +4,8 @@ function Invoke-ListLogs {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

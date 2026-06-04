@@ -4,6 +4,8 @@ function Invoke-ListIntuneReusableSettings {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists Intune reusable policy settings for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

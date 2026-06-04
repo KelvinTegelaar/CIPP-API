@@ -4,6 +4,8 @@ function Invoke-ListSites {
         Entrypoint
     .ROLE
         Sharepoint.Site.Read
+    .DESCRIPTION
+        Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

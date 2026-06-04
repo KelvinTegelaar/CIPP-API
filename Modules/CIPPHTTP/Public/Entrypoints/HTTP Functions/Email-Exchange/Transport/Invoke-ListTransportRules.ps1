@@ -4,6 +4,8 @@ function Invoke-ListTransportRules {
         Entrypoint
     .ROLE
         Exchange.TransportRule.Read
+    .DESCRIPTION
+        Lists mail flow (transport) rules configured in Exchange Online, with optional detailed view by rule ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

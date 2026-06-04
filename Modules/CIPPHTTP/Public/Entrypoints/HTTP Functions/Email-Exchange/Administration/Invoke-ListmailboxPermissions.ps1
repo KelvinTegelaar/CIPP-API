@@ -4,6 +4,8 @@ function Invoke-ListmailboxPermissions {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists mailbox permissions (Full Access, Send As, Send on Behalf) for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

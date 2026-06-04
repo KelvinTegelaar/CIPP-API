@@ -4,6 +4,8 @@ function Invoke-ListTeamsVoice {
         Entrypoint
     .ROLE
         Teams.Voice.Read
+    .DESCRIPTION
+        Lists Microsoft Teams voice and PSTN usage for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

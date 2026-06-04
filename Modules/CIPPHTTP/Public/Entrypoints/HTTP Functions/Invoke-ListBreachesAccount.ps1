@@ -4,6 +4,8 @@ Function Invoke-ListBreachesAccount {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Checks an email account or domain against the Have I Been Pwned (HIBP) breach database.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

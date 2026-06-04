@@ -4,6 +4,8 @@ function Invoke-ListAppApprovalTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Application.Read
+    .DESCRIPTION
+        Lists saved application approval templates for standardized app consent configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ListContainerLogs {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Retrieves container logs for the CIPP backend process. Requires SuperAdmin access. Supports ReadLog, ListFiles, and snapshot actions.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

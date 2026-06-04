@@ -4,6 +4,8 @@ function Invoke-ListCIPPUsers {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Lists CIPP platform users and their role assignments from the allowedUsers table. Requires SuperAdmin access.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

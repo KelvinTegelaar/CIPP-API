@@ -4,6 +4,8 @@ Function Invoke-ListTeamsLisLocation {
         Entrypoint
     .ROLE
         Teams.Voice.Read
+    .DESCRIPTION
+        Lists Teams emergency calling Location Information Service (LIS) locations configured for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

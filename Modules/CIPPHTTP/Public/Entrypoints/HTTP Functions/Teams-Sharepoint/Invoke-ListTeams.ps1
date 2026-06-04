@@ -4,6 +4,8 @@ Function Invoke-ListTeams {
         Entrypoint
     .ROLE
         Teams.Group.Read
+    .DESCRIPTION
+        Lists Microsoft Teams teams for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

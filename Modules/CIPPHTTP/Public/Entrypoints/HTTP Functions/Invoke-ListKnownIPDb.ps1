@@ -4,6 +4,8 @@ function Invoke-ListKnownIPDb {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists known IP address entries from the CIPP IP database, optionally filtered by tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

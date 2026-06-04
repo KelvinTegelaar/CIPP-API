@@ -4,6 +4,8 @@ function Invoke-ListGenericTestFunction {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Returns the original request URL for debugging purposes. Used for CIPP platform diagnostics.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

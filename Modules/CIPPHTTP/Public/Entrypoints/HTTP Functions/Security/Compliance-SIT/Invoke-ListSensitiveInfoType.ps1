@@ -4,6 +4,8 @@ Function Invoke-ListSensitiveInfoType {
         Entrypoint
     .ROLE
         Security.SensitiveInfoType.Read
+    .DESCRIPTION
+        Lists sensitive information types (SITs) configured in the Security & Compliance Center, optionally including built-in types.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

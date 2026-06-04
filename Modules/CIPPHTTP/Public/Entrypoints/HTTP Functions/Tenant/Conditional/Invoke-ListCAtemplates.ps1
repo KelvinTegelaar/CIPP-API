@@ -4,6 +4,8 @@ function Invoke-ListCAtemplates {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Lists saved Conditional Access policy templates for deploying standardized CA configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
