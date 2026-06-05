@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_2_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.2.2) - Sign-in to shared mailboxes SHALL be blocked
+    Tests CIS M365 7.0.0 (1.2.2) - Sign-in to shared mailboxes SHALL be blocked
     #>
     param($Tenant)
 

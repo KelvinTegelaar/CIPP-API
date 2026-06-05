@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_1_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.1.1) - External file sharing in Teams SHALL be enabled for only approved cloud storage services
+    Tests CIS M365 7.0.0 (8.1.1) - External file sharing in Teams SHALL be enabled for only approved cloud storage services
     #>
     param($Tenant)
 

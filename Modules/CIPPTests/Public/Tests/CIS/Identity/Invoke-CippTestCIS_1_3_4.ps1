@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.4) - 'User owned apps and services' SHALL be restricted
+    Tests CIS M365 7.0.0 (1.3.4) - 'User owned apps and services' SHALL be restricted
     #>
     param($Tenant)
 

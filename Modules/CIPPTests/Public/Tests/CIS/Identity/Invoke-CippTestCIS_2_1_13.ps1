@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_13 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.13) - Connection filter safe list SHALL be off
+    Tests CIS M365 7.0.0 (2.1.13) - Connection filter safe list SHALL be off
     #>
     param($Tenant)
 

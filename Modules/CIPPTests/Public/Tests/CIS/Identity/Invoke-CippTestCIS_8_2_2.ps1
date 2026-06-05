@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_2_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.2.2) - Communication with unmanaged Teams users SHALL be disabled
+    Tests CIS M365 7.0.0 (8.2.2) - Communication with unmanaged Teams users SHALL be disabled
     #>
     param($Tenant)
 

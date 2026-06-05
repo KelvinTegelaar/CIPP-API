@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.2) - At least two emergency access (break-glass) accounts SHALL be defined
+    Tests CIS M365 7.0.0 (1.1.2) - At least two emergency access (break-glass) accounts SHALL be defined
 
     .DESCRIPTION
     Identifies likely break-glass accounts by looking for cloud-only Global Administrator

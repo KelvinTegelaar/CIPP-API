@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_5_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.5.3) - Additional storage providers SHALL be restricted in Outlook on the web
+    Tests CIS M365 7.0.0 (6.5.3) - Additional storage providers SHALL be restricted in Outlook on the web
     #>
     param($Tenant)
 

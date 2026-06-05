@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_4_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (4.2) - Device enrollment for personally owned devices SHALL be blocked by default
+    Tests CIS M365 7.0.0 (4.2) - Device enrollment for personally owned devices SHALL be blocked by default
     #>
     param($Tenant)
 

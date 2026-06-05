@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_10 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.10) - DMARC Records for all Exchange Online domains SHALL be published
+    Tests CIS M365 7.0.0 (2.1.10) - DMARC Records for all Exchange Online domains SHALL be published
     #>
     param($Tenant)
 
