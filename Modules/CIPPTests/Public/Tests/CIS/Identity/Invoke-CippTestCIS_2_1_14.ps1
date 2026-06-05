@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_14 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.14) - Inbound anti-spam policies SHALL NOT contain allowed domains
+    Tests CIS M365 7.0.0 (2.1.14) - Inbound anti-spam policies SHALL NOT contain allowed domains
     #>
     param($Tenant)
 

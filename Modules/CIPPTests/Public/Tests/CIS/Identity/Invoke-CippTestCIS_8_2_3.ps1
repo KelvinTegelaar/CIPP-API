@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_2_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.2.3) - External Teams users SHALL NOT be able to initiate conversations
+    Tests CIS M365 7.0.0 (8.2.3) - External Teams users SHALL NOT be able to initiate conversations
     #>
     param($Tenant)
 

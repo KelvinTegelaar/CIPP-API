@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_4_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.4.1) - Priority account protection SHALL be enabled and configured
+    Tests CIS M365 7.0.0 (2.4.1) - Priority account protection SHALL be enabled and configured
     #>
     param($Tenant)
 

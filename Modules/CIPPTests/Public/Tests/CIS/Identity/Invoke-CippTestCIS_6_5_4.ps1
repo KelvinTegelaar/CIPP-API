@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_5_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.5.4) - SMTP AUTH SHALL be disabled
+    Tests CIS M365 7.0.0 (6.5.4) - SMTP AUTH SHALL be disabled
     #>
     param($Tenant)
 

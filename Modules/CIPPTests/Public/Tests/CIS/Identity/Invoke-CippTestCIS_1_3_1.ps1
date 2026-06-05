@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.1) - Password expiration policy SHALL be set to 'never expire'
+    Tests CIS M365 7.0.0 (1.3.1) - Password expiration policy SHALL be set to 'never expire'
     #>
     param($Tenant)
 

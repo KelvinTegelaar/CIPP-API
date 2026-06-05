@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.3) - Between two and four global admins SHALL be designated
+    Tests CIS M365 7.0.0 (1.1.3) - Between two and four global admins SHALL be designated
     #>
     param($Tenant)
 

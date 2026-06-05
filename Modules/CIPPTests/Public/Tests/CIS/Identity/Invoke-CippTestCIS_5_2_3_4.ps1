@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.4) - All member users SHALL be 'MFA capable'
+    Tests CIS M365 7.0.0 (5.2.3.4) - All member users SHALL be 'MFA capable'
     #>
     param($Tenant)
 

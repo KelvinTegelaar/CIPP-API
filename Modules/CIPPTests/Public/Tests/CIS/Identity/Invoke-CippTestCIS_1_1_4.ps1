@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.4) - Administrative accounts SHALL use licenses with a reduced application footprint
+    Tests CIS M365 7.0.0 (1.1.4) - Administrative accounts SHALL use licenses with a reduced application footprint
     #>
     param($Tenant)
 

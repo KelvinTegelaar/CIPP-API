@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.8) - External sharing SHALL be restricted by security group
+    Tests CIS M365 7.0.0 (7.2.8) - External sharing SHALL be restricted by security group
     #>
     param($Tenant)
 

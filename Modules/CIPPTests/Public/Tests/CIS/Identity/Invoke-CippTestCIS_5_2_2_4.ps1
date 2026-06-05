@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.4) - Sign-in frequency SHALL be enabled and browser sessions not persistent for administrative users
+    Tests CIS M365 7.0.0 (5.2.2.4) - Sign-in frequency SHALL be enabled and browser sessions not persistent for administrative users
     #>
     param($Tenant)
 

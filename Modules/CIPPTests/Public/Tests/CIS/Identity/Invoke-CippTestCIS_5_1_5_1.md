@@ -9,7 +9,7 @@ Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ PermissionGran
 (Or assign `ManagePermissionGrantsForSelf.microsoft-user-default-low` if low-risk consent is acceptable.)
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.1.5.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.1.5.1](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

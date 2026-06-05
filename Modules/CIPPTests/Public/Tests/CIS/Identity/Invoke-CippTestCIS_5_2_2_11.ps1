@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_11 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.11) - Sign-in frequency for Intune Enrollment SHALL be 'Every time'
+    Tests CIS M365 7.0.0 (5.2.2.11) - Sign-in frequency for Intune Enrollment SHALL be 'Every time'
     #>
     param($Tenant)
 

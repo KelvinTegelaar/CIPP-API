@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.2.1) - Only organizationally managed/approved public groups SHALL exist
+    Tests CIS M365 7.0.0 (1.2.1) - Only organizationally managed/approved public groups SHALL exist
     #>
     param($Tenant)
 

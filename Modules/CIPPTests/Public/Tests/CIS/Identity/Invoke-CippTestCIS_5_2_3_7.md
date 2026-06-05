@@ -5,7 +5,7 @@ Email OTP delivers MFA codes to a guest's mailbox — if that mailbox is comprom
 Microsoft Entra > Authentication methods > Email OTP — set to Disabled.
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.2.3.7](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.2.3.7](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

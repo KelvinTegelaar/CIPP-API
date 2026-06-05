@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.8) - Sways SHALL NOT be shared with people outside of the organization
+    Tests CIS M365 7.0.0 (1.3.8) - Sways SHALL NOT be shared with people outside of the organization
     #>
     param($Tenant)
 

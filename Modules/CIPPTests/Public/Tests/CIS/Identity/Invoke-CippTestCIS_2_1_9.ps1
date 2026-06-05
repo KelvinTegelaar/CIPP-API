@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_9 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.9) - DKIM SHALL be enabled for all Exchange Online Domains
+    Tests CIS M365 7.0.0 (2.1.9) - DKIM SHALL be enabled for all Exchange Online Domains
     #>
     param($Tenant)
 

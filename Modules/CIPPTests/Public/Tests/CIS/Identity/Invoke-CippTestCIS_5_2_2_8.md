@@ -8,7 +8,7 @@ Conditional Access policy:
 - Grant: Block
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.2.2.8](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.2.2.8](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

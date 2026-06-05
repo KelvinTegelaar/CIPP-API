@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.8) - SPF records SHALL be published for all Exchange Domains
+    Tests CIS M365 7.0.0 (2.1.8) - SPF records SHALL be published for all Exchange Domains
     #>
     param($Tenant)
 

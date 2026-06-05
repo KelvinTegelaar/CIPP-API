@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.1) - Administrative accounts SHALL be cloud-only
+    Tests CIS M365 7.0.0 (1.1.1) - Administrative accounts SHALL be cloud-only
 
     .DESCRIPTION
     Privileged role holders should be cloud-only accounts (no onPremisesSyncEnabled),

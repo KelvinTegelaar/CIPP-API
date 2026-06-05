@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_3_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (3.3.1) - Information Protection sensitivity label policies SHALL be published
+    Tests CIS M365 7.0.0 (3.3.1) - Information Protection sensitivity label policies SHALL be published
     #>
     param($Tenant)
 

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_5_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.5.5) - Direct Send submissions SHALL be rejected
+    Tests CIS M365 7.0.0 (6.5.5) - Direct Send submissions SHALL be rejected
     #>
     param($Tenant)
 
