@@ -14,6 +14,9 @@ function Assert-CippVersion {
 
     if ($env:CIPPNG -eq 'true') {
         $APIVersion = $env:APP_VERSION
+        if (!$CIPPVersion) {
+            $CIPPVersion = $env:APP_VERSION
+        }
     } else {
         $APIVersion = (Get-Content -Path (Join-Path $env:CIPPRootPath 'version_latest.txt')).trim()
     }
