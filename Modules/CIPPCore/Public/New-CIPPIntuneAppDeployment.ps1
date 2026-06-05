@@ -45,21 +45,33 @@ function New-CIPPIntuneAppDeployment {
     }
 
     if (-not $IntuneBody -and $AppType -eq 'Choco') {
+        $PackageName = [string]$AppConfig.PackageName
+        if ([string]::IsNullOrWhiteSpace($PackageName)) {
+            throw 'PackageName is required for Choco app deployments.'
+        }
+
+        if (-not [regex]::IsMatch($PackageName, '^[A-Za-z0-9][A-Za-z0-9._-]*$')) {
+            throw "Invalid PackageName '$PackageName'. Allowed characters: letters, numbers, dot, underscore, hyphen."
+        }
+
         $IntuneBody = Get-Content (Join-Path $env:CIPPRootPath 'AddChocoApp\Choco.app.json') | ConvertFrom-Json
         $IntuneBody.description = $AppConfig.description
         $IntuneBody.displayName = $AppConfig.ApplicationName
         $IntuneBody.installExperience.runAsAccount = if ($AppConfig.InstallAsSystem) { 'system' } else { 'user' }
         $IntuneBody.installExperience.deviceRestartBehavior = if ($AppConfig.DisableRestart) { 'suppress' } else { 'allow' }
-        $IntuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $($AppConfig.PackageName)"
+        $PackageNameArg = ConvertTo-CIPPSafePwshArg -Value $PackageName
+        $IntuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $PackageNameArg"
         if ($AppConfig.customrepo) {
-            $IntuneBody.installCommandLine = $IntuneBody.installCommandLine + " -CustomRepo $($AppConfig.CustomRepo)"
+            $CustomRepoArg = ConvertTo-CIPPSafePwshArg -Value ([string]$AppConfig.CustomRepo)
+            $IntuneBody.installCommandLine = $IntuneBody.installCommandLine + " -CustomRepo $CustomRepoArg"
         }
         if ($AppConfig.customArguments) {
-            $IntuneBody.installCommandLine = $IntuneBody.installCommandLine + " -CustomArguments '$($AppConfig.customArguments)'"
+            $CustomArgumentsArg = ConvertTo-CIPPSafePwshArg -Value ([string]$AppConfig.customArguments)
+            $IntuneBody.installCommandLine = $IntuneBody.installCommandLine + " -CustomArguments $CustomArgumentsArg"
         }
-        $IntuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $($AppConfig.PackageName)"
+        $IntuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $PackageNameArg"
         $IntuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
-        $IntuneBody.detectionRules[0].fileOrFolderName = "$($AppConfig.PackageName)"
+        $IntuneBody.detectionRules[0].fileOrFolderName = $PackageName
 
         if ($IntuneBody.installCommandLine -match '%') {
             $IntuneBody.installCommandLine = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $IntuneBody.installCommandLine
