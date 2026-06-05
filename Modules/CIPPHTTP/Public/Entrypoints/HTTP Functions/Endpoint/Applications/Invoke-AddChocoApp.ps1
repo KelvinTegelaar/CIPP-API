@@ -13,13 +13,32 @@ function Invoke-AddChocoApp {
 
 
     $ChocoApp = $Request.Body
+    $PackageName = [string]$ChocoApp.PackageName
+    if ([string]::IsNullOrWhiteSpace($PackageName)) {
+        $Result = 'PackageName is required.'
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Warning'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ 'Results' = $Result }
+            })
+    }
+
+    if (-not [regex]::IsMatch($PackageName, '^[A-Za-z0-9][A-Za-z0-9._-]*$')) {
+        $Result = "Invalid PackageName '$PackageName'. Allowed characters: letters, numbers, dot, underscore, hyphen."
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Warning'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ 'Results' = $Result }
+            })
+    }
+
     $intuneBody = Get-Content 'AddChocoApp\Choco.app.json' | ConvertFrom-Json
     $AssignTo = $Request.Body.AssignTo -eq 'customGroup' ? $Request.Body.CustomGroup : $Request.Body.AssignTo
     $intuneBody.description = $ChocoApp.description
     $intuneBody.displayName = $ChocoApp.ApplicationName
     $intuneBody.installExperience.runAsAccount = if ($ChocoApp.InstallAsSystem) { 'system' } else { 'user' }
     $intuneBody.installExperience.deviceRestartBehavior = if ($ChocoApp.DisableRestart) { 'suppress' } else { 'allow' }
-    $PackageNameArg = ConvertTo-CIPPSafePwshArg -Value ([string]$ChocoApp.PackageName)
+    $PackageNameArg = ConvertTo-CIPPSafePwshArg -Value $PackageName
     $intuneBody.installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Install.ps1 -InstallChoco -Packagename $PackageNameArg"
     if ($ChocoApp.customrepo) {
         $CustomRepoArg = ConvertTo-CIPPSafePwshArg -Value ([string]$ChocoApp.CustomRepo)
@@ -31,7 +50,7 @@ function Invoke-AddChocoApp {
     }
     $intuneBody.UninstallCommandLine = "powershell.exe -ExecutionPolicy Bypass .\Uninstall.ps1 -Packagename $PackageNameArg"
     $intuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
-    $intuneBody.detectionRules[0].fileOrFolderName = "$($ChocoApp.PackageName)"
+    $intuneBody.detectionRules[0].fileOrFolderName = $PackageName
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
     $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
