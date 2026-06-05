@@ -203,7 +203,7 @@ function Invoke-ExecContainerManagement {
                 $Settings = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
                     Write-LogMessage -API $APIName -headers $Headers -message "Auto-update: new container image detected (running: $RunningDigest, remote: $RemoteDigest). Restarting." -sev Info
-                    try { [Craft.Services.AppLifecycleBridge]::RequestRestart('Auto-update: new container image available') } catch {}
+                    try { Request-CIPPRestart -Reason 'Auto-update: new container image available' } catch {}
                     $Result = "Update available — container restart initiated (auto-update enabled). Running digest: $RunningDigest, Remote digest: $RemoteDigest"
                 } elseif ($UpdateAvailable) {
                     $Result = "Update available. Running digest: $RunningDigest, Remote digest: $RemoteDigest. Restart the container to apply."
@@ -323,7 +323,7 @@ function Invoke-ExecContainerManagement {
                 Write-LogMessage -API $APIName -headers $Headers -message 'Container restart requested by super admin' -sev Info
                 $Body = @{ Results = 'Container restart initiated. The application will be back online shortly.' }
                 try {
-                    [Craft.Services.AppLifecycleBridge]::RequestRestart('Restart requested by super admin via container management page')
+                    Request-CIPPRestart -Reason 'Restart requested by super admin via container management page'
                 } catch {
                     $Body = @{ Results = 'Restart command sent but the bridge is not available. The app may need to be restarted from the Azure Portal.' }
                 }

@@ -241,7 +241,7 @@ function Test-CIPPAccess {
                 }
             }
 
-            if ($Permissions -contains 'CIPP.AppSettings.ReadWrite' -and $env:CIPPNG -ne 'true' -and $env:CIPP_SSO_MIGRATION_PROMPT -eq 'true') {
+            if ($env:CIPPNG -ne 'true') {
                 try {
                     $SSOTable = Get-CIPPTable -tablename 'SSOMigration'
                     $SSOMigration = Get-CIPPAzDataTableEntity @SSOTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue

@@ -500,7 +500,7 @@ function Invoke-ExecSSOSetup {
                 Write-LogMessage -API $APIName -headers $Headers -message "SSO migration complete: appId=$AppId, multiTenant=$MultiTenant" -sev Info
 
                 # Step 6: Restart to apply EasyAuth
-                [Craft.Services.AppLifecycleBridge]::RequestRestart('SSO migration complete — EasyAuth configured with customer CIPP-SSO app')
+                Request-CIPPRestart -Reason 'SSO migration complete — EasyAuth configured with customer CIPP-SSO app'
 
                 $Body = @{
                     Results = @{
