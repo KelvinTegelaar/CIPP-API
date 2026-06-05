@@ -23,6 +23,16 @@ function Set-CIPPDBCacheSettings {
         if (!$Settings) { $Settings = @() }
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Settings' -Data $Settings -AddCount
         $Settings = $null
+
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching apps and services settings' -sev Debug
+        $AppsAndServices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/admin/appsAndServices' -tenantid $TenantFilter
+        if ($AppsAndServices -and $AppsAndServices.PSObject.Properties.Name -contains 'settings') {
+            $AppsAndServices = $AppsAndServices.settings
+        }
+        if (!$AppsAndServices) { $AppsAndServices = @() }
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppsAndServices' -Data $AppsAndServices -AddCount
+        $AppsAndServices = $null
+
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached directory settings successfully' -sev Debug
 
     } catch {
