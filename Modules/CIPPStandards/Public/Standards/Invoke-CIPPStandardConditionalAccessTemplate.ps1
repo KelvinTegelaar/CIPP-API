@@ -141,7 +141,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 return
             }
             if (!$Compare) {
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue $true -Tenant $Tenant
+                $ExpectedValue = @{ 'Differences' = 'No Differences found' }
+                $CurrentValue = @{ 'Differences' = 'No Differences found' }
+                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue $true -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
             } else {
                 #this can still be prettified but is for later.
                 $ExpectedValue = @{ 'Differences' = @() }
