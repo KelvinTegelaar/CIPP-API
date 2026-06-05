@@ -88,7 +88,7 @@ function Initialize-CIPPAuth {
                         Write-Information "[Auth-Init] EasyAuth clientId ($ConfiguredAppId) differs from migration app — migration complete, cleaning up"
                         $Removed = Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_MIGRATION_APPID'
                         if ($Removed) {
-                            [Craft.Services.AppLifecycleBridge]::RequestRestart('SSO migration env var cleaned up during warmup')
+                            Request-CIPPRestart -Reason 'SSO migration env var cleaned up during warmup'
                         }
                     } else {
                         Write-Information '[Auth-Init] No clientId found in EasyAuth config — skipping cleanup'
@@ -134,7 +134,7 @@ function Initialize-CIPPAuth {
                             $Configured = Set-CIPPSSOEasyAuth -AppId $ConfiguredAppId -MultiTenant $SSOMultiTenant -TenantId $env:TenantID
                             if ($Configured) {
                                 Write-Information '[Auth-Init] EasyAuth issuer updated — requesting container restart'
-                                [Craft.Services.AppLifecycleBridge]::RequestRestart('EasyAuth issuer updated to match SSOMultiTenant setting during warmup')
+                                Request-CIPPRestart -Reason 'EasyAuth issuer updated to match SSOMultiTenant setting during warmup'
                             }
                         } else {
                             Write-Information "[Auth-Init] EasyAuth issuer matches SSOMultiTenant setting ($SSOMultiTenant) — no update needed"
@@ -155,7 +155,7 @@ function Initialize-CIPPAuth {
                 $Configured = Set-CIPPSSOEasyAuth -AppId $env:CIPP_SSO_MIGRATION_APPID -MultiTenant $false -TenantId $env:TenantID -UseKvReferences -ImplicitAuth
                 if ($Configured) {
                     Write-Information '[Auth-Init] Implicit auth EasyAuth configured — requesting restart'
-                    [Craft.Services.AppLifecycleBridge]::RequestRestart('Implicit auth EasyAuth configured with central migration app during warmup')
+                    Request-CIPPRestart -Reason 'Implicit auth EasyAuth configured with central migration app during warmup'
                 }
             } catch {
                 Write-Information "[Auth-Init] Implicit auth EasyAuth setup failed (non-fatal): $_"
@@ -186,7 +186,7 @@ function Initialize-CIPPAuth {
                 $Configured = Set-CIPPSSOEasyAuth -AppId $SSOAppId -MultiTenant $SSOMultiTenant -TenantId $env:TenantID -UseKvReferences
                 if ($Configured) {
                     Write-Information '[Auth-Init] EasyAuth configured — requesting container restart'
-                    [Craft.Services.AppLifecycleBridge]::RequestRestart('EasyAuth configured from SSO credentials during warmup')
+                    Request-CIPPRestart -Reason 'EasyAuth configured from SSO credentials during warmup'
                 }
             } else {
                 Write-Information '[Auth-Init] SAM credentials loaded but no SSO AppId found — enabling setup wizard'
