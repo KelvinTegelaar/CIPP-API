@@ -412,12 +412,12 @@ function Get-CIPPDrift {
                 if (-not $ExistingDriftStates.ContainsKey($Deviation.standardName)) {
                     $RowKey = $Deviation.standardName -replace '\.', '_'
                     $NewDriftEntities.Add(@{
-                        PartitionKey = $TenantFilter
-                        RowKey       = $RowKey
-                        StandardName = $Deviation.standardName
-                        Status       = 'New'
-                        LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                    })
+                            PartitionKey = $TenantFilter
+                            RowKey       = $RowKey
+                            StandardName = $Deviation.standardName
+                            Status       = 'New'
+                            LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        })
                 }
             }
             if ($NewDriftEntities.Count -gt 0) {

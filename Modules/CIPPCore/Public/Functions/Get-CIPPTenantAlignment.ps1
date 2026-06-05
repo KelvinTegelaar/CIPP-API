@@ -449,8 +449,7 @@ function Get-CIPPTenantAlignment {
                                 $DeniedDeviationsCount++
                             }
                         }
-                    }
-                    elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
+                    } elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
                     if ($item.ReportingDisabled) { $ReportingDisabledStandardsCount++ }
                 }
 
