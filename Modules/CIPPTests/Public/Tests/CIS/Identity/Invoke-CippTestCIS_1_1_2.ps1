@@ -11,11 +11,11 @@ function Invoke-CippTestCIS_1_1_2 {
 
     try {
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
-        if (-not $Roles -or -not $RoleAssignments -or -not $Users) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles, RoleAssignments, or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        if ($null -eq $Roles -or $null -eq $Users) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
@@ -25,7 +25,20 @@ function Invoke-CippTestCIS_1_1_2 {
             return
         }
 
-        $GAUserIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$RoleAssignments.Where({ $_.roleDefinitionId -eq $GA.id }).principalId)
+        $GAUserIds = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($Member in @($GA.members)) {
+            if ($Member.id) {
+                [void]$GAUserIds.Add([string]$Member.id)
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -eq $GA.id -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $Assignment.principalId) {
+                [void]$GAUserIds.Add([string]$Assignment.principalId)
+            }
+        }
+
         $GAUsers = $Users.Where({ $GAUserIds.Contains($_.id) })
         $BreakGlassPattern = 'breakglass|break-glass|emergency|cipp-bg|bg-admin'
         $LikelyBG = $GAUsers.Where({ $_.userPrincipalName -match $BreakGlassPattern -and $_.onPremisesSyncEnabled -ne $true })

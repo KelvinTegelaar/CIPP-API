@@ -11,17 +11,37 @@ function Invoke-CippTestCIS_1_1_1 {
     param($Tenant)
 
     try {
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
-        if (-not $Roles -or -not $RoleAssignments -or -not $Users) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles, RoleAssignments, or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        if ($null -eq $Roles -or $null -eq $Users) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
-        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
-        $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new([string[]]($RoleAssignments.Where({ $PrivilegedRoleIds.Contains($_.roleDefinitionId) }).principalId | Select-Object -Unique))
+        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
+        $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($Role in @($Roles)) {
+            $RoleTemplateId = if ($Role.roleTemplateId) { [string]$Role.roleTemplateId } elseif ($Role.RoletemplateId) { [string]$Role.RoletemplateId } else { $null }
+            if ($RoleTemplateId) {
+                [void]$PrivilegedRoleIds.Add($RoleTemplateId)
+            }
+
+            foreach ($Member in @($Role.members)) {
+                if ($Member.id) {
+                    [void]$PrivilegedUserIds.Add([string]$Member.id)
+                }
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $PrivilegedRoleIds.Contains([string]$Assignment.roleDefinitionId) -and $Assignment.principalId) {
+                [void]$PrivilegedUserIds.Add([string]$Assignment.principalId)
+            }
+        }
+
         $PrivilegedUsers = $Users.Where({ $PrivilegedUserIds.Contains($_.id) })
 
         if (-not $PrivilegedUsers) {
