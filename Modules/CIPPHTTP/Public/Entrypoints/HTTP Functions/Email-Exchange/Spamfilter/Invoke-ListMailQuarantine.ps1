@@ -14,7 +14,15 @@ function Invoke-ListMailQuarantine {
 
     try {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 } | Select-Object -ExcludeProperty *data.type*
+            $Page = 1
+            $PageSize = 1000
+            $AllMessages = [System.Collections.Generic.List[object]]::new()
+            do {
+                $Results = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = $PageSize; Page = $Page } | Select-Object -ExcludeProperty *data.type*
+                if ($Results) { $AllMessages.AddRange(@($Results)) }
+                $Page++
+            } while (@($Results).Count -eq $PageSize)
+            $AllMessages
         } else {
             $Table = Get-CIPPTable -TableName cacheQuarantineMessages
             $PartitionKey = 'QuarantineMessage'
