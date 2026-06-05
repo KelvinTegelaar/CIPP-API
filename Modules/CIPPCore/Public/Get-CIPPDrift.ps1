@@ -65,6 +65,16 @@ function Get-CIPPDrift {
     # Load CA templates with GUID hashtable
     $RawCATemplates = Get-CIPPAzDataTableEntity @IntuneTable -Filter "PartitionKey eq 'CATemplate'"
     $CATemplatesByGuid = @{}
+    # Build a hashtable indexed by Package for O(1) CA tag lookup
+    $CATemplatesByPackage = @{}
+    foreach ($t in $RawCATemplates) {
+        if ($t.Package) {
+            if (-not $CATemplatesByPackage.ContainsKey($t.Package)) {
+                $CATemplatesByPackage[$t.Package] = [System.Collections.Generic.List[object]]::new()
+            }
+            $CATemplatesByPackage[$t.Package].Add($t)
+        }
+    }
     $AllCATemplates = foreach ($RawTemplate in $RawCATemplates) {
         try {
             $data = $RawTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
@@ -279,9 +289,15 @@ function Get-CIPPDrift {
                         if ($Template.TemplateList.value) {
                             $CATemplateIds.Add($Template.TemplateList.value)
                         }
-                        if ($Template.'TemplateList-Tags'.rawData.templates) {
-                            foreach ($TagTemplate in $Template.'TemplateList-Tags'.rawData.templates) {
-                                $CATemplateIds.Add($TagTemplate.GUID)
+                        if ($Template.'TemplateList-Tags') {
+                            $TagValue = if ($Template.'TemplateList-Tags'.value) { $Template.'TemplateList-Tags'.value } else { $null }
+                            if ($TagValue) {
+                                $ResolvedCATagTemplates = if ($CATemplatesByPackage.ContainsKey($TagValue)) { $CATemplatesByPackage[$TagValue] } else { @() }
+                                foreach ($ResolvedTemplate in $ResolvedCATagTemplates) {
+                                    if ($ResolvedTemplate.RowKey -and $ResolvedTemplate.RowKey -notin $CATemplateIds) {
+                                        $CATemplateIds.Add($ResolvedTemplate.RowKey)
+                                    }
+                                }
                             }
                         }
                     }
@@ -396,12 +412,12 @@ function Get-CIPPDrift {
                 if (-not $ExistingDriftStates.ContainsKey($Deviation.standardName)) {
                     $RowKey = $Deviation.standardName -replace '\.', '_'
                     $NewDriftEntities.Add(@{
-                        PartitionKey = $TenantFilter
-                        RowKey       = $RowKey
-                        StandardName = $Deviation.standardName
-                        Status       = 'New'
-                        LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                    })
+                            PartitionKey = $TenantFilter
+                            RowKey       = $RowKey
+                            StandardName = $Deviation.standardName
+                            Status       = 'New'
+                            LastModified = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        })
                 }
             }
             if ($NewDriftEntities.Count -gt 0) {

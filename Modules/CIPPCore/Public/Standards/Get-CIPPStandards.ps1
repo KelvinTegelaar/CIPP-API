@@ -49,7 +49,7 @@ function Get-CIPPStandards {
             $IsArray = $StandardValue -is [System.Collections.IEnumerable] -and -not ($StandardValue -is [string])
 
             if ($IsArray) {
-                $NewArray = foreach ($Item in $StandardValue) {
+                $NewArray = @(foreach ($Item in $StandardValue) {
                     if ($Item.'TemplateList-Tags'.value) {
                         $HasExpansions = $true
                         $Table = Get-CippTable -tablename 'templates'
@@ -60,6 +60,7 @@ function Get-CIPPStandards {
                         }
                         $Filter = "PartitionKey eq '$PartitionKey'"
                         $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $Item.'TemplateList-Tags'.value
+                        Write-Information "Expanding $StandardName tag '$($Item.'TemplateList-Tags'.value)' from partition '$PartitionKey': found $(@($TemplatesList).Count) templates"
 
                         foreach ($TemplateItem in $TemplatesList) {
                             $TemplateJSON = $TemplateItem.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
@@ -77,8 +78,10 @@ function Get-CIPPStandards {
                         $Item | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
                         $Item
                     }
+                })
+                if ($NewArray.Count -gt 0) {
+                    $ExpandedStandards[$StandardName] = $NewArray
                 }
-                $ExpandedStandards[$StandardName] = $NewArray
             } else {
                 if ($StandardValue.'TemplateList-Tags'.value) {
                     $HasExpansions = $true
@@ -139,6 +142,7 @@ function Get-CIPPStandards {
 
             foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                 $Value = $Standards.$StandardName
+                if ($null -eq $Value) { continue }
                 $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
 
                 if ($IsArray) {
@@ -282,6 +286,7 @@ function Get-CIPPStandards {
 
                 foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                     $Value = $Standards.$StandardName
+                    if ($null -eq $Value) { continue }
                     $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
 
                     if ($IsArray) {
@@ -351,6 +356,7 @@ function Get-CIPPStandards {
 
                 foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                     $Value = $Standards.$StandardName
+                    if ($null -eq $Value) { continue }
                     $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
 
                     if ($IsArray) {
@@ -430,6 +436,7 @@ function Get-CIPPStandards {
 
                 foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                     $Value = $Standards.$StandardName
+                    if ($null -eq $Value) { continue }
                     $IsArray = $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])
 
                     if ($IsArray) {

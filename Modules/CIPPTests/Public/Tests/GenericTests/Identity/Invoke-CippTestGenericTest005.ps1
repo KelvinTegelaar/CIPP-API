@@ -46,13 +46,13 @@ function Invoke-CippTestGenericTest005 {
         $null = $Result.Append("|-------------|----------------|------------|--------------|-----------------|`n")
 
         foreach ($Admin in ($Admins | Sort-Object DisplayName)) {
-            $Name = $Admin.DisplayName
+            $Name = ($Admin.DisplayName -replace '\|', '\|')
             $Registered = if ($Admin.MFARegistration -eq $true) { '✅ Yes' } else { '❌ No' }
             $Methods = if ($Admin.MFAMethods) {
                 $MethodList = if ($Admin.MFAMethods -is [string]) {
                     try { ($Admin.MFAMethods | ConvertFrom-Json) -join ', ' } catch { $Admin.MFAMethods }
                 } else { ($Admin.MFAMethods) -join ', ' }
-                $MethodList -replace 'microsoftAuthenticator', 'Authenticator' -replace 'phoneAuthentication', 'Phone' -replace 'fido2', 'FIDO2' -replace 'softwareOneTimePasscode', 'Software OTP' -replace 'emailAuthentication', 'Email' -replace 'windowsHelloForBusiness', 'Windows Hello' -replace 'temporaryAccessPass', 'Temp Pass'
+                ($MethodList -replace 'microsoftAuthenticator', 'Authenticator' -replace 'phoneAuthentication', 'Phone' -replace 'fido2', 'FIDO2' -replace 'softwareOneTimePasscode', 'Software OTP' -replace 'emailAuthentication', 'Email' -replace 'windowsHelloForBusiness', 'Windows Hello' -replace 'temporaryAccessPass', 'Temp Pass') -replace '\|', '\|'
             } else { 'None' }
             $Protection = if ($Admin.CoveredByCA -like 'Enforced*') { "Conditional Access" }
             elseif ($Admin.CoveredBySD -eq $true) { 'Security Defaults' }

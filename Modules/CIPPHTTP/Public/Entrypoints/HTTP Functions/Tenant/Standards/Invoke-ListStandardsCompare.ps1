@@ -19,7 +19,7 @@ function Invoke-ListStandardsCompare {
     $StandardParams = @{}
     if ($TemplateFilter) { $StandardParams.TemplateId = $TemplateFilter }
     if ($TenantFilter) { $StandardParams.TenantFilter = $TenantFilter }
-    $StandardList = Get-CIPPStandards @StandardParams
+    $StandardList = @(Get-CIPPStandards @StandardParams) + @(Get-CIPPStandards @StandardParams -runManually $true)
 
     $ScopedTemplateGuids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $ScopedQuarantineNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
