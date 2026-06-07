@@ -6,15 +6,17 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CIPP
 {
     /// <summary>
-    /// Process-scoped, thread-safe LRU cache for test data lookups.
-    /// Shared across all PowerShell runspaces. Bounded by both a byte-size
-    /// cap (default 50 MB) and a short TTL (default 1 minute) so that test
-    /// suites running against a single tenant get fast cache hits without
-    /// accumulating stale Gen2 roots that cause GC thrashing.
+    /// Host-scoped, thread-safe LRU cache for test data lookups. The DLL is
+    /// loaded once per Azure Functions host, so every PowerShell worker
+    /// process on that host shares this exact instance. Bounded by both a
+    /// byte-size cap (default 100 MB) and a short TTL (default 5 minutes)
+    /// so that test suites running against a single tenant get fast cache
+    /// hits without accumulating stale Gen2 roots that cause GC thrashing.
     /// </summary>
     public static class TestDataCache
     {
@@ -28,10 +30,12 @@ namespace CIPP
         private static readonly Dictionary<string, LinkedListNode<string>> _lruIndex = new(); // key → node
         private static readonly object _lruLock = new();
         private static long _currentBytes;
-        private static int _accessCount;
+        private static long _accessCount;
         private static long _hits;
         private static long _misses;
         private static long _evictions;
+        private static long _oversized;
+        private static int _sweepInFlight; // 0 = idle, 1 = a background ClearExpired is running
 
         private sealed class CacheEntry
         {
@@ -60,7 +64,11 @@ namespace CIPP
 
         public static bool TryGet(string key, out object? value)
         {
-            Interlocked.Increment(ref _accessCount);
+            var count = Interlocked.Increment(ref _accessCount);
+            // Every ~1000 accesses, kick off a background sweep so TTL-expired
+            // entries that nobody re-reads still get evicted. CAS-guarded so
+            // overlapping triggers collapse to a single sweep.
+            if ((count % 1000) == 0) TryFireBackgroundSweep();
 
             if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired)
             {
@@ -95,9 +103,14 @@ namespace CIPP
             int itemCount = value is ICollection col ? col.Count : 0;
             long sizeBytes = EstimateValueSize(value, itemCount);
 
-            // If a single entry exceeds the cap, don't cache it at all
+            // If a single entry exceeds the cap, don't cache it at all — bump
+            // _oversized so GetDiagnostics surfaces these silent drops instead
+            // of leaving callers to chase phantom misses.
             if (sizeBytes > _maxBytes)
+            {
+                Interlocked.Increment(ref _oversized);
                 return;
+            }
 
             // Remove existing entry for this key first
             if (_cache.ContainsKey(key))
@@ -170,6 +183,7 @@ namespace CIPP
             Interlocked.Exchange(ref _hits, 0);
             Interlocked.Exchange(ref _misses, 0);
             Interlocked.Exchange(ref _evictions, 0);
+            Interlocked.Exchange(ref _oversized, 0);
         }
 
         /// <summary>
@@ -191,6 +205,40 @@ namespace CIPP
             return removed;
         }
 
+        /// <summary>
+        /// Remove every entry whose TTL has elapsed. Pair to the lazy per-key
+        /// eviction in TryGet — handles keys that nobody reads again. Safe to
+        /// call from anywhere; the background sweep triggered by TryGet uses
+        /// this method.
+        /// </summary>
+        public static int ClearExpired()
+        {
+            // Snapshot first; RemoveEntry mutates _cache and _lruIndex under _lruLock.
+            var expiredKeys = new List<string>();
+            foreach (var kvp in _cache)
+            {
+                if (kvp.Value.IsExpired) expiredKeys.Add(kvp.Key);
+            }
+            foreach (var key in expiredKeys) RemoveEntry(key);
+            return expiredKeys.Count;
+        }
+
+        /// <summary>
+        /// Fire-and-forget a single background ClearExpired sweep. The CAS guard
+        /// collapses overlapping triggers so we never have more than one sweep
+        /// running at a time, regardless of read pressure.
+        /// </summary>
+        private static void TryFireBackgroundSweep()
+        {
+            if (Interlocked.CompareExchange(ref _sweepInFlight, 1, 0) != 0) return;
+            Task.Run(() =>
+            {
+                try { ClearExpired(); }
+                catch { /* swallow — sweep is best-effort */ }
+                finally { Interlocked.Exchange(ref _sweepInFlight, 0); }
+            });
+        }
+
         public static int Count => _cache.Count;
         public static long CurrentBytes => Interlocked.Read(ref _currentBytes);
         public static double CurrentMB => Math.Round(Interlocked.Read(ref _currentBytes) / (1024.0 * 1024.0), 2);
@@ -199,6 +247,7 @@ namespace CIPP
         public static long Hits => Interlocked.Read(ref _hits);
         public static long Misses => Interlocked.Read(ref _misses);
         public static long Evictions => Interlocked.Read(ref _evictions);
+        public static long Oversized => Interlocked.Read(ref _oversized);
         public static double HitRate => (_hits + _misses) > 0
             ? Math.Round(_hits * 100.0 / (_hits + _misses), 1) : 0;
 
@@ -326,12 +375,16 @@ namespace CIPP
         /// </summary>
         public static CacheDiagnostics GetDiagnostics()
         {
-            var now = DateTime.UtcNow;
             var entries = _cache.ToArray(); // snapshot
 
             long totalBytes = 0;
             var byType = new Dictionary<string, TypeBucket>();
+            int active = 0, expired = 0;
+            DateTime? earliestExpiry = null, latestExpiry = null;
 
+            // Single pass — use the SizeBytes stored at insert instead of
+            // re-running EstimateValueSize (which would JSON-serialize every
+            // PSObject tree on every diagnostic poll and thrash the LOH).
             foreach (var kvp in entries)
             {
                 var parts = kvp.Key.Split('|', 2);
@@ -341,7 +394,7 @@ namespace CIPP
                 if (kvp.Value.Value is ICollection col)
                     itemCount = col.Count;
 
-                long entryBytes = EstimateValueSize(kvp.Value.Value, itemCount);
+                long entryBytes = kvp.Value.SizeBytes;
                 totalBytes += entryBytes;
 
                 if (!byType.TryGetValue(dataType, out var bucket))
@@ -352,12 +405,7 @@ namespace CIPP
                 bucket.EntryCount++;
                 bucket.TotalBytes += entryBytes;
                 bucket.TotalItems += itemCount;
-            }
 
-            int active = 0, expired = 0;
-            DateTime? earliestExpiry = null, latestExpiry = null;
-            foreach (var kvp in entries)
-            {
                 if (kvp.Value.IsExpired) { expired++; } else { active++; }
                 var exp = kvp.Value.ExpiresUtc;
                 if (earliestExpiry == null || exp < earliestExpiry) earliestExpiry = exp;
@@ -377,9 +425,10 @@ namespace CIPP
                 Misses = Interlocked.Read(ref _misses),
                 HitRate = HitRate,
                 Evictions = Interlocked.Read(ref _evictions),
+                Oversized = Interlocked.Read(ref _oversized),
                 EarliestExpiryUtc = earliestExpiry,
                 LatestExpiryUtc = latestExpiry,
-                AccessCount = _accessCount,
+                AccessCount = Interlocked.Read(ref _accessCount),
                 TypeBreakdown = byType.Values
                     .OrderByDescending(b => b.TotalBytes)
                     .ToList(),
@@ -401,9 +450,10 @@ namespace CIPP
         public long Misses { get; set; }
         public double HitRate { get; set; }
         public long Evictions { get; set; }
+        public long Oversized { get; set; }
         public DateTime? EarliestExpiryUtc { get; set; }
         public DateTime? LatestExpiryUtc { get; set; }
-        public int AccessCount { get; set; }
+        public long AccessCount { get; set; }
         public List<TypeBucket> TypeBreakdown { get; set; } = new();
     }
 
