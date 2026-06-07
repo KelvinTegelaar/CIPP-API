@@ -3,7 +3,7 @@ using namespace Microsoft.Azure.Functions.PowerShellWorker
 function New-CippCoreRequest {
     <#
     .SYNOPSIS
-        Main entrypoint for all HTTP triggered functions in CIPP
+        Main entrypoint for all HTTP triggered functions in CIPP, this must live in the CIPPCore module
     .DESCRIPTION
         This function is the main entry point for all HTTP triggered functions in CIPP. It routes requests to the appropriate function based on the CIPPEndpoint parameter in the request.
     .FUNCTIONALITY

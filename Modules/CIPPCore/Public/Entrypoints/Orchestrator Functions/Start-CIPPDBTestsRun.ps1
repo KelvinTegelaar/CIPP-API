@@ -38,6 +38,8 @@ function Start-CIPPDBTestsRun {
     }
 
     try {
+        try { [CIPP.TestDataCache]::Clear() } catch { Write-Information "TestDataCache clear skipped: $($_.Exception.Message)" }
+
         $AllTenantsList = if ($TenantFilter -eq 'allTenants') {
             $DbCounts = Get-CIPPDbItem -CountsOnly -TenantFilter 'allTenants'
             $TenantsWithData = $DbCounts | Where-Object { (($_.DataCount ?? $_.Count) ?? 0) -gt 0 } | Select-Object -ExpandProperty PartitionKey -Unique
