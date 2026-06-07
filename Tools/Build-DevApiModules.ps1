@@ -5,8 +5,7 @@ $repoRoot = Split-Path -Parent $toolsRoot
 $modulesRoot = Join-Path $repoRoot 'Modules'
 $outputRoot = Join-Path $repoRoot 'Output'
 
-Install-Module -Name ModuleBuilder -MaximumVersion 3.1.9 -Scope CurrentUser -Force -AllowClobber
-Import-Module -Name ModuleBuilder -Force
+Import-Module -Name (Join-Path $toolsRoot 'ModuleBuilder\3.1.8\ModuleBuilder.psd1') -Force
 
 Write-Host "Repo root: $repoRoot"
 Set-Location -Path $repoRoot
