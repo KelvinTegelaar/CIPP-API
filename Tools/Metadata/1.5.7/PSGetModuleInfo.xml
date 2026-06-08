@@ -1,0 +1,154 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">Metadata</S>
+      <Version N="Version">1.5.7</Version>
+      <S N="Type">Module</S>
+      <S N="Description">A module for PowerShell data serialization</S>
+      <S N="Author">Joel Bennett</S>
+      <S N="CompanyName">Jaykul</S>
+      <S N="Copyright">Copyright (c) 2014-2021 by Joel Bennett, all rights reserved.</S>
+      <DT N="PublishedDate">2022-08-17T05:03:00+08:00</DT>
+      <Obj N="InstalledDate" RefId="1">
+        <DT>2025-12-08T22:53:40.2167412+08:00</DT>
+        <MS>
+          <Obj N="DisplayHint" RefId="2">
+            <TN RefId="1">
+              <T>Microsoft.PowerShell.Commands.DisplayHintType</T>
+              <T>System.Enum</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>DateTime</ToString>
+            <I32>2</I32>
+          </Obj>
+        </MS>
+      </Obj>
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">http://opensource.org/licenses/MIT</URI>
+      <URI N="ProjectUri">https://github.com/PoshCode/Metadata</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="3">
+        <TN RefId="2">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>Serialization</S>
+          <S>Metadata</S>
+          <S>Development</S>
+          <S>Configuration</S>
+          <S>Settings</S>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="4">
+        <TN RefId="3">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">Workflow</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="2" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Add-MetadataConverter</S>
+                <S>ConvertFrom-Metadata</S>
+                <S>ConvertTo-Metadata</S>
+                <S>Export-Metadata</S>
+                <S>Get-Metadata</S>
+                <S>Import-Metadata</S>
+                <S>Test-PSVersion</S>
+                <S>Update-Metadata</S>
+                <S>Update-Object</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="7">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Add-MetadataConverter</S>
+                <S>ConvertFrom-Metadata</S>
+                <S>ConvertTo-Metadata</S>
+                <S>Export-Metadata</S>
+                <S>Get-Metadata</S>
+                <S>Import-Metadata</S>
+                <S>Test-PSVersion</S>
+                <S>Update-Metadata</S>
+                <S>Update-Object</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">Fixes PSObject serialization bug</S>
+      <Obj N="Dependencies" RefId="8">
+        <TNRef RefId="2" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="9">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Copyright (c) 2014-2021 by Joel Bennett, all rights reserved.</S>
+          <S N="description">A module for PowerShell data serialization</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="releaseNotes">Fixes PSObject serialization bug</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">697777</S>
+          <S N="downloadCount">780046</S>
+          <S N="packageSize">15204</S>
+          <S N="published">17/08/2022 5:03:00 AM +08:00</S>
+          <S N="created">17/08/2022 5:03:00 AM +08:00</S>
+          <S N="lastUpdated">8/12/2025 2:50:00 PM +08:00</S>
+          <S N="tags">Serialization Metadata Development Configuration Settings PSModule PSFunction_Add-MetadataConverter PSCommand_Add-MetadataConverter PSFunction_ConvertFrom-Metadata PSCommand_ConvertFrom-Metadata PSFunction_ConvertTo-Metadata PSCommand_ConvertTo-Metadata PSFunction_Export-Metadata PSCommand_Export-Metadata PSFunction_Get-Metadata PSCommand_Get-Metadata PSFunction_Import-Metadata PSCommand_Import-Metadata PSFunction_Test-PSVersion PSCommand_Test-PSVersion PSFunction_Update-Metadata PSCommand_Update-Metadata PSFunction_Update-Object PSCommand_Update-Object PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2025-12-08T14:50:00Z</S>
+          <S N="NormalizedVersion">1.5.7</S>
+          <S N="Authors">Joel Bennett</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">Metadata.nuspec|Metadata.psd1|Metadata.psm1</S>
+          <S N="GUID">c7505d40-646d-46b5-a440-8a81791c5d23</S>
+          <S N="CompanyName">HuddledMasses.org</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\Zac\Documents\PowerShell\Modules\Metadata\1.5.7</S>
+    </MS>
+  </Obj>
+</Objs>
