@@ -4,6 +4,8 @@ Function Invoke-ListUserConditionalAccessPolicies {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists Conditional Access policies that apply to a specific user in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ function Invoke-ListGraphBulkRequest {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Executes multiple Microsoft Graph API requests in a single batch call for a given tenant. Accepts an array of request objects in the body.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

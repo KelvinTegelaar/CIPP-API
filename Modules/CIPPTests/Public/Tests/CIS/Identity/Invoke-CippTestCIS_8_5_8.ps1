@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.8) - External meeting chat SHALL be off
+    Tests CIS M365 7.0.0 (8.5.8) - External meeting chat SHALL be off
     #>
     param($Tenant)
 

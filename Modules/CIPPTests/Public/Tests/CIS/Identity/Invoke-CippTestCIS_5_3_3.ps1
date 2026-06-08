@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_3_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.3.3) - 'Access reviews' for privileged roles SHALL be configured
+    Tests CIS M365 7.0.0 (5.3.3) - 'Access reviews' for privileged roles SHALL be configured
     #>
     param($Tenant)
 

@@ -22,23 +22,23 @@ function Invoke-CippTestZTNA24839 {
         $Passed = $AssignedCompliantProfiles.Count -gt 0
 
         if ($Passed) {
-            $ResultMarkdown = "✅ At least one Enterprise Wi-Fi profile for iOS exists and is assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ At least one Enterprise Wi-Fi profile for iOS exists and is assigned.`n`n")
         } else {
-            $ResultMarkdown = "❌ No Enterprise Wi-Fi profile for iOS exists or none are assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ No Enterprise Wi-Fi profile for iOS exists or none are assigned.`n`n")
         }
 
         if ($iOSWifiConfProfiles.Count -gt 0) {
-            $ResultMarkdown += "## iOS WiFi Configuration Profiles`n`n"
-            $ResultMarkdown += "| Policy Name | Wi-Fi Security Type | Assigned |`n"
-            $ResultMarkdown += "| :---------- | :------------------ | :------- |`n"
+            $null = $ResultMarkdown.Append("## iOS WiFi Configuration Profiles`n`n")
+            $null = $ResultMarkdown.Append("| Policy Name | Wi-Fi Security Type | Assigned |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :------------------ | :------- |`n")
 
             foreach ($policy in $iOSWifiConfProfiles) {
                 $securityType = if ($policy.wiFiSecurityType) { $policy.wiFiSecurityType } else { 'Unknown' }
                 $assigned = if ($policy.assignments -and $policy.assignments.Count -gt 0) { '✅ Yes' } else { '❌ No' }
-                $ResultMarkdown += "| $($policy.displayName) | $securityType | $assigned |`n"
+                $null = $ResultMarkdown.Append("| $($policy.displayName) | $securityType | $assigned |`n")
             }
         } else {
-            $ResultMarkdown += "No iOS WiFi configuration profiles found.`n"
+            $null = $ResultMarkdown.Append("No iOS WiFi configuration profiles found.`n")
         }
 
         $Status = if ($Passed) { 'Passed' } else { 'Failed' }

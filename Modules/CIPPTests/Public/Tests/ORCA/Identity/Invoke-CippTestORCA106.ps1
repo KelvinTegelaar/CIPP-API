@@ -26,16 +26,16 @@ function Invoke-CippTestORCA106 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have quarantine retention period set to 30 days.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have quarantine retention period set to 30 days.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies do not have quarantine retention period set to 30 days.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Quarantine Retention Period |`n"
-            $Result += "|------------|----------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies do not have quarantine retention period set to 30 days.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Quarantine Retention Period |`n")
+            $null = $Result.Append("|------------|----------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.QuarantineRetentionPeriod) days |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.QuarantineRetentionPeriod) days |`n")
             }
         }
 

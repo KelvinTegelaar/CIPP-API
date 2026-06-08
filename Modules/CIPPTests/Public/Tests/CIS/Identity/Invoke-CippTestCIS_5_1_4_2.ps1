@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_4_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.4.2) - Maximum number of devices per user SHALL be limited
+    Tests CIS M365 7.0.0 (5.1.4.2) - Maximum number of devices per user SHALL be limited
     #>
     param($Tenant)
 
@@ -16,12 +16,12 @@ function Invoke-CippTestCIS_5_1_4_2 {
         $Cfg = $DRP | Select-Object -First 1
         $Quota = [int]$Cfg.userDeviceQuota
 
-        if ($Quota -gt 0 -and $Quota -le 20) {
+        if ($Quota -gt 0 -and $Quota -le 10) {
             $Status = 'Passed'
-            $Result = "userDeviceQuota is set to $Quota (CIS recommends 20 or less)."
+            $Result = "userDeviceQuota is set to $Quota (CIS recommends 10 or less)."
         } else {
             $Status = 'Failed'
-            $Result = "userDeviceQuota is $Quota (CIS recommends 20 or less)."
+            $Result = "userDeviceQuota is $Quota (CIS recommends 10 or less)."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_4_2' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Maximum number of devices per user is limited' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Device Management'

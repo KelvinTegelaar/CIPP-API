@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_4_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (4.1) - Devices without a compliance policy SHALL be marked 'not compliant'
+    Tests CIS M365 7.0.0 (4.1) - Devices without a compliance policy SHALL be marked 'not compliant'
     #>
     param($Tenant)
 

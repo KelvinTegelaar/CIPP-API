@@ -28,28 +28,28 @@ function Invoke-CippTestZTNA21838 {
         $StatusEmoji = if ($Fido2Enabled) { '✅' } else { '❌' }
 
         if ($Fido2Enabled) {
-            $ResultMarkdown = "Security key authentication method is enabled for your tenant, providing hardware-backed phishing-resistant authentication.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Security key authentication method is enabled for your tenant, providing hardware-backed phishing-resistant authentication.`n`n")
         } else {
-            $ResultMarkdown = "Security key authentication method is not enabled; users cannot register FIDO2 security keys for strong authentication.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Security key authentication method is not enabled; users cannot register FIDO2 security keys for strong authentication.`n`n")
         }
 
-        $ResultMarkdown += "## FIDO2 security key authentication settings`n`n"
-        $ResultMarkdown += "$StatusEmoji **FIDO2 authentication method**`n"
-        $ResultMarkdown += "- Status: $($Fido2Config.state)`n"
+        $null = $ResultMarkdown.Append("## FIDO2 security key authentication settings`n`n")
+        $null = $ResultMarkdown.Append("$StatusEmoji **FIDO2 authentication method**`n")
+        $null = $ResultMarkdown.Append("- Status: $($Fido2Config.state)`n")
 
         $IncludeTargetsDisplay = if ($Fido2Config.includeTargets -and $Fido2Config.includeTargets.Count -gt 0) {
             ($Fido2Config.includeTargets | ForEach-Object { if ($_.id -eq 'all_users') { 'All users' } else { $_.id } }) -join ', '
         } else {
             'None'
         }
-        $ResultMarkdown += "- Include targets: $IncludeTargetsDisplay`n"
+        $null = $ResultMarkdown.Append("- Include targets: $IncludeTargetsDisplay`n")
 
         $ExcludeTargetsDisplay = if ($Fido2Config.excludeTargets -and $Fido2Config.excludeTargets.Count -gt 0) {
             ($Fido2Config.excludeTargets | ForEach-Object { $_.id }) -join ', '
         } else {
             'None'
         }
-        $ResultMarkdown += "- Exclude targets: $ExcludeTargetsDisplay`n"
+        $null = $ResultMarkdown.Append("- Exclude targets: $ExcludeTargetsDisplay`n")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
 

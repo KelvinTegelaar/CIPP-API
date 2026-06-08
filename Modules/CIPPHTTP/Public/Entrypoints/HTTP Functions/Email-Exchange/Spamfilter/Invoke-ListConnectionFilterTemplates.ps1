@@ -4,6 +4,8 @@ Function Invoke-ListConnectionFilterTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.ConnectionFilter.Read
+    .DESCRIPTION
+        Lists saved connection filter policy templates for Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

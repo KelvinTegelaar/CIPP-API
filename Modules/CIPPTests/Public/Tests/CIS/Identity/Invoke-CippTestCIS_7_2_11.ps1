@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_11 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.11) - SharePoint default sharing link permission SHALL be set
+    Tests CIS M365 7.0.0 (7.2.11) - SharePoint default sharing link permission SHALL be set
     #>
     param($Tenant)
 

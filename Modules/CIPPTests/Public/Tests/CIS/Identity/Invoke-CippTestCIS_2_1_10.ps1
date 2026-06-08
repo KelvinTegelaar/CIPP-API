@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_10 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.10) - DMARC Records for all Exchange Online domains SHALL be published
+    Tests CIS M365 7.0.0 (2.1.10) - DMARC Records for all Exchange Online domains SHALL be published
     #>
     param($Tenant)
 
@@ -19,12 +19,12 @@ function Invoke-CippTestCIS_2_1_10 {
 
         if (-not $Failing -or $Failing.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($Results.Count) domain(s) have a DMARC record with p=quarantine or p=reject."
+            $Result = [System.Text.StringBuilder]::new("All $($Results.Count) domain(s) have a DMARC record with p=quarantine or p=reject.")
         } else {
             $Status = 'Failed'
-            $Result = "$($Failing.Count) of $($Results.Count) domain(s) are missing a compliant DMARC record:`n`n| Domain | DMARCPresent | DMARCActionPolicy |`n| :----- | :----------- | :---------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("$($Failing.Count) of $($Results.Count) domain(s) are missing a compliant DMARC record:`n`n| Domain | DMARCPresent | DMARCActionPolicy |`n| :----- | :----------- | :---------------- |`n")
             foreach ($D in ($Failing | Select-Object -First 25)) {
-                $Result += "| $($D.Domain) | $($D.DMARCPresent) | $($D.DMARCActionPolicy) |`n"
+                $null = $Result.Append("| $($D.Domain) | $($D.DMARCPresent) | $($D.DMARCActionPolicy) |`n")
             }
         }
 

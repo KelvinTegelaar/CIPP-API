@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.1) - Administrative accounts SHALL be cloud-only
+    Tests CIS M365 7.0.0 (1.1.1) - Administrative accounts SHALL be cloud-only
 
     .DESCRIPTION
     Privileged role holders should be cloud-only accounts (no onPremisesSyncEnabled),
@@ -11,19 +11,38 @@ function Invoke-CippTestCIS_1_1_1 {
     param($Tenant)
 
     try {
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
-        if (-not $Roles -or -not $RoleAssignments -or -not $Users) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles, RoleAssignments, or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        if ($null -eq $Roles -or $null -eq $Users) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
-        $PrivilegedRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
-        $PrivilegedAssignments = $RoleAssignments | Where-Object { $_.roleDefinitionId -in $PrivilegedRoleIds }
-        $PrivilegedUserIds = $PrivilegedAssignments.principalId | Select-Object -Unique
-        $PrivilegedUsers = $Users | Where-Object { $_.id -in $PrivilegedUserIds }
+        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
+        $PrivilegedUserIds = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($Role in @($Roles)) {
+            $RoleTemplateId = if ($Role.roleTemplateId) { [string]$Role.roleTemplateId } elseif ($Role.RoletemplateId) { [string]$Role.RoletemplateId } else { $null }
+            if ($RoleTemplateId) {
+                [void]$PrivilegedRoleIds.Add($RoleTemplateId)
+            }
+
+            foreach ($Member in @($Role.members)) {
+                if ($Member.id) {
+                    [void]$PrivilegedUserIds.Add([string]$Member.id)
+                }
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $PrivilegedRoleIds.Contains([string]$Assignment.roleDefinitionId) -and $Assignment.principalId) {
+                [void]$PrivilegedUserIds.Add([string]$Assignment.principalId)
+            }
+        }
+
+        $PrivilegedUsers = $Users.Where({ $PrivilegedUserIds.Contains($_.id) })
 
         if (-not $PrivilegedUsers) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_1' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No privileged users found.' -Risk 'High' -Name 'Administrative accounts are cloud-only' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Privileged Access'
@@ -38,13 +57,13 @@ function Invoke-CippTestCIS_1_1_1 {
 
         if ($NonCompliant.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($PrivilegedUsers.Count) privileged users are cloud-only and unlicensed."
+            $Result = [System.Text.StringBuilder]::new("All $($PrivilegedUsers.Count) privileged users are cloud-only and unlicensed.")
         } else {
             $Status = 'Failed'
-            $Result = "$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) are not cloud-only or are licensed:`n`n"
-            $Result += "| UPN | Synced | Licensed |`n| :-- | :----- | :------- |`n"
+            $Result = [System.Text.StringBuilder]::new("$($NonCompliant.Count) of $($PrivilegedUsers.Count) privileged user(s) are not cloud-only or are licensed:`n`n")
+            $null = $Result.Append("| UPN | Synced | Licensed |`n| :-- | :----- | :------- |`n")
             foreach ($U in ($NonCompliant | Select-Object -First 25)) {
-                $Result += "| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $([bool]($U.assignedLicenses.Count -gt 0)) |`n"
+                $null = $Result.Append("| $($U.userPrincipalName) | $([bool]$U.onPremisesSyncEnabled) | $([bool]($U.assignedLicenses.Count -gt 0)) |`n")
             }
         }
 

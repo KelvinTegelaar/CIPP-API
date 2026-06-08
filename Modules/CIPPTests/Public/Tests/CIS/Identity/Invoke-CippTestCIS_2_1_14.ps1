@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_14 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.14) - Inbound anti-spam policies SHALL NOT contain allowed domains
+    Tests CIS M365 7.0.0 (2.1.14) - Inbound anti-spam policies SHALL NOT contain allowed domains
     #>
     param($Tenant)
 
@@ -17,12 +17,12 @@ function Invoke-CippTestCIS_2_1_14 {
 
         if (-not $Offending) {
             $Status = 'Passed'
-            $Result = "All $($Inbound.Count) inbound anti-spam policy/policies have no allowed sender domains."
+            $Result = [System.Text.StringBuilder]::new("All $($Inbound.Count) inbound anti-spam policy/policies have no allowed sender domains.")
         } else {
             $Status = 'Failed'
-            $Result = "$($Offending.Count) inbound anti-spam policy/policies have allowed sender domains configured:`n`n"
+            $Result = [System.Text.StringBuilder]::new("$($Offending.Count) inbound anti-spam policy/policies have allowed sender domains configured:`n`n")
             foreach ($P in $Offending) {
-                $Result += "- **$($P.Identity)**: $($P.AllowedSenderDomains -join ', ')`n"
+                $null = $Result.Append("- **$($P.Identity)**: $($P.AllowedSenderDomains -join ', ')`n")
             }
         }
 

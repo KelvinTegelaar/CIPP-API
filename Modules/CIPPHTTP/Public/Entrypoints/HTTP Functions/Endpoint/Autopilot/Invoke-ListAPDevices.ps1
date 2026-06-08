@@ -4,6 +4,8 @@ Function Invoke-ListAPDevices {
         Entrypoint
     .ROLE
         Endpoint.Autopilot.Read
+    .DESCRIPTION
+        Lists Windows Autopilot device identities registered in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

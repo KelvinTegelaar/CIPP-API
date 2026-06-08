@@ -174,7 +174,7 @@ function Update-AppManagementPolicy {
                         $PolicyAction = "Updated existing policy $CIPPAppPolicyId to allow credentials"
                     } elseif ($ExistingExemptionPolicy) {
                         # Exemption policy exists but not assigned to app - update and assign it
-                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -headers $headers
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
                             # Assign existing policy to CIPP-SAM application
@@ -190,14 +190,14 @@ function Update-AppManagementPolicy {
                         }
                     } else {
                         # Create new policy and assign to CIPP-SAM app
-                        $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -headers $headers
+                        $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
                             # Assign policy to CIPP-SAM application using beta endpoint
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($CreatedPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -headers $headers
+                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
                             $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
                             $CIPPAppPolicyId = $CreatedPolicy.id
                             $CIPPAppTargeted = $true

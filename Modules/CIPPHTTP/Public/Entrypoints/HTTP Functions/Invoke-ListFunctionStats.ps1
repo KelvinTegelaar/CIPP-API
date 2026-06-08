@@ -4,6 +4,8 @@ function Invoke-ListFunctionStats {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists execution statistics for CIPP functions, including timing and performance metrics, filterable by function type and time range.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

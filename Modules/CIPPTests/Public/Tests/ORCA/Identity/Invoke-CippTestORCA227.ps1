@@ -38,15 +38,15 @@ function Invoke-CippTestORCA227 {
 
         if ($DomainsWithoutPolicy.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All accepted domains are covered by Safe Attachments policies.`n`n"
-            $Result += "**Total Accepted Domains:** $($AcceptedDomains.Count)`n"
-            $Result += "**Total Safe Attachments Policies:** $($SafeAttachmentPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All accepted domains are covered by Safe Attachments policies.`n`n")
+            $null = $Result.Append("**Total Accepted Domains:** $($AcceptedDomains.Count)`n")
+            $null = $Result.Append("**Total Safe Attachments Policies:** $($SafeAttachmentPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($DomainsWithoutPolicy.Count) domains do not have a Safe Attachments policy.`n`n"
-            $Result += "**Domains Without Policy:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("$($DomainsWithoutPolicy.Count) domains do not have a Safe Attachments policy.`n`n")
+            $null = $Result.Append("**Domains Without Policy:**`n`n")
             foreach ($Domain in $DomainsWithoutPolicy) {
-                $Result += "- $Domain`n"
+                $null = $Result.Append("- $Domain`n")
             }
         }
 

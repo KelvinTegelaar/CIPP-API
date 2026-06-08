@@ -4,6 +4,8 @@ function Invoke-ListFeatureFlags {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists CIPP feature flags and their enabled/disabled state, including environment-driven overrides.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,10 +13,19 @@ function Invoke-ListFeatureFlags {
     try {
         Write-LogMessage -API 'ListFeatureFlags' -message 'Accessed feature flags list' -sev 'Debug'
 
-        $FeatureFlags = Get-CIPPFeatureFlag
+        $FeatureFlags = @(Get-CIPPFeatureFlag)
+
+        # Environment-driven overrides: enable flags that depend on the runtime platform
+        if ($env:CIPPNG -eq 'true') {
+            foreach ($Flag in $FeatureFlags) {
+                if ($Flag.Id -eq 'SuperAdminNG') {
+                    $Flag.Enabled = $true
+                }
+            }
+        }
 
         $StatusCode = [HttpStatusCode]::OK
-        $Body = @($FeatureFlags)
+        $Body = $FeatureFlags
     } catch {
         Write-LogMessage -API 'ListFeatureFlags' -message "Failed to retrieve feature flags: $($_.Exception.Message)" -sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError

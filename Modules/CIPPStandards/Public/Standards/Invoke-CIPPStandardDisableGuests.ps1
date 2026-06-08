@@ -33,11 +33,11 @@ function Invoke-CIPPStandardDisableGuests {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableGuests' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableGuests' -TenantFilter $Tenant -Preset Entra
 
     if ($TestResult -eq $false) {
         #writing to each item that the license is not present.
@@ -61,6 +61,9 @@ function Invoke-CIPPStandardDisableGuests {
                 if ($lastSignIn.ToUniversalTime() -le $Days) {
                     $guest
                 }
+            } elseif ($guest.externalUserState -eq 'PendingAcceptance') {
+                # Never accepted the invite; createdDateTime is already <= $Days due to the server-side filter
+                $guest
             }
         }
         $GraphRequest = @($EnrichedGuests)
@@ -104,7 +107,12 @@ function Invoke-CIPPStandardDisableGuests {
 
                     if ($result.status -eq 200 -or $result.status -eq 204) {
                         $guest.accountEnabled = $false
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Last sign-in: $lastSignIn" -sev Info
+                        $reason = if ($guest.externalUserState -eq 'PendingAcceptance') {
+                            "unredeemed invite created $($guest.createdDateTime)"
+                        } else {
+                            "last sign-in: $lastSignIn"
+                        }
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Reason: $reason" -sev Info
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $errorMsg" -sev Error
@@ -121,26 +129,37 @@ function Invoke-CIPPStandardDisableGuests {
     if ($Settings.alert -eq $true) {
 
         if ($GraphRequest.Count -gt 0) {
-            $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled, externalUserState
-            Write-StandardsAlert -message "Guests accounts with a login longer than 90 days ago: $($GraphRequest.count)" -object $Filtered -tenant $tenant -standardName 'DisableGuests' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Guests accounts with a login longer than $checkDays days ago: $($GraphRequest.count)" -sev Info
+            $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled, externalUserState, createdDateTime
+            $PendingCount = @($Filtered | Where-Object { $_.externalUserState -eq 'PendingAcceptance' }).Count
+            $StaleCount = $Filtered.Count - $PendingCount
+            $AlertMessage = "Stale guest accounts found: $($GraphRequest.Count) total ($StaleCount inactive >$checkDays days, $PendingCount unredeemed invites >$checkDays days old)"
+            Write-StandardsAlert -message $AlertMessage -object $Filtered -tenant $tenant -standardName 'DisableGuests' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No stale guest accounts found (threshold: $checkDays days)." -sev Info
         }
     }
     if ($Settings.report -eq $true) {
-        $Filtered = $GraphRequest | Where-Object { $_.accountEnabled } | Select-Object -Property UserPrincipalName, id, signInActivity, EnrichedLastSignInDateTime, mail, userType, accountEnabled
+        $Filtered = $GraphRequest | Where-Object { $_.accountEnabled } | Select-Object -Property UserPrincipalName, id, signInActivity, EnrichedLastSignInDateTime, mail, userType, accountEnabled, externalUserState, createdDateTime
+        $PendingInvites = @($Filtered | Where-Object { $_.externalUserState -eq 'PendingAcceptance' })
+        $StaleSignIns = @($Filtered | Where-Object { $_.externalUserState -ne 'PendingAcceptance' })
 
         $CurrentValue = [PSCustomObject]@{
-            GuestsDisabledAfterDays      = $checkDays
-            GuestsDisabledAccountCount   = $Filtered.Count
-            GuestsDisabledAccountDetails = @($Filtered)
+            GuestsDisabledAfterDays           = $checkDays
+            GuestsDisabledAccountCount        = $Filtered.Count
+            GuestsStaleSignInCount            = $StaleSignIns.Count
+            GuestsPendingAcceptanceCount      = $PendingInvites.Count
+            GuestsDisabledAccountDetails      = @($Filtered)
+            GuestsPendingAcceptanceDetails    = $PendingInvites
         }
 
         $ExpectedValue = [PSCustomObject]@{
-            GuestsDisabledAfterDays      = $checkDays
-            GuestsDisabledAccountCount   = 0
-            GuestsDisabledAccountDetails = @()
+            GuestsDisabledAfterDays           = $checkDays
+            GuestsDisabledAccountCount        = 0
+            GuestsStaleSignInCount            = 0
+            GuestsPendingAcceptanceCount      = 0
+            GuestsDisabledAccountDetails      = @()
+            GuestsPendingAcceptanceDetails    = @()
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant

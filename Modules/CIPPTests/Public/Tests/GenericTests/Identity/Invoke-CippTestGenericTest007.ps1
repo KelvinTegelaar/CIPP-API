@@ -16,29 +16,34 @@ function Invoke-CippTestGenericTest007 {
         $LicensedUsers = @($MFAData | Where-Object { $_.UPN -and $_.isLicensed -eq $true })
 
         if ($LicensedUsers.Count -eq 0) {
-            $Result = "No licensed user accounts were found in the MFA state data. This may indicate no licenses have been assigned or the data needs to be re-synced."
+            $Result = [System.Text.StringBuilder]::new("No licensed user accounts were found in the MFA state data. This may indicate no licenses have been assigned or the data needs to be re-synced.")
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest007' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Licensed User MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
         }
 
         $TotalUsers = $LicensedUsers.Count
-        $MFARegistered = @($LicensedUsers | Where-Object { $_.MFARegistration -eq $true }).Count
-        $NotProtected = @($LicensedUsers | Where-Object { $_.CoveredByCA -notlike 'Enforced*' -and $_.CoveredBySD -ne $true -and $_.PerUser -notin @('Enforced', 'Enabled') }).Count
-        $Admins = @($LicensedUsers | Where-Object { $_.IsAdmin -eq $true }).Count
+        $MFARegistered = 0
+        $NotProtected = 0
+        $Admins = 0
+        foreach ($u in $LicensedUsers) {
+            if ($u.MFARegistration -eq $true) { $MFARegistered++ }
+            if ($u.CoveredByCA -notlike 'Enforced*' -and $u.CoveredBySD -ne $true -and $u.PerUser -notin @('Enforced', 'Enabled')) { $NotProtected++ }
+            if ($u.IsAdmin -eq $true) { $Admins++ }
+        }
         $MFARegPct = if ($TotalUsers -gt 0) { [math]::Round(($MFARegistered / $TotalUsers) * 100, 1) } else { 0 }
 
-        $Result = "**Licensed Users:** $TotalUsers | **Admins among them:** $Admins | **MFA Registered:** $MFARegistered ($MFARegPct%)"
+        $Result = [System.Text.StringBuilder]::new("**Licensed Users:** $TotalUsers | **Admins among them:** $Admins | **MFA Registered:** $MFARegistered ($MFARegPct%)")
         if ($NotProtected -gt 0) {
-            $Result += " | **Unprotected: $NotProtected**"
+            $null = $Result.Append(" | **Unprotected: $NotProtected**")
         }
-        $Result += "`n`n"
+        $null = $Result.Append("`n`n")
 
         if ($NotProtected -gt 0) {
-            $Result += "**⚠️ $NotProtected licensed user(s) have no MFA enforcement.** These accounts have access to company data and email but are not protected by any MFA policy.`n`n"
+            $null = $Result.Append("**⚠️ $NotProtected licensed user(s) have no MFA enforcement.** These accounts have access to company data and email but are not protected by any MFA policy.`n`n")
         }
 
-        $Result += "| Display Name | Role | MFA Registered | MFA Method | Protected By |`n"
-        $Result += "|-------------|------|----------------|------------|--------------|`n"
+        $null = $Result.Append("| Display Name | Role | MFA Registered | MFA Method | Protected By |`n")
+        $null = $Result.Append("|-------------|------|----------------|------------|--------------|`n")
 
         $DisplayUsers = $LicensedUsers | Sort-Object DisplayName | Select-Object -First 100
         foreach ($User in $DisplayUsers) {
@@ -55,11 +60,11 @@ function Invoke-CippTestGenericTest007 {
             elseif ($User.CoveredBySD -eq $true) { 'Security Defaults' }
             elseif ($User.PerUser -in @('Enforced', 'Enabled')) { "Per-User MFA ($($User.PerUser))" }
             else { '❌ None' }
-            $Result += "| $Name | $Role | $Registered | $Methods | $Protection |`n"
+            $null = $Result.Append("| $Name | $Role | $Registered | $Methods | $Protection |`n")
         }
 
         if ($LicensedUsers.Count -gt 100) {
-            $Result += "`n*Showing 100 of $($LicensedUsers.Count) licensed user accounts.*`n"
+            $null = $Result.Append("`n*Showing 100 of $($LicensedUsers.Count) licensed user accounts.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest007' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Licensed User MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

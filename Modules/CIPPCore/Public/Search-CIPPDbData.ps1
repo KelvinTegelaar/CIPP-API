@@ -69,7 +69,7 @@ function Search-CIPPDbData {
             'Groups', 'Roles', 'LicenseOverview', 'IntuneDeviceCompliancePolicies', 'SecureScore',
             'SecureScoreControlProfiles', 'Mailboxes', 'CASMailbox', 'MailboxPermissions',
             'OneDriveUsage', 'MailboxUsage', 'Devices', 'AllRoles', 'Licenses', 'DeviceCompliancePolicies',
-            'BitlockerKeys'
+            'BitlockerKeys', 'Apps', 'ServicePrincipals'
         )]
         [string[]]$Types,
 

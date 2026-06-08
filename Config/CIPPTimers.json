@@ -18,14 +18,6 @@
     "PreferredProcessor": "usertasks"
   },
   {
-    "Id": "168decf3-7ddd-471e-ab46-8b40be0f18ae",
-    "Command": "Start-CIPPProcessorQueue",
-    "Description": "Timer to handle user initiated tasks",
-    "Cron": "0 */15 * * * *",
-    "Priority": 1,
-    "RunOnProcessor": true
-  },
-  {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to download audit logs",
@@ -263,6 +255,24 @@
     "Priority": 24,
     "RunOnProcessor": true,
     "TZOffset": true,
+    "IsSystem": true
+  },
+  {
+    "Id": "a3b4c5d6-e7f8-4a9b-8c1d-2e3f4a5b6c7d",
+    "Command": "Start-ContainerUpdateCheck",
+    "Description": "Check for container image updates and optionally auto-restart",
+    "Cron": "0 0 * * * *",
+    "Priority": 30,
+    "RunOnProcessor": false,
+    "IsSystem": true
+  },
+  {
+    "Id": "7e2a9b4c-1d5f-4a8e-b3c6-0f9d2e7a4b1c",
+    "Command": "Start-UserSyncTimer",
+    "Description": "Sync partner tenant users and group-based roles into allowedUsers table",
+    "Cron": "0 */15 * * * *",
+    "Priority": 11,
+    "RunOnProcessor": false,
     "IsSystem": true
   }
 ]

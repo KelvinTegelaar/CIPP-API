@@ -4,6 +4,8 @@ Function Invoke-ListTransportRulesTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.TransportRule.Read
+    .DESCRIPTION
+        Lists saved transport rule templates for Exchange Online mail flow rules.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

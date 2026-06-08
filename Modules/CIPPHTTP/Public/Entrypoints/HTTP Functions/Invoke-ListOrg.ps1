@@ -4,6 +4,8 @@ Function Invoke-ListOrg {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Retrieves the Entra ID organization profile for a tenant, including display name, addresses, and tenant metadata.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -12,34 +12,68 @@ function Invoke-ExecTestRun {
 
     try {
         $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting data collection and test run for tenant: $TenantFilter" -sev Info
-        $Batch = @(
-            @{
-                FunctionName = 'CIPPDBCacheData'
-                TenantFilter = $TenantFilter
-                QueueId      = $Queue.RowKey
-                QueueName    = "Cache - $TenantFilter"
+        $Mode = ($Request.Query.mode ?? $Request.Body.mode ?? 'both').ToString().ToLower()
+        if ($Mode -notin @('both', 'cache', 'tests')) { $Mode = 'both' }
+
+        switch ($Mode) {
+            'tests' {
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting tests-only run for tenant: $TenantFilter" -sev Info
+                $InstanceId = Start-CIPPDBTestsRun -TenantFilter $TenantFilter -Force
+                $ResultMessage = "Successfully started test run for $TenantFilter"
             }
-        )
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'TestDataCollectionAndRun'
-            Batch            = $Batch
-            SkipLog          = $false
-            PostExecution    = @{
-                FunctionName = 'CIPPDBCacheApplyBatch'
-                Parameters   = @{
-                    TestRun      = $true
-                    TenantFilter = $TenantFilter
+            'cache' {
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting cache-only collection for tenant: $TenantFilter" -sev Info
+                $Batch = @(
+                    @{
+                        FunctionName = 'CIPPDBCacheData'
+                        TenantFilter = $TenantFilter
+                        QueueName    = "Cache - $TenantFilter"
+                    }
+                )
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = "TestDataCollection-$TenantFilter"
+                    Batch            = $Batch
+                    SkipLog          = $false
+                    PostExecution    = @{
+                        FunctionName = 'CIPPDBCacheApplyBatch'
+                        Parameters   = @{
+                            TenantFilter = $TenantFilter
+                        }
+                    }
                 }
+                $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
+                $ResultMessage = "Successfully started cache collection for $TenantFilter"
+            }
+            default {
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "Starting data collection and test run for tenant: $TenantFilter" -sev Info
+                $Batch = @(
+                    @{
+                        FunctionName = 'CIPPDBCacheData'
+                        TenantFilter = $TenantFilter
+                        QueueName    = "Cache - $TenantFilter"
+                    }
+                )
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = "TestDataCollectionAndRun-$TenantFilter"
+                    Batch            = $Batch
+                    SkipLog          = $false
+                    PostExecution    = @{
+                        FunctionName = 'CIPPDBCacheApplyBatch'
+                        Parameters   = @{
+                            TestRun      = $true
+                            TenantFilter = $TenantFilter
+                        }
+                    }
+                }
+                $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
+                $ResultMessage = "Successfully started data collection and test run for $TenantFilter"
             }
         }
 
-        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-
         $StatusCode = [HttpStatusCode]::OK
-        $Body = [PSCustomObject]@{ Results = "Successfully started data collection and test run for $TenantFilter" }
+        $Body = [PSCustomObject]@{ Results = $ResultMessage }
 
-        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Data collection and test run orchestration started. Instance ID: $InstanceId" -sev Info
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Mode '$Mode' orchestration started. Instance ID: $InstanceId" -sev Info
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

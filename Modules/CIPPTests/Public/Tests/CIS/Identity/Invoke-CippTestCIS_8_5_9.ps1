@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_9 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.9) - Meeting recording SHALL be off by default
+    Tests CIS M365 7.0.0 (8.5.9) - Meeting recording SHALL be off by default
     #>
     param($Tenant)
 

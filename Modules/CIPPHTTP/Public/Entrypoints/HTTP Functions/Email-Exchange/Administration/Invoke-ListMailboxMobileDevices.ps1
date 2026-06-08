@@ -4,6 +4,8 @@ Function Invoke-ListMailboxMobileDevices {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists mobile devices associated with a specific Exchange Online mailbox.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

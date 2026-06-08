@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_4_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.4.4) - Zero-hour auto purge for Microsoft Teams SHALL be on
+    Tests CIS M365 7.0.0 (2.4.4) - Zero-hour auto purge for Microsoft Teams SHALL be on
     #>
     param($Tenant)
 

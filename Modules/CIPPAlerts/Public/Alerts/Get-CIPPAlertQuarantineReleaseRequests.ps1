@@ -11,18 +11,7 @@
         $TenantFilter
     )
 
-    #Add rerun protection: This Monitor can only run once every hour.
-    $Rerun = Test-CIPPRerun -TenantFilter $TenantFilter -Type 'ExchangeMonitor' -API 'Get-CIPPAlertQuarantineReleaseRequests'
-    if ($Rerun) {
-        return
-    }
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'QuarantineReleaseRequests' -TenantFilter $TenantFilter -RequiredCapabilities @(
-        'EXCHANGE_S_STANDARD',
-        'EXCHANGE_S_ENTERPRISE',
-        'EXCHANGE_S_STANDARD_GOV',
-        'EXCHANGE_S_ENTERPRISE_GOV',
-        'EXCHANGE_LITE'
-    )
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'QuarantineReleaseRequests' -TenantFilter $TenantFilter -Preset Exchange
 
     if (-not $HasLicense) {
         return

@@ -32,14 +32,14 @@ function Invoke-CippTestZTNA21828 {
         $reportTitle = 'Conditional Access Policies targeting Authentication Transfer'
 
         if ($matchedPolicies.Count -gt 0) {
-            $mdInfo = "`n## $reportTitle`n`n"
-            $mdInfo += "| Policy Name | Policy ID | State | Created | Modified |`n"
-            $mdInfo += "| :---------- | :-------- | :---- | :------ | :------- |`n"
+            $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+            $null = $mdInfo.Append("| Policy Name | Policy ID | State | Created | Modified |`n")
+            $null = $mdInfo.Append("| :---------- | :-------- | :---- | :------ | :------- |`n")
 
             foreach ($policy in $matchedPolicies) {
                 $created = if ($policy.createdDateTime) { $policy.createdDateTime } else { 'N/A' }
                 $modified = if ($policy.modifiedDateTime) { $policy.modifiedDateTime } else { 'N/A' }
-                $mdInfo += "| $($policy.displayName) | $($policy.id) | $($policy.state) | $created | $modified |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | $($policy.id) | $($policy.state) | $created | $modified |`n")
             }
 
             $testResultMarkdown = $testResultMarkdown + $mdInfo

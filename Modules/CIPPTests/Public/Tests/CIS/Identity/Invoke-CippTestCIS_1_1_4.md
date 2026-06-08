@@ -7,7 +7,7 @@ Administrative accounts that hold productivity licenses (Exchange Online, ShareP
 3. Block sign-in to mailbox / OWA / Teams for these accounts via Conditional Access if licenses cannot be removed.
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 1.1.4](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 1.1.4](https://www.cisecurity.org/benchmark/microsoft_365)
 - [Tiered admin model](https://learn.microsoft.com/security/privileged-access-workstations/privileged-access-access-model)
 
 <!--- Results --->

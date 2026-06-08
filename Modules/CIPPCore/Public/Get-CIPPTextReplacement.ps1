@@ -65,11 +65,12 @@ function Get-CIPPTextReplacement {
     $Vars = @{}
     if ($GlobalMap) {
         foreach ($Var in $GlobalMap) {
+            if (-not $Var.PSObject.Properties['Value']) { continue }
+            $Val = $Var.Value
             if ($EscapeForJson.IsPresent) {
-                # Escape quotes for JSON if not already escaped
-                $Var.Value = $Var.Value -replace '(?<!\\)"', '\"'
+                $Val = $Val -replace '(?<!\\)"', '\"'
             }
-            $Vars[$Var.RowKey] = $Var.Value
+            $Vars[$Var.RowKey] = $Val
         }
     }
 
@@ -82,11 +83,12 @@ function Get-CIPPTextReplacement {
         }
         if ($ReplaceMap) {
             foreach ($Var in $ReplaceMap) {
+                if (-not $Var.PSObject.Properties['Value']) { continue }
+                $Val = $Var.Value
                 if ($EscapeForJson.IsPresent) {
-                    # Escape quotes for JSON if not already escaped
-                    $Var.Value = $Var.Value -replace '(?<!\\)"', '\"'
+                    $Val = $Val -replace '(?<!\\)"', '\"'
                 }
-                $Vars[$Var.RowKey] = $Var.Value
+                $Vars[$Var.RowKey] = $Val
             }
         }
     }

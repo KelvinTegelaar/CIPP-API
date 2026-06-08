@@ -28,8 +28,7 @@ function Set-CIPPDBCacheReportSubmissionPolicy {
 
         if ($ReportSubmissionPolicies) {
             $Data = @($ReportSubmissionPolicies)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ReportSubmissionPolicy' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ReportSubmissionPolicy' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ReportSubmissionPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Report Submission Policies" -sev Debug
         }
         $ReportSubmissionPolicies = $null

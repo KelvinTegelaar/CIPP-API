@@ -30,7 +30,7 @@ function Invoke-ExecSetPackageTag {
         }
 
         foreach ($GUID in $GUIDS) {
-            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
             $Filter = "RowKey eq '$SafeGUID'"
             $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Entity = @{

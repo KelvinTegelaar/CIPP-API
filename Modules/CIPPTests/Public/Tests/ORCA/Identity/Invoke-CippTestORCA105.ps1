@@ -26,16 +26,16 @@ function Invoke-CippTestORCA105 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Links policies have synchronous URL detonation enabled.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Links policies have synchronous URL detonation enabled.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Links policies do not have synchronous URL detonation enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Deliver Message After Scan |`n"
-            $Result += "|------------|---------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Links policies do not have synchronous URL detonation enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Deliver Message After Scan |`n")
+            $null = $Result.Append("|------------|---------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.DeliverMessageAfterScan) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.DeliverMessageAfterScan) |`n")
             }
         }
 

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.2) - Idle session timeout SHALL be 3 hours or less for unmanaged devices
+    Tests CIS M365 7.0.0 (1.3.2) - Idle session timeout SHALL be 3 hours or less for unmanaged devices
     #>
     param($Tenant)
 

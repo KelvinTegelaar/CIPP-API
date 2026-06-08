@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.2) - Anonymous users and dial-in callers SHALL NOT be able to start a meeting
+    Tests CIS M365 7.0.0 (8.5.2) - Anonymous users and dial-in callers SHALL NOT be able to start a meeting
     #>
     param($Tenant)
 
