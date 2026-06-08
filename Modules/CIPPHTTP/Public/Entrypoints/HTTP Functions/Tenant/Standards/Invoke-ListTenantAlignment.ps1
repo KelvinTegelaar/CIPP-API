@@ -4,6 +4,8 @@ function Invoke-ListTenantAlignment {
         Entrypoint
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists tenant alignment data showing how well tenants conform to their assigned standards templates.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

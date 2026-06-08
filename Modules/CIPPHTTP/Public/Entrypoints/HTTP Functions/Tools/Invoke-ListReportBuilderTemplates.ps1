@@ -4,6 +4,8 @@ function Invoke-ListReportBuilderTemplates {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists saved Report Builder templates that define custom report configurations with data blocks and formatting.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

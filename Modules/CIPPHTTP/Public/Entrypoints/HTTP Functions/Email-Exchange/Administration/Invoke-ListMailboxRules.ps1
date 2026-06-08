@@ -4,11 +4,16 @@ function Invoke-ListMailboxRules {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists inbox rules configured on mailboxes in a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
+    if (-not [string]::IsNullOrEmpty($TenantFilter) -and $TenantFilter -ne 'AllTenants') {
+        $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+    }
     $UseReportDB = $Request.Query.UseReportDB
 
     try {

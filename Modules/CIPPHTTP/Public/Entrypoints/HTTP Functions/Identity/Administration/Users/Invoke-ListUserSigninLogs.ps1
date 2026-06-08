@@ -4,6 +4,8 @@ Function Invoke-ListUserSigninLogs {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists recent sign-in log entries for a specific Entra ID user, ordered by most recent.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

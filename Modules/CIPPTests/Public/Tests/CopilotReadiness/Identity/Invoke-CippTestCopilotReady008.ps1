@@ -69,20 +69,20 @@ function Invoke-CippTestCopilotReady008 {
         $MedPct = [math]::Round(($MediumTier.Count / $Total) * 100, 1)
         $LowPct = [math]::Round(($LowTier.Count / $Total) * 100, 1)
 
-        $Result = "## Copilot Candidate Tier Breakdown`n`n"
-        $Result += "Scoring is based on 6 readiness signals from the Microsoft 365 Copilot Readiness report (30-day window).`n`n"
-        $Result += "| Tier | Users | % of Tenant | Description |`n"
-        $Result += "|------|-------|-------------|-------------|`n"
-        $Result += "| **High** (≥4 signals) | $($HighTier.Count) | $HighPct% | Power M365 users — strongest Copilot ROI |`n"
-        $Result += "| **Medium** (3 signals) | $($MediumTier.Count) | $MedPct% | Engaged users — good Copilot candidates |`n"
-        $Result += "| **Low** (≤2 signals) | $($LowTier.Count) | $LowPct% | Low engagement — adopt M365 basics first |`n"
-        $Result += "`n**Signals scored:** Copilot license assigned, qualified update channel, Teams meetings, Teams chat, Outlook email, Office documents (each = 1 point)`n"
+        $Result = [System.Text.StringBuilder]::new("## Copilot Candidate Tier Breakdown`n`n")
+        $null = $Result.Append("Scoring is based on 6 readiness signals from the Microsoft 365 Copilot Readiness report (30-day window).`n`n")
+        $null = $Result.Append("| Tier | Users | % of Tenant | Description |`n")
+        $null = $Result.Append("|------|-------|-------------|-------------|`n")
+        $null = $Result.Append("| **High** (≥4 signals) | $($HighTier.Count) | $HighPct% | Power M365 users — strongest Copilot ROI |`n")
+        $null = $Result.Append("| **Medium** (3 signals) | $($MediumTier.Count) | $MedPct% | Engaged users — good Copilot candidates |`n")
+        $null = $Result.Append("| **Low** (≤2 signals) | $($LowTier.Count) | $LowPct% | Low engagement — adopt M365 basics first |`n")
+        $null = $Result.Append("`n**Signals scored:** Copilot license assigned, qualified update channel, Teams meetings, Teams chat, Outlook email, Office documents (each = 1 point)`n")
 
         if ($HighTier.Count -gt 0 -and $HighTier.Count -le 20) {
-            $Result += "`n**High tier users:**`n"
-            foreach ($Upn in $HighTier) { $Result += "- $Upn`n" }
+            $null = $Result.Append("`n**High tier users:**`n")
+            foreach ($Upn in $HighTier) { $null = $Result.Append("- $Upn`n") }
         } elseif ($HighTier.Count -gt 20) {
-            $Result += "`n*$($HighTier.Count) users are in the high tier — use the Microsoft 365 Copilot Readiness report in the admin center for the full list.*`n"
+            $null = $Result.Append("`n*$($HighTier.Count) users are in the high tier — use the Microsoft 365 Copilot Readiness report in the admin center for the full list.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady008' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Copilot candidate tier breakdown' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

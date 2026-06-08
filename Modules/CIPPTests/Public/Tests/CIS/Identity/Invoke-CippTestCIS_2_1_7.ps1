@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_7 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.7) - An anti-phishing policy SHALL be created
+    Tests CIS M365 7.0.0 (2.1.7) - An anti-phishing policy SHALL be created
     #>
     param($Tenant)
 

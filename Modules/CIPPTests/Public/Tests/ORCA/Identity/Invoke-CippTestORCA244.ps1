@@ -26,16 +26,16 @@ function Invoke-CippTestORCA244 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies honor sending domain DMARC.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies honor sending domain DMARC.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies do not honor sending domain DMARC.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Honor DMARC Policy |`n"
-            $Result += "|------------|--------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies do not honor sending domain DMARC.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Honor DMARC Policy |`n")
+            $null = $Result.Append("|------------|--------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.HonorDMARCPolicy) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.HonorDMARCPolicy) |`n")
             }
         }
 

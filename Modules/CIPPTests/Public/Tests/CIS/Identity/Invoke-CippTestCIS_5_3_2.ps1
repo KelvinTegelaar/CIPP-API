@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_3_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.3.2) - 'Access reviews' for Guest Users SHALL be configured
+    Tests CIS M365 7.0.0 (5.3.2) - 'Access reviews' for Guest Users SHALL be configured
     #>
     param($Tenant)
 

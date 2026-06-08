@@ -1669,7 +1669,7 @@ function Invoke-NinjaOneTenantSync {
                 'Tenant ID'      = $Customer.customerId
                 'Creation Date'  = $TenantDetails.createdDateTime
                 'Domains'        = $customerDomains
-                'Admin Users'    = ($AdminUsers | ForEach-Object { "$($_.DisplayName)" }) -join ', '
+                'Admin Users'    = ($AdminUsers | Select-Object -Property DisplayName -Unique | ForEach-Object { "$($_.DisplayName)" }) -join ', '
 
             }
 

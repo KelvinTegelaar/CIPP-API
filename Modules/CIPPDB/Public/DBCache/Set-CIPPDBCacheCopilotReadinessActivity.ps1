@@ -44,8 +44,7 @@ function Set-CIPPDBCacheCopilotReadinessActivity {
             }
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotReadinessActivity' -Data $FlattenedData
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotReadinessActivity' -Data $FlattenedData -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotReadinessActivity' -Data $FlattenedData -AddCount
         $FlattenedData = $null
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Copilot readiness activity successfully' -sev Debug
 

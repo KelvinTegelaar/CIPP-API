@@ -10,15 +10,15 @@ function Invoke-CippTestORCA242 {
         # Since we don't have an alert policy cache, we'll provide informational guidance
 
         $Status = 'Informational'
-        $Result = "Alert policies for protection features should be enabled and monitored.`n`n"
-        $Result += "**Recommended Alert Policies:**`n`n"
-        $Result += "- Messages reported by users as malware or phish`n"
-        $Result += "- Email sending limit exceeded`n"
-        $Result += "- Suspicious email forwarding activity`n"
-        $Result += "- Malware campaign detected`n"
-        $Result += "- Suspicious connector activity`n"
-        $Result += "- Unusual external user file activity`n"
-        $Result += "`n**Action Required:** Verify alert policies are configured in Microsoft 365 Security & Compliance Center"
+        $Result = [System.Text.StringBuilder]::new("Alert policies for protection features should be enabled and monitored.`n`n")
+        $null = $Result.Append("**Recommended Alert Policies:**`n`n")
+        $null = $Result.Append("- Messages reported by users as malware or phish`n")
+        $null = $Result.Append("- Email sending limit exceeded`n")
+        $null = $Result.Append("- Suspicious email forwarding activity`n")
+        $null = $Result.Append("- Malware campaign detected`n")
+        $null = $Result.Append("- Suspicious connector activity`n")
+        $null = $Result.Append("- Unusual external user file activity`n")
+        $null = $Result.Append("`n**Action Required:** Verify alert policies are configured in Microsoft 365 Security & Compliance Center")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA242' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Important protection alerts enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Configuration'
 

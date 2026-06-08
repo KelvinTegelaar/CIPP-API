@@ -20,7 +20,7 @@ function Get-CippApiClient {
     }
     $Apps = Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
     $Apps = foreach ($Client in $Apps) {
-        $Client = $Client | Select-Object -Property @{Name = 'ClientId'; Expression = { $_.RowKey } }, AppName, Role, IPRange, Enabled
+        $Client = $Client | Select-Object -Property @{Name = 'ClientId'; Expression = { $_.RowKey } }, AppName, Role, IPRange, Enabled, @{Name = 'MCPAllowed'; Expression = { [bool]$_.MCPAllowed } }
 
         if (!$Client.Role) {
             $Client.Role = $null

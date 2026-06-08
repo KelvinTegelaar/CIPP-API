@@ -22,7 +22,7 @@ function Get-CIPPAlertNewRiskyUsers {
         $RiskyUsersDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
 
         # Get current risky users with more detailed information
-        $NewDelta = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyUsers' -tenantid $TenantFilter) | Select-Object userPrincipalName, riskLevel, riskState, riskDetail, riskLastUpdatedDateTime, isProcessing, history
+        $NewDelta = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyUsers?`$top=500' -tenantid $TenantFilter) | Select-Object userPrincipalName, riskLevel, riskState, riskDetail, riskLastUpdatedDateTime, isProcessing, history
 
         $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
         $DeltaEntity = @{

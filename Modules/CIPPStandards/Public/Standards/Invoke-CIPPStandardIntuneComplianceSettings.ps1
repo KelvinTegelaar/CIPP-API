@@ -17,7 +17,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
             Configures how the system treats devices that don't have specific compliance policies and sets how often devices must check in to maintain their compliance status. This ensures proper security oversight of all corporate devices and maintains current compliance information.
         ADDEDCOMPONENT
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.IntuneComplianceSettings.secureByDefault","label":"Mark devices with no compliance policy as","options":[{"label":"Compliant","value":"false"},{"label":"Non-Compliant","value":"true"}]}
-            {"type":"number","name":"standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays","label":"Compliance status validity period (days)","defaultValue":130,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":120,"message":"Maximum value is 120"}}}
+            {"type":"number","name":"standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays","label":"Compliance status validity period (days)","defaultValue":120,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":120,"message":"Maximum value is 120"}}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -34,11 +34,11 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneComplianceSettings' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneComplianceSettings' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

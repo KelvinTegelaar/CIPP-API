@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_7 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.7) - External participants SHALL NOT give or request control
+    Tests CIS M365 7.0.0 (8.5.7) - External participants SHALL NOT give or request control
     #>
     param($Tenant)
 

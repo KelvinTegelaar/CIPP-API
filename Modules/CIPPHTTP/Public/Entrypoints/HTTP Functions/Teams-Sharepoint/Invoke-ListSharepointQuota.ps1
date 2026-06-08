@@ -4,6 +4,8 @@ Function Invoke-ListSharepointQuota {
         Entrypoint
     .ROLE
         Sharepoint.Admin.Read
+    .DESCRIPTION
+        Retrieves SharePoint Online storage quota usage for a tenant, showing used and total storage.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

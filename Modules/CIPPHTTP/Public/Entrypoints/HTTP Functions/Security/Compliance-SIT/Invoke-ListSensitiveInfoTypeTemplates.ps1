@@ -4,6 +4,8 @@ Function Invoke-ListSensitiveInfoTypeTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Security.SensitiveInfoType.Read
+    .DESCRIPTION
+        Lists saved sensitive information type templates for deploying custom SIT configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

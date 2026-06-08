@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.4) - Sign-in frequency SHALL be enabled and browser sessions not persistent for administrative users
+    Tests CIS M365 7.0.0 (5.2.2.4) - Sign-in frequency SHALL be enabled and browser sessions not persistent for administrative users
     #>
     param($Tenant)
 
@@ -14,18 +14,18 @@ function Invoke-CippTestCIS_5_2_2_4 {
             return
         }
 
-        $PrivRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
+        $PrivRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeRoles -and
-            (@($_.conditions.users.includeRoles) | Where-Object { $_ -in $PrivRoleIds }).Count -gt 0 -and
+            ([string[]]$_.conditions.users.includeRoles).Where({ $PrivRoleIds.Contains($_) }, 'First', 1).Count -gt 0 -and
             $_.sessionControls -and
             $_.sessionControls.signInFrequency -and
             $_.sessionControls.signInFrequency.isEnabled -eq $true -and
             $_.sessionControls.persistentBrowser -and
             $_.sessionControls.persistentBrowser.mode -eq 'never'
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

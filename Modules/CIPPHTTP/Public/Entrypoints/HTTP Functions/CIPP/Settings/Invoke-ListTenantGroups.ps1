@@ -6,6 +6,8 @@ function Invoke-ListTenantGroups {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists tenant groups (logical groupings of managed tenants) and optionally includes usage data.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

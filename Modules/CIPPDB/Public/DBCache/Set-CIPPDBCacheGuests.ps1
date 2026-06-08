@@ -21,8 +21,7 @@ function Set-CIPPDBCacheGuests {
 
         $Guests = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=userType eq 'Guest'&`$expand=sponsors&`$top=999" -tenantid $TenantFilter
         if (!$Guests) { $Guests = @() }
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Guests' -Data $Guests
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Guests' -Data $Guests -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Guests' -Data $Guests -AddCount
         $Guests = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached guest users successfully' -sev Debug

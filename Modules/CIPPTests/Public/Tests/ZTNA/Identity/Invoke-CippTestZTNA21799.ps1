@@ -46,9 +46,9 @@ function Invoke-CippTestZTNA21799 {
         $tableRows = ''
 
         if ($matchedPolicies.Count -gt 0) {
-            $mdInfo = "`n## $reportTitle`n`n"
-            $mdInfo += "| Policy Name | Grant Controls | Target Users |`n"
-            $mdInfo += "| :---------- | :------------- | :----------- |`n"
+            $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+            $null = $mdInfo.Append("| Policy Name | Grant Controls | Target Users |`n")
+            $null = $mdInfo.Append("| :---------- | :------------- | :----------- |`n")
 
             foreach ($policy in $matchedPolicies) {
                 $grantControls = switch ($policy.grantControls) {
@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA21799 {
                     $policy.conditions.users.includeUsers -join ', '
                 }
 
-                $mdInfo += "| $($policy.displayName) | $grantControls | $targetUsers |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | $grantControls | $targetUsers |`n")
             }
         }
         $testResultMarkdown = $testResultMarkdown + $mdInfo

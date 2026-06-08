@@ -4,6 +4,8 @@ function Invoke-ListGDAPAccessAssignments {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Lists GDAP access assignments for a specific delegated admin relationship, including security group members and their role mappings.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

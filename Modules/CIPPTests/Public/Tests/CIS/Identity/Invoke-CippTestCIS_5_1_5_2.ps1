@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_5_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.5.2) - The admin consent workflow SHALL be enabled
+    Tests CIS M365 7.0.0 (5.1.5.2) - The admin consent workflow SHALL be enabled
     #>
     param($Tenant)
 

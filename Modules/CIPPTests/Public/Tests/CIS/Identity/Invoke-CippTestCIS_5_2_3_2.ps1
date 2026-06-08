@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.2) - Custom banned passwords lists SHALL be used
+    Tests CIS M365 7.0.0 (5.2.3.2) - Custom banned passwords lists SHALL be used
     #>
     param($Tenant)
 

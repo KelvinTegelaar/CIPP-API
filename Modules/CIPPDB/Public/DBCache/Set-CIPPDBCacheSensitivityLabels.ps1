@@ -17,7 +17,7 @@ function Set-CIPPDBCacheSensitivityLabels {
     )
 
     try {
-        $LicenseCheck = Test-CIPPStandardLicense -StandardName 'SensitivityLabelsCache' -TenantFilter $TenantFilter -RequiredCapabilities @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2') -SkipLog
+        $LicenseCheck = Test-CIPPStandardLicense -StandardName 'SensitivityLabelsCache' -TenantFilter $TenantFilter -Preset Compliance -SkipLog
 
         if ($LicenseCheck -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have a Purview/AIP license, skipping sensitivity labels' -sev Debug
@@ -29,8 +29,7 @@ function Set-CIPPDBCacheSensitivityLabels {
         $Labels = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/informationProtection/sensitivityLabels' -tenantid $TenantFilter -AsApp $true
 
         if ($Labels) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data $Labels -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Labels.Count) sensitivity labels" -sev Debug
         }
 

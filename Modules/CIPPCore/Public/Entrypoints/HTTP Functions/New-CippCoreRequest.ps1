@@ -3,7 +3,7 @@ using namespace Microsoft.Azure.Functions.PowerShellWorker
 function New-CippCoreRequest {
     <#
     .SYNOPSIS
-        Main entrypoint for all HTTP triggered functions in CIPP
+        Main entrypoint for all HTTP triggered functions in CIPP, this must live in the CIPPCore module
     .DESCRIPTION
         This function is the main entry point for all HTTP triggered functions in CIPP. It routes requests to the appropriate function based on the CIPPEndpoint parameter in the request.
     .FUNCTIONALITY
@@ -43,6 +43,24 @@ function New-CippCoreRequest {
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Information "API Endpoint: $($Request.Params.CIPPEndpoint) | Frontend Version: $($Request.Headers.'X-CIPP-Version' ?? 'Not specified')"
 
+    # For now, while we're in read-only we force the role of the MCP API cred.
+    # When we remove the feature flag, in NG, we move this to use the users role/ident.
+    if ($Request.Params.CIPPEndpoint -eq 'ExecMcp' -and
+        $Request.Headers.'x-ms-client-principal' -and
+        $Request.Headers.'x-ms-client-principal-name' -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+        try {
+            $McpPrincipal = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
+            $McpAppId = ($McpPrincipal.claims | Where-Object { $_.typ -in @('azp', 'appid') } | Select-Object -First 1).val
+            if ($McpAppId -and (Get-CippApiClient -AppId $McpAppId)) {
+                $Request.Headers | Add-Member -NotePropertyName 'x-ms-client-principal-name' -NotePropertyValue $McpAppId -Force
+                $Request.Headers | Add-Member -NotePropertyName 'x-ms-client-principal-idp' -NotePropertyValue 'aad' -Force
+                Write-Information "MCP request mapped to API client $McpAppId (running at the app's CIPP role)"
+            }
+        } catch {
+            Write-Information "MCP principal app resolution failed: $($_.Exception.Message)"
+        }
+    }
+
     # Check if endpoint is disabled via feature flags
     $FeatureFlags = Get-CIPPFeatureFlag
     $DisabledEndpoint = $FeatureFlags | Where-Object {
@@ -55,6 +73,15 @@ function New-CippCoreRequest {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::ServiceUnavailable
                 Body       = "This feature has been disabled: $($DisabledEndpoint.Description)"
+            })
+    }
+
+    # Block all API calls except /api/me when subscription has ended
+    if ($env:cipp_hosted_subscription_ended -and $Request.Params.CIPPEndpoint -ne 'me') {
+        $HttpTotalStopwatch.Stop()
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = 'Your CIPP subscription has ended. Access to this instance is no longer available.'
             })
     }
 

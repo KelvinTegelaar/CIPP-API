@@ -8,9 +8,9 @@ function Get-CippDbRoleMembers {
         [string]$RoleTemplateId
     )
 
-    $RoleAssignments = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleAssignmentScheduleInstances'
-    $RoleEligibilities = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleEligibilitySchedules'
-    $DirectRoleAssignments = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Roles' | Where-Object { $_.roleTemplateId -eq $RoleTemplateId } | Select-Object -ExpandProperty members
+    $RoleAssignments = Get-CIPPTestData -TenantFilter $TenantFilter -Type 'RoleAssignmentScheduleInstances'
+    $RoleEligibilities = Get-CIPPTestData -TenantFilter $TenantFilter -Type 'RoleEligibilitySchedules'
+    $DirectRoleAssignments = Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Roles' | Where-Object { $_.roleTemplateId -eq $RoleTemplateId } | Select-Object -ExpandProperty members
 
     $ActiveMembers = $RoleAssignments | Where-Object {
         $_.roleDefinitionId -eq $RoleTemplateId -and $_.assignmentType -eq 'Assigned'

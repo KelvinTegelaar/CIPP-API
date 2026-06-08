@@ -26,24 +26,24 @@ function Invoke-CippTestORCA107 {
 
         if ($FailedPolicies.Count -eq 0 -and $PassedPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $Result = "All quarantine policies have end-user spam notifications enabled.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Notification Frequency (days) |`n"
-            $Result += "|------------|-------------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("All quarantine policies have end-user spam notifications enabled.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Notification Frequency (days) |`n")
+            $null = $Result.Append("|------------|-------------------------------|`n")
             foreach ($Policy in $PassedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.EndUserSpamNotificationFrequency) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.EndUserSpamNotificationFrequency) |`n")
             }
         } elseif ($PassedPolicies.Count -eq 0) {
             $Status = 'Failed'
-            $Result = "No quarantine policies have end-user spam notifications enabled.`n`n"
+            $Result = [System.Text.StringBuilder]::new("No quarantine policies have end-user spam notifications enabled.`n`n")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) quarantine policies do not have end-user spam notifications enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Notification Frequency |`n"
-            $Result += "|------------|----------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) quarantine policies do not have end-user spam notifications enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Notification Frequency |`n")
+            $null = $Result.Append("|------------|----------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | Disabled |`n"
+                $null = $Result.Append("| $($Policy.Identity) | Disabled |`n")
             }
         }
 

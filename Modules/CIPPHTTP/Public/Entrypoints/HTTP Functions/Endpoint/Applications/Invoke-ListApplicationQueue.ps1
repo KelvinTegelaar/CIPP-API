@@ -4,6 +4,8 @@ Function Invoke-ListApplicationQueue {
         Entrypoint
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Lists queued Intune application deployments that are pending assignment to tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

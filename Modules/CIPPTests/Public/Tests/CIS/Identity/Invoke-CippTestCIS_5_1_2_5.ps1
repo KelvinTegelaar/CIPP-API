@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_2_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.2.5) - The option to remain signed in SHALL be hidden
+    Tests CIS M365 7.0.0 (5.1.2.5) - The option to remain signed in SHALL be hidden
     #>
     param($Tenant)
 

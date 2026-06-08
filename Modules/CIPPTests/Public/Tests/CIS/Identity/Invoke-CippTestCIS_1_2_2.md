@@ -6,7 +6,7 @@ Shared mailboxes have a backing user account. If that account is enabled, an att
 2. Access shared mailboxes via delegated permissions or SendAs/SendOnBehalf.
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 1.2.2](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 1.2.2](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

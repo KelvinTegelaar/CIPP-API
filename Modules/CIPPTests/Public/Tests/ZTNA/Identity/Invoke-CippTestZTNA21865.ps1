@@ -19,17 +19,17 @@ function Invoke-CippTestZTNA21865 {
         $Passed = $TrustedLocations.Count -gt 0
 
         if ($Passed) {
-            $ResultMarkdown = "✅ Trusted named locations are configured.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Trusted named locations are configured.`n`n")
         } else {
-            $ResultMarkdown = "❌ No trusted named locations configured.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ No trusted named locations configured.`n`n")
         }
 
-        $ResultMarkdown += "## Named Locations`n`n"
-        $ResultMarkdown += "$($NamedLocations.Count) named locations found.`n`n"
+        $null = $ResultMarkdown.Append("## Named Locations`n`n")
+        $null = $ResultMarkdown.Append("$($NamedLocations.Count) named locations found.`n`n")
 
         if ($NamedLocations.Count -gt 0) {
-            $ResultMarkdown += "| Name | Type | Trusted |`n"
-            $ResultMarkdown += "| :--- | :--- | :------ |`n"
+            $null = $ResultMarkdown.Append("| Name | Type | Trusted |`n")
+            $null = $ResultMarkdown.Append("| :--- | :--- | :------ |`n")
 
             foreach ($Location in $NamedLocations) {
                 $Name = $Location.displayName
@@ -37,7 +37,7 @@ function Invoke-CippTestZTNA21865 {
                 elseif ($Location.'@odata.type' -eq '#microsoft.graph.countryNamedLocation') { 'Country-based' }
                 else { 'Unknown' }
                 $Trusted = if ($Location.isTrusted) { 'Yes' } else { 'No' }
-                $ResultMarkdown += "| $Name | $Type | $Trusted |`n"
+                $null = $ResultMarkdown.Append("| $Name | $Type | $Trusted |`n")
             }
         }
 

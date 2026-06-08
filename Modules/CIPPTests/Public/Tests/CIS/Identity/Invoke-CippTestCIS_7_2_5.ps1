@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.5) - SharePoint guest users SHALL NOT share items they don't own
+    Tests CIS M365 7.0.0 (7.2.5) - SharePoint guest users SHALL NOT share items they don't own
     #>
     param($Tenant)
 

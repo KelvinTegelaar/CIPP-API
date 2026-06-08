@@ -4,6 +4,8 @@ function Invoke-ListResellerRelationshipLink {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Retrieves the indirect reseller relationship invitation link from Partner Center for onboarding new customer tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

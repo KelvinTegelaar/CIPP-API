@@ -4,11 +4,28 @@ Function Invoke-ListTeams {
         Entrypoint
     .ROLE
         Teams.Group.Read
+    .DESCRIPTION
+        Lists Microsoft Teams teams for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
+    $UseReportDB = $Request.Query.UseReportDB
+    if ($request.query.type -eq 'List' -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        try {
+            $GraphRequest = Get-CIPPTeamsReport -TenantFilter $TenantFilter -ErrorAction Stop
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $_.Exception.Message
+        }
+        return ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @($GraphRequest)
+            })
+    }
+
     if ($request.query.type -eq 'List') {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=resourceProvisioningOptions/Any(x:x eq 'Team')&`$select=id,displayName,description,visibility,mailNickname" -tenantid $TenantFilter | Sort-Object -Property displayName
     }
