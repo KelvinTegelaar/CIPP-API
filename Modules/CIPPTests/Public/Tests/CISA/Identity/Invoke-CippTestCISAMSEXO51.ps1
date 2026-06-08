@@ -26,18 +26,18 @@ function Invoke-CippTestCISAMSEXO51 {
         $FailedMailboxes = $CASMailboxes | Where-Object { $_.SmtpClientAuthenticationDisabled -eq $false }
 
         if ($FailedMailboxes.Count -eq 0) {
-            $Result = "✅ **Pass**: SMTP authentication is disabled for all $($CASMailboxes.Count) mailbox(es)."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: SMTP authentication is disabled for all $($CASMailboxes.Count) mailbox(es).")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedMailboxes.Count) of $($CASMailboxes.Count) mailbox(es) have SMTP authentication enabled"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedMailboxes.Count) of $($CASMailboxes.Count) mailbox(es) have SMTP authentication enabled")
             if ($FailedMailboxes.Count -gt 10) {
-                $Result += ' (showing first 10)'
+                $null = $Result.Append(' (showing first 10)')
             }
-            $Result += ":`n`n"
-            $Result += "| Display Name | Identity | SMTP Auth Disabled |`n"
-            $Result += "| :----------- | :------- | :----------------- |`n"
+            $null = $Result.Append(":`n`n")
+            $null = $Result.Append("| Display Name | Identity | SMTP Auth Disabled |`n")
+            $null = $Result.Append("| :----------- | :------- | :----------------- |`n")
             foreach ($Mailbox in ($FailedMailboxes | Select-Object -First 10)) {
-                $Result += "| $($Mailbox.DisplayName) | $($Mailbox.Identity) | $($Mailbox.SmtpClientAuthenticationDisabled) |`n"
+                $null = $Result.Append("| $($Mailbox.DisplayName) | $($Mailbox.Identity) | $($Mailbox.SmtpClientAuthenticationDisabled) |`n")
             }
             $Status = 'Failed'
         }

@@ -22,12 +22,12 @@ function Invoke-CippTestZTNA21861 {
         $Passed = if ($UntriagedHighRiskUsers.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = '✅ All high-risk users are properly triaged in Entra ID Protection.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('✅ All high-risk users are properly triaged in Entra ID Protection.')
         } else {
-            $ResultMarkdown = "❌ Found **$($UntriagedHighRiskUsers.Count)** untriaged high-risk users in Entra ID Protection.`n`n"
-            $ResultMarkdown += "## Untriaged High-Risk Users`n`n"
-            $ResultMarkdown += "| User | Risk level | Last updated | Risk detail |`n"
-            $ResultMarkdown += "| :--- | :--- | :--- | :--- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Found **$($UntriagedHighRiskUsers.Count)** untriaged high-risk users in Entra ID Protection.`n`n")
+            $null = $ResultMarkdown.Append("## Untriaged High-Risk Users`n`n")
+            $null = $ResultMarkdown.Append("| User | Risk level | Last updated | Risk detail |`n")
+            $null = $ResultMarkdown.Append("| :--- | :--- | :--- | :--- |`n")
 
             foreach ($User in $UntriagedHighRiskUsers) {
                 $UserPrincipalName = if ($User.userPrincipalName) { $User.userPrincipalName } else { $User.id }
@@ -41,7 +41,7 @@ function Invoke-CippTestZTNA21861 {
                 $RiskDetail = $User.riskDetail
 
                 $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)"
-                $ResultMarkdown += "| [$UserPrincipalName]($PortalLink) | $RiskLevel | $RiskDate | $RiskDetail |`n"
+                $null = $ResultMarkdown.Append("| [$UserPrincipalName]($PortalLink) | $RiskLevel | $RiskDate | $RiskDetail |`n")
             }
         }
 

@@ -4,6 +4,8 @@ function Invoke-ListPendingWebhooks {
         Entrypoint
     .ROLE
         CIPP.Alert.Read
+    .DESCRIPTION
+        Lists pending incoming webhook events that have not yet been processed by CIPP.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -26,14 +26,14 @@ function Invoke-CippTestCISAMSEXO151 {
         $FailedPolicies = $SafeLinksPolicies | Where-Object { -not $_.EnableSafeLinksForEmail }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have URL comparison with block-list enabled."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have URL comparison with block-list enabled.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have URL scanning enabled:`n`n"
-            $Result += "| Policy Name | Safe Links for Email |`n"
-            $Result += "| :---------- | :------------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have URL scanning enabled:`n`n")
+            $null = $Result.Append("| Policy Name | Safe Links for Email |`n")
+            $null = $Result.Append("| :---------- | :------------------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Name) | $($Policy.EnableSafeLinksForEmail) |`n"
+                $null = $Result.Append("| $($Policy.Name) | $($Policy.EnableSafeLinksForEmail) |`n")
             }
             $Status = 'Failed'
         }

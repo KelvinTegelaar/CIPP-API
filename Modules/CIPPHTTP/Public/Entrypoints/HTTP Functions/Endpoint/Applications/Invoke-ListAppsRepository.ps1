@@ -4,6 +4,8 @@ Function Invoke-ListAppsRepository {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Searches external application repositories (WinGet, Chocolatey, etc.) for available application packages.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

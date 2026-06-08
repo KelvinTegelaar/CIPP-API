@@ -68,29 +68,31 @@ function Invoke-CippTestZTNA21868 {
 
         if ($HasGuestAppOwners -or $HasGuestSpOwners) {
             $Status = 'Failed'
-            $Result = "Guest users own applications or service principals`n`n"
+            $sb = [System.Text.StringBuilder]::new()
+            $null = $sb.Append("Guest users own applications or service principals`n`n")
 
             if ($HasGuestAppOwners -and $HasGuestSpOwners) {
-                $Result += "## Guest users own both applications and service principals`n`n"
-                $Result += "### Applications owned by guest users`n`n"
-                $Result += "| User Display Name | User Principal Name | Application |`n"
-                $Result += "| :---------------- | :------------------ | :---------- |`n"
-                $Result += ($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"
-                $Result += "`n`n### Service principals owned by guest users`n`n"
-                $Result += "| User Display Name | User Principal Name | Service Principal |`n"
-                $Result += "| :---------------- | :------------------ | :---------------- |`n"
-                $Result += ($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"
+                $null = $sb.Append("## Guest users own both applications and service principals`n`n")
+                $null = $sb.Append("### Applications owned by guest users`n`n")
+                $null = $sb.Append("| User Display Name | User Principal Name | Application |`n")
+                $null = $sb.Append("| :---------------- | :------------------ | :---------- |`n")
+                $null = $sb.Append((($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"))
+                $null = $sb.Append("`n`n### Service principals owned by guest users`n`n")
+                $null = $sb.Append("| User Display Name | User Principal Name | Service Principal |`n")
+                $null = $sb.Append("| :---------------- | :------------------ | :---------------- |`n")
+                $null = $sb.Append((($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"))
             } elseif ($HasGuestAppOwners) {
-                $Result += "## Guest users own applications`n`n"
-                $Result += "| User Display Name | User Principal Name | Application |`n"
-                $Result += "| :---------------- | :------------------ | :---------- |`n"
-                $Result += ($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"
+                $null = $sb.Append("## Guest users own applications`n`n")
+                $null = $sb.Append("| User Display Name | User Principal Name | Application |`n")
+                $null = $sb.Append("| :---------------- | :------------------ | :---------- |`n")
+                $null = $sb.Append((($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"))
             } elseif ($HasGuestSpOwners) {
-                $Result += "## Guest users own service principals`n`n"
-                $Result += "| User Display Name | User Principal Name | Service Principal |`n"
-                $Result += "| :---------------- | :------------------ | :---------------- |`n"
-                $Result += ($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"
+                $null = $sb.Append("## Guest users own service principals`n`n")
+                $null = $sb.Append("| User Display Name | User Principal Name | Service Principal |`n")
+                $null = $sb.Append("| :---------------- | :------------------ | :---------------- |`n")
+                $null = $sb.Append((($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"))
             }
+            $Result = $sb.ToString()
         } else {
             $Status = 'Passed'
             $Result = 'No guest users own any applications or service principals in the tenant'

@@ -4,6 +4,8 @@ Function Invoke-ListSharedMailboxStatistics {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists shared mailboxes and their usage statistics for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

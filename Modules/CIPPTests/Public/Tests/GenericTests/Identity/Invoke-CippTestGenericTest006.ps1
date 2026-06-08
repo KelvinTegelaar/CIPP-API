@@ -16,49 +16,53 @@ function Invoke-CippTestGenericTest006 {
         $StandardUsers = @($MFAData | Where-Object { $_.UPN -and $_.IsAdmin -ne $true })
 
         if ($StandardUsers.Count -eq 0) {
-            $Result = "No standard (non-admin) user accounts were found in the MFA state data."
+            $Result = [System.Text.StringBuilder]::new("No standard (non-admin) user accounts were found in the MFA state data.")
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest006' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'User MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
         }
 
         $TotalUsers = $StandardUsers.Count
-        $MFARegistered = @($StandardUsers | Where-Object { $_.MFARegistration -eq $true }).Count
-        $NotProtected = @($StandardUsers | Where-Object { $_.CoveredByCA -notlike 'Enforced*' -and $_.CoveredBySD -ne $true -and $_.PerUser -notin @('Enforced', 'Enabled') }).Count
+        $MFARegistered = 0
+        $NotProtected = 0
+        foreach ($u in $StandardUsers) {
+            if ($u.MFARegistration -eq $true) { $MFARegistered++ }
+            if ($u.CoveredByCA -notlike 'Enforced*' -and $u.CoveredBySD -ne $true -and $u.PerUser -notin @('Enforced', 'Enabled')) { $NotProtected++ }
+        }
         $MFARegPct = if ($TotalUsers -gt 0) { [math]::Round(($MFARegistered / $TotalUsers) * 100, 1) } else { 0 }
 
-        $Result = "**Total Users:** $TotalUsers | **MFA Registered:** $MFARegistered ($MFARegPct%)"
+        $Result = [System.Text.StringBuilder]::new("**Total Users:** $TotalUsers | **MFA Registered:** $MFARegistered ($MFARegPct%)")
         if ($NotProtected -gt 0) {
-            $Result += " | **Unprotected: $NotProtected**"
+            $null = $Result.Append(" | **Unprotected: $NotProtected**")
         }
-        $Result += "`n`n"
+        $null = $Result.Append("`n`n")
 
         if ($NotProtected -gt 0) {
-            $Result += "**⚠️ $NotProtected user account(s) have no MFA enforcement.** Consider enabling a Conditional Access policy that requires MFA for all users.`n`n"
+            $null = $Result.Append("**⚠️ $NotProtected user account(s) have no MFA enforcement.** Consider enabling a Conditional Access policy that requires MFA for all users.`n`n")
         }
 
-        $Result += "| Display Name | MFA Registered | MFA Method | Protected By | User Type |`n"
-        $Result += "|-------------|----------------|------------|--------------|-----------|`n"
+        $null = $Result.Append("| Display Name | MFA Registered | MFA Method | Protected By | User Type |`n")
+        $null = $Result.Append("|-------------|----------------|------------|--------------|-----------|`n")
 
         $DisplayUsers = $StandardUsers | Sort-Object DisplayName | Select-Object -First 100
         foreach ($User in $DisplayUsers) {
-            $Name = $User.DisplayName
+            $Name = ($User.DisplayName -replace '\|', '\|')
             $Registered = if ($User.MFARegistration -eq $true) { '✅ Yes' } else { '❌ No' }
             $Methods = if ($User.MFAMethods) {
                 $MethodList = if ($User.MFAMethods -is [string]) {
                     try { ($User.MFAMethods | ConvertFrom-Json) -join ', ' } catch { $User.MFAMethods }
                 } else { ($User.MFAMethods) -join ', ' }
-                $MethodList -replace 'microsoftAuthenticator', 'Authenticator' -replace 'phoneAuthentication', 'Phone' -replace 'fido2', 'FIDO2' -replace 'softwareOneTimePasscode', 'Software OTP' -replace 'emailAuthentication', 'Email' -replace 'windowsHelloForBusiness', 'Windows Hello' -replace 'temporaryAccessPass', 'Temp Pass'
+                ($MethodList -replace 'microsoftAuthenticator', 'Authenticator' -replace 'phoneAuthentication', 'Phone' -replace 'fido2', 'FIDO2' -replace 'softwareOneTimePasscode', 'Software OTP' -replace 'emailAuthentication', 'Email' -replace 'windowsHelloForBusiness', 'Windows Hello' -replace 'temporaryAccessPass', 'Temp Pass') -replace '\|', '\|'
             } else { 'None' }
             $Protection = if ($User.CoveredByCA -like 'Enforced*') { "Conditional Access" }
             elseif ($User.CoveredBySD -eq $true) { 'Security Defaults' }
             elseif ($User.PerUser -in @('Enforced', 'Enabled')) { "Per-User MFA ($($User.PerUser))" }
             else { '❌ None' }
             $UserType = if ($User.UserType -eq 'Guest') { 'Guest' } else { 'Member' }
-            $Result += "| $Name | $Registered | $Methods | $Protection | $UserType |`n"
+            $null = $Result.Append("| $Name | $Registered | $Methods | $Protection | $UserType |`n")
         }
 
         if ($StandardUsers.Count -gt 100) {
-            $Result += "`n*Showing 100 of $($StandardUsers.Count) user accounts.*`n"
+            $null = $Result.Append("`n*Showing 100 of $($StandardUsers.Count) user accounts.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest006' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'User MFA Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

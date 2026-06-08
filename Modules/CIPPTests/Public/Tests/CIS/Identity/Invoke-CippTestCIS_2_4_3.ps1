@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_4_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.4.3) - Microsoft Defender for Cloud Apps SHALL be enabled and configured
+    Tests CIS M365 7.0.0 (2.4.3) - Microsoft Defender for Cloud Apps SHALL be enabled and configured
     #>
     param($Tenant)
 

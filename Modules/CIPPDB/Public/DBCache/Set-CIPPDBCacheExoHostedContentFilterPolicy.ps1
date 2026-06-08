@@ -20,8 +20,7 @@ function Set-CIPPDBCacheExoHostedContentFilterPolicy {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Exchange Hosted Content Filter policies' -sev Debug
         $HostedContentFilterPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-HostedContentFilterPolicy'
         if ($HostedContentFilterPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedContentFilterPolicy' -Data $HostedContentFilterPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedContentFilterPolicy' -Data $HostedContentFilterPolicies -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoHostedContentFilterPolicy' -Data $HostedContentFilterPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($HostedContentFilterPolicies.Count) Hosted Content Filter policies" -sev Debug
         }
         $HostedContentFilterPolicies = $null

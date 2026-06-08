@@ -20,17 +20,17 @@ function Invoke-CippTestORCA235 {
 
         if ($CustomDomains.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No custom domains found. Only using onmicrosoft.com domain.`n`n"
-            $Result += "**Total Domains:** $($AcceptedDomains.Count)"
+            $Result = [System.Text.StringBuilder]::new("No custom domains found. Only using onmicrosoft.com domain.`n`n")
+            $null = $Result.Append("**Total Domains:** $($AcceptedDomains.Count)")
         } else {
             $Status = 'Informational'
-            $Result = "Found $($CustomDomains.Count) custom domains that should have SPF records configured.`n`n"
-            $Result += "**Custom Domains:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("Found $($CustomDomains.Count) custom domains that should have SPF records configured.`n`n")
+            $null = $Result.Append("**Custom Domains:**`n`n")
             foreach ($Domain in $CustomDomains) {
-                $Result += "- $($Domain.DomainName)`n"
+                $null = $Result.Append("- $($Domain.DomainName)`n")
             }
-            $Result += "`n**Action Required:** Verify that each custom domain has an SPF record including Microsoft 365:`n"
-            $Result += "``v=spf1 include:spf.protection.outlook.com -all``"
+            $null = $Result.Append("`n**Action Required:** Verify that each custom domain has an SPF record including Microsoft 365:`n")
+            $null = $Result.Append("``v=spf1 include:spf.protection.outlook.com -all``")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'

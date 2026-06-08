@@ -31,10 +31,12 @@ function Invoke-AddCustomScript {
             $LatestVersion = $ExistingVersions | Sort-Object -Property Version -Descending | Select-Object -First 1
             $CurrentEnabled = if ($LatestVersion.PSObject.Properties['Enabled']) { [bool]$LatestVersion.Enabled } else { $true }
             $CurrentAlertOnFailure = if ($LatestVersion.PSObject.Properties['AlertOnFailure']) { [bool]$LatestVersion.AlertOnFailure } else { $false }
+            $CurrentAlertStatuses = if ($LatestVersion.PSObject.Properties['AlertStatuses'] -and -not [string]::IsNullOrWhiteSpace($LatestVersion.AlertStatuses)) { $LatestVersion.AlertStatuses } else { '[]' }
             $CurrentResultMode = if ($LatestVersion.PSObject.Properties['ResultMode'] -and -not [string]::IsNullOrWhiteSpace($LatestVersion.ResultMode)) { $LatestVersion.ResultMode } else { 'Auto' }
 
             $NewEnabled = $CurrentEnabled
             $NewAlertOnFailure = $CurrentAlertOnFailure
+            $NewAlertStatuses = $CurrentAlertStatuses
             $NewResultMode = $CurrentResultMode
 
             switch ($Action) {
@@ -46,9 +48,13 @@ function Invoke-AddCustomScript {
                 }
                 'EnableAlerts' {
                     $NewAlertOnFailure = $true
+                    if ($NewAlertStatuses -eq '[]') {
+                        $NewAlertStatuses = @('Failed') | ConvertTo-Json -Compress
+                    }
                 }
                 'DisableAlerts' {
                     $NewAlertOnFailure = $false
+                    $NewAlertStatuses = '[]'
                 }
                 'SetResultMode' {
                     $RequestedMode = $Request.Body.ResultMode
@@ -65,6 +71,7 @@ function Invoke-AddCustomScript {
                 RowKey         = $LatestVersion.RowKey
                 Enabled        = $NewEnabled
                 AlertOnFailure = $NewAlertOnFailure
+                AlertStatuses  = $NewAlertStatuses
                 ResultMode     = $NewResultMode
             }
 
@@ -115,6 +122,7 @@ function Invoke-AddCustomScript {
             $UserImpact = $Request.Body.UserImpact
             $Enabled = $Request.Body.Enabled
             $AlertOnFailure = $Request.Body.AlertOnFailure
+            $AlertStatuses = if ($Request.Body.AlertStatuses) { $Request.Body.AlertStatuses | ConvertTo-Json -Compress } else { '[]' }
             $ReturnType = $Request.Body.ReturnType
             $MarkdownTemplate = $Request.Body.MarkdownTemplate
             $ResultSchema = $Request.Body.ResultSchema
@@ -222,6 +230,7 @@ function Invoke-AddCustomScript {
                 UserImpact           = $UserImpact
                 Enabled              = $Enabled
                 AlertOnFailure       = $AlertOnFailure
+                AlertStatuses        = $AlertStatuses
                 ReturnType           = $ReturnType
                 MarkdownTemplate     = $MarkdownTemplate
                 ResultSchema         = $ResultSchema

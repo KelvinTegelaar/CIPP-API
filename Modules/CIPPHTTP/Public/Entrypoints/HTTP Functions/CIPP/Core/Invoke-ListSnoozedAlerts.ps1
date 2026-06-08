@@ -4,6 +4,8 @@ function Invoke-ListSnoozedAlerts {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Alert.Read
+    .DESCRIPTION
+        Lists alerts that have been snoozed (temporarily suppressed), filterable by cmdlet name. Returns snooze duration and scope details.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

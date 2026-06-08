@@ -4,6 +4,8 @@ Function Invoke-ListSiteMembers {
         Entrypoint
     .ROLE
         Sharepoint.Site.Read
+    .DESCRIPTION
+        Lists members of a specific SharePoint site by site ID, including user display names and email addresses.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -4,6 +4,8 @@ Function Invoke-ListStandards {
         Entrypoint
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists configured tenant standards (compliance policies) and their settings, with optional consolidated view.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

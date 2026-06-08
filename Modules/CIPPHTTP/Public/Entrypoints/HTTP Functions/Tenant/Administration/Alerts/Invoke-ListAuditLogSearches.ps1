@@ -4,6 +4,8 @@ function Invoke-ListAuditLogSearches {
         Entrypoint
     .ROLE
         Tenant.Alert.Read
+    .DESCRIPTION
+        Lists or creates Microsoft 365 Unified Audit Log searches for a tenant, with support for retrieving search results.
     #>
     Param($Request, $TriggerMetadata)
     # Interact with the query parameters

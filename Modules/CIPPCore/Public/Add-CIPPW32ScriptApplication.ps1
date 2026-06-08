@@ -45,15 +45,15 @@ function Add-CIPPW32ScriptApplication {
     )
 
     # Get the standard Chocolatey package location (relative to function app root)
-    $IntuneWinFile = 'AddChocoApp\IntunePackage.intunewin'
-    $ChocoXmlFile = 'AddChocoApp\Choco.App.xml'
+    $IntuneWinFile = Join-Path $env:CIPPRootPath 'AddChocoApp\IntunePackage.intunewin'
+    $ChocoXmlFile = Join-Path $env:CIPPRootPath 'AddChocoApp\Choco.App.xml'
 
     if (-not (Test-Path $IntuneWinFile)) {
-        throw "Chocolatey IntunePackage.intunewin not found at: $IntuneWinFile (Current directory: $PWD)"
+        throw "Chocolatey IntunePackage.intunewin not found at: $IntuneWinFile (CIPPRootPath: $env:CIPPRootPath)"
     }
 
     if (-not (Test-Path $ChocoXmlFile)) {
-        throw "Choco.App.xml not found at: $ChocoXmlFile (Current directory: $PWD)"
+        throw "Choco.App.xml not found at: $ChocoXmlFile (CIPPRootPath: $env:CIPPRootPath)"
     }
 
     # Parse the Choco XML to get encryption info. We need a wrapper around the application and this is a tiny intune file, perfect for our purpose.

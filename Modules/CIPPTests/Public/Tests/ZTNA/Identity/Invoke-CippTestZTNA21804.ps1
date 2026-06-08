@@ -27,12 +27,12 @@ function Invoke-CippTestZTNA21804 {
 
         $reportTitle = 'Weak authentication methods'
 
-        $mdInfo = "`n## $reportTitle`n`n"
-        $mdInfo += "| Method ID | Is method weak? | State |`n"
-        $mdInfo += "| :-------- | :-------------- | :---- |`n"
+        $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+        $null = $mdInfo.Append("| Method ID | Is method weak? | State |`n")
+        $null = $mdInfo.Append("| :-------- | :-------------- | :---- |`n")
 
         foreach ($method in $matchedMethods) {
-            $mdInfo += "| $($method.id) | Yes | $($method.state) |`n"
+            $null = $mdInfo.Append("| $($method.id) | Yes | $($method.state) |`n")
         }
 
         $testResultMarkdown = $testResultMarkdown + $mdInfo

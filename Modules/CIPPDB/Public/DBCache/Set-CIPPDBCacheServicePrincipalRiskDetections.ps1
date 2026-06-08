@@ -23,8 +23,7 @@ function Set-CIPPDBCacheServicePrincipalRiskDetections {
         $ServicePrincipalRiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/servicePrincipalRiskDetections' -tenantid $TenantFilter
 
         if ($ServicePrincipalRiskDetections) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipalRiskDetections' -Data $ServicePrincipalRiskDetections
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipalRiskDetections' -Data $ServicePrincipalRiskDetections -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipalRiskDetections' -Data $ServicePrincipalRiskDetections -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ServicePrincipalRiskDetections.Count) service principal risk detections successfully" -sev Debug
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No service principal risk detections found or Workload Identity Protection not available' -sev Debug

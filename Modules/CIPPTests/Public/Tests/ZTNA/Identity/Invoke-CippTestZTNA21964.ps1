@@ -18,16 +18,16 @@ function Invoke-CippTestZTNA21964 {
         $BuiltInStrengths = @($AuthStrengths | Where-Object { $_.policyType -eq 'builtIn' })
         $CustomStrengths = @($AuthStrengths | Where-Object { $_.policyType -eq 'custom' })
 
-        $ResultMarkdown = "## Authentication Strength Policies`n`n"
-        $ResultMarkdown += "Found $($AuthStrengths.Count) authentication strength policies ($($BuiltInStrengths.Count) built-in, $($CustomStrengths.Count) custom).`n`n"
+        $ResultMarkdown = [System.Text.StringBuilder]::new("## Authentication Strength Policies`n`n")
+        $null = $ResultMarkdown.Append("Found $($AuthStrengths.Count) authentication strength policies ($($BuiltInStrengths.Count) built-in, $($CustomStrengths.Count) custom).`n`n")
 
         if ($CustomStrengths.Count -gt 0) {
-            $ResultMarkdown += "### Custom Authentication Strengths`n`n"
-            $ResultMarkdown += "| Name | Combinations |`n"
-            $ResultMarkdown += "| :--- | :---------- |`n"
+            $null = $ResultMarkdown.Append("### Custom Authentication Strengths`n`n")
+            $null = $ResultMarkdown.Append("| Name | Combinations |`n")
+            $null = $ResultMarkdown.Append("| :--- | :---------- |`n")
             foreach ($strength in $CustomStrengths) {
                 $combinations = if ($strength.allowedCombinations) { $strength.allowedCombinations.Count } else { 0 }
-                $ResultMarkdown += "| $($strength.displayName) | $combinations methods |`n"
+                $null = $ResultMarkdown.Append("| $($strength.displayName) | $combinations methods |`n")
             }
         }
 

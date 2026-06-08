@@ -4,6 +4,8 @@ function Invoke-ListUserGroups {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists Entra ID group memberships for a specific user.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

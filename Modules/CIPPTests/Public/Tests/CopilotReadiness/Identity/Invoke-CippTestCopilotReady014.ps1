@@ -23,22 +23,22 @@ function Invoke-CippTestCopilotReady014 {
 
         if ($EnabledPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $Result = "**$($EnabledPolicies.Count) enabled DLP polic$(if ($EnabledPolicies.Count -eq 1) { 'y' } else { 'ies' })** found in the tenant.`n`n"
-            $Result += "| Policy | Workload | Enabled |`n"
-            $Result += "|--------|----------|---------|`n"
+            $Result = [System.Text.StringBuilder]::new("**$($EnabledPolicies.Count) enabled DLP polic$(if ($EnabledPolicies.Count -eq 1) { 'y' } else { 'ies' })** found in the tenant.`n`n")
+            $null = $Result.Append("| Policy | Workload | Enabled |`n")
+            $null = $Result.Append("|--------|----------|---------|`n")
             foreach ($Policy in ($AllPolicies | Sort-Object DisplayName)) {
                 $IsEnabled = if ($Policy.Mode -eq 'Enable' -and $Policy.Enabled -eq $true) { '✅ Yes' } else { 'No' }
                 $Workload = if ($Policy.Workload) { $Policy.Workload } else { '—' }
-                $Result += "| $($Policy.DisplayName) | $Workload | $IsEnabled |`n"
+                $null = $Result.Append("| $($Policy.DisplayName) | $Workload | $IsEnabled |`n")
             }
         } else {
             $Status = 'Failed'
-            $Result = "No enabled DLP policies were found in this tenant.`n`n"
+            $Result = [System.Text.StringBuilder]::new("No enabled DLP policies were found in this tenant.`n`n")
             if ($AllPolicies.Count -gt 0) {
-                $Result += "**$($AllPolicies.Count) polic$(if ($AllPolicies.Count -eq 1) { 'y exists' } else { 'ies exist' })** but none are enabled.`n`n"
+                $null = $Result.Append("**$($AllPolicies.Count) polic$(if ($AllPolicies.Count -eq 1) { 'y exists' } else { 'ies exist' })** but none are enabled.`n`n")
             }
-            $Result += 'Data Loss Prevention policies help protect sensitive information from being shared inappropriately — a critical control when Copilot can surface content broadly. '
-            $Result += 'Enable or create DLP policies in the [Microsoft Purview compliance portal](https://compliance.microsoft.com/datalossprevention) before deploying Copilot.'
+            $null = $Result.Append('Data Loss Prevention policies help protect sensitive information from being shared inappropriately — a critical control when Copilot can surface content broadly. ')
+            $null = $Result.Append('Enable or create DLP policies in the [Microsoft Purview compliance portal](https://compliance.microsoft.com/datalossprevention) before deploying Copilot.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady014' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Tenant has enabled DLP policies configured' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

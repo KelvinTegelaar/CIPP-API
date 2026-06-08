@@ -124,27 +124,27 @@ function Invoke-CippTestZTNA21835 {
 
         $AccountCount = $EmergencyAccessAccounts.Count
         $Passed = 'Failed'
-        $ResultMarkdown = ''
+        $ResultMarkdown = [System.Text.StringBuilder]::new()
 
         if ($AccountCount -lt 2) {
-            $ResultMarkdown = "Fewer than two emergency access accounts were identified based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Fewer than two emergency access accounts were identified based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions.`n`n")
         } elseif ($AccountCount -ge 2 -and $AccountCount -le 4) {
             $Passed = 'Passed'
-            $ResultMarkdown = "Emergency access accounts appear to be configured as per Microsoft guidance based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Emergency access accounts appear to be configured as per Microsoft guidance based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions.`n`n")
         } else {
-            $ResultMarkdown = "$AccountCount emergency access accounts appear to be configured based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions. Review these accounts to determine whether this volume is excessive for your organization.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("$AccountCount emergency access accounts appear to be configured based on cloud-only state, registered phishing-resistant credentials and Conditional Access policy exclusions. Review these accounts to determine whether this volume is excessive for your organization.`n`n")
         }
 
-        $ResultMarkdown += "**Summary:**`n"
-        $ResultMarkdown += "- Total permanent Global Administrators: $($PermanentGAMembers.Count)`n"
-        $ResultMarkdown += "- Cloud-only GAs with phishing-resistant auth: $($EmergencyAccountCandidates.Count)`n"
-        $ResultMarkdown += "- Emergency access accounts (excluded from all CA): $AccountCount`n"
-        $ResultMarkdown += "- Enabled Conditional Access policies: $($EnabledCAPolicies.Count)`n`n"
+        $null = $ResultMarkdown.Append("**Summary:**`n")
+        $null = $ResultMarkdown.Append("- Total permanent Global Administrators: $($PermanentGAMembers.Count)`n")
+        $null = $ResultMarkdown.Append("- Cloud-only GAs with phishing-resistant auth: $($EmergencyAccountCandidates.Count)`n")
+        $null = $ResultMarkdown.Append("- Emergency access accounts (excluded from all CA): $AccountCount`n")
+        $null = $ResultMarkdown.Append("- Enabled Conditional Access policies: $($EnabledCAPolicies.Count)`n`n")
 
         if ($EmergencyAccessAccounts.Count -gt 0) {
-            $ResultMarkdown += "## Emergency access accounts`n`n"
-            $ResultMarkdown += "| Display name | UPN | Synced from on-premises | Authentication methods |`n"
-            $ResultMarkdown += "| :----------- | :-- | :---------------------- | :--------------------- |`n"
+            $null = $ResultMarkdown.Append("## Emergency access accounts`n`n")
+            $null = $ResultMarkdown.Append("| Display name | UPN | Synced from on-premises | Authentication methods |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :-- | :---------------------- | :--------------------- |`n")
 
             foreach ($Account in $EmergencyAccessAccounts) {
                 $SyncStatus = if ($Account.OnPremisesSyncEnabled -ne $true) { 'No' } else { 'Yes' }
@@ -153,15 +153,15 @@ function Invoke-CippTestZTNA21835 {
                     }) -join ', '
 
                 $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($Account.Id)"
-                $ResultMarkdown += "| $($Account.DisplayName) | [$($Account.UserPrincipalName)]($PortalLink) | $SyncStatus | $AuthMethodDisplay |`n"
+                $null = $ResultMarkdown.Append("| $($Account.DisplayName) | [$($Account.UserPrincipalName)]($PortalLink) | $SyncStatus | $AuthMethodDisplay |`n")
             }
-            $ResultMarkdown += "`n"
+            $null = $ResultMarkdown.Append("`n")
         }
 
         if ($PermanentGAMembers.Count -gt 0) {
-            $ResultMarkdown += "## All permanent Global Administrators`n`n"
-            $ResultMarkdown += "| Display name | UPN | Cloud only | All CA excluded | Phishing resistant auth |`n"
-            $ResultMarkdown += "| :----------- | :-- | :--------: | :---------: | :---------------------: |`n"
+            $null = $ResultMarkdown.Append("## All permanent Global Administrators`n`n")
+            $null = $ResultMarkdown.Append("| Display name | UPN | Cloud only | All CA excluded | Phishing resistant auth |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :-- | :--------: | :---------: | :---------------------: |`n")
 
             $UserSummary = [System.Collections.Generic.List[object]]::new()
             foreach ($Member in $PermanentGAMembers) {
@@ -189,10 +189,10 @@ function Invoke-CippTestZTNA21835 {
             }
 
             foreach ($UserSum in $UserSummary) {
-                $ResultMarkdown += "| $($UserSum.DisplayName) | [$($UserSum.UserPrincipalName)]($($UserSum.PortalLink)) | $($UserSum.CloudOnly) | $($UserSum.CAExcluded) | $($UserSum.PhishingResistant) |`n"
+                $null = $ResultMarkdown.Append("| $($UserSum.DisplayName) | [$($UserSum.UserPrincipalName)]($($UserSum.PortalLink)) | $($UserSum.CloudOnly) | $($UserSum.CAExcluded) | $($UserSum.PhishingResistant) |`n")
             }
 
-            $ResultMarkdown += "`n"
+            $null = $ResultMarkdown.Append("`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Emergency access accounts are configured appropriately' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'

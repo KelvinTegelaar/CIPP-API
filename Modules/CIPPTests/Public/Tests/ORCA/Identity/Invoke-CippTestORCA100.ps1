@@ -27,16 +27,16 @@ function Invoke-CippTestORCA100 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have appropriate Bulk Complaint Level (BCL) thresholds set between 4 and 6.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have appropriate Bulk Complaint Level (BCL) thresholds set between 4 and 6.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies have BCL thresholds outside the recommended range (4-6).`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Current BCL Threshold |`n"
-            $Result += "|------------|----------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies have BCL thresholds outside the recommended range (4-6).`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Current BCL Threshold |`n")
+            $null = $Result.Append("|------------|----------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.BulkThreshold) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.BulkThreshold) |`n")
             }
         }
 

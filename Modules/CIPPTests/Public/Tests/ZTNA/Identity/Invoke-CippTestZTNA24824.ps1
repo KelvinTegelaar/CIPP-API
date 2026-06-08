@@ -118,9 +118,9 @@ function Invoke-CippTestZTNA24824 {
 
         # Build result markdown
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: Conditional Access policies block noncompliant devices across all platforms.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Conditional Access policies block noncompliant devices across all platforms.`n`n")
         } else {
-            $ResultMarkdown = "❌ **Fail**: Conditional Access policies do not cover all device platforms.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: Conditional Access policies do not cover all device platforms.`n`n")
             $missingPlatforms = [System.Collections.Generic.List[string]]::new()
             foreach ($key in $PlatformCoverage.Keys) {
                 if (-not $PlatformCoverage[$key]) {
@@ -128,19 +128,19 @@ function Invoke-CippTestZTNA24824 {
                 }
             }
             if ($missingPlatforms.Count -gt 0) {
-                $ResultMarkdown += "**Missing platform coverage**: $($missingPlatforms -join ', ')`n`n"
+                $null = $ResultMarkdown.Append("**Missing platform coverage**: $($missingPlatforms -join ', ')`n`n")
             }
         }
 
-        $ResultMarkdown += "## Compliant device policies`n`n"
-        $ResultMarkdown += "| Policy Name | Platforms |`n"
-        $ResultMarkdown += "| :---------- | :-------- |`n"
+        $null = $ResultMarkdown.Append("## Compliant device policies`n`n")
+        $null = $ResultMarkdown.Append("| Policy Name | Platforms |`n")
+        $null = $ResultMarkdown.Append("| :---------- | :-------- |`n")
 
         foreach ($detail in $PolicyDetails) {
-            $ResultMarkdown += "| $($detail.Name) | $($detail.Platforms) |`n"
+            $null = $ResultMarkdown.Append("| $($detail.Name) | $($detail.Platforms) |`n")
         }
 
-        $ResultMarkdown += "`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
+        $null = $ResultMarkdown.Append("`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)")
 
         $TestParams = @{
             TestId               = 'ZTNA24824'

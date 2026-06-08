@@ -4,13 +4,30 @@ function Invoke-ListTeamsVoice {
         Entrypoint
     .ROLE
         Teams.Voice.Read
+    .DESCRIPTION
+        Lists Microsoft Teams voice and PSTN usage for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
+    $UseReportDB = $Request.Query.UseReportDB
     try {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+            try {
+                $GraphRequest = Get-CIPPTeamsVoiceReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
+        $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
         $Users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter)
         $Skip = 0
         $GraphRequest = do {

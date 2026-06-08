@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_1_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.1.2) - Mailbox audit actions SHALL be configured
+    Tests CIS M365 7.0.0 (6.1.2) - Mailbox audit actions SHALL be configured
     #>
     param($Tenant)
 

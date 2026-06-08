@@ -36,17 +36,17 @@ function Invoke-CippTestZTNA22128 {
             'fe930be7-5e62-47db-91af-98c3a49a38b1'
         )
 
-        $GuestsInPrivilegedRoles = @()
+        $GuestsInPrivilegedRoles = [System.Collections.Generic.List[object]]::new()
         foreach ($Role in $Roles) {
             if ($Role.roleTemplateId -in $PrivilegedRoleTemplateIds -and $Role.members) {
                 foreach ($Member in $Role.members) {
                     if ($GuestIdHash.ContainsKey($Member.id)) {
-                        $GuestsInPrivilegedRoles += [PSCustomObject]@{
+                        $GuestsInPrivilegedRoles.Add([PSCustomObject]@{
                             RoleName               = $Role.displayName
                             GuestId                = $Member.id
                             GuestDisplayName       = $Member.displayName
                             GuestUserPrincipalName = $Member.userPrincipalName
-                        }
+                        })
                     }
                 }
             }
@@ -59,26 +59,25 @@ function Invoke-CippTestZTNA22128 {
 
         $Status = 'Failed'
 
-        $ResultLines = @(
-            "Found $($GuestsInPrivilegedRoles.Count) guest user(s) with privileged role assignments."
-            ''
-            "**Total guests in tenant:** $($Guests.Count)"
-            "**Guests with privileged roles:** $($GuestsInPrivilegedRoles.Count)"
-            ''
-            '**Guest users in privileged roles:**'
-        )
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        $ResultLines.Add("Found $($GuestsInPrivilegedRoles.Count) guest user(s) with privileged role assignments.")
+        $ResultLines.Add('')
+        $ResultLines.Add("**Total guests in tenant:** $($Guests.Count)")
+        $ResultLines.Add("**Guests with privileged roles:** $($GuestsInPrivilegedRoles.Count)")
+        $ResultLines.Add('')
+        $ResultLines.Add('**Guest users in privileged roles:**')
 
         $RoleGroups = $GuestsInPrivilegedRoles | Group-Object -Property RoleName
         foreach ($RoleGroup in $RoleGroups) {
-            $ResultLines += ''
-            $ResultLines += "**$($RoleGroup.Name)** ($($RoleGroup.Count) guest(s)):"
+            $ResultLines.Add('')
+            $ResultLines.Add("**$($RoleGroup.Name)** ($($RoleGroup.Count) guest(s)):")
             foreach ($Guest in $RoleGroup.Group) {
-                $ResultLines += "- $($Guest.GuestDisplayName) ($($Guest.GuestUserPrincipalName))"
+                $ResultLines.Add("- $($Guest.GuestDisplayName) ($($Guest.GuestUserPrincipalName))")
             }
         }
 
-        $ResultLines += ''
-        $ResultLines += '**Security concern:** Guest users should not have privileged directory roles. Consider using separate admin accounts for external administrators or removing privileged access.'
+        $ResultLines.Add('')
+        $ResultLines.Add('**Security concern:** Guest users should not have privileged directory roles. Consider using separate admin accounts for external administrators or removing privileged access.')
 
         $Result = $ResultLines -join "`n"
 

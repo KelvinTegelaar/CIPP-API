@@ -29,8 +29,7 @@ function Set-CIPPDBCacheCsTenantFederationConfiguration {
 
         if ($Federation) {
             $Data = @($Federation)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTenantFederationConfiguration' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTenantFederationConfiguration' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTenantFederationConfiguration' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Teams Tenant Federation Configuration' -sev Debug
         }
         $Federation = $null

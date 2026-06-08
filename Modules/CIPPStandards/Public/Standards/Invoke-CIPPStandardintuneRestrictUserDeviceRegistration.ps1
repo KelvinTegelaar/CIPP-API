@@ -27,7 +27,7 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -40,7 +40,8 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
         return
     }
     # Current M365 Config
-    $CurrentOdataType = $PreviousSetting.azureADJoin.allowedToJoin.'@odata.type'
+    $CurrentOdataType = $PreviousSetting.azureADRegistration.allowedToRegister.'@odata.type'
+    $IsAdminConfigurable = [bool]$PreviousSetting.azureADRegistration.isAdminConfigurable
 
     # Standards Config
     $DisableUserDeviceRegistration = [bool]$Settings.disableUserDeviceRegistration
@@ -53,29 +54,31 @@ function Invoke-CIPPStandardintuneRestrictUserDeviceRegistration {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is already configured (registering users allowed to join: $DesiredStateText)." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is already configured (users allowed to register: $DesiredStateText)." -sev Info
+        } elseif ($IsAdminConfigurable -eq $false) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Cannot remediate device registration restriction: azureADRegistration.isAdminConfigurable is false for this tenant (commonly because Intune is enabled). Skipping remediation.' -sev Warn
         } else {
             try {
-                $PreviousSetting.azureADJoin.allowedToJoin = @{ '@odata.type' = $DesiredOdataType; users = $null; groups = $null }
+                $PreviousSetting.azureADRegistration.allowedToRegister = @{ '@odata.type' = $DesiredOdataType; users = $null; groups = $null }
                 $NewBody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10
                 New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 $CurrentOdataType = $DesiredOdataType
                 $CurrentDisableUserDeviceRegistration = ($CurrentOdataType -eq '#microsoft.graph.noDeviceRegistrationMembership')
                 $StateIsCorrect = ($CurrentOdataType -eq $DesiredOdataType)
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set device registration restriction (registering users allowed to join: $DesiredStateText)." -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set device registration restriction (users allowed to register: $DesiredStateText)." -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set device registration restriction (registering users allowed to join: $DesiredStateText). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set device registration restriction (users allowed to register: $DesiredStateText). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is configured as expected (registering users allowed to join: $DesiredStateText)." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is configured as expected (users allowed to register: $DesiredStateText)." -sev Info
         } else {
-            Write-StandardsAlert -message "Device registration restriction is not configured as expected (registering users allowed to join: $DesiredStateText)" -object @{ current = @{ disableUserDeviceRegistration = $CurrentDisableUserDeviceRegistration }; desired = @{ disableUserDeviceRegistration = $DisableUserDeviceRegistration } } -tenant $Tenant -standardName 'intuneRestrictUserDeviceRegistration' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is not configured as expected (registering users allowed to join: $DesiredStateText)." -sev Info
+            Write-StandardsAlert -message "Device registration restriction is not configured as expected (users allowed to register: $DesiredStateText)" -object @{ current = @{ disableUserDeviceRegistration = $CurrentDisableUserDeviceRegistration }; desired = @{ disableUserDeviceRegistration = $DisableUserDeviceRegistration } } -tenant $Tenant -standardName 'intuneRestrictUserDeviceRegistration' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Device registration restriction is not configured as expected (users allowed to register: $DesiredStateText)." -sev Info
         }
     }
 

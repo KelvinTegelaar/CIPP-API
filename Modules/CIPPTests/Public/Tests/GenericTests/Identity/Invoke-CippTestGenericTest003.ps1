@@ -15,7 +15,7 @@ function Invoke-CippTestGenericTest003 {
 
         $Licenses = @($LicenseData)
 
-        $Result = ""
+        $Result = [System.Text.StringBuilder]::new()
 
         $HasRenewals = $false
         $TrialCount = 0
@@ -44,24 +44,24 @@ function Invoke-CippTestGenericTest003 {
         }
 
         if (-not $HasRenewals) {
-            $Result += 'No subscription renewal information is available. This may indicate non-standard licensing or the data has not been synced recently.'
+            $null = $Result.Append('No subscription renewal information is available. This may indicate non-standard licensing or the data has not been synced recently.')
             Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest003' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'License Renewal Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
             return
         }
 
         if ($TrialCount -gt 0) {
-            $Result += "**⚠️ $TrialCount trial subscription(s) detected.** Trial licenses will expire and may cause users to lose access if not converted to paid subscriptions.`n`n"
+            $null = $Result.Append("**⚠️ $TrialCount trial subscription(s) detected.** Trial licenses will expire and may cause users to lose access if not converted to paid subscriptions.`n`n")
         }
 
         $UrgentRenewals = @($UpcomingRenewals | Where-Object { $_.DaysUntilRenew -le 30 -and $_.DaysUntilRenew -ge 0 })
         if ($UrgentRenewals.Count -gt 0) {
-            $Result += "**🔴 $($UrgentRenewals.Count) subscription(s) renewing within 30 days** — review these to ensure billing and seat counts are correct.`n`n"
+            $null = $Result.Append("**🔴 $($UrgentRenewals.Count) subscription(s) renewing within 30 days** — review these to ensure billing and seat counts are correct.`n`n")
         }
 
         $Sorted = $UpcomingRenewals | Sort-Object DaysUntilRenew
 
-        $Result += "| License | Status | Billing Term | Seats | Renews In | Renewal Date | Trial |`n"
-        $Result += "|---------|--------|--------------|-------|-----------|--------------|-------|`n"
+        $null = $Result.Append("| License | Status | Billing Term | Seats | Renews In | Renewal Date | Trial |`n")
+        $null = $Result.Append("|---------|--------|--------------|-------|-----------|--------------|-------|`n")
 
         foreach ($Renewal in $Sorted) {
             $DaysLabel = if ($null -eq $Renewal.DaysUntilRenew) { 'Unknown' }
@@ -76,7 +76,7 @@ function Invoke-CippTestGenericTest003 {
                 'Deleted' { "❌ $($Renewal.Status)" }
                 default { $Renewal.Status }
             }
-            $Result += "| $($Renewal.License) | $StatusIcon | $($Renewal.Term) | $($Renewal.Seats) | $DaysLabel | $($Renewal.NextRenewal) | $TrialLabel |`n"
+            $null = $Result.Append("| $($Renewal.License) | $StatusIcon | $($Renewal.Term) | $($Renewal.Seats) | $DaysLabel | $($Renewal.NextRenewal) | $TrialLabel |`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest003' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'License Renewal Report' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'

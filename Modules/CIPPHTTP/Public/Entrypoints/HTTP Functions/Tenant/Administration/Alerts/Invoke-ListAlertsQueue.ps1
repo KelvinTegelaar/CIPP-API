@@ -4,6 +4,8 @@ function Invoke-ListAlertsQueue {
         Entrypoint
     .ROLE
         CIPP.Alert.Read
+    .DESCRIPTION
+        Lists configured alert rules including webhook rules and scheduled alert tasks, showing their configuration and tenant scope.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

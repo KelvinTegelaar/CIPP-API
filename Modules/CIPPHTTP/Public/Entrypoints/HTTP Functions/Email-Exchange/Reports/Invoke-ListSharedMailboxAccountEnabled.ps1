@@ -4,6 +4,8 @@ function Invoke-ListSharedMailboxAccountEnabled {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists shared mailboxes that have direct sign-in enabled (account not disabled), which is a security concern.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

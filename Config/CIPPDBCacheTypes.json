@@ -245,6 +245,11 @@
     "description": "All Exchange Online mailboxes"
   },
   {
+    "type": "HVEAccounts",
+    "friendlyName": "HVE Accounts",
+    "description": "High Volume Email accounts"
+  },
+  {
     "type": "CASMailboxes",
     "friendlyName": "CAS Mailboxes",
     "description": "Client Access Server mailbox settings"
@@ -358,5 +363,10 @@
     "type": "CopilotUserCountTrend",
     "friendlyName": "Copilot User Count Trend",
     "description": "Daily Copilot active user count trend (7-day period)"
+  },
+  {
+    "type": "ExoTransportConfig",
+    "friendlyName": "Exchange Transport Config",
+    "description": "Exchange Online transport configuration including SMTP authentication settings"
   }
 ]

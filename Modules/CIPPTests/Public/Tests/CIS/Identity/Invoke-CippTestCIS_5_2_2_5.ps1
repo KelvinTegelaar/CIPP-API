@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.5) - 'Phishing-resistant MFA strength' SHALL be required for Administrators
+    Tests CIS M365 7.0.0 (5.2.2.5) - 'Phishing-resistant MFA strength' SHALL be required for Administrators
     #>
     param($Tenant)
 

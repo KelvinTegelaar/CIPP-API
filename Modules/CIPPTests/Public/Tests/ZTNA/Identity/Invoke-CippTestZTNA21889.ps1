@@ -83,15 +83,15 @@ function Invoke-CippTestZTNA21889 {
 
         # Build result message
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: Your organization has implemented multiple passwordless authentication methods reducing password exposure.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Your organization has implemented multiple passwordless authentication methods reducing password exposure.`n`n")
         } else {
-            $ResultMarkdown = "❌ **Fail**: Your organization relies heavily on password-based authentication, creating security vulnerabilities.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: Your organization relies heavily on password-based authentication, creating security vulnerabilities.`n`n")
         }
 
         # Build detailed markdown table
-        $ResultMarkdown += "## Passwordless authentication methods`n`n"
-        $ResultMarkdown += "| Method | State | Include targets | Authentication mode | Status |`n"
-        $ResultMarkdown += "| :----- | :---- | :-------------- | :------------------ | :----- |`n"
+        $null = $ResultMarkdown.Append("## Passwordless authentication methods`n`n")
+        $null = $ResultMarkdown.Append("| Method | State | Include targets | Authentication mode | Status |`n")
+        $null = $ResultMarkdown.Append("| :----- | :---- | :-------------- | :------------------ | :----- |`n")
 
         # FIDO2 row
         $Fido2State = if ($Fido2Enabled) { '✅ Enabled' } else { '❌ Disabled' }
@@ -101,7 +101,7 @@ function Invoke-CippTestZTNA21889 {
             'None'
         }
         $Fido2Status = if ($Fido2Valid) { '✅ Pass' } else { '❌ Fail' }
-        $ResultMarkdown += "| FIDO2 Security Keys | $Fido2State | $Fido2TargetsDisplay | N/A | $Fido2Status |`n"
+        $null = $ResultMarkdown.Append("| FIDO2 Security Keys | $Fido2State | $Fido2TargetsDisplay | N/A | $Fido2Status |`n")
 
         # Microsoft Authenticator row
         $AuthState = if ($AuthEnabled) { '✅ Enabled' } else { '❌ Disabled' }
@@ -112,7 +112,7 @@ function Invoke-CippTestZTNA21889 {
         }
         $AuthModeDisplay = if ($AuthModeValid) { "✅ $AuthMode" } else { "❌ $AuthMode" }
         $AuthStatus = if ($AuthValid) { '✅ Pass' } else { '❌ Fail' }
-        $ResultMarkdown += "| Microsoft Authenticator | $AuthState | $AuthTargetsDisplay | $AuthModeDisplay | $AuthStatus |`n"
+        $null = $ResultMarkdown.Append("| Microsoft Authenticator | $AuthState | $AuthTargetsDisplay | $AuthModeDisplay | $AuthStatus |`n")
 
         $TestParams = @{
             TestId = 'ZTNA21889'

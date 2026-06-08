@@ -26,16 +26,16 @@ function Invoke-CippTestORCA140 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have High Confidence Spam action set to Quarantine.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have High Confidence Spam action set to Quarantine.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies do not have High Confidence Spam action set to Quarantine.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | High Confidence Spam Action |`n"
-            $Result += "|------------|---------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies do not have High Confidence Spam action set to Quarantine.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | High Confidence Spam Action |`n")
+            $null = $Result.Append("|------------|---------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.HighConfidenceSpamAction) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.HighConfidenceSpamAction) |`n")
             }
         }
 

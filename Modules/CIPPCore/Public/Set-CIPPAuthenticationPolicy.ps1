@@ -5,6 +5,9 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin')]$AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
         $MicrosoftAuthenticatorSoftwareOathEnabled,
+        [ValidateSet('default', 'enabled', 'disabled')]$MicrosoftAuthenticatorDisplayLocation,
+        [ValidateSet('default', 'enabled', 'disabled')]$MicrosoftAuthenticatorDisplayAppInfo,
+        [ValidateSet('default', 'enabled', 'disabled')]$MicrosoftAuthenticatorCompanionApp,
         $TAPMinimumLifetime = 60, #Minutes
         $TAPMaximumLifetime = 480, #minutes
         $TAPDefaultLifeTime = 60, #minutes
@@ -21,7 +24,7 @@ function Set-CIPPAuthenticationPolicy {
     $State = if ($Enabled) { 'enabled' } else { 'disabled' }
     # Get current state of the called authentication method and Set state of authentication method to input state
     try {
-        $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $Tenant
+        $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $Tenant -AsApp $True
         $CurrentInfo.state = $State
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -41,26 +44,30 @@ function Set-CIPPAuthenticationPolicy {
 
         # Microsoft Authenticator
         'MicrosoftAuthenticator' {
-            # Remove numberMatchingRequiredState property if it exists
-            $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
-
             if ($State -eq 'enabled') {
-                $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $State
-                $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $State
                 # Set MS authenticator OTP state if parameter is passed in
-                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) {
+                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled) {
                     $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled
                     $OptionalLogMessage = "and MS Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
                 }
+                # Feature settings
+                if ($MicrosoftAuthenticatorDisplayAppInfo) {
+                    $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $MicrosoftAuthenticatorDisplayAppInfo
+                }
+                if ($MicrosoftAuthenticatorDisplayLocation) {
+                    $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $MicrosoftAuthenticatorDisplayLocation
+                }
+                if ($MicrosoftAuthenticatorCompanionApp) {
+                    $CurrentInfo.featureSettings.companionAppAllowedState.state = $MicrosoftAuthenticatorCompanionApp
+                }
+                # numberMatchingRequiredState is permanently enabled by Microsoft and can no longer be toggled
+                $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
             }
         }
 
         # SMS
         'SMS' {
-            if ($State -eq 'enabled') {
-                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                throw "Setting $AuthenticationMethodId to enabled is not allowed"
-            }
+            # No special configuration needed
         }
 
         # Temporary Access Pass
@@ -87,31 +94,24 @@ function Set-CIPPAuthenticationPolicy {
 
         # Voice call
         'Voice' {
-            # Disallow enabling voice
-            if ($State -eq 'enabled') {
-                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                throw "Setting $AuthenticationMethodId to enabled is not allowed"
-            }
+            # No special configuration needed
         }
 
         # Email OTP
         'Email' {
-            if ($State -eq 'enabled') {
-                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                throw "Setting $AuthenticationMethodId to enabled is not allowed"
-            }
+            # No special configuration needed
         }
 
         # Certificate-based authentication
         'x509Certificate' {
-            # Nothing special to do here
+            # No special configuration needed
         }
 
         # QR code
         'QRCodePin' {
             if ($State -eq 'enabled') {
-                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                throw "Setting $AuthenticationMethodId to enabled is not allowed"
+                $CurrentInfo.standardQRCodeLifetimeInDays = $QRCodeLifetimeInDays
+                $CurrentInfo.pinLength = $QRCodePinLength
             }
         }
         default {
@@ -137,7 +137,7 @@ function Set-CIPPAuthenticationPolicy {
     try {
         if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
             # Convert body to JSON and send request
-            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type PATCH -Body (ConvertTo-Json -InputObject $CurrentInfo -Compress -Depth 10) -ContentType 'application/json'
+            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type PATCH -Body (ConvertTo-Json -InputObject $CurrentInfo -Compress -Depth 10) -ContentType 'application/json' -AsApp $True
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
         }
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"

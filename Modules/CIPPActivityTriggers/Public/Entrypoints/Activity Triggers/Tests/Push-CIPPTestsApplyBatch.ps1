@@ -35,8 +35,9 @@ function Push-CIPPTestsApplyBatch {
         Write-Information "Aggregated $($AllTasks.Count) test tasks from all tenants"
 
         # Start a single flat orchestrator to execute all test tasks
+        $TenantSuffix = if ($Item.Parameters.TenantFilter) { "_$($Item.Parameters.TenantFilter)" } else { '' }
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'CIPPTestsExecute'
+            OrchestratorName = "CIPPTestsExecute$TenantSuffix"
             Batch            = @($AllTasks)
             SkipLog          = $true
         }

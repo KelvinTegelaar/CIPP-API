@@ -21,16 +21,16 @@ function Invoke-CippTestZTNA21862 {
         $Passed = if (($UntriagedRiskyPrincipals.Count -eq 0) -and ($UntriagedRiskDetections.Count -eq 0)) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = '✅ All risky workload identities have been triaged'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('✅ All risky workload identities have been triaged')
         } else {
             $RiskySPCount = $UntriagedRiskyPrincipals.Count
             $RiskyDetectionCount = $UntriagedRiskDetections.Count
-            $ResultMarkdown = "❌ Found $RiskySPCount untriaged risky service principals and $RiskyDetectionCount untriaged risk detections`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Found $RiskySPCount untriaged risky service principals and $RiskyDetectionCount untriaged risk detections`n`n")
 
             if ($RiskySPCount -gt 0) {
-                $ResultMarkdown += "## Untriaged Risky Service Principals`n`n"
-                $ResultMarkdown += "| Service Principal | Type | Risk Level | Risk State | Risk Last Updated |`n"
-                $ResultMarkdown += "| :--- | :--- | :--- | :--- | :--- |`n"
+                $null = $ResultMarkdown.Append("## Untriaged Risky Service Principals`n`n")
+                $null = $ResultMarkdown.Append("| Service Principal | Type | Risk Level | Risk State | Risk Last Updated |`n")
+                $null = $ResultMarkdown.Append("| :--- | :--- | :--- | :--- | :--- |`n")
                 foreach ($SP in $UntriagedRiskyPrincipals) {
                     $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/SignOn/objectId/$($SP.id)/appId/$($SP.appId)"
                     $RiskLevel = switch ($SP.riskLevel) {
@@ -46,14 +46,14 @@ function Invoke-CippTestZTNA21862 {
                         'remediated' { '✅ Remediated' }
                         default { $SP.riskState }
                     }
-                    $ResultMarkdown += "| [$($SP.displayName)]($PortalLink) | $($SP.servicePrincipalType) | $RiskLevel | $RiskState | $($SP.riskLastUpdatedDateTime) |`n"
+                    $null = $ResultMarkdown.Append("| [$($SP.displayName)]($PortalLink) | $($SP.servicePrincipalType) | $RiskLevel | $RiskState | $($SP.riskLastUpdatedDateTime) |`n")
                 }
             }
 
             if ($RiskyDetectionCount -gt 0) {
-                $ResultMarkdown += "`n`n## Untriaged Risk Detection Events`n`n"
-                $ResultMarkdown += "| Service Principal | Risk Level | Risk State | Risk Event Type | Risk Last Updated |`n"
-                $ResultMarkdown += "| :--- | :--- | :--- | :--- | :--- |`n"
+                $null = $ResultMarkdown.Append("`n`n## Untriaged Risk Detection Events`n`n")
+                $null = $ResultMarkdown.Append("| Service Principal | Risk Level | Risk State | Risk Event Type | Risk Last Updated |`n")
+                $null = $ResultMarkdown.Append("| :--- | :--- | :--- | :--- | :--- |`n")
                 foreach ($Detection in $UntriagedRiskDetections) {
                     $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/SignOn/objectId/$($Detection.servicePrincipalId)/appId/$($Detection.appId)"
                     $RiskLevel = switch ($Detection.riskLevel) {
@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA21862 {
                         'remediated' { '✅ Remediated' }
                         default { $Detection.riskState }
                     }
-                    $ResultMarkdown += "| [$($Detection.servicePrincipalDisplayName)]($PortalLink) | $RiskLevel | $RiskState | $($Detection.riskEventType) | $($Detection.detectedDateTime) |`n"
+                    $null = $ResultMarkdown.Append("| [$($Detection.servicePrincipalDisplayName)]($PortalLink) | $RiskLevel | $RiskState | $($Detection.riskEventType) | $($Detection.detectedDateTime) |`n")
                 }
             }
         }

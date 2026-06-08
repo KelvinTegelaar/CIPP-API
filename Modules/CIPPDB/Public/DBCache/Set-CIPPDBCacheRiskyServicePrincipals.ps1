@@ -23,8 +23,7 @@ function Set-CIPPDBCacheRiskyServicePrincipals {
         $RiskyServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyServicePrincipals' -tenantid $TenantFilter
 
         if ($RiskyServicePrincipals) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Data $RiskyServicePrincipals -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($RiskyServicePrincipals.Count) risky service principals successfully" -sev Debug
         } else {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'No risky service principals found or Workload Identity Protection not available' -sev Debug

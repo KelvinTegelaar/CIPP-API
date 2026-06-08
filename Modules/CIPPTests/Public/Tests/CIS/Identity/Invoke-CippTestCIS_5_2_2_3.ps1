@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.3) - Conditional Access policies SHALL block legacy authentication
+    Tests CIS M365 7.0.0 (5.2.2.3) - Conditional Access policies SHALL block legacy authentication
     #>
     param($Tenant)
 

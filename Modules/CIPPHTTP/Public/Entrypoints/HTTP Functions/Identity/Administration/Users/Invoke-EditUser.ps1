@@ -65,7 +65,9 @@ function Invoke-EditUser {
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass
             }
         } | ForEach-Object {
-            $NonEmptyProperties = $_.PSObject.Properties | Select-Object -ExpandProperty Name
+            $NonEmptyProperties = $_.PSObject.Properties |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_.Value) } |
+            Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties
         }
         if ($UserObj.defaultAttributes) {

@@ -56,24 +56,24 @@ function Invoke-CippTestZTNA21830 {
         $Passed = if ($CompliantDevicePolicies.Count -eq 0 -or $DeviceFilterPolicies.Count -eq 0) { 'Failed' } else { 'Passed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = 'Conditional Access policies restrict privileged role access to PAW devices.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Conditional Access policies restrict privileged role access to PAW devices.')
         } else {
-            $ResultMarkdown = 'No Conditional Access policies found that restrict privileged roles to PAW device.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('No Conditional Access policies found that restrict privileged roles to PAW device.')
         }
 
         $CompliantDeviceMarkdown = if ($CompliantDevicePolicies.Count -gt 0) { '✅' } else { '❌' }
         $DeviceFilterMarkdown = if ($DeviceFilterPolicies.Count -gt 0) { '✅' } else { '❌' }
 
-        $ResultMarkdown += "`n`n**$CompliantDeviceMarkdown Found $($CompliantDevicePolicies.Count) policy(s) with compliant device control targeting all privileged roles**`n"
+        $null = $ResultMarkdown.Append("`n`n**$CompliantDeviceMarkdown Found $($CompliantDevicePolicies.Count) policy(s) with compliant device control targeting all privileged roles**`n")
         foreach ($Policy in $CompliantDevicePolicies) {
             $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.id)"
-            $ResultMarkdown += "- **Policy:** [$($Policy.displayName)]($PortalLink)`n"
+            $null = $ResultMarkdown.Append("- **Policy:** [$($Policy.displayName)]($PortalLink)`n")
         }
 
-        $ResultMarkdown += "`n`n**$DeviceFilterMarkdown Found $($DeviceFilterPolicies.Count) policy(s) with PAW/SAW device filter targeting all privileged roles**`n"
+        $null = $ResultMarkdown.Append("`n`n**$DeviceFilterMarkdown Found $($DeviceFilterPolicies.Count) policy(s) with PAW/SAW device filter targeting all privileged roles**`n")
         foreach ($Policy in $DeviceFilterPolicies) {
             $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.id)"
-            $ResultMarkdown += "- **Policy:** [$($Policy.displayName)]($PortalLink)`n"
+            $null = $ResultMarkdown.Append("- **Policy:** [$($Policy.displayName)]($PortalLink)`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Conditional Access policies for Privileged Access Workstations are configured' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'

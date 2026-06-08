@@ -4,6 +4,8 @@ function Invoke-ListAutopilotconfig {
         Entrypoint
     .ROLE
         Endpoint.Autopilot.Read
+    .DESCRIPTION
+        Lists Windows Autopilot deployment profiles, Enrollment Status Page configurations, or Windows Hello for Business policies for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

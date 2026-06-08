@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_7 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.7) - 'Third-party storage services' SHALL be restricted in 'Microsoft 365 on the web'
+    Tests CIS M365 7.0.0 (1.3.7) - 'Third-party storage services' SHALL be restricted in 'Microsoft 365 on the web'
     #>
     param($Tenant)
 

@@ -4,6 +4,8 @@ function Invoke-ListExConnectorTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.Connector.Read
+    .DESCRIPTION
+        Lists saved Exchange connector templates for creating inbound/outbound connectors.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

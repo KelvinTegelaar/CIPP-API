@@ -17,7 +17,7 @@ function Set-CIPPDBCachePIMSettings {
     )
 
     try {
-        $TestResult = Test-CIPPStandardLicense -StandardName 'PIMSettingsCache' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM_P2') -SkipLog
+        $TestResult = Test-CIPPStandardLicense -StandardName 'PIMSettingsCache' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog
 
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium P2 license, skipping PIM' -sev Debug
@@ -30,8 +30,7 @@ function Set-CIPPDBCachePIMSettings {
             $PIMRoleSettings = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/roleManagementPolicyAssignments?$top=999' -tenantid $TenantFilter
 
             if ($PIMRoleSettings) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMRoleSettings' -Data $PIMRoleSettings -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMRoleSettings.Count) PIM role settings" -sev Debug
             }
             $PIMRoleSettings = $null
@@ -43,8 +42,7 @@ function Set-CIPPDBCachePIMSettings {
             $PIMAssignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/roleManagement/directory/roleEligibilityScheduleInstances?$top=999' -tenantid $TenantFilter
 
             if ($PIMAssignments) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'PIMAssignments' -Data $PIMAssignments -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($PIMAssignments.Count) PIM assignments" -sev Debug
             }
             $PIMAssignments = $null

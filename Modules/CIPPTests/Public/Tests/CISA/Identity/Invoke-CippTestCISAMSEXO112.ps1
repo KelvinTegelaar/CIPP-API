@@ -30,16 +30,16 @@ function Invoke-CippTestCISAMSEXO112 {
         }
 
         if ($PoliciesWithTips.Count -gt 0) {
-            $Result = "✅ **Pass**: $($PoliciesWithTips.Count) policy/policies have impersonation safety tips enabled:`n`n"
-            $Result += "| Policy | Similar Users Tips | Similar Domains Tips | Unusual Characters Tips |`n"
-            $Result += "| :----- | :----------------- | :------------------- | :---------------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: $($PoliciesWithTips.Count) policy/policies have impersonation safety tips enabled:`n`n")
+            $null = $Result.Append("| Policy | Similar Users Tips | Similar Domains Tips | Unusual Characters Tips |`n")
+            $null = $Result.Append("| :----- | :----------------- | :------------------- | :---------------------- |`n")
             foreach ($Policy in $PoliciesWithTips) {
-                $Result += "| $($Policy.Identity) | $($Policy.EnableSimilarUsersSafetyTips) | $($Policy.EnableSimilarDomainsSafetyTips) | $($Policy.EnableUnusualCharactersSafetyTips) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.EnableSimilarUsersSafetyTips) | $($Policy.EnableSimilarDomainsSafetyTips) | $($Policy.EnableUnusualCharactersSafetyTips) |`n")
             }
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: No policies found with impersonation safety tips enabled.`n`n"
-            $Result += "Enable safety tips in preset security policies to warn users about potential impersonation."
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: No policies found with impersonation safety tips enabled.`n`n")
+            $null = $Result.Append("Enable safety tips in preset security policies to warn users about potential impersonation.")
             $Status = 'Failed'
         }
 

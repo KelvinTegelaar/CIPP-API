@@ -71,15 +71,15 @@ function Invoke-CippTestZTNA21820 {
         }
 
         if ($RolesWithIssues.Count -eq 0) {
-            $ResultMarkdown = 'Activation alerts are configured for privileged role assignments.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Activation alerts are configured for privileged role assignments.')
         } else {
-            $ResultMarkdown = 'Activation alerts are missing or improperly configured for privileged roles.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('Activation alerts are missing or improperly configured for privileged roles.')
         }
 
         if ($RolesWithIssues.Count -gt 0) {
-            $ResultMarkdown += "`n`n## Roles with missing or misconfigured alerts`n`n"
-            $ResultMarkdown += "| Role display name | Default recipients | Additional recipients |`n"
-            $ResultMarkdown += "| :---------------- | :----------------- | :------------------- |`n"
+            $null = $ResultMarkdown.Append("`n`n## Roles with missing or misconfigured alerts`n`n")
+            $null = $ResultMarkdown.Append("| Role display name | Default recipients | Additional recipients |`n")
+            $null = $ResultMarkdown.Append("| :---------------- | :----------------- | :------------------- |`n")
 
             foreach ($RoleIssue in $RolesWithIssues) {
                 $Role = $RoleIssue.Role
@@ -93,9 +93,9 @@ function Invoke-CippTestZTNA21820 {
                 }
                 $Recipients = $RoleIssue.NotificationRecipients
 
-                $ResultMarkdown += "| $DisplayNameLink | $DefaultRecipientsStatus | $Recipients |`n"
+                $null = $ResultMarkdown.Append("| $DisplayNameLink | $DefaultRecipientsStatus | $Recipients |`n")
             }
-            $ResultMarkdown += "`n`n*Not all misconfigured roles may be listed. For performance reasons, this assessment stops at the first detected issue.*`n"
+            $null = $ResultMarkdown.Append("`n`n*Not all misconfigured roles may be listed. For performance reasons, this assessment stops at the first detected issue.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Low' -Name 'Activation alert for all privileged role assignments' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'

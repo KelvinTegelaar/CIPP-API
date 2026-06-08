@@ -4,6 +4,8 @@ function Invoke-ListMFAUsers {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists users and their MFA registration status for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

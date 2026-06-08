@@ -22,8 +22,7 @@ function Set-CIPPDBCacheExoSharingPolicy {
         $SharingPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SharingPolicy'
 
         if ($SharingPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSharingPolicy' -Data $SharingPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSharingPolicy' -Data $SharingPolicies -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSharingPolicy' -Data $SharingPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SharingPolicies.Count) Sharing Policies" -sev Debug
         }
         $SharingPolicies = $null

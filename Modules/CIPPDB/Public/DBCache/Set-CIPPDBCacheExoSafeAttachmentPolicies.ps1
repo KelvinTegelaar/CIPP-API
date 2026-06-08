@@ -22,8 +22,7 @@ function Set-CIPPDBCacheExoSafeAttachmentPolicies {
         # Get Safe Attachment policies
         $SafeAttachmentPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeAttachmentPolicy'
         if ($SafeAttachmentPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentPolicies' -Data $SafeAttachmentPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentPolicies' -Data $SafeAttachmentPolicies -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentPolicies' -Data $SafeAttachmentPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SafeAttachmentPolicies.Count) Safe Attachment policies" -sev Debug
         }
         $SafeAttachmentPolicies = $null
@@ -31,8 +30,7 @@ function Set-CIPPDBCacheExoSafeAttachmentPolicies {
         # Get Safe Attachment rules
         $SafeAttachmentRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-SafeAttachmentRule'
         if ($SafeAttachmentRules) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentRules' -Data $SafeAttachmentRules
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentRules' -Data $SafeAttachmentRules -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoSafeAttachmentRules' -Data $SafeAttachmentRules -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($SafeAttachmentRules.Count) Safe Attachment rules" -sev Debug
         }
         $SafeAttachmentRules = $null

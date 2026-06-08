@@ -22,14 +22,14 @@ function Invoke-CippTestORCA189 {
 
         if ($BypassRules.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No transport rules are bypassing Safe Attachments processing."
+            $Result = [System.Text.StringBuilder]::new("No transport rules are bypassing Safe Attachments processing.")
         } else {
             $Status = 'Failed'
-            $Result = "$($BypassRules.Count) transport rules are bypassing Safe Attachments processing.`n`n"
-            $Result += "| Rule Name | Priority |`n"
-            $Result += "|-----------|----------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($BypassRules.Count) transport rules are bypassing Safe Attachments processing.`n`n")
+            $null = $Result.Append("| Rule Name | Priority |`n")
+            $null = $Result.Append("|-----------|----------|`n")
             foreach ($Rule in $BypassRules) {
-                $Result += "| $($Rule.Name) | $($Rule.Priority) |`n"
+                $null = $Result.Append("| $($Rule.Name) | $($Rule.Priority) |`n")
             }
         }
 

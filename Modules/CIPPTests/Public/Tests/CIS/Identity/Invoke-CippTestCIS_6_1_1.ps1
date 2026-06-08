@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_1_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.1.1) - 'AuditDisabled' organizationally SHALL be 'False'
+    Tests CIS M365 7.0.0 (6.1.1) - 'AuditDisabled' organizationally SHALL be 'False'
     #>
     param($Tenant)
 

@@ -4,6 +4,8 @@ Function Invoke-ListRetentionCompliancePolicyTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Security.RetentionCompliancePolicy.Read
+    .DESCRIPTION
+        Lists saved retention compliance policy templates for deploying standardized retention configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

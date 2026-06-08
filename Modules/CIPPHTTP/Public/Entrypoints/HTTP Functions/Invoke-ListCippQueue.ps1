@@ -4,6 +4,8 @@ function Invoke-ListCippQueue {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists active and recent CIPP background processing queue items and their status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -11,6 +11,8 @@ function Start-UserTasksOrchestrator {
         $TaskId = $null
     )
 
+    try { [CIPP.TestDataCache]::ClearExpired() } catch { Write-Information "TestDataCache clearexpired skipped: $($_.Exception.Message)" }
+
     $Table = Get-CippTable -tablename 'ScheduledTasks'
 
     if ($TaskId) {

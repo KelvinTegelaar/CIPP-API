@@ -4,6 +4,8 @@ Function Invoke-ListUserDevices {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists Intune-managed devices registered to a specific user, including compliance status and endpoint protection details.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

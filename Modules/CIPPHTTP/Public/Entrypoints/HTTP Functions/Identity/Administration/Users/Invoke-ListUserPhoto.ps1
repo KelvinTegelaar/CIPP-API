@@ -4,6 +4,8 @@ Function Invoke-ListUserPhoto {
         Entrypoint,AnyTenant
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Retrieves the profile photo for a specific Entra ID user, returned as a base64-encoded image.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

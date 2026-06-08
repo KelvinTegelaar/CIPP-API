@@ -4,6 +4,8 @@ Function Invoke-ListDeviceDetails {
         Entrypoint
     .ROLE
         Identity.Device.Read
+    .DESCRIPTION
+        Retrieves detailed information about a specific Intune-managed device by ID, name, or serial number.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

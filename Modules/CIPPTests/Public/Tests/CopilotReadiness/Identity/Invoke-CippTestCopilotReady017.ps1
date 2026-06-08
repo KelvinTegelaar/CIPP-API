@@ -21,8 +21,8 @@ function Invoke-CippTestCopilotReady017 {
         $TrendPoints = @($TrendData | Where-Object { $_.reportDate } | Sort-Object reportDate)
 
         if ($TrendPoints.Count -eq 0) {
-            $Result = "No Microsoft 365 Copilot usage trend data was found for the past 7 days.`n`n"
-            $Result += 'This tenant either has no Copilot licenses assigned or users have not yet started using Copilot features.'
+            $Result = [System.Text.StringBuilder]::new("No Microsoft 365 Copilot usage trend data was found for the past 7 days.`n`n")
+            $null = $Result.Append('This tenant either has no Copilot licenses assigned or users have not yet started using Copilot features.')
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady017' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Copilot adoption trend (7-day)' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
             return
         }
@@ -33,13 +33,13 @@ function Invoke-CippTestCopilotReady017 {
         } | Select-Object -First 1
 
         # Build trend table
-        $Result = "## Copilot Active User Trend (Last 7 Days)`n`n"
-        $Result += "| Date | Active Users |`n"
-        $Result += "|------|-------------|`n"
+        $Result = [System.Text.StringBuilder]::new("## Copilot Active User Trend (Last 7 Days)`n`n")
+        $null = $Result.Append("| Date | Active Users |`n")
+        $null = $Result.Append("|------|-------------|`n")
 
         foreach ($Point in $TrendPoints) {
             $Count = if ($CountField) { $Point.$CountField } else { 'N/A' }
-            $Result += "| $($Point.reportDate) | $Count |`n"
+            $null = $Result.Append("| $($Point.reportDate) | $Count |`n")
         }
 
         # Determine trend direction if we have a count field and at least 2 data points
@@ -60,7 +60,7 @@ function Invoke-CippTestCopilotReady017 {
                 $TrendText = "**Trending down** — active Copilot users decreased by $([math]::Abs($Delta)) over the 7-day window. Consider reviewing adoption activities to re-engage users."
             }
 
-            $Result += "`n$TrendIcon $TrendText"
+            $null = $Result.Append("`n$TrendIcon $TrendText")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady017' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Informational' -Name 'Copilot adoption trend (7-day)' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

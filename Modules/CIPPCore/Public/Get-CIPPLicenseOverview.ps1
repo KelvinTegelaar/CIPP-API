@@ -4,7 +4,8 @@ function Get-CIPPLicenseOverview {
     param (
         $TenantFilter,
         $APIName = 'Get License Overview',
-        $Headers
+        $Headers,
+        [switch]$AlertMode
     )
 
     $Requests = @(
@@ -62,6 +63,16 @@ function Get-CIPPLicenseOverview {
         $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
     }
 
+    # In AlertMode, exclude all licenses in the table (both ExcludedEverywhere and alert-only)
+    # In normal mode, only exclude licenses where ExcludedEverywhere is true (or null for backward compat)
+    if ($AlertMode) {
+        $EffectiveExcludedGuids = @($ExcludedSkuList.GUID)
+    } else {
+        $EffectiveExcludedGuids = @($ExcludedSkuList | Where-Object {
+            $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
+        } | ForEach-Object { $_.GUID })
+    }
+
     $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value) | Sort-Object -Property displayName
     $UsersBySku = @{}
     foreach ($User in $AllLicensedUsers) {
@@ -109,7 +120,7 @@ function Get-CIPPLicenseOverview {
     $GraphRequest = foreach ($singleReq in $RawGraphRequest) {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
-            if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
+            if ($sku.skuId -in $EffectiveExcludedGuids) { continue }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber

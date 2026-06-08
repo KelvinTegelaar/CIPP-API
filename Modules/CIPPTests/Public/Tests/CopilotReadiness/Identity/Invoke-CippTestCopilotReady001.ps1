@@ -33,17 +33,17 @@ function Invoke-CippTestCopilotReady001 {
 
         if ($EligibleSkus.Count -gt 0) {
             $Status = 'Passed'
-            $Result = "Tenant has **$($EligibleSkus.Count)** eligible prerequisite license plan(s) covering **$AssignableCount** seats that qualify for Microsoft 365 Copilot.`n`n"
-            $Result += "| License | Total Seats | Assigned |`n"
-            $Result += "|---------|------------|---------|`n"
+            $Result = [System.Text.StringBuilder]::new("Tenant has **$($EligibleSkus.Count)** eligible prerequisite license plan(s) covering **$AssignableCount** seats that qualify for Microsoft 365 Copilot.`n`n")
+            $null = $Result.Append("| License | Total Seats | Assigned |`n")
+            $null = $Result.Append("|---------|------------|---------|`n")
             foreach ($Sku in $EligibleSkus) {
-                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) |`n"
+                $null = $Result.Append("| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) |`n")
             }
         } else {
             $Status = 'Failed'
-            $Result = "No Microsoft 365 Copilot prerequisite licenses were found in this tenant.`n`n"
-            $Result += 'Users must have an eligible M365 plan before a Copilot add-on license can be assigned. '
-            $Result += 'See [Microsoft licensing requirements](https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-licensing) for the full list.'
+            $Result = [System.Text.StringBuilder]::new("No Microsoft 365 Copilot prerequisite licenses were found in this tenant.`n`n")
+            $null = $Result.Append('Users must have an eligible M365 plan before a Copilot add-on license can be assigned. ')
+            $null = $Result.Append('See [Microsoft licensing requirements](https://learn.microsoft.com/en-us/copilot/microsoft-365/microsoft-365-copilot-licensing) for the full list.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady001' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Tenant has M365 Copilot prerequisite licenses' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

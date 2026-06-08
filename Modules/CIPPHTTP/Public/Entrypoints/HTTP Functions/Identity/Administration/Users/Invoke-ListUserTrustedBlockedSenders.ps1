@@ -1,9 +1,11 @@
-﻿function Invoke-ListUserTrustedBlockedSenders {
+function Invoke-ListUserTrustedBlockedSenders {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists trusted and blocked sender entries configured for a specific user's Exchange Online mailbox junk email settings.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

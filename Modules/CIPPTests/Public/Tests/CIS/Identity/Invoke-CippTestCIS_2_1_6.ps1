@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_6 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.6) - Exchange Online Spam Policies SHALL be set to notify administrators
+    Tests CIS M365 7.0.0 (2.1.6) - Exchange Online Spam Policies SHALL be set to notify administrators
     #>
     param($Tenant)
 

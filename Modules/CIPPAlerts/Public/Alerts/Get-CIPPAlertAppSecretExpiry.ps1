@@ -4,7 +4,7 @@ function Get-CIPPAlertAppSecretExpiry {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -21,6 +21,7 @@ function Get-CIPPAlertAppSecretExpiry {
     $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
 
     foreach ($App in $applist) {
+        if ($App.displayName -match 'ConnectSyncProvisioning') { continue }
         Write-Host "checking $($App.displayName)"
         if ($App.passwordCredentials) {
             foreach ($Credential in $App.passwordCredentials) {

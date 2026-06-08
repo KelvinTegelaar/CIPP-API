@@ -7,24 +7,55 @@ function Invoke-CippTestZTNA21782 {
 
     try {
         $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
 
-        if (-not $UserRegistrationDetails -or -not $RoleAssignments) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        if ($null -eq $UserRegistrationDetails -or $null -eq $Roles) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (UserRegistrationDetails or Roles) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
         $PhishResistantMethods = @('passKeyDeviceBound', 'passKeyDeviceBoundAuthenticator', 'windowsHelloForBusiness')
 
-        # Join user registration details with role assignments
-        $results = $UserRegistrationDetails | Where-Object {
-            $userId = $_.id
-            $RoleAssignments | Where-Object { $_.principalId -eq $userId }
-        } | ForEach-Object {
-            $user = $_
-            $userRoles = $RoleAssignments | Where-Object { $_.principalId -eq $user.id }
-            $hasPhishResistant = $false
+        $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
+        $RoleNamesById = @{}
+        foreach ($Role in @($Roles.Where({ $_.isPrivileged -eq $true }))) {
+            if ($Role.id) {
+                [void]$PrivilegedRoleIds.Add([string]$Role.id)
+                $RoleNamesById[[string]$Role.id] = $Role.displayName
+            }
+        }
 
+        $PrivilegedPrincipalsById = @{}
+        foreach ($Role in @($Roles.Where({ $_.isPrivileged -eq $true }))) {
+            foreach ($Member in @($Role.members)) {
+                if (-not $Member.id) { continue }
+                $principalId = [string]$Member.id
+                if (-not $PrivilegedPrincipalsById.ContainsKey($principalId)) {
+                    $PrivilegedPrincipalsById[$principalId] = [System.Collections.Generic.HashSet[string]]::new()
+                }
+                [void]$PrivilegedPrincipalsById[$principalId].Add($Role.displayName)
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $PrivilegedRoleIds.Contains([string]$Assignment.roleDefinitionId) -and $Assignment.principalId) {
+                $principalId = [string]$Assignment.principalId
+                if (-not $PrivilegedPrincipalsById.ContainsKey($principalId)) {
+                    $PrivilegedPrincipalsById[$principalId] = [System.Collections.Generic.HashSet[string]]::new()
+                }
+                $roleName = $RoleNamesById[[string]$Assignment.roleDefinitionId]
+                if ($roleName) {
+                    [void]$PrivilegedPrincipalsById[$principalId].Add($roleName)
+                }
+            }
+        }
+
+        $results = [System.Collections.Generic.List[object]]::new()
+        foreach ($user in $UserRegistrationDetails) {
+            if (-not $PrivilegedPrincipalsById.ContainsKey($user.id)) { continue }
+            $userRoles = $PrivilegedPrincipalsById[$user.id]
+            $hasPhishResistant = $false
             if ($user.methodsRegistered) {
                 foreach ($method in $PhishResistantMethods) {
                     if ($user.methodsRegistered -contains $method) {
@@ -33,21 +64,20 @@ function Invoke-CippTestZTNA21782 {
                     }
                 }
             }
-
-            [PSCustomObject]@{
-                id                       = $user.id
-                userDisplayName          = $user.userDisplayName
-                roleDisplayName          = ($userRoles.roleDefinitionName -join ', ')
-                methodsRegistered        = $user.methodsRegistered
-                phishResistantAuthMethod = $hasPhishResistant
-            }
+            $results.Add([PSCustomObject]@{
+                    id                       = $user.id
+                    userDisplayName          = $user.userDisplayName
+                    roleDisplayName          = ($userRoles | Sort-Object | Select-Object -Unique) -join ', '
+                    methodsRegistered        = $user.methodsRegistered
+                    phishResistantAuthMethod = $hasPhishResistant
+                })
         }
 
-        $totalUserCount = $results.Length
-        $phishResistantPrivUsers = $results | Where-Object { $_.phishResistantAuthMethod }
-        $phishablePrivUsers = $results | Where-Object { !$_.phishResistantAuthMethod }
+        $totalUserCount = $results.Count
+        $phishResistantPrivUsers = $results.Where({ $_.phishResistantAuthMethod })
+        $phishablePrivUsers = $results.Where({ !$_.phishResistantAuthMethod })
 
-        $phishResistantPrivUserCount = $phishResistantPrivUsers.Length
+        $phishResistantPrivUserCount = $phishResistantPrivUsers.Count
 
         $passed = $totalUserCount -eq $phishResistantPrivUserCount
 

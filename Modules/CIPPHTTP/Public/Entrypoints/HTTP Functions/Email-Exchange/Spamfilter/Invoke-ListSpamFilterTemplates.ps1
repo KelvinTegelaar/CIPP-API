@@ -4,6 +4,8 @@ Function Invoke-ListSpamFilterTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists saved spam filter policy templates for Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

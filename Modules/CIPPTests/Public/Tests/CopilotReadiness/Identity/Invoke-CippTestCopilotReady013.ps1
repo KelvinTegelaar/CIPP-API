@@ -22,20 +22,20 @@ function Invoke-CippTestCopilotReady013 {
 
         if ($ActiveLabels.Count -gt 0) {
             $Status = 'Passed'
-            $Result = "**$($ActiveLabels.Count) active sensitivity label$(if ($ActiveLabels.Count -eq 1) { '' } else { 's' })** found in the tenant.`n`n"
-            $Result += "| Label | Parent | Has Protection |`n"
-            $Result += "|-------|--------|---------------|`n"
+            $Result = [System.Text.StringBuilder]::new("**$($ActiveLabels.Count) active sensitivity label$(if ($ActiveLabels.Count -eq 1) { '' } else { 's' })** found in the tenant.`n`n")
+            $null = $Result.Append("| Label | Parent | Has Protection |`n")
+            $null = $Result.Append("|-------|--------|---------------|`n")
             foreach ($Label in ($ActiveLabels | Sort-Object sensitivity)) {
                 $ParentName = if ($Label.parent -and $Label.parent.name) { $Label.parent.name } else { '—' }
                 $HasProtection = if ($Label.hasProtection -eq $true) { '✅ Yes' } else { 'No' }
-                $Result += "| $($Label.name) | $ParentName | $HasProtection |`n"
+                $null = $Result.Append("| $($Label.name) | $ParentName | $HasProtection |`n")
             }
-            $Result += "`nCopilot can respect and apply these labels when creating or summarizing content."
+            $null = $Result.Append("`nCopilot can respect and apply these labels when creating or summarizing content.")
         } else {
             $Status = 'Failed'
-            $Result = "No active sensitivity labels were found in this tenant.`n`n"
-            $Result += 'Sensitivity labels classify and protect organizational data — helping ensure Copilot-generated content is appropriately marked. '
-            $Result += 'Configure labels in the [Microsoft Purview compliance portal](https://compliance.microsoft.com/informationprotection) before deploying Copilot.'
+            $Result = [System.Text.StringBuilder]::new("No active sensitivity labels were found in this tenant.`n`n")
+            $null = $Result.Append('Sensitivity labels classify and protect organizational data — helping ensure Copilot-generated content is appropriately marked. ')
+            $null = $Result.Append('Configure labels in the [Microsoft Purview compliance portal](https://compliance.microsoft.com/informationprotection) before deploying Copilot.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady013' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Tenant has sensitivity labels configured in Purview' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

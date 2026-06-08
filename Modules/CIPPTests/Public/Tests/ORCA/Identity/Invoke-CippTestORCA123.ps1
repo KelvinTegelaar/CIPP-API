@@ -26,16 +26,16 @@ function Invoke-CippTestORCA123 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-phishing policies have Unusual Characters Safety Tips enabled.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-phishing policies have Unusual Characters Safety Tips enabled.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-phishing policies do not have Unusual Characters Safety Tips enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Enable Unusual Characters Safety Tips |`n"
-            $Result += "|------------|---------------------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-phishing policies do not have Unusual Characters Safety Tips enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Enable Unusual Characters Safety Tips |`n")
+            $null = $Result.Append("|------------|---------------------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.EnableUnusualCharactersSafetyTips) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.EnableUnusualCharactersSafetyTips) |`n")
             }
         }
 

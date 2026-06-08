@@ -56,18 +56,18 @@ function Invoke-CippTestCopilotReady004 {
 
         if ($ActivityPercent -ge $ActivityThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'These users are good candidates for Copilot in Outlook, which provides AI-assisted drafting, summarization, and email coaching.'
+            $Result = [System.Text.StringBuilder]::new("**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('These users are good candidates for Copilot in Outlook, which provides AI-assisted drafting, summarization, and email coaching.')
         } else {
             $Status = 'Failed'
-            $Result = "Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'Copilot for Outlook delivers the most value to active email users. '
-            $Result += "Consider reviewing Exchange Online license assignment and adoption before rolling out Copilot.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('Copilot for Outlook delivers the most value to active email users. ')
+            $null = $Result.Append("Consider reviewing Exchange Online license assignment and adoption before rolling out Copilot.`n`n")
             if ($InactiveUsers.Count -gt 0 -and $InactiveUsers.Count -le 20) {
-                $Result += "**Inactive users (no Outlook email in 30 days):**`n"
-                foreach ($Upn in $InactiveUsers) { $Result += "- $Upn`n" }
+                $null = $Result.Append("**Inactive users (no Outlook email in 30 days):**`n")
+                foreach ($Upn in $InactiveUsers) { $null = $Result.Append("- $Upn`n") }
             } elseif ($InactiveUsers.Count -gt 20) {
-                $Result += "**$($InactiveUsers.Count) users** had no Outlook email activity in the past 30 days."
+                $null = $Result.Append("**$($InactiveUsers.Count) users** had no Outlook email activity in the past 30 days.")
             }
         }
 

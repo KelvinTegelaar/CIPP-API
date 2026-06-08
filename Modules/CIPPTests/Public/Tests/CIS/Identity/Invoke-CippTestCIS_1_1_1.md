@@ -7,7 +7,7 @@ Microsoft 365 administrators should authenticate using cloud-only identities. Sy
 3. Strip productivity licenses from administrative accounts (Entra ID P2 only is sufficient for most cases).
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 1.1.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 1.1.1](https://www.cisecurity.org/benchmark/microsoft_365)
 - [Protect M365 admin accounts](https://learn.microsoft.com/en-us/microsoft-365/admin/add-users/protect-global-admins)
 
 <!--- Results --->

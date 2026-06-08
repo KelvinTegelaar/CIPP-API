@@ -4,6 +4,8 @@ function Invoke-ListTenants {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists all managed tenants accessible to the current user, with support for cache clearing and tenant filtering. This is the primary endpoint for tenant enumeration.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

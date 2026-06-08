@@ -4,6 +4,8 @@ Function Invoke-ListSensitivityLabel {
         Entrypoint
     .ROLE
         Security.SensitivityLabel.Read
+    .DESCRIPTION
+        Lists sensitivity labels and label policies configured in the Security & Compliance Center for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

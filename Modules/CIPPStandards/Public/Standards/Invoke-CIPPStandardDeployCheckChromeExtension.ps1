@@ -30,7 +30,6 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"freeSolo":true,"name":"standards.DeployCheckChromeExtension.urlAllowlist","label":"URL Allowlist","placeholder":"e.g. https://example.com/*","helperText":"Enter URLs to allowlist in the extension. Press enter to add each URL. Wildcards are allowed. This should be used for sites that are being blocked by the extension but are known to be safe."}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.domainSquattingEnabled","label":"Enable domain squatting detection","defaultValue":true}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.companyName","label":"Company Name","placeholder":"YOUR-COMPANY","required":false}
-            {"type":"textField","name":"standards.DeployCheckChromeExtension.companyURL","label":"Company URL","placeholder":"https://yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.productName","label":"Product Name","placeholder":"YOUR-PRODUCT-NAME","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportEmail","label":"Support Email","placeholder":"support@yourcompany.com","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportUrl","label":"Support URL","placeholder":"https://support.yourcompany.com","required":false}
@@ -40,6 +39,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             {"type":"textField","name":"standards.DeployCheckChromeExtension.logoUrl","label":"Logo URL","placeholder":"https://yourcompany.com/logo.png","required":false}
             {"name":"AssignTo","label":"Who should this app be assigned to?","type":"radio","options":[{"label":"Do not assign","value":"On"},{"label":"Assign to all users","value":"allLicensedUsers"},{"label":"Assign to all devices","value":"AllDevices"},{"label":"Assign to all users and devices","value":"AllDevicesAndUsers"},{"label":"Assign to Custom Group","value":"customGroup"}]}
             {"type":"textField","required":false,"name":"customGroup","label":"Enter the custom group name if you selected 'Assign to Custom Group'. Wildcards are allowed."}
+            {"name":"excludeGroup","label":"Exclude Groups","type":"textField","required":false,"helpText":"Enter the group name(s) to exclude from the assignment. Wildcards are allowed. Multiple group names are comma-separated."}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -57,13 +57,13 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
 
     # Check for required Intune license
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DeployCheckChromeExtension' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DeployCheckChromeExtension' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DeployCheckChromeExtension' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
@@ -107,7 +107,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     $SupportUrl = $Settings.supportUrl ?? ''
     $PrivacyPolicyUrl = $Settings.privacyPolicyUrl ?? ''
     $AboutUrl = $Settings.aboutUrl ?? ''
-    $PrimaryColor = if ($Settings.primaryColor) { $Settings.primaryColor } else { '#F77F00' }
+    $PrimaryColor = if ($Settings.primaryColor) { '#{0}' -f ($Settings.primaryColor -replace '^#+', '') } else { '#F77F00' }
     $LogoUrl = $Settings.logoUrl ?? ''
 
     ##########################################################################
@@ -136,7 +136,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
         ExtSettingsKey     = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSettings\`$edgeExtensionId"
         ToolbarProp        = 'toolbar_state'
         ToolbarPinned      = 'force_shown'
-        ToolbarUnpinned    = 'hidden'
+        ToolbarUnpinned    = 'default_hidden'
     }
 )
 
@@ -372,6 +372,7 @@ exit 0
         if ($Settings.remediate -eq $true) {
             $AssignTo = $Settings.AssignTo ?? 'AllDevices'
             if ($Settings.customGroup) { $AssignTo = $Settings.customGroup }
+            $ExcludeGroup = $Settings.excludeGroup
 
             # Clean up legacy OMA-URI configuration policies from the old approach
             $LegacyPolicies = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?$select=id,displayName' -tenantid $Tenant | Where-Object {
@@ -429,7 +430,7 @@ exit 0
 
                     if ($NewApp -and $AssignTo -ne 'On') {
                         Start-Sleep -Milliseconds 500
-                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                        Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                     }
 
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info
@@ -451,7 +452,7 @@ exit 0
 
                 if ($NewApp -and $AssignTo -ne 'On') {
                     Start-Sleep -Milliseconds 500
-                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                    Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -TenantFilter $Tenant -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
                 }
 
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully deployed $AppDisplayName" -sev Info

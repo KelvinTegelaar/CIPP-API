@@ -25,8 +25,9 @@ function Invoke-PublicWebhooks {
         $body = $Request.Query.validationCode
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.CIPPID) {
+        $CIPPID = ConvertTo-CIPPODataFilterValue -Value $Request.Query.CIPPID -Type Guid
         $WebhookTable = Get-CIPPTable -TableName webhookTable
-        $Webhookinfo = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$($Request.Query.CIPPID)'" -First 1
+        $Webhookinfo = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$CIPPID'" -First 1
         if (-not $Webhookinfo) {
             Write-Host "No matching CIPPID found: $($Request.Query.CIPPID)"
             $Body = 'This webhook is not authorized.'

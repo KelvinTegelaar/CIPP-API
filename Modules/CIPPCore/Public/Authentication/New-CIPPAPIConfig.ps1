@@ -22,6 +22,20 @@ function New-CIPPAPIConfig {
         if ($AppId) {
             $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($AppId)')" -NoAuthCheck $true -AsApp $true
             Write-Information "Found existing app with AppId $AppId"
+
+            # Validate and repair identifier URI for existing apps
+            try {
+                $RepairResult = Repair-CippApiIdentifierUri -AppId $AppId -ApplicationObjectId $APIApp.id
+                if ($RepairResult.Fixed) {
+                    Write-Information "Repaired identifier URI: $($RepairResult.Message)"
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant 'None' -message "Repaired identifier URI for app $AppId $($RepairResult.Message)" -Sev 'Info'
+                } else {
+                    Write-Information "Identifier URI validation: $($RepairResult.Message)"
+                }
+            } catch {
+                Write-Warning "Failed to validate/repair identifier URI for existing app: $($_.Exception.Message)"
+                # Don't fail the whole operation if URI repair fails
+            }
         } else {
             $CreateBody = @{
                 api                    = @{
@@ -122,29 +136,58 @@ function New-CIPPAPIConfig {
                 if (-not $APIPassword) {
                     throw 'Failed to create application password after retries. The app may not have replicated yet; wait a moment and retry.'
                 }
-                Write-Information 'Adding App URL'
+
+                Write-Information 'Adding Application Identifier URI'
                 $Step = 'Adding Application Identifier URI'
-                $IdentifierUriBody = "{`"identifierUris`":[`"api://$($APIApp.appId)`"]}"
-                $IdentifierUriUpdated = $false
-                for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
-                    try {
-                        New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)" -AsApp $true -NoAuthCheck $true -type PATCH -body $IdentifierUriBody -maxRetries 3 | Out-Null
-                        $IdentifierUriUpdated = $true
-                        break
-                    } catch {
-                        $IsNotReplicatedYet = $_.Exception.Message -match "Resource '.*' does not exist or one of its queried reference-property objects are not present"
-                        if ($IsNotReplicatedYet -and $Attempt -lt 6) {
-                            $DelaySeconds = 3
-                            Write-Information "Application object not yet replicated for identifier URI update (attempt $Attempt of 6). Retrying in $DelaySeconds second(s)."
-                            Start-Sleep -Seconds $DelaySeconds
-                            try {
-                                $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($APIApp.appId)')" -NoAuthCheck $true -AsApp $true
-                            } catch {
-                                Write-Information "Application lookup retry failed before identifier URI retry: $($_.Exception.Message)"
+                $DesiredIdentifierUri = "api://$($APIApp.appId)"
+
+                # Check if identifier URI already exists
+                if ($APIApp.identifierUris -contains $DesiredIdentifierUri) {
+                    Write-Information "Application Identifier URI '$DesiredIdentifierUri' already set, skipping."
+                    $IdentifierUriUpdated = $true
+                } else {
+                    Write-Information "Setting Application Identifier URI to '$DesiredIdentifierUri'"
+                    $IdentifierUriBody = @{
+                        identifierUris = @($DesiredIdentifierUri)
+                    }
+                    $IdentifierUriUpdated = $false
+                    for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
+                        try {
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)" -AsApp $true -NoAuthCheck $true -type PATCH -body $IdentifierUriBody -maxRetries 3 | Out-Null
+                            Write-Information "Successfully set identifier URI on attempt $Attempt"
+                            $IdentifierUriUpdated = $true
+                            break
+                        } catch {
+                            $ErrorMsg = $_.Exception.Message
+                            Write-Information "Identifier URI update attempt $Attempt failed: $ErrorMsg"
+
+                            $IsNotReplicatedYet = $ErrorMsg -match "Resource '.*' does not exist or one of its queried reference-property objects are not present"
+                            $IsConflict = $ErrorMsg -match "Another object with the same value for property identifierUris already exists" -or $ErrorMsg -match "Property identifierUris is invalid"
+
+                            if ($IsConflict) {
+                                Write-Warning "Identifier URI conflict detected: $ErrorMsg"
+                                Write-Information "This may indicate the URI is already in use by another application or the app registration needs manual cleanup."
+                                throw
                             }
-                            continue
+
+                            if ($IsNotReplicatedYet -and $Attempt -lt 6) {
+                                $DelaySeconds = 3
+                                Write-Information "Application object not yet replicated for identifier URI update (attempt $Attempt of 6). Retrying in $DelaySeconds second(s)."
+                                Start-Sleep -Seconds $DelaySeconds
+                                try {
+                                    $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($APIApp.appId)')" -NoAuthCheck $true -AsApp $true
+                                    Write-Information "Re-fetched app: identifierUris=$($APIApp.identifierUris -join ', ')"
+                                } catch {
+                                    Write-Information "Application lookup retry failed before identifier URI retry: $($_.Exception.Message)"
+                                }
+                                continue
+                            }
+
+                            if ($Attempt -ge 6) {
+                                Write-Warning "Failed to set identifier URI after $Attempt attempts. Last error: $ErrorMsg"
+                            }
+                            throw
                         }
-                        throw
                     }
                 }
 

@@ -4,6 +4,8 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         Entrypoint
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Lists audit log entries showing changes to a specific Conditional Access policy, including before/after values.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

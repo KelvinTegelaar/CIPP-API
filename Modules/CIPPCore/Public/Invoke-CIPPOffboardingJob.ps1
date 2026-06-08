@@ -166,6 +166,17 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Condition  = { $Options.DisableOneDriveSharing -eq $true }
+                Cmdlet     = 'Set-CIPPOneDriveSharing'
+                Parameters = @{
+                    TenantFilter      = $TenantFilter
+                    UserId            = $Username
+                    SharingCapability = 'Disabled'
+                    APIName           = $APIName
+                    Headers           = $Headers
+                }
+            }
+            @{
                 Condition  = { $Options.AccessNoAutomap.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPMailboxAccess'
                 Parameters = @{

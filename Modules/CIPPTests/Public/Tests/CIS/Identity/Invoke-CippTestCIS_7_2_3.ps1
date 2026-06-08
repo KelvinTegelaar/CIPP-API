@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.3) - External content sharing SHALL be restricted
+    Tests CIS M365 7.0.0 (7.2.3) - External content sharing SHALL be restricted
     #>
     param($Tenant)
 

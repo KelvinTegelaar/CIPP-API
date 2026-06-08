@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.1) - MFA SHALL be enabled for all users in administrative roles
+    Tests CIS M365 7.0.0 (5.2.2.1) - MFA SHALL be enabled for all users in administrative roles
     #>
     param($Tenant)
 
@@ -14,15 +14,15 @@ function Invoke-CippTestCIS_5_2_2_1 {
             return
         }
 
-        $PrivRoleIds = ($Roles | Where-Object { $_.isPrivileged -eq $true }).id
+        $PrivRoleIds = [System.Collections.Generic.HashSet[string]]::new([string[]]$Roles.Where({ $_.isPrivileged -eq $true }).id)
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.grantControls -and
             ($_.grantControls.builtInControls -contains 'mfa' -or $_.grantControls.authenticationStrength) -and
             $_.conditions.users.includeRoles -and
-            (@($_.conditions.users.includeRoles) | Where-Object { $_ -in $PrivRoleIds }).Count -gt 0
-        }
+            ([string[]]$_.conditions.users.includeRoles).Where({ $PrivRoleIds.Contains($_) }, 'First', 1).Count -gt 0
+        })
 
         if ($Matching) {
             $Status = 'Passed'

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_4_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.4.4) - Local administrator assignment SHALL be limited during Entra join
+    Tests CIS M365 7.0.0 (5.1.4.4) - Local administrator assignment SHALL be limited during Entra join
     #>
     param($Tenant)
 

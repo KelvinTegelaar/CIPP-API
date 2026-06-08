@@ -4,6 +4,8 @@ function Invoke-ListExternalTenantInfo {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Looks up publicly available tenant information for an external Entra ID tenant by domain or tenant ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

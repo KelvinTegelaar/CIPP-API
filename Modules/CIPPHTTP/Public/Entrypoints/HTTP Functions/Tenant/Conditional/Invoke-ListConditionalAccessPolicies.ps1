@@ -4,6 +4,8 @@ function Invoke-ListConditionalAccessPolicies {
         Entrypoint
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Lists Conditional Access policies for a tenant with resolved display names for users, groups, applications, and locations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

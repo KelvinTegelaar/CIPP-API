@@ -7,7 +7,7 @@ Set-HostedConnectionFilterPolicy -Identity Default -IPAllowList @()
 ```
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 2.1.12](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 2.1.12](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%
