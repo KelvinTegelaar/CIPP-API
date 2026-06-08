@@ -5,8 +5,8 @@ function Get-CIPPGeoIPLocation {
     )
 
     $CacheGeoIPTable = Get-CippTable -tablename 'cachegeoip'
-    $30DaysAgo = (Get-Date).AddDays(-30).ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Filter = "PartitionKey eq 'IP' and RowKey eq '$IP' and Timestamp ge datetime'$30DaysAgo'"
+    $1DayAgo = (Get-Date).AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $Filter = "PartitionKey eq 'IP' and RowKey eq '$IP' and Timestamp ge datetime'$1DayAgo'"
     $GeoIP = Get-CippAzDataTableEntity @CacheGeoIPTable -Filter $Filter
     if ($GeoIP -and $GeoIP.Data) {
         return ($GeoIP.Data | ConvertFrom-Json)
