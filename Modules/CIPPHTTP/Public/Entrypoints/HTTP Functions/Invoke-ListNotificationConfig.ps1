@@ -4,6 +4,8 @@ Function Invoke-ListNotificationConfig {
         Entrypoint
     .ROLE
         CIPP.AppSettings.Read
+    .DESCRIPTION
+        Retrieves the CIPP notification configuration, including alert channels, severity filters, and notification targets.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

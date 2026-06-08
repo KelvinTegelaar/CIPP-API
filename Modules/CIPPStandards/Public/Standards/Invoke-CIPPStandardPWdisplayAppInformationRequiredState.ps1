@@ -42,13 +42,13 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
 
     try {
-        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant -AsApp $True
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PWdisplayAppInformationRequiredState state for $Tenant. Error: $ErrorMessage" -Sev Error

@@ -4,6 +4,8 @@ Function Invoke-ListRetentionCompliancePolicy {
         Entrypoint
     .ROLE
         Security.RetentionCompliancePolicy.Read
+    .DESCRIPTION
+        Lists retention compliance policies and their associated rules from the Security & Compliance Center.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

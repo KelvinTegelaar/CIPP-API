@@ -49,7 +49,7 @@ function New-CIPPTAP {
         # Create parameter string for logging
         $paramString = ' with ' + ($logParts -join ', ')
 
-        Write-LogMessage -headers $Headers -API $APIName -message "Created Temporary Access Password (TAP) for $UserID$paramString" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Created Temporary Access Pass (TAP) for $UserID$paramString" -Sev 'Info' -tenant $TenantFilter
 
         # Build result text with parameters
         $resultText = "The TAP for $UserID is $($GraphRequest.temporaryAccessPass) - This TAP is usable for the next $($GraphRequest.LifetimeInMinutes) minutes"
@@ -69,7 +69,7 @@ function New-CIPPTAP {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to create Temporary Access Password (TAP) for $($UserID): $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to create Temporary Access Pass (TAP) for $($UserID): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         throw $Result
     }

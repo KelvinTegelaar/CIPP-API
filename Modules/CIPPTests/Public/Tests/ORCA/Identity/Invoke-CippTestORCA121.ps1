@@ -14,8 +14,8 @@ function Invoke-CippTestORCA121 {
         }
 
         $Status = 'Passed'
-        $Result = "Quarantine policies are configured to support Zero Hour Auto Purge.`n`n"
-        $Result += "**Total Policies:** $($Policies.Count)"
+        $Result = [System.Text.StringBuilder]::new("Quarantine policies are configured to support Zero Hour Auto Purge.`n`n")
+        $null = $Result.Append("**Total Policies:** $($Policies.Count)")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA121' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Low' -Name 'Supported filter policy action used' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Quarantine'
 

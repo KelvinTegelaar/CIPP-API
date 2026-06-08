@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.3) - Notifications for internal users sending malware SHALL be enabled
+    Tests CIS M365 7.0.0 (2.1.3) - Notifications for internal users sending malware SHALL be enabled
     #>
     param($Tenant)
 

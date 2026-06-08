@@ -25,9 +25,23 @@ function Invoke-ExecExcludeLicenses {
                     RowKey                 = $GUID
                     'GUID'                 = $GUID
                     'Product_Display_Name' = $DisplayName
+                    'ExcludedEverywhere'   = $true
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $AddObject -Force
                 $Result = "Success. Added $DisplayName($GUID) to the excluded licenses list."
+                Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Info'
+
+            }
+            'AlertOnly' {
+                $AddObject = @{
+                    PartitionKey           = 'License'
+                    RowKey                 = $GUID
+                    'GUID'                 = $GUID
+                    'Product_Display_Name' = $DisplayName
+                    'ExcludedEverywhere'   = $false
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $AddObject -Force
+                $Result = "Success. $DisplayName($GUID) will now only be excluded from alerts."
                 Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Info'
 
             }

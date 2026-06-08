@@ -4,6 +4,8 @@ Function Invoke-ListTenantDetails {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Retrieves detailed organization information for a tenant, including addresses, assigned plans, sync status, and custom properties.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,7 +26,7 @@ Function Invoke-ListTenantDetails {
         $customProperties = Get-TenantProperties -customerId $TenantFilter
         $org | Add-Member -MemberType NoteProperty -Name 'customProperties' -Value $customProperties
 
-        $Groups = (Get-TenantGroups -TenantFilter $TenantFilter) ?? @()
+        $Groups = (Get-TenantGroups -TenantFilter $TenantFilter -SkipCache) ?? @()
         $org | Add-Member -MemberType NoteProperty -Name 'Groups' -Value @($Groups)
         $StatusCode = [HttpStatusCode]::OK
 

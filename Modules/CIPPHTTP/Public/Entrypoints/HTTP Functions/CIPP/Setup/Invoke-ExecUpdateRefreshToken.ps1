@@ -31,13 +31,13 @@ function Invoke-ExecUpdateRefreshToken {
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
             if ($IsPartnerTenant) {
-                Set-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                $null = Set-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
                 Set-Item -Path env:RefreshToken -Value $Request.body.refreshtoken -Force
             } else {
                 Write-Information "$($env:TenantID) does not match $($Request.body.tenantId) - adding a new secret for the tenant."
                 $name = $Request.body.tenantId
                 try {
-                    Set-CippKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                    $null = Set-CippKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
                     Set-Item -Path env:$name -Value $Request.body.refreshtoken -Force
                 } catch {
                     Write-Information "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
@@ -60,7 +60,7 @@ function Invoke-ExecUpdateRefreshToken {
                     OrchestratorName = 'UpdatePermissionsOrchestrator'
                     Batch            = @($TenantBatch)
                 }
-                Start-CIPPOrchestrator -InputObject $InputObject
+                $null = Start-CIPPOrchestrator -InputObject $InputObject
                 Write-Information 'Started permissions update orchestrator for Partner Tenant'
             } catch {
                 Write-Warning "Failed to start permissions orchestrator: $($_.Exception.Message)"
@@ -76,6 +76,11 @@ function Invoke-ExecUpdateRefreshToken {
             'resultText' = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
             'state'      = 'success'
         }
+
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Results
+            })
     } catch {
         $Results = [pscustomobject]@{
             'Results' = @{

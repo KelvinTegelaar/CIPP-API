@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.8) - SPF records SHALL be published for all Exchange Domains
+    Tests CIS M365 7.0.0 (2.1.8) - SPF records SHALL be published for all Exchange Domains
     #>
     param($Tenant)
 
@@ -17,12 +17,12 @@ function Invoke-CippTestCIS_2_1_8 {
 
         if (-not $Failing -or $Failing.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($Results.Count) domain(s) have an SPF record published."
+            $Result = [System.Text.StringBuilder]::new("All $($Results.Count) domain(s) have an SPF record published.")
         } else {
             $Status = 'Failed'
-            $Result = "$($Failing.Count) of $($Results.Count) domain(s) are missing a valid SPF record:`n`n| Domain | SPF Record |`n| :----- | :--------- |`n"
+            $Result = [System.Text.StringBuilder]::new("$($Failing.Count) of $($Results.Count) domain(s) are missing a valid SPF record:`n`n| Domain | SPF Record |`n| :----- | :--------- |`n")
             foreach ($D in ($Failing | Select-Object -First 25)) {
-                $Result += "| $($D.Domain) | $($D.ActualSPFRecord) |`n"
+                $null = $Result.Append("| $($D.Domain) | $($D.ActualSPFRecord) |`n")
             }
         }
 

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_1_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.1.1) - External file sharing in Teams SHALL be enabled for only approved cloud storage services
+    Tests CIS M365 7.0.0 (8.1.1) - External file sharing in Teams SHALL be enabled for only approved cloud storage services
     #>
     param($Tenant)
 
@@ -14,12 +14,12 @@ function Invoke-CippTestCIS_8_1_1 {
         }
 
         $Cfg = $Client | Select-Object -First 1
-        $Enabled = @()
-        if ($Cfg.AllowDropbox)     { $Enabled += 'Dropbox' }
-        if ($Cfg.AllowBox)         { $Enabled += 'Box' }
-        if ($Cfg.AllowGoogleDrive) { $Enabled += 'GoogleDrive' }
-        if ($Cfg.AllowShareFile)   { $Enabled += 'ShareFile' }
-        if ($Cfg.AllowEgnyte)      { $Enabled += 'Egnyte' }
+        $Enabled = [System.Collections.Generic.List[string]]::new()
+        if ($Cfg.AllowDropbox)     { $Enabled.Add('Dropbox') }
+        if ($Cfg.AllowBox)         { $Enabled.Add('Box') }
+        if ($Cfg.AllowGoogleDrive) { $Enabled.Add('GoogleDrive') }
+        if ($Cfg.AllowShareFile)   { $Enabled.Add('ShareFile') }
+        if ($Cfg.AllowEgnyte)      { $Enabled.Add('Egnyte') }
 
         if ($Enabled.Count -eq 0) {
             $Status = 'Passed'

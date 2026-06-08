@@ -30,8 +30,7 @@ function Set-CIPPDBCacheSPOTenant {
 
         if ($SPOTenant) {
             $SPOTenantArray = @($SPOTenant)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenant' -Data $SPOTenantArray
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenant' -Data $SPOTenantArray -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenant' -Data $SPOTenantArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint Online tenant configuration' -sev Debug
         }
         $SPOTenant = $null

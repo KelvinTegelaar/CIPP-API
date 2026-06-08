@@ -33,35 +33,35 @@ function Invoke-CippTestZTNA21839 {
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods'
 
-        $ResultMarkdown = "`n## [Passkey authentication method details]($PortalLink)`n"
+        $ResultMarkdown = [System.Text.StringBuilder]::new("`n## [Passkey authentication method details]($PortalLink)`n")
 
         $StatusDisplay = if ($Fido2Enabled) { 'Enabled ✅' } else { 'Disabled ❌' }
-        $ResultMarkdown += "- **Status** : $StatusDisplay`n"
+        $null = $ResultMarkdown.Append("- **Status** : $StatusDisplay`n")
 
         if ($Fido2Enabled) {
-            $ResultMarkdown += '- **Include targets** : '
+            $null = $ResultMarkdown.Append('- **Include targets** : ')
             if ($IncludeTargets) {
                 $TargetsDisplay = ($IncludeTargets | ForEach-Object {
                         if ($_.id -eq 'all_users') { 'All users' } else { $_.id }
                     }) -join ', '
-                $ResultMarkdown += "$TargetsDisplay`n"
+                $null = $ResultMarkdown.Append("$TargetsDisplay`n")
             } else {
-                $ResultMarkdown += "None`n"
+                $null = $ResultMarkdown.Append("None`n")
             }
 
-            $ResultMarkdown += "- **Enforce attestation** : $IsAttestationEnforced`n"
+            $null = $ResultMarkdown.Append("- **Enforce attestation** : $IsAttestationEnforced`n")
 
             if ($KeyRestrictions) {
-                $ResultMarkdown += "- **Key restriction policy** :`n"
+                $null = $ResultMarkdown.Append("- **Key restriction policy** :`n")
                 if ($null -ne $KeyRestrictions.isEnforced) {
-                    $ResultMarkdown += "  - **Enforce key restrictions** : $($KeyRestrictions.isEnforced)`n"
+                    $null = $ResultMarkdown.Append("  - **Enforce key restrictions** : $($KeyRestrictions.isEnforced)`n")
                 } else {
-                    $ResultMarkdown += "  - **Enforce key restrictions** : Not configured`n"
+                    $null = $ResultMarkdown.Append("  - **Enforce key restrictions** : Not configured`n")
                 }
                 if ($KeyRestrictions.enforcementType) {
-                    $ResultMarkdown += "  - **Restrict specific keys** : $($KeyRestrictions.enforcementType)`n"
+                    $null = $ResultMarkdown.Append("  - **Restrict specific keys** : $($KeyRestrictions.enforcementType)`n")
                 } else {
-                    $ResultMarkdown += "  - **Restrict specific keys** : Not configured`n"
+                    $null = $ResultMarkdown.Append("  - **Restrict specific keys** : Not configured`n")
                 }
             }
         }
@@ -69,9 +69,9 @@ function Invoke-CippTestZTNA21839 {
         $Passed = if ($Fido2Enabled -and $HasIncludeTargets) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "Passkey authentication method is enabled and configured for users in your tenant.$ResultMarkdown"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Passkey authentication method is enabled and configured for users in your tenant.$ResultMarkdown")
         } else {
-            $ResultMarkdown = "Passkey authentication method is not enabled or not configured for any users in your tenant.$ResultMarkdown"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Passkey authentication method is not enabled or not configured for any users in your tenant.$ResultMarkdown")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Passkey authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Credential management'

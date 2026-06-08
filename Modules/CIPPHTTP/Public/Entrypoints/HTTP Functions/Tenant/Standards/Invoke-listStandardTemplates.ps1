@@ -4,6 +4,8 @@ function Invoke-listStandardTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists saved standards templates that define sets of standards to apply to tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -43,13 +45,28 @@ function Invoke-listStandardTemplates {
                     $Items = if ($StandardConfig -is [System.Collections.IEnumerable] -and $StandardConfig -isnot [string]) { $StandardConfig } else { @($StandardConfig) }
                     foreach ($Item in $Items) {
                         if ($Item.'TemplateList-Tags' -and $Item.'TemplateList-Tags'.value) {
-                            if (-not $IntuneTemplatesCache) {
-                                $IntuneTable = Get-CippTable -tablename 'templates'
-                                $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
-                                $IntuneTemplatesCache = Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter
+                            $PartitionKey = switch ($StandardName) {
+                                'ConditionalAccessTemplate' { 'CATemplate' }
+                                'IntuneTemplate' { 'IntuneTemplate' }
+                                default { 'IntuneTemplate' }
+                            }
+                            if ($PartitionKey -eq 'CATemplate') {
+                                if (-not $CATemplatesCache) {
+                                    $CATable = Get-CippTable -tablename 'templates'
+                                    $CAFilter = "PartitionKey eq 'CATemplate'"
+                                    $CATemplatesCache = Get-CIPPAzDataTableEntity @CATable -Filter $CAFilter
+                                }
+                                $TemplatesCache = $CATemplatesCache
+                            } else {
+                                if (-not $IntuneTemplatesCache) {
+                                    $IntuneTable = Get-CippTable -tablename 'templates'
+                                    $IntuneFilter = "PartitionKey eq 'IntuneTemplate'"
+                                    $IntuneTemplatesCache = Get-CIPPAzDataTableEntity @IntuneTable -Filter $IntuneFilter
+                                }
+                                $TemplatesCache = $IntuneTemplatesCache
                             }
                             $PackageName = $Item.'TemplateList-Tags'.value
-                            $LiveExpanded = @($IntuneTemplatesCache | Where-Object package -EQ $PackageName | ForEach-Object {
+                            $LiveExpanded = @($TemplatesCache | Where-Object package -EQ $PackageName | ForEach-Object {
                                     $TplJson = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
                                     [pscustomobject]@{
                                         GUID        = $_.RowKey

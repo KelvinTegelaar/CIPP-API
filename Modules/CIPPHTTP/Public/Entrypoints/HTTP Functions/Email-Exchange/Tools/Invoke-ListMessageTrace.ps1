@@ -4,6 +4,8 @@ function Invoke-ListMessageTrace {
         Entrypoint
     .ROLE
         Exchange.TransportRule.Read
+    .DESCRIPTION
+        Traces email message delivery in Exchange Online, searchable by message ID, sender, recipient, and date range.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

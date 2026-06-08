@@ -48,13 +48,13 @@ function Invoke-CippTestZTNA21819 {
         }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "Activation alerts are configured for Global Administrator role.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Activation alerts are configured for Global Administrator role.`n`n")
         } else {
-            $ResultMarkdown = "Activation alerts are missing or improperly configured for Global Administrator role.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Activation alerts are missing or improperly configured for Global Administrator role.`n`n")
         }
 
-        $ResultMarkdown += "| Role display name | Default recipients | Additional recipients |`n"
-        $ResultMarkdown += "| :---------------- | :----------------- | :------------------- |`n"
+        $null = $ResultMarkdown.Append("| Role display name | Default recipients | Additional recipients |`n")
+        $null = $ResultMarkdown.Append("| :---------------- | :----------------- | :------------------- |`n")
 
         $RoleLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles'
         $DisplayNameLink = "[$($GlobalAdminRole.displayName)]($RoleLink)"
@@ -73,7 +73,7 @@ function Invoke-CippTestZTNA21819 {
             $Recipients
         }
 
-        $ResultMarkdown += "| $DisplayNameLink | $DefaultRecipientsStatus | $RecipientsDisplay |`n"
+        $null = $ResultMarkdown.Append("| $DisplayNameLink | $DefaultRecipientsStatus | $RecipientsDisplay |`n")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Low' -Name 'Activation alert for Global Administrator role assignment' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
 

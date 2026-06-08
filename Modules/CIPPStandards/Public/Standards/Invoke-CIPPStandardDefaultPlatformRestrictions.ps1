@@ -43,11 +43,11 @@ function Invoke-CIPPStandardDefaultPlatformRestrictions {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DefaultPlatformRestrictions' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DefaultPlatformRestrictions' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true

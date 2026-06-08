@@ -29,8 +29,7 @@ function Set-CIPPDBCacheCsTeamsMessagingPolicy {
 
         if ($MessagingPolicy) {
             $Data = @($MessagingPolicy)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsMessagingPolicy' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsMessagingPolicy' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsMessagingPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Teams Messaging Policy' -sev Debug
         }
         $MessagingPolicy = $null

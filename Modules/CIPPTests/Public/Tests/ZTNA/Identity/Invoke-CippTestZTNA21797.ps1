@@ -33,7 +33,7 @@ function Invoke-CippTestZTNA21797 {
         }
 
         $passwordlessEnabled = $false
-        $passwordlessAuthMethods = @()
+        $passwordlessAuthMethods = [System.Collections.Generic.List[object]]::new()
 
         if ($authMethodsPolicy.authenticationMethodConfigurations) {
             foreach ($method in $authMethodsPolicy.authenticationMethodConfigurations) {
@@ -55,11 +55,11 @@ function Invoke-CippTestZTNA21797 {
 
                 if ($isPasswordless) {
                     $passwordlessEnabled = $true
-                    $passwordlessAuthMethods += [PSCustomObject]@{
+                    $passwordlessAuthMethods.Add([PSCustomObject]@{
                         Name           = $methodName
                         State          = $methodState
                         AdditionalInfo = $additionalInfo
-                    }
+                    })
                 }
             }
         }
@@ -82,59 +82,59 @@ function Invoke-CippTestZTNA21797 {
             }
         }
 
-        $mdInfo = "`n## Passwordless Authentication Methods allowed in tenant`n`n"
+        $mdInfo = [System.Text.StringBuilder]::new("`n## Passwordless Authentication Methods allowed in tenant`n`n")
 
         if ($passwordlessAuthMethods.Count -gt 0) {
-            $mdInfo += "| Authentication Method Name | State | Additional Info |`n"
-            $mdInfo += "| :------------------------ | :---- | :-------------- |`n"
+            $null = $mdInfo.Append("| Authentication Method Name | State | Additional Info |`n")
+            $null = $mdInfo.Append("| :------------------------ | :---- | :-------------- |`n")
             foreach ($method in $passwordlessAuthMethods) {
-                $mdInfo += "| $($method.Name) | $($method.State) | $($method.AdditionalInfo) |`n"
+                $null = $mdInfo.Append("| $($method.Name) | $($method.State) | $($method.AdditionalInfo) |`n")
             }
         } else {
-            $mdInfo += "No passwordless authentication methods are enabled.`n"
+            $null = $mdInfo.Append("No passwordless authentication methods are enabled.`n")
         }
 
-        $mdInfo += "`n## Conditional Access Policies targeting high risk users`n`n"
+        $null = $mdInfo.Append("`n## Conditional Access Policies targeting high risk users`n`n")
 
         $allEnabledHighRiskPolicies = @($caPasswordChangePolicies) + @($caBlockPolicies)
 
         if ($allEnabledHighRiskPolicies.Count -gt 0) {
-            $mdInfo += "| Conditional Access Policy Name | Status | Conditions |`n"
-            $mdInfo += "| :--------------------- | :----- | :--------- |`n"
+            $null = $mdInfo.Append("| Conditional Access Policy Name | Status | Conditions |`n")
+            $null = $mdInfo.Append("| :--------------------- | :----- | :--------- |`n")
 
             foreach ($policy in $allEnabledHighRiskPolicies) {
-                $conditions = 'User Risk Level: High'
+                $conditions = [System.Text.StringBuilder]::new('User Risk Level: High')
                 if ($policy.grantControls.builtInControls -contains 'passwordChange') {
-                    $conditions += ', Control: Password Change'
+                    $null = $conditions.Append(', Control: Password Change')
                 }
                 if ($policy.grantControls.builtInControls -contains 'block') {
-                    $conditions += ', Control: Block'
+                    $null = $conditions.Append(', Control: Block')
                 }
-                $mdInfo += "| $($policy.displayName) | Enabled | $conditions |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | Enabled | $conditions |`n")
             }
         }
 
         if ($inactiveCAPolicies.Count -gt 0) {
             if ($allEnabledHighRiskPolicies.Count -eq 0) {
-                $mdInfo += "No conditional access policies targeting high risk users found.`n`n"
-                $mdInfo += "### Inactive policies targeting high risk users (not contributing to security posture):`n`n"
-                $mdInfo += "| Conditional Access Policy Name | Status | Conditions |`n"
-                $mdInfo += "| :--------------------- | :----- | :--------- |`n"
+                $null = $mdInfo.Append("No conditional access policies targeting high risk users found.`n`n")
+                $null = $mdInfo.Append("### Inactive policies targeting high risk users (not contributing to security posture):`n`n")
+                $null = $mdInfo.Append("| Conditional Access Policy Name | Status | Conditions |`n")
+                $null = $mdInfo.Append("| :--------------------- | :----- | :--------- |`n")
             }
 
             foreach ($policy in $inactiveCAPolicies) {
-                $conditions = 'User Risk Level: High'
+                $conditions = [System.Text.StringBuilder]::new('User Risk Level: High')
                 if ($policy.grantControls.builtInControls -contains 'passwordChange') {
-                    $conditions += ', Control: Password Change'
+                    $null = $conditions.Append(', Control: Password Change')
                 }
                 if ($policy.grantControls.builtInControls -contains 'block') {
-                    $conditions += ', Control: Block'
+                    $null = $conditions.Append(', Control: Block')
                 }
                 $status = if ($policy.state -eq 'enabledForReportingButNotEnforced') { 'Report-only' } else { 'Disabled' }
-                $mdInfo += "| $($policy.displayName) | $status | $conditions |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | $status | $conditions |`n")
             }
         } elseif ($allEnabledHighRiskPolicies.Count -eq 0) {
-            $mdInfo += "No conditional access policies targeting high risk users found.`n"
+            $null = $mdInfo.Append("No conditional access policies targeting high risk users found.`n")
         }
 
         $testResultMarkdown = $testResultMarkdown + $mdInfo

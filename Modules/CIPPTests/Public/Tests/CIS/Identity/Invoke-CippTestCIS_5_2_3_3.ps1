@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.3) - Password protection SHALL be enabled for on-prem Active Directory
+    Tests CIS M365 7.0.0 (5.2.3.3) - Password protection SHALL be enabled for on-prem Active Directory
     #>
     param($Tenant)
 

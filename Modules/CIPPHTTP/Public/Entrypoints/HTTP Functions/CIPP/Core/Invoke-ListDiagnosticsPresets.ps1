@@ -4,6 +4,8 @@ function Invoke-ListDiagnosticsPresets {
         Entrypoint
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Lists saved diagnostics presets used for troubleshooting CIPP configuration. Requires SuperAdmin access.
     #>
     [CmdletBinding()]
     param (

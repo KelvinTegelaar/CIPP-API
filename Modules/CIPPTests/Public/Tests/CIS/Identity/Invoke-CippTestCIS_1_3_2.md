@@ -9,7 +9,7 @@ Create a Conditional Access policy:
 - Session: Sign-in frequency 3 hours, persistent browser = never
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 1.3.2](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 1.3.2](https://www.cisecurity.org/benchmark/microsoft_365)
 - [Configure sign-in frequency](https://learn.microsoft.com/entra/identity/conditional-access/concept-session-lifetime)
 
 <!--- Results --->

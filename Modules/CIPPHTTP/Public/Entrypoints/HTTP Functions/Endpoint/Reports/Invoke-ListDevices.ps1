@@ -4,6 +4,8 @@ Function Invoke-ListDevices {
         Entrypoint
     .ROLE
         Endpoint.Device.Read
+    .DESCRIPTION
+        Lists Intune-managed devices for a tenant, including device compliance and configuration status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

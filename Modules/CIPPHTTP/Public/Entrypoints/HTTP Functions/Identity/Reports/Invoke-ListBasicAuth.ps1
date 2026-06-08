@@ -4,6 +4,8 @@ Function Invoke-ListBasicAuth {
         Entrypoint
     .ROLE
         Identity.AuditLog.Read
+    .DESCRIPTION
+        Lists sign-in events using basic authentication (legacy protocols) for a tenant from the audit logs.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

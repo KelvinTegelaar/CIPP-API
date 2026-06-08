@@ -38,28 +38,28 @@ function Invoke-CippTestCopilotReady002 {
 
         if ($CopilotLicenses.Count -eq 0) {
             $Status = 'Failed'
-            $Result = "No Microsoft 365 Copilot add-on licenses were found in this tenant.`n`n"
-            $Result += 'Purchase Microsoft 365 Copilot licenses and assign them to eligible users to enable Copilot features.'
+            $Result = [System.Text.StringBuilder]::new("No Microsoft 365 Copilot add-on licenses were found in this tenant.`n`n")
+            $null = $Result.Append('Purchase Microsoft 365 Copilot licenses and assign them to eligible users to enable Copilot features.')
         } elseif ($TotalConsumed -eq 0) {
             $Status = 'Failed'
-            $Result = "Microsoft 365 Copilot licenses exist (**$TotalEnabled** seats) but **none are assigned** to any users.`n`n"
-            $Result += "| License | Total Seats | Assigned | Available |`n"
-            $Result += "|---------|------------|----------|-----------|`n"
+            $Result = [System.Text.StringBuilder]::new("Microsoft 365 Copilot licenses exist (**$TotalEnabled** seats) but **none are assigned** to any users.`n`n")
+            $null = $Result.Append("| License | Total Seats | Assigned | Available |`n")
+            $null = $Result.Append("|---------|------------|----------|-----------|`n")
             foreach ($Sku in $CopilotLicenses) {
                 $Available = [int]$Sku.TotalLicenses - [int]$Sku.CountUsed
-                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n"
+                $null = $Result.Append("| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n")
             }
         } else {
             $Status = 'Passed'
-            $Result = "Microsoft 365 Copilot licenses are purchased and assigned.`n`n"
-            $Result += "| License | Total Seats | Assigned | Available |`n"
-            $Result += "|---------|------------|----------|-----------|`n"
+            $Result = [System.Text.StringBuilder]::new("Microsoft 365 Copilot licenses are purchased and assigned.`n`n")
+            $null = $Result.Append("| License | Total Seats | Assigned | Available |`n")
+            $null = $Result.Append("|---------|------------|----------|-----------|`n")
             foreach ($Sku in $CopilotLicenses) {
                 $Available = [int]$Sku.TotalLicenses - [int]$Sku.CountUsed
-                $Result += "| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n"
+                $null = $Result.Append("| $($Sku.License) | $($Sku.TotalLicenses) | $($Sku.CountUsed) | $Available |`n")
             }
             if ($TotalAvailable -gt 0) {
-                $Result += "`n**$TotalAvailable unassigned seat(s)** are available to assign to additional users."
+                $null = $Result.Append("`n**$TotalAvailable unassigned seat(s)** are available to assign to additional users.")
             }
         }
 

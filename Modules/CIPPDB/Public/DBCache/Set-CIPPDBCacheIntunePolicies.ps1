@@ -17,7 +17,7 @@ function Set-CIPPDBCacheIntunePolicies {
     )
 
     try {
-        $TestResult = Test-CIPPStandardLicense -StandardName 'IntunePoliciesCache' -TenantFilter $TenantFilter -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1') -SkipLog
+        $TestResult = Test-CIPPStandardLicense -StandardName 'IntunePoliciesCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
 
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping' -sev Debug
@@ -104,8 +104,7 @@ function Set-CIPPDBCacheIntunePolicies {
                     }
                 }
 
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type "Intune$($PolicyType.Type)" -Data $Policies -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Policies.Count) $($PolicyType.Type)" -sev Debug
 
                 # Fetch device statuses for compliance policies using bulk requests

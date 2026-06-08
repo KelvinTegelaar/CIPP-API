@@ -26,16 +26,16 @@ function Invoke-CippTestORCA179 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Links policies are enabled for internal senders.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Links policies are enabled for internal senders.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Links policies are not enabled for internal senders.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Enable For Internal Senders |`n"
-            $Result += "|------------|----------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Links policies are not enabled for internal senders.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Enable For Internal Senders |`n")
+            $null = $Result.Append("|------------|----------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.EnableForInternalSenders) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.EnableForInternalSenders) |`n")
             }
         }
 

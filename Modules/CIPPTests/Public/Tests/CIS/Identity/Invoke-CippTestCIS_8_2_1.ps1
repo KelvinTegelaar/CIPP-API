@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.2.1) - External domains SHALL be restricted in the Teams admin center
+    Tests CIS M365 7.0.0 (8.2.1) - External domains SHALL be restricted in the Teams admin center
     #>
     param($Tenant)
 

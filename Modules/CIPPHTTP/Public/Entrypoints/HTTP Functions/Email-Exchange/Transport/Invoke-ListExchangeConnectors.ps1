@@ -4,6 +4,8 @@ function Invoke-ListExchangeConnectors {
         Entrypoint
     .ROLE
         Exchange.Connector.Read
+    .DESCRIPTION
+        Lists inbound and outbound mail flow connectors configured in Exchange Online.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

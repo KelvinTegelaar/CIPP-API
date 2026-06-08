@@ -4,6 +4,8 @@ Function Invoke-ListSharepointSettings {
         Entrypoint
     .ROLE
         Sharepoint.Admin.Read
+    .DESCRIPTION
+        Retrieves SharePoint Online tenant-level settings and configuration.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

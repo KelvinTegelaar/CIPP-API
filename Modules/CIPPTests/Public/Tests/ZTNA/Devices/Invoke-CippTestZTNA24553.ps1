@@ -27,19 +27,19 @@ function Invoke-CippTestZTNA24553 {
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {
-            $ResultMarkdown = "✅ Windows Update policies are configured and assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Windows Update policies are configured and assigned.`n`n")
         } else {
-            $ResultMarkdown = "❌ No Windows Update policies are configured or assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ No Windows Update policies are configured or assigned.`n`n")
         }
 
-        $ResultMarkdown += "## Windows Update Policies`n`n"
-        $ResultMarkdown += "| Policy Name | Type | Assigned |`n"
-        $ResultMarkdown += "| :---------- | :--- | :------- |`n"
+        $null = $ResultMarkdown.Append("## Windows Update Policies`n`n")
+        $null = $ResultMarkdown.Append("| Policy Name | Type | Assigned |`n")
+        $null = $ResultMarkdown.Append("| :---------- | :--- | :------- |`n")
 
         foreach ($policy in $UpdatePolicies) {
             $type = if ($policy.'@odata.type' -eq '#microsoft.graph.windowsUpdateForBusinessConfiguration') { 'Update' } else { 'Compliance' }
             $assigned = if ($policy.assignments -and $policy.assignments.Count -gt 0) { '✅ Yes' } else { '❌ No' }
-            $ResultMarkdown += "| $($policy.displayName) | $type | $assigned |`n"
+            $null = $ResultMarkdown.Append("| $($policy.displayName) | $type | $assigned |`n")
         }
 
         $Status = if ($Passed) { 'Passed' } else { 'Failed' }

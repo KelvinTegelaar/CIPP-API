@@ -28,28 +28,28 @@ function Invoke-CippTestZTNA21840 {
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods'
 
-        $ResultMarkdown = "`n## [Security key attestation policy details]($PortalLink)`n"
+        $ResultMarkdown = [System.Text.StringBuilder]::new("`n## [Security key attestation policy details]($PortalLink)`n")
 
         $AttestationStatus = if ($IsAttestationEnforced -eq $true) { 'True ✅' } else { 'False ❌' }
-        $ResultMarkdown += "- **Enforce attestation** : $AttestationStatus`n"
+        $null = $ResultMarkdown.Append("- **Enforce attestation** : $AttestationStatus`n")
 
         if ($KeyRestrictions) {
-            $ResultMarkdown += "- **Key restriction policy** :`n"
+            $null = $ResultMarkdown.Append("- **Key restriction policy** :`n")
             if ($null -ne $KeyRestrictions.isEnforced) {
-                $ResultMarkdown += "  - **Enforce key restrictions** : $($KeyRestrictions.isEnforced)`n"
+                $null = $ResultMarkdown.Append("  - **Enforce key restrictions** : $($KeyRestrictions.isEnforced)`n")
             } else {
-                $ResultMarkdown += "  - **Enforce key restrictions** : Not configured`n"
+                $null = $ResultMarkdown.Append("  - **Enforce key restrictions** : Not configured`n")
             }
             if ($KeyRestrictions.enforcementType) {
-                $ResultMarkdown += "  - **Restrict specific keys** : $($KeyRestrictions.enforcementType)`n"
+                $null = $ResultMarkdown.Append("  - **Restrict specific keys** : $($KeyRestrictions.enforcementType)`n")
             } else {
-                $ResultMarkdown += "  - **Restrict specific keys** : Not configured`n"
+                $null = $ResultMarkdown.Append("  - **Restrict specific keys** : Not configured`n")
             }
 
             if ($KeyRestrictions.aaGuids -and $KeyRestrictions.aaGuids.Count -gt 0) {
-                $ResultMarkdown += "  - **AAGUID** :`n"
+                $null = $ResultMarkdown.Append("  - **AAGUID** :`n")
                 foreach ($Guid in $KeyRestrictions.aaGuids) {
-                    $ResultMarkdown += "    - $Guid`n"
+                    $null = $ResultMarkdown.Append("    - $Guid`n")
                 }
             }
         }
@@ -57,9 +57,9 @@ function Invoke-CippTestZTNA21840 {
         $Passed = if ($IsAttestationEnforced -eq $true) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "Security key attestation is properly enforced, ensuring only verified hardware authenticators can be registered.$ResultMarkdown"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Security key attestation is properly enforced, ensuring only verified hardware authenticators can be registered.$ResultMarkdown")
         } else {
-            $ResultMarkdown = "Security key attestation is not enforced, allowing unverified or potentially compromised security keys to be registered.$ResultMarkdown"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Security key attestation is not enforced, allowing unverified or potentially compromised security keys to be registered.$ResultMarkdown")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Security key attestation is enforced' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

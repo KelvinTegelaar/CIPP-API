@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.3) - Only people in my org SHALL be able to bypass the lobby
+    Tests CIS M365 7.0.0 (8.5.3) - Only people in my org SHALL be able to bypass the lobby
     #>
     param($Tenant)
 

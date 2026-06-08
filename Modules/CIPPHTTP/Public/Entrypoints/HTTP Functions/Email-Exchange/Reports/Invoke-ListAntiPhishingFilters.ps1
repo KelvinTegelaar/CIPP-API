@@ -4,6 +4,8 @@ function Invoke-ListAntiPhishingFilters {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists anti-phishing policies and their associated rules configured in Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

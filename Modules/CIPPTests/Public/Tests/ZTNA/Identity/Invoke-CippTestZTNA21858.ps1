@@ -14,14 +14,14 @@ function Invoke-CippTestZTNA21858 {
 
         $InactivityThresholdDays = 90
         $Today = Get-Date
-        $EnabledGuests = $Guests | Where-Object { $_.AccountEnabled -eq $true }
+        $EnabledGuests = $Guests.Where({ $_.AccountEnabled -eq $true })
 
         if (-not $EnabledGuests) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21858' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No guest users found in the tenant' -Risk 'Medium' -Name 'Inactive guest identities are disabled or removed from the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
             return
         }
 
-        $InactiveGuests = @()
+        $InactiveGuests = [System.Collections.Generic.List[object]]::new()
         foreach ($Guest in $EnabledGuests) {
             $DaysSinceLastActivity = $null
 
@@ -34,22 +34,21 @@ function Invoke-CippTestZTNA21858 {
             }
 
             if ($null -ne $DaysSinceLastActivity -and $DaysSinceLastActivity -gt $InactivityThresholdDays) {
-                $InactiveGuests += $Guest
+                $InactiveGuests.Add($Guest)
             }
         }
 
         if ($InactiveGuests.Count -gt 0) {
             $Status = 'Failed'
 
-            $ResultLines = @(
-                "Found $($InactiveGuests.Count) inactive guest user(s) with no sign-in activity in the last $InactivityThresholdDays days."
-                ''
-                "**Total enabled guests:** $($EnabledGuests.Count)"
-                "**Inactive guests:** $($InactiveGuests.Count)"
-                "**Inactivity threshold:** $InactivityThresholdDays days"
-                ''
-                '**Top 10 inactive guest users:**'
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add("Found $($InactiveGuests.Count) inactive guest user(s) with no sign-in activity in the last $InactivityThresholdDays days.")
+            $ResultLines.Add('')
+            $ResultLines.Add("**Total enabled guests:** $($EnabledGuests.Count)")
+            $ResultLines.Add("**Inactive guests:** $($InactiveGuests.Count)")
+            $ResultLines.Add("**Inactivity threshold:** $InactivityThresholdDays days")
+            $ResultLines.Add('')
+            $ResultLines.Add('**Top 10 inactive guest users:**')
 
             $Top10Guests = $InactiveGuests | Sort-Object {
                 if ($_.signInActivity.lastSuccessfulSignInDateTime) {
@@ -63,20 +62,20 @@ function Invoke-CippTestZTNA21858 {
                 if ($Guest.signInActivity.lastSuccessfulSignInDateTime) {
                     $LastActivity = [DateTime]$Guest.signInActivity.lastSuccessfulSignInDateTime
                     $DaysInactive = [Math]::Round(($Today - $LastActivity).TotalDays, 0)
-                    $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName)) - Last sign-in: $DaysInactive days ago"
+                    $ResultLines.Add("- $($Guest.displayName) ($($Guest.userPrincipalName)) - Last sign-in: $DaysInactive days ago")
                 } else {
                     $Created = [DateTime]$Guest.createdDateTime
                     $DaysSinceCreated = [Math]::Round(($Today - $Created).TotalDays, 0)
-                    $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName)) - Never signed in (Created $DaysSinceCreated days ago)"
+                    $ResultLines.Add("- $($Guest.displayName) ($($Guest.userPrincipalName)) - Never signed in (Created $DaysSinceCreated days ago)")
                 }
             }
 
             if ($InactiveGuests.Count -gt 10) {
-                $ResultLines += "- ... and $($InactiveGuests.Count - 10) more inactive guest(s)"
+                $ResultLines.Add("- ... and $($InactiveGuests.Count - 10) more inactive guest(s)")
             }
 
-            $ResultLines += ''
-            $ResultLines += '**Recommendation:** Review and remove or disable inactive guest accounts to reduce security risks.'
+            $ResultLines.Add('')
+            $ResultLines.Add('**Recommendation:** Review and remove or disable inactive guest accounts to reduce security risks.')
 
             $Result = $ResultLines -join "`n"
         } else {

@@ -14,6 +14,14 @@ function Invoke-ExecQuarantineManagement {
         $TenantFilter = $Request.Body.tenantFilter | Select-Object -First 1
         $ActionType = $Request.Body.Type | Select-Object -First 1
         $AllowSender = $Request.Body.AllowSender -eq $true
+        $RecipientAddresses = @($Request.Body.RecipientAddress | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $UserRecipients = @(
+            $RecipientAddresses |
+                ForEach-Object { $_ -split '[,;]' } |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                Select-Object -Unique
+        )
         $params = @{}
 
         if ($ActionType -eq 'Release') {
@@ -27,11 +35,15 @@ function Invoke-ExecQuarantineManagement {
         } else {
             $params['ActionType'] = $ActionType
             if ($Request.Body.Identity -is [string]) {
-                $params['Identities'] = @($Request.Body.Identity)
+                $params['Identity'] = $Request.Body.Identity
             } else {
                 $params['Identities'] = $Request.Body.Identity
+                # For -Identities, Exchange requires -Identity to be present, but ignores its value.
+                $params['Identity'] = '000'
             }
-            $params['Identity'] = '000'
+            if ($ActionType -eq 'Deny' -and $UserRecipients.Count -gt 0) {
+                $params['User'] = $UserRecipients
+            }
         }
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $params
 

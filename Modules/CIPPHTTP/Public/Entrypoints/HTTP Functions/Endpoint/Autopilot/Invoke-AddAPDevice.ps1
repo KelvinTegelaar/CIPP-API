@@ -13,7 +13,7 @@ function Invoke-AddAPDevice {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    $TenantFilter = (Get-Tenants | Where-Object { $_.defaultDomainName -eq $Request.Body.TenantFilter.value }).customerId
+    $TenantFilter = (Get-Tenants -TenantFilter $Request.Body.TenantFilter.value).customerId
     $GroupName = if ($Request.Body.Groupname) { $Request.Body.Groupname } else { (New-Guid).GUID }
     Write-Host $GroupName
 

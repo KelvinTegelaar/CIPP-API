@@ -4,6 +4,8 @@ function Invoke-ListDefenderTVM {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists software vulnerabilities from Microsoft Defender Threat and Vulnerability Management (TVM), grouped by CVE ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

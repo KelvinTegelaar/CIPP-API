@@ -4,6 +4,8 @@ function Invoke-ListNewUserDefaults {
         Entrypoint,AnyTenant
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists default templates for new user creation, including default domain, usage location, and license assignments.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

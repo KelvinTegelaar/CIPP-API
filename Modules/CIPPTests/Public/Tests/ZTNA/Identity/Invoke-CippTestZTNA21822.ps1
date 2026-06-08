@@ -26,34 +26,34 @@ function Invoke-CippTestZTNA21822 {
         }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "Guest access is limited to approved tenants.`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Guest access is limited to approved tenants.`n")
         } else {
-            $ResultMarkdown = "Guest access is not limited to approved tenants.`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Guest access is not limited to approved tenants.`n")
         }
 
-        $ResultMarkdown += "`n`n## [Collaboration restrictions](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/Settings/menuId/)`n`n"
-        $ResultMarkdown += 'The tenant is configured to: '
+        $null = $ResultMarkdown.Append("`n`n## [Collaboration restrictions](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/Settings/menuId/)`n`n")
+        $null = $ResultMarkdown.Append('The tenant is configured to: ')
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown += "**Allow invitations only to the specified domains (most restrictive)** ✅`n"
+            $null = $ResultMarkdown.Append("**Allow invitations only to the specified domains (most restrictive)** ✅`n")
         } else {
             if ($BlockedDomains -and $BlockedDomains.Count -gt 0) {
-                $ResultMarkdown += "**Deny invitations to the specified domains** ❌`n"
+                $null = $ResultMarkdown.Append("**Deny invitations to the specified domains** ❌`n")
             } else {
-                $ResultMarkdown += "**Allow invitations to be sent to any domain (most inclusive)** ❌`n"
+                $null = $ResultMarkdown.Append("**Allow invitations to be sent to any domain (most inclusive)** ❌`n")
             }
         }
 
         if (($AllowedDomains -and $AllowedDomains.Count -gt 0) -or ($BlockedDomains -and $BlockedDomains.Count -gt 0)) {
-            $ResultMarkdown += "| Domain | Status |`n"
-            $ResultMarkdown += "| :--- | :--- |`n"
+            $null = $ResultMarkdown.Append("| Domain | Status |`n")
+            $null = $ResultMarkdown.Append("| :--- | :--- |`n")
 
             foreach ($Domain in $AllowedDomains) {
-                $ResultMarkdown += "| $Domain | ✅ Allowed |`n"
+                $null = $ResultMarkdown.Append("| $Domain | ✅ Allowed |`n")
             }
 
             foreach ($Domain in $BlockedDomains) {
-                $ResultMarkdown += "| $Domain | ❌ Blocked |`n"
+                $null = $ResultMarkdown.Append("| $Domain | ❌ Blocked |`n")
             }
         }
 

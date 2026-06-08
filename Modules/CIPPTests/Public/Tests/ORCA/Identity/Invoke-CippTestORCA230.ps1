@@ -38,15 +38,15 @@ function Invoke-CippTestORCA230 {
 
         if ($DomainsWithoutPolicy.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All accepted domains are covered by Anti-phishing policies.`n`n"
-            $Result += "**Total Accepted Domains:** $($AcceptedDomains.Count)`n"
-            $Result += "**Total Anti-phishing Policies:** $($AntiPhishPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All accepted domains are covered by Anti-phishing policies.`n`n")
+            $null = $Result.Append("**Total Accepted Domains:** $($AcceptedDomains.Count)`n")
+            $null = $Result.Append("**Total Anti-phishing Policies:** $($AntiPhishPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($DomainsWithoutPolicy.Count) domains do not have an Anti-phishing policy.`n`n"
-            $Result += "**Domains Without Policy:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("$($DomainsWithoutPolicy.Count) domains do not have an Anti-phishing policy.`n`n")
+            $null = $Result.Append("**Domains Without Policy:**`n`n")
             foreach ($Domain in $DomainsWithoutPolicy) {
-                $Result += "- $Domain`n"
+                $null = $Result.Append("- $Domain`n")
             }
         }
 

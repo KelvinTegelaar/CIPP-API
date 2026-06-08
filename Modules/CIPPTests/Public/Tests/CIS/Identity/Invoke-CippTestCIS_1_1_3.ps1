@@ -1,16 +1,16 @@
 function Invoke-CippTestCIS_1_1_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.3) - Between two and four global admins SHALL be designated
+    Tests CIS M365 7.0.0 (1.1.3) - Between two and four global admins SHALL be designated
     #>
     param($Tenant)
 
     try {
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
 
-        if (-not $Roles -or -not $RoleAssignments) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_3' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles or RoleAssignments) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Between two and four global admins are designated' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Privileged Access'
+        if ($null -eq $Roles) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_3' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Between two and four global admins are designated' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Privileged Access'
             return
         }
 
@@ -20,7 +20,21 @@ function Invoke-CippTestCIS_1_1_3 {
             return
         }
 
-        $GACount = (($RoleAssignments | Where-Object { $_.roleDefinitionId -eq $GA.id }).principalId | Select-Object -Unique).Count
+        $GAMembers = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($Member in @($GA.members)) {
+            if ($Member.id) {
+                [void]$GAMembers.Add([string]$Member.id)
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -eq $GA.id -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $Assignment.principalId) {
+                [void]$GAMembers.Add([string]$Assignment.principalId)
+            }
+        }
+
+        $GACount = $GAMembers.Count
 
         if ($GACount -ge 2 -and $GACount -le 4) {
             $Status = 'Passed'

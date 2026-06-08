@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.1) - Password expiration policy SHALL be set to 'never expire'
+    Tests CIS M365 7.0.0 (1.3.1) - Password expiration policy SHALL be set to 'never expire'
     #>
     param($Tenant)
 
@@ -17,12 +17,12 @@ function Invoke-CippTestCIS_1_3_1 {
 
         if (-not $Failing -or $Failing.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All $($Domains.Count) domain(s) have password expiration disabled (passwordValidityPeriodInDays = 2147483647)."
+            $Result = [System.Text.StringBuilder]::new("All $($Domains.Count) domain(s) have password expiration disabled (passwordValidityPeriodInDays = 2147483647).")
         } else {
             $Status = 'Failed'
-            $Result = "$($Failing.Count) domain(s) still expire passwords:`n`n| Domain | Validity (days) |`n| :----- | :-------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("$($Failing.Count) domain(s) still expire passwords:`n`n| Domain | Validity (days) |`n| :----- | :-------------- |`n")
             foreach ($D in $Failing) {
-                $Result += "| $($D.id) | $($D.passwordValidityPeriodInDays) |`n"
+                $null = $Result.Append("| $($D.id) | $($D.passwordValidityPeriodInDays) |`n")
             }
         }
 

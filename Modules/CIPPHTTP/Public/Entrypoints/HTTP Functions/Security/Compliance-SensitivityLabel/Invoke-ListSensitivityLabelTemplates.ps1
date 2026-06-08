@@ -4,6 +4,8 @@ Function Invoke-ListSensitivityLabelTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Security.SensitivityLabel.Read
+    .DESCRIPTION
+        Lists saved sensitivity label templates for deploying standardized label configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

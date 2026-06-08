@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_12 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.12) - Connection filter IP allow list SHALL NOT be used
+    Tests CIS M365 7.0.0 (2.1.12) - Connection filter IP allow list SHALL NOT be used
     #>
     param($Tenant)
 

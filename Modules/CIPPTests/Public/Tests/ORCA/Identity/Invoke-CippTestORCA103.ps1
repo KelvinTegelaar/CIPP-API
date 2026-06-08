@@ -45,16 +45,16 @@ function Invoke-CippTestORCA103 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All outbound spam filter policies are configured correctly.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All outbound spam filter policies are configured correctly.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) outbound spam filter policies are not configured correctly.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Issues |`n"
-            $Result += "|------------|--------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) outbound spam filter policies are not configured correctly.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Issues |`n")
+            $null = $Result.Append("|------------|--------|`n")
             foreach ($Failed in $FailedPolicies) {
-                $Result += "| $($Failed.Policy.Identity) | $($Failed.Issues -join '<br/>') |`n"
+                $null = $Result.Append("| $($Failed.Policy.Identity) | $($Failed.Issues -join '<br/>') |`n")
             }
         }
 

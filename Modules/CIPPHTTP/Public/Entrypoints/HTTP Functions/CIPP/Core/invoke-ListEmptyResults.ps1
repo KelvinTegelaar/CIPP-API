@@ -8,6 +8,8 @@ function invoke-ListEmptyResults {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Returns an empty results array. Used as a placeholder endpoint.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

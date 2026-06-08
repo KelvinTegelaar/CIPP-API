@@ -153,6 +153,15 @@ function Update-CIPPDynamicTenantGroups {
                 $ScriptBlock = [ScriptBlock]::Create($WhereString)
                 $MatchingTenants = $TenantObj | Where-Object $ScriptBlock
 
+                if ($Group.ExcludePartnerTenant -eq $true -and $env:TenantID) {
+                    $BeforeCount = ($MatchingTenants | Measure-Object).Count
+                    $MatchingTenants = @($MatchingTenants | Where-Object { $_.customerId -ne $env:TenantID })
+                    $RemovedCount = $BeforeCount - ($MatchingTenants | Measure-Object).Count
+                    if ($RemovedCount -gt 0) {
+                        Write-Information "ExcludePartnerTenant is enabled for group '$($Group.Name)'; removed $RemovedCount partner tenant from results"
+                    }
+                }
+
                 Write-Information "Found $($MatchingTenants.Count) matching tenants for group '$($Group.Name)'"
 
                 $CurrentMembers = @($AllGroupMembers | Where-Object { $_.GroupId -eq $Group.RowKey })

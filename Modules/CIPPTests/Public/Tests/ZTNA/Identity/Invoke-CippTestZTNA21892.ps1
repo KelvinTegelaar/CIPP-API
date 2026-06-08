@@ -99,10 +99,10 @@ function Invoke-CippTestZTNA21892 {
         # Determine pass/fail
         if ($MatchingPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $ResultMarkdown = "✅ **Pass**: Conditional Access policies require managed devices for all sign-in activity.`n`n"
-            $ResultMarkdown += "## Matching policies`n`n"
-            $ResultMarkdown += "| Policy name | State | All users | All apps | Compliant device | Hybrid joined |`n"
-            $ResultMarkdown += "| :---------- | :---- | :-------- | :------- | :--------------- | :------------ |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Conditional Access policies require managed devices for all sign-in activity.`n`n")
+            $null = $ResultMarkdown.Append("## Matching policies`n`n")
+            $null = $ResultMarkdown.Append("| Policy name | State | All users | All apps | Compliant device | Hybrid joined |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :---- | :-------- | :------- | :--------------- | :------------ |`n")
 
             foreach ($Policy in $MatchingPolicies) {
                 $policyLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.PolicyId)"
@@ -112,12 +112,12 @@ function Invoke-CippTestZTNA21892 {
                 $compliant = if ($Policy.CompliantDevice) { '✅' } else { '❌' }
                 $hybrid = if ($Policy.HybridJoinedDevice) { '✅' } else { '❌' }
 
-                $ResultMarkdown += "| [$policyName]($policyLink) | $($Policy.PolicyState) | $allUsers | $allApps | $compliant | $hybrid |`n"
+                $null = $ResultMarkdown.Append("| [$policyName]($policyLink) | $($Policy.PolicyState) | $allUsers | $allApps | $compliant | $hybrid |`n")
             }
         } else {
             $Status = 'Failed'
-            $ResultMarkdown = "❌ **Fail**: No Conditional Access policies found that require managed devices for all sign-in activity.`n`n"
-            $ResultMarkdown += 'Organizations should enforce that all sign-ins come from managed devices (compliant or hybrid Azure AD joined) to ensure security controls are applied.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: No Conditional Access policies found that require managed devices for all sign-in activity.`n`n")
+            $null = $ResultMarkdown.Append('Organizations should enforce that all sign-ins come from managed devices (compliant or hybrid Azure AD joined) to ensure security controls are applied.')
         }
 
         $TestParams = @{

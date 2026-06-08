@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_6_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.6.3) - Guest user invitations SHALL be limited to the Guest Inviter role
+    Tests CIS M365 7.0.0 (5.1.6.3) - Guest user invitations SHALL be limited to the Guest Inviter role
     #>
     param($Tenant)
 

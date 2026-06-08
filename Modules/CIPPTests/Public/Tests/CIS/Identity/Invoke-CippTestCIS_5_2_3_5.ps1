@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.5) - Weak authentication methods SHALL be disabled (SMS, Voice)
+    Tests CIS M365 7.0.0 (5.2.3.5) - Weak authentication methods SHALL be disabled (SMS, Voice)
     #>
     param($Tenant)
 

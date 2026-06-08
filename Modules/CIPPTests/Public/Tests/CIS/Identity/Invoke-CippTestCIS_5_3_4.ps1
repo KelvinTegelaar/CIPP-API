@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_3_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.3.4) - Approval SHALL be required for Global Administrator role activation
+    Tests CIS M365 7.0.0 (5.3.4) - Approval SHALL be required for Global Administrator role activation
     #>
     param($Tenant)
 

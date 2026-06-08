@@ -5,6 +5,8 @@ function Invoke-ListIntunePolicy {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists Intune device configuration policies for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -78,13 +80,47 @@ function Invoke-ListIntunePolicy {
                     }
 
                     if ($DefinitionRequests.Count -gt 0) {
+                        $HasDefinitionFailures = $false
                         $DefinitionResults = New-GraphBulkRequest -Requests @($DefinitionRequests) -tenantid $TenantFilter
                         foreach ($DefinitionResult in $DefinitionResults) {
+                            if ($DefinitionResult.status -ne 200) {
+                                $HasDefinitionFailures = $true
+                                continue
+                            }
+
                             $SettingId = $SettingIdMap[$DefinitionResult.id]
                             $Setting = $GraphRequest.settings | Where-Object { $_.id -eq $SettingId } | Select-Object -First 1
                             if ($Setting) {
                                 $Definitions = @($DefinitionResult.body.value ?? $DefinitionResult.body)
                                 $Setting | Add-Member -NotePropertyName settingDefinitions -NotePropertyValue $Definitions -Force
+                            }
+                        }
+
+                        if ($HasDefinitionFailures -and $GraphRequest.templateReference.templateId) {
+                            try {
+                                $TemplateSettingsResponse = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicyTemplates('$($GraphRequest.templateReference.templateId)')/settingTemplates?`$expand=settingDefinitions&`$top=1000" -tenantid $TenantFilter
+                                $TemplateSettings = @($TemplateSettingsResponse.value ?? $TemplateSettingsResponse)
+                                $TemplateDefinitionsByInstanceId = @{}
+
+                                foreach ($TemplateSetting in $TemplateSettings) {
+                                    $TemplateInstanceId = $TemplateSetting.settingInstanceTemplate.settingInstanceTemplateId
+                                    $TemplateDefinitions = @($TemplateSetting.settingDefinitions | Where-Object { $_.id })
+                                    if ($TemplateInstanceId -and $TemplateDefinitions.Count -gt 0) {
+                                        $TemplateDefinitionsByInstanceId[$TemplateInstanceId] = $TemplateDefinitions
+                                    }
+                                }
+
+                                foreach ($Setting in $GraphRequest.settings) {
+                                    $ExistingDefinitions = @($Setting.settingDefinitions | Where-Object { $_.id })
+                                    if ($ExistingDefinitions.Count -gt 0) { continue }
+
+                                    $TemplateInstanceId = $Setting.settingInstance.settingInstanceTemplateReference.settingInstanceTemplateId
+                                    if ($TemplateInstanceId -and $TemplateDefinitionsByInstanceId.ContainsKey($TemplateInstanceId)) {
+                                        $Setting | Add-Member -NotePropertyName settingDefinitions -NotePropertyValue $TemplateDefinitionsByInstanceId[$TemplateInstanceId] -Force
+                                    }
+                                }
+                            } catch {
+                                Write-Information "Could not retrieve configuration policy template definitions for ${ID}: $($_.Exception.Message)"
                             }
                         }
                     }

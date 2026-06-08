@@ -4,6 +4,8 @@ Function Invoke-ListPartnerRelationships {
         Entrypoint
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Lists cross-tenant access policy partner configurations for a tenant, showing delegated admin and collaboration settings.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

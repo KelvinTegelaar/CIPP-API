@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_1_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.1.3) - 'AuditBypassEnabled' SHALL NOT be enabled on mailboxes
+    Tests CIS M365 7.0.0 (6.1.3) - 'AuditBypassEnabled' SHALL NOT be enabled on mailboxes
     #>
     param($Tenant)
 

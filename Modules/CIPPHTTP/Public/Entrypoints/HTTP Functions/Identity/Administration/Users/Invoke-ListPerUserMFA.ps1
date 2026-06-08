@@ -4,6 +4,8 @@ function Invoke-ListPerUserMFA {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists per-user MFA state (enabled, enforced, disabled) for users in a tenant via the legacy MFA management API.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

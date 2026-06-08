@@ -23,24 +23,24 @@ function Invoke-CippTestCopilotReady011 {
 
         if ($EnabledPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $Result = "**$($EnabledPolicies.Count) enabled Conditional Access polic$(if ($EnabledPolicies.Count -eq 1) { 'y' } else { 'ies' })** found in the tenant.`n`n"
-            $Result += "| Policy Name | State |`n"
-            $Result += "|-------------|-------|`n"
+            $Result = [System.Text.StringBuilder]::new("**$($EnabledPolicies.Count) enabled Conditional Access polic$(if ($EnabledPolicies.Count -eq 1) { 'y' } else { 'ies' })** found in the tenant.`n`n")
+            $null = $Result.Append("| Policy Name | State |`n")
+            $null = $Result.Append("|-------------|-------|`n")
             foreach ($Policy in ($EnabledPolicies | Sort-Object displayName)) {
-                $Result += "| $($Policy.displayName) | Enabled |`n"
+                $null = $Result.Append("| $($Policy.displayName) | Enabled |`n")
             }
             if ($ReportOnlyPolicies.Count -gt 0) {
-                $Result += "`n*$($ReportOnlyPolicies.Count) additional polic$(if ($ReportOnlyPolicies.Count -eq 1) { 'y is' } else { 'ies are' }) in report-only mode and not enforcing access controls.*"
+                $null = $Result.Append("`n*$($ReportOnlyPolicies.Count) additional polic$(if ($ReportOnlyPolicies.Count -eq 1) { 'y is' } else { 'ies are' }) in report-only mode and not enforcing access controls.*")
             }
         } else {
             $Status = 'Failed'
-            $Result = "No enabled Conditional Access policies were found in this tenant.`n`n"
+            $Result = [System.Text.StringBuilder]::new("No enabled Conditional Access policies were found in this tenant.`n`n")
             if ($ReportOnlyPolicies.Count -gt 0) {
-                $Result += "**$($ReportOnlyPolicies.Count) polic$(if ($ReportOnlyPolicies.Count -eq 1) { 'y is' } else { 'ies are' }) in report-only mode** but not enforcing.`n`n"
+                $null = $Result.Append("**$($ReportOnlyPolicies.Count) polic$(if ($ReportOnlyPolicies.Count -eq 1) { 'y is' } else { 'ies are' }) in report-only mode** but not enforcing.`n`n")
             }
-            $Result += 'Conditional Access is the primary mechanism for enforcing MFA, device compliance, and access controls in Entra ID. '
-            $Result += 'Before deploying Copilot, establish at least a baseline CA policy requiring MFA for all users. '
-            $Result += 'See [Microsoft CA policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) to get started.'
+            $null = $Result.Append('Conditional Access is the primary mechanism for enforcing MFA, device compliance, and access controls in Entra ID. ')
+            $null = $Result.Append('Before deploying Copilot, establish at least a baseline CA policy requiring MFA for all users. ')
+            $null = $Result.Append('See [Microsoft CA policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) to get started.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady011' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Tenant has enabled Conditional Access policies' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

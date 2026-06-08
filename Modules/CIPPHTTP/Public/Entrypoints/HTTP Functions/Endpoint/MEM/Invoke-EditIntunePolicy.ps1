@@ -1,9 +1,9 @@
-Function Invoke-EditIntunePolicy {
+function Invoke-EditIntunePolicy {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Endpoint.MEM.Read
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,7 +23,7 @@ Function Invoke-EditIntunePolicy {
 
         # Only add displayName if it's provided
         if ($DisplayName) {
-            $properties["displayName"] = $DisplayName
+            $properties['displayName'] = $DisplayName
         }
 
         # Update the policy

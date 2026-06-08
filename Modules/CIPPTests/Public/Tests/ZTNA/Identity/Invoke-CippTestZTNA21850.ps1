@@ -16,28 +16,28 @@ function Invoke-CippTestZTNA21850 {
 
         if ($null -eq $PasswordRuleSettings) {
             $Passed = 'Failed'
-            $ResultMarkdown = '❌ Password rule settings template not found.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('❌ Password rule settings template not found.')
         } else {
             $LockoutThresholdSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutThreshold' }
 
             if ($null -eq $LockoutThresholdSetting) {
                 $Passed = 'Failed'
-                $ResultMarkdown = "❌ Lockout threshold setting not found in [password rule settings]($PortalLink)."
+                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Lockout threshold setting not found in [password rule settings]($PortalLink).")
             } else {
                 $LockoutThreshold = [int]$LockoutThresholdSetting.value
 
                 if ($LockoutThreshold -le 10) {
                     $Passed = 'Passed'
-                    $ResultMarkdown = "✅ Smart lockout threshold is set to 10 or below.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart lockout threshold is set to 10 or below.`n`n")
                 } else {
                     $Passed = 'Failed'
-                    $ResultMarkdown = "❌ Smart lockout threshold is configured above 10.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Smart lockout threshold is configured above 10.`n`n")
                 }
 
-                $ResultMarkdown += "## [Smart lockout configuration]($PortalLink)`n`n"
-                $ResultMarkdown += "| Setting | Value |`n"
-                $ResultMarkdown += "| :---- | :---- |`n"
-                $ResultMarkdown += "| Lockout threshold | $LockoutThreshold attempts |`n"
+                $null = $ResultMarkdown.Append("## [Smart lockout configuration]($PortalLink)`n`n")
+                $null = $ResultMarkdown.Append("| Setting | Value |`n")
+                $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+                $null = $ResultMarkdown.Append("| Lockout threshold | $LockoutThreshold attempts |`n")
             }
         }
 

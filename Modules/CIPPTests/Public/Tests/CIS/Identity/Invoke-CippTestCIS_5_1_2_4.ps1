@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_2_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.2.4) - Access to the Entra admin center SHALL be restricted
+    Tests CIS M365 7.0.0 (5.1.2.4) - Access to the Entra admin center SHALL be restricted
     #>
     param($Tenant)
 

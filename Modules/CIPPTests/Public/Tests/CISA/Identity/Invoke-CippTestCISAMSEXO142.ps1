@@ -37,14 +37,14 @@ function Invoke-CippTestCISAMSEXO142 {
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies move spam to junk folder or quarantine."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies move spam to junk folder or quarantine.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies do not properly handle spam:`n`n"
-            $Result += "| Policy Name | Current Action | Expected |`n"
-            $Result += "| :---------- | :------------- | :------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies do not properly handle spam:`n`n")
+            $null = $Result.Append("| Policy Name | Current Action | Expected |`n")
+            $null = $Result.Append("| :---------- | :------------- | :------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n"
+                $null = $Result.Append("| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n")
             }
             $Status = 'Failed'
         }

@@ -41,9 +41,9 @@ function Invoke-CippTestZTNA21824 {
         $reportTitle = 'Sign-in frequency policies'
 
         if ($filteredCAPolicies -and $filteredCAPolicies.Count -gt 0) {
-            $mdInfo = "`n## $reportTitle`n`n"
-            $mdInfo += "| Policy Name | Sign-in Frequency | Status |`n"
-            $mdInfo += "| :---------- | :---------------- | :----- |`n"
+            $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+            $null = $mdInfo.Append("| Policy Name | Sign-in Frequency | Status |`n")
+            $null = $mdInfo.Append("| :---------- | :---------------- | :----- |`n")
 
             foreach ($filteredCAPolicy in $filteredCAPolicies) {
                 $policyName = $filteredCAPolicy.DisplayName
@@ -71,7 +71,7 @@ function Invoke-CippTestZTNA21824 {
                     '❌'
                 }
 
-                $mdInfo += "| $policyName | $signInFreqValue | $status |`n"
+                $null = $mdInfo.Append("| $policyName | $signInFreqValue | $status |`n")
             }
 
             $testResultMarkdown = $testResultMarkdown + $mdInfo

@@ -4,6 +4,8 @@ Function Invoke-ListHaloClients {
         Entrypoint
     .ROLE
         CIPP.Extension.Read
+    .DESCRIPTION
+        Lists client records from the configured HaloPSA instance for tenant mapping purposes.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

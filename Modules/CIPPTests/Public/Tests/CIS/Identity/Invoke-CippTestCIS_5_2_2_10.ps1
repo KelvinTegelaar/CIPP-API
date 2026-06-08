@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_10 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.10) - A managed device SHALL be required to register security information
+    Tests CIS M365 7.0.0 (5.2.2.10) - A managed device SHALL be required to register security information
     #>
     param($Tenant)
 

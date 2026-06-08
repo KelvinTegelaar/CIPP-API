@@ -26,23 +26,23 @@ function Invoke-CippTestORCA101 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies are configured to mark bulk mail as spam.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)`n`n"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies are configured to mark bulk mail as spam.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)`n`n")
             if ($PassedPolicies.Count -gt 0) {
-                $Result += "| Policy Name | Mark As Spam Bulk Mail |`n"
-                $Result += "|------------|------------------------|`n"
+                $null = $Result.Append("| Policy Name | Mark As Spam Bulk Mail |`n")
+                $null = $Result.Append("|------------|------------------------|`n")
                 foreach ($Policy in $PassedPolicies) {
-                    $Result += "| $($Policy.Identity) | $($Policy.MarkAsSpamBulkMail) |`n"
+                    $null = $Result.Append("| $($Policy.Identity) | $($Policy.MarkAsSpamBulkMail) |`n")
                 }
             }
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies are not configured to mark bulk mail as spam.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Mark As Spam Bulk Mail |`n"
-            $Result += "|------------|------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies are not configured to mark bulk mail as spam.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Mark As Spam Bulk Mail |`n")
+            $null = $Result.Append("|------------|------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.MarkAsSpamBulkMail) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.MarkAsSpamBulkMail) |`n")
             }
         }
 

@@ -4,6 +4,8 @@ Function Invoke-ListBPA {
         Entrypoint
     .ROLE
         Tenant.BestPracticeAnalyser.Read
+    .DESCRIPTION
+        Lists Best Practice Analyser (BPA) report results for tenants, based on a selected BPA template.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

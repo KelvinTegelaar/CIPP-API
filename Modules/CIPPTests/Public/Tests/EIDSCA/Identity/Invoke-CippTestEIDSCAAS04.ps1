@@ -20,11 +20,11 @@ function Invoke-CippTestEIDSCAAS04 {
             return
         }
 
-        $InvalidTargets = @()
+        $InvalidTargets = [System.Collections.Generic.List[string]]::new()
         if ($SmsConfig.includeTargets) {
             foreach ($target in $SmsConfig.includeTargets) {
                 if ($target.isUsableForSignIn -ne $false) {
-                    $InvalidTargets += $target.id
+                    $InvalidTargets.Add($target.id)
                 }
             }
         }

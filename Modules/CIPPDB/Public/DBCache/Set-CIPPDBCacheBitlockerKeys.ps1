@@ -21,8 +21,7 @@ function Set-CIPPDBCacheBitlockerKeys {
 
         $BitlockerKeys = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/informationProtection/bitlocker/recoveryKeys' -tenantid $TenantFilter
         if (!$BitlockerKeys) { $BitlockerKeys = @() }
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -Data $BitlockerKeys
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -Data $BitlockerKeys -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -Data $BitlockerKeys -AddCount
         $BitlockerKeys = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached BitLocker recovery keys successfully' -sev Debug

@@ -20,8 +20,7 @@ function Set-CIPPDBCacheServicePrincipals {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching service principals' -sev Debug
 
         $ServicePrincipals = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Data $ServicePrincipals
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Data $ServicePrincipals -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Data $ServicePrincipals -AddCount
         $ServicePrincipals = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached service principals successfully' -sev Debug

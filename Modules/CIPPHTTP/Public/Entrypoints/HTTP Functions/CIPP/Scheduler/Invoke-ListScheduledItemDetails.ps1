@@ -4,6 +4,8 @@ function Invoke-ListScheduledItemDetails {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
+    .DESCRIPTION
+        Retrieves detailed information about a specific scheduled task by its RowKey, including execution results and task parameters.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -21,9 +23,11 @@ function Invoke-ListScheduledItemDetails {
         return
     }
 
+    $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $RowKey -Type String
+
     # Retrieve the task information
     $TaskTable = Get-CIPPTable -TableName 'ScheduledTasks'
-    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$RowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
+    $Task = Get-CIPPAzDataTableEntity @TaskTable -Filter "RowKey eq '$SafeRowKey' and PartitionKey eq 'ScheduledTask'" | Select-Object RowKey, Name, TaskState, Command, Parameters, Recurrence, ExecutedTime, ScheduledTime, PostExecution, Tenant, TenantGroup, Hidden, Results, Timestamp, Trigger
 
     if (-not $Task) {
         return ([HttpResponseContext]@{
@@ -36,6 +40,10 @@ function Invoke-ListScheduledItemDetails {
     # Process the task (similar to the way it's done in Invoke-ListScheduledItems)
     if ($Task.Parameters) {
         $Task.Parameters = $Task.Parameters | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Remove headers from parameters for cleaner display, and because they may contain sensitive information. Headers are only used for execution, not needed for display.
+        if ($Task.Parameters.Headers) {
+            $Task.Parameters.PSObject.Properties.Remove('Headers')
+        }
     } else {
         $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
     }
@@ -95,7 +103,7 @@ function Invoke-ListScheduledItemDetails {
 
     # Get the results if available
     $ResultsTable = Get-CIPPTable -TableName 'ScheduledTaskResults'
-    $ResultsFilter = "PartitionKey eq '$RowKey'"
+    $ResultsFilter = "PartitionKey eq '$SafeRowKey'"
 
     $Results = Get-CIPPAzDataTableEntity @ResultsTable -Filter $ResultsFilter
 

@@ -4,6 +4,8 @@ function Invoke-ListUserSettings {
         Entrypoint,AnyTenant
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Retrieves the current CIPP user's personal settings and preferences.
     #>
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers

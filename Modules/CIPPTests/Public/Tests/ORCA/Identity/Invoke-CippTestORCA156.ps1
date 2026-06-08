@@ -26,16 +26,16 @@ function Invoke-CippTestORCA156 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Links policies are tracking user clicks.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Links policies are tracking user clicks.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Links policies are not tracking user clicks.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Track Clicks |`n"
-            $Result += "|------------|-------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Links policies are not tracking user clicks.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Track Clicks |`n")
+            $null = $Result.Append("|------------|-------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.TrackClicks) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.TrackClicks) |`n")
             }
         }
 

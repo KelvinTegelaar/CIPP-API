@@ -5,7 +5,7 @@ Approval-gated GA activation prevents a single compromised admin from activating
 Microsoft Entra > PIM > Microsoft Entra roles > Global Administrator > Settings: Require approval to activate = Yes, approvers = (named GA list).
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.3.4](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.3.4](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

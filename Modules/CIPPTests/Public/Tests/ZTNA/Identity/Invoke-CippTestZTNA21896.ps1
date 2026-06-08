@@ -28,25 +28,24 @@ function Invoke-CippTestZTNA21896 {
         $TotalWithCreds = $SPsWithPassCreds.Count + $SPsWithKeyCreds.Count
         $Status = 'Investigate'
 
-        $ResultLines = @(
-            "Found $TotalWithCreds service principal(s) with credentials configured in the tenant, which represents a security risk."
-            ''
-        )
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        $ResultLines.Add("Found $TotalWithCreds service principal(s) with credentials configured in the tenant, which represents a security risk.")
+        $ResultLines.Add('')
 
         if ($SPsWithPassCreds.Count -gt 0) {
-            $ResultLines += "**Service principals with password credentials:** $($SPsWithPassCreds.Count)"
-            $ResultLines += ''
+            $ResultLines.Add("**Service principals with password credentials:** $($SPsWithPassCreds.Count)")
+            $ResultLines.Add('')
         }
 
         if ($SPsWithKeyCreds.Count -gt 0) {
-            $ResultLines += "**Service principals with key credentials (certificates):** $($SPsWithKeyCreds.Count)"
-            $ResultLines += ''
+            $ResultLines.Add("**Service principals with key credentials (certificates):** $($SPsWithKeyCreds.Count)")
+            $ResultLines.Add('')
         }
 
-        $ResultLines += '**Security implications:**'
-        $ResultLines += '- Service principals with credentials can be compromised if not properly secured'
-        $ResultLines += '- Password credentials are less secure than managed identities or certificate-based authentication'
-        $ResultLines += '- Consider using managed identities where possible to eliminate credential management'
+        $ResultLines.Add('**Security implications:**')
+        $ResultLines.Add('- Service principals with credentials can be compromised if not properly secured')
+        $ResultLines.Add('- Password credentials are less secure than managed identities or certificate-based authentication')
+        $ResultLines.Add('- Consider using managed identities where possible to eliminate credential management')
 
         $Result = $ResultLines -join "`n"
 

@@ -16,7 +16,8 @@ function New-TeamsRequest {
         $GraphToken = (Get-GraphToken -tenantid $TenantFilter).Authorization -replace 'Bearer '
 
         $null = Connect-MicrosoftTeams -AccessTokens @($TeamsToken, $GraphToken)
-        & $Cmdlet @CmdParams
+        $Result = & $Cmdlet @CmdParams -ErrorAction Stop
+        $Result
     } else {
         Write-Error "Cmdlet $Cmdlet not found in MicrosoftTeams module"
     }

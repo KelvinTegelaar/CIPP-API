@@ -4,12 +4,29 @@ function Invoke-ListApps {
         Entrypoint
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Lists Intune managed applications for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
+    $UseReportDB = $Request.Query.UseReportDB
     try {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+            try {
+                $GraphRequest = Get-CIPPIntuneApplicationReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $GraphRequest = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($GraphRequest)
+                })
+        }
+
         # Use bulk requests to get groups and apps with assignments
         $BulkRequests = @(
             @{

@@ -4,6 +4,8 @@ function Invoke-ListCustomRole {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists custom RBAC roles defined in CIPP, including their permission sets and associated access role groups.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

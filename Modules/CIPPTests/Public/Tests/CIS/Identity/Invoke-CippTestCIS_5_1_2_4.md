@@ -7,7 +7,7 @@ Invoke-MgGraphRequest -Method PATCH -Uri 'https://graph.microsoft.com/beta/admin
 ```
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.1.2.4](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.1.2.4](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

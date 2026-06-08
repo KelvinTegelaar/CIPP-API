@@ -4,6 +4,8 @@ Function Invoke-ListServiceHealth {
         Entrypoint
     .ROLE
         Tenant.Administration.Read
+    .DESCRIPTION
+        Lists active Microsoft 365 service health issues and advisories for a tenant or all tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

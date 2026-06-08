@@ -28,6 +28,8 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
             {"type":"switch","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.unlockWithBiometricsEnabled","label":"Allow biometric authentication","default":true}
             {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.enhancedBiometricsState","label":"Use enhanced anti-spoofing when available","multiple":false,"options":[{"label":"Not configured","value":"notConfigured"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"switch","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.remotePassportEnabled","label":"Allow phone sign-in","default":true}
+            {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.enhancedSignInSecurity","label":"Enable enhanced sign-in security","multiple":false,"options":[{"label":"Not configured","value":"0"},{"label":"Enabled on capable hardware","value":"1"},{"label":"Disabled on all systems","value":"2"}]}
+            {"type":"autoComplete","name":"standards.EnrollmentWindowsHelloForBusinessConfiguration.securityKeyForSignIn","label":"Use security keys for sign-in","multiple":false,"options":[{"label":"Not configured","value":"notConfigured"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -44,11 +46,11 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'EnrollmentWindowsHelloForBusinessConfiguration' -TenantFilter $Tenant -RequiredCapabilities @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'EnrollmentWindowsHelloForBusinessConfiguration' -TenantFilter $Tenant -Preset Intune
 
     if ($TestResult -eq $false) {
         return $true
@@ -56,12 +58,14 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
 
     try {
         $CurrentState = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$expand=assignments&orderBy=priority&`$filter=deviceEnrollmentConfigurationType eq 'WindowsHelloForBusiness'" -tenantID $Tenant -AsApp $true |
-            Select-Object -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState
+            Select-Object -Property id, pinMinimumLength, pinMaximumLength, pinUppercaseCharactersUsage, pinLowercaseCharactersUsage, pinSpecialCharactersUsage, state, securityDeviceRequired, unlockWithBiometricsEnabled, remotePassportEnabled, pinPreviousBlockCount, pinExpirationInDays, enhancedBiometricsState, enhancedSignInSecurity, securityKeyForSignIn
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnrollmentWindowsHelloForBusinessConfiguration state for $Tenant. Error: $ErrorMessage" -Sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the EnrollmentWindowsHelloForBusinessConfiguration state for $Tenant. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         return
     }
+
+    $EnhancedSignInSecurity = if ($null -ne $Settings.enhancedSignInSecurity) { [int]$Settings.enhancedSignInSecurity.value } else { $null }
 
     $StateIsCorrect = ($CurrentState.pinMinimumLength -eq $Settings.pinMinimumLength) -and
     ($CurrentState.pinMaximumLength -eq $Settings.pinMaximumLength) -and
@@ -74,7 +78,10 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
     ($CurrentState.remotePassportEnabled -eq $Settings.remotePassportEnabled) -and
     ($CurrentState.pinPreviousBlockCount -eq $Settings.pinPreviousBlockCount) -and
     ($CurrentState.pinExpirationInDays -eq $Settings.pinExpirationInDays) -and
-    ($CurrentState.enhancedBiometricsState -eq $Settings.enhancedBiometricsState.value)
+    ($CurrentState.enhancedBiometricsState -eq $Settings.enhancedBiometricsState.value) -and
+    (($null -eq $Settings.enhancedSignInSecurity) -or ($CurrentState.enhancedSignInSecurity -eq $EnhancedSignInSecurity)) -and
+    (($null -eq $Settings.securityKeyForSignIn) -or ($CurrentState.securityKeyForSignIn -eq $Settings.securityKeyForSignIn.value))
+    # Backwards compatibility for when newer settings were not yet added
 
     $CompareField = [PSCustomObject]@{
         pinMinimumLength            = $CurrentState.pinMinimumLength
@@ -91,6 +98,14 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         enhancedBiometricsState     = $CurrentState.enhancedBiometricsState
     }
 
+    if ($null -ne $Settings.enhancedSignInSecurity) {
+        $CompareField | Add-Member -NotePropertyName enhancedSignInSecurity -NotePropertyValue $CurrentState.enhancedSignInSecurity
+    }
+
+    if ($null -ne $Settings.securityKeyForSignIn) {
+        $CompareField | Add-Member -NotePropertyName securityKeyForSignIn -NotePropertyValue $CurrentState.securityKeyForSignIn
+    }
+
     $ExpectedValue = [PSCustomObject]@{
         pinMinimumLength            = $Settings.pinMinimumLength
         pinMaximumLength            = $Settings.pinMaximumLength
@@ -104,6 +119,14 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
         pinPreviousBlockCount       = $Settings.pinPreviousBlockCount
         pinExpirationInDays         = $Settings.pinExpirationInDays
         enhancedBiometricsState     = $Settings.enhancedBiometricsState.value
+    }
+
+    if ($null -ne $Settings.enhancedSignInSecurity) {
+        $ExpectedValue | Add-Member -NotePropertyName enhancedSignInSecurity -NotePropertyValue $EnhancedSignInSecurity
+    }
+
+    if ($null -ne $Settings.securityKeyForSignIn) {
+        $ExpectedValue | Add-Member -NotePropertyName securityKeyForSignIn -NotePropertyValue $Settings.securityKeyForSignIn.value
     }
 
     if ($Settings.remediate -eq $true) {
@@ -130,6 +153,8 @@ function Invoke-CIPPStandardEnrollmentWindowsHelloForBusinessConfiguration {
                     pinPreviousBlockCount       = $Settings.pinPreviousBlockCount
                     pinExpirationInDays         = $Settings.pinExpirationInDays
                     enhancedBiometricsState     = $Settings.enhancedBiometricsState.value
+                    enhancedSignInSecurity      = ($EnhancedSignInSecurity ?? $CurrentState.enhancedSignInSecurity)
+                    securityKeyForSignIn        = ($Settings.securityKeyForSignIn.value ?? $CurrentState.securityKeyForSignIn)
                 } | ConvertTo-Json -Compress -Depth 10
             }
             try {

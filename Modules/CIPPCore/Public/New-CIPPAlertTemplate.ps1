@@ -280,9 +280,11 @@ function New-CIPPAlertTemplate {
     }
 
     if ($Format -eq 'html') {
+        $AssembledHtml = $HTMLTemplate -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText, $AuditLogLink
+        $AssembledHtml = $AssembledHtml -replace '\r\n', '' -replace '\n', ''
         return [pscustomobject]@{
             title       = $Title
-            htmlcontent = $HTMLTemplate -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText, $AuditLogLink
+            htmlcontent = $AssembledHtml
         }
     } elseif ($Format -eq 'json') {
         if ($InputObject -eq 'auditlog') {

@@ -5,10 +5,9 @@ $repoRoot = Split-Path -Parent $toolsRoot
 $modulesRoot = Join-Path $repoRoot 'Modules'
 $outputRoot = Join-Path $repoRoot 'Output'
 
-if (-not (Get-Module -ListAvailable -Name ModuleBuilder)) {
-    Install-Module -Name ModuleBuilder -Scope CurrentUser -Force
-}
-Import-Module -Name ModuleBuilder -Force
+Import-Module -Name (Join-Path $toolsRoot 'Metadata\1.5.7\Metadata.psd1') -Force
+Import-Module -Name (Join-Path $toolsRoot 'Configuration\1.6.0\Configuration.psd1') -Force
+Import-Module -Name (Join-Path $toolsRoot 'ModuleBuilder\3.1.8\ModuleBuilder.psd1') -Force
 
 Write-Host "Repo root: $repoRoot"
 Set-Location -Path $repoRoot

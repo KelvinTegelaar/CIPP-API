@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_7 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.7) - Link sharing SHALL be restricted in SharePoint and OneDrive
+    Tests CIS M365 7.0.0 (7.2.7) - Link sharing SHALL be restricted in SharePoint and OneDrive
     #>
     param($Tenant)
 

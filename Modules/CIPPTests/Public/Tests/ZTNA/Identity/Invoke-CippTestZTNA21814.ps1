@@ -40,15 +40,15 @@ function Invoke-CippTestZTNA21814 {
         $Passed = $SyncedUsers.Count -eq 0
 
         if ($Passed) {
-            $ResultMarkdown = "Validated that standing or eligible privileged accounts are cloud only accounts.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Validated that standing or eligible privileged accounts are cloud only accounts.`n`n")
         } else {
-            $ResultMarkdown = "This tenant has $($SyncedUsers.Count) privileged users that are synced from on-premise.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("This tenant has $($SyncedUsers.Count) privileged users that are synced from on-premise.`n`n")
         }
 
         if ($RoleData.Count -gt 0) {
-            $ResultMarkdown += "## Privileged Roles`n`n"
-            $ResultMarkdown += "| Role Name | User | Source | Status |`n"
-            $ResultMarkdown += "| :--- | :--- | :--- | :---: |`n"
+            $null = $ResultMarkdown.Append("## Privileged Roles`n`n")
+            $null = $ResultMarkdown.Append("| Role Name | User | Source | Status |`n")
+            $null = $ResultMarkdown.Append("| :--- | :--- | :--- | :---: |`n")
 
             foreach ($RoleUser in ($RoleData | Sort-Object RoleName, UserDisplayName)) {
                 if ($RoleUser.OnPremisesSyncEnabled) {
@@ -60,7 +60,7 @@ function Invoke-CippTestZTNA21814 {
                 }
 
                 $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($RoleUser.UserId)"
-                $ResultMarkdown += "| $($RoleUser.RoleName) | [$($RoleUser.UserDisplayName)]($UserLink) | $Type | $Status |`n"
+                $null = $ResultMarkdown.Append("| $($RoleUser.RoleName) | [$($RoleUser.UserDisplayName)]($UserLink) | $Type | $Status |`n")
             }
         }
 

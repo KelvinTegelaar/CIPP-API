@@ -22,11 +22,10 @@ function Set-CIPPDBCacheCopilotUserCountTrend {
         $Data = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUserCountTrend(period='D7')?`$format=application/json" -tenantid $TenantFilter -AsApp $true
 
         if ($Data) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountTrend' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountTrend' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountTrend' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Copilot user count trend records" -sev Debug
         } else {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountTrend' -Data @() -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountTrend' -Data @() -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Copilot user count trend: no records returned (no active Copilot usage)' -sev Debug
         }
 

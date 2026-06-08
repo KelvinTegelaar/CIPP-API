@@ -4,6 +4,8 @@ function Invoke-ListSafeAttachmentsFilters {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists Safe Attachments policies and their associated rules configured in Microsoft Defender for Office 365.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

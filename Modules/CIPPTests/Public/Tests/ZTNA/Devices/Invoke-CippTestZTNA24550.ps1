@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA24550 {
             $_.platforms -match 'windows10'
         }
 
-        $WindowsBitLockerPolicies = @()
+        $WindowsBitLockerPolicies = [System.Collections.Generic.List[object]]::new()
         foreach ($WindowsPolicy in $WindowsPolicies) {
             $ValidSettingValues = @('device_vendor_msft_bitlocker_requiredeviceencryption_1')
 
@@ -36,7 +36,7 @@ function Invoke-CippTestZTNA24550 {
                 }
 
                 if ($HasValidSetting) {
-                    $WindowsBitLockerPolicies += $WindowsPolicy
+                    $WindowsBitLockerPolicies.Add($WindowsPolicy)
                 }
             }
         }
@@ -47,14 +47,13 @@ function Invoke-CippTestZTNA24550 {
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $ResultLines = @(
-                'At least one Windows BitLocker policy is configured and assigned.'
-                ''
-                '**Windows BitLocker Policies:**'
-                ''
-                '| Policy Name | Status | Assignment Count |'
-                '| :---------- | :----- | :--------------- |'
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add('At least one Windows BitLocker policy is configured and assigned.')
+            $ResultLines.Add('')
+            $ResultLines.Add('**Windows BitLocker Policies:**')
+            $ResultLines.Add('')
+            $ResultLines.Add('| Policy Name | Status | Assignment Count |')
+            $ResultLines.Add('| :---------- | :----- | :--------------- |')
 
             foreach ($Policy in $WindowsBitLockerPolicies) {
                 $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) {
@@ -63,21 +62,20 @@ function Invoke-CippTestZTNA24550 {
                     '❌ Not assigned'
                 }
                 $AssignmentCount = if ($Policy.assignments) { $Policy.assignments.Count } else { 0 }
-                $ResultLines += "| $($Policy.name) | $PolicyStatus | $AssignmentCount |"
+                $ResultLines.Add("| $($Policy.name) | $PolicyStatus | $AssignmentCount |")
             }
 
             $Result = $ResultLines -join "`n"
         } else {
             $Status = 'Failed'
             if ($WindowsBitLockerPolicies.Count -gt 0) {
-                $ResultLines = @(
-                    'Windows BitLocker policies exist but none are assigned.'
-                    ''
-                    '**Unassigned BitLocker Policies:**'
-                    ''
-                )
+                $ResultLines = [System.Collections.Generic.List[string]]::new()
+                $ResultLines.Add('Windows BitLocker policies exist but none are assigned.')
+                $ResultLines.Add('')
+                $ResultLines.Add('**Unassigned BitLocker Policies:**')
+                $ResultLines.Add('')
                 foreach ($Policy in $WindowsBitLockerPolicies) {
-                    $ResultLines += "- $($Policy.name)"
+                    $ResultLines.Add("- $($Policy.name)")
                 }
             } else {
                 $ResultLines = @('No Windows BitLocker policy is configured or assigned.')

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_3_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.3) - 'External sharing' of calendars SHALL NOT be available
+    Tests CIS M365 7.0.0 (1.3.3) - 'External sharing' of calendars SHALL NOT be available
     #>
     param($Tenant)
 

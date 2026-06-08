@@ -4,6 +4,8 @@ function Invoke-ListCustomVariables {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists custom variables configured in CIPP for use in templates and automation.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
