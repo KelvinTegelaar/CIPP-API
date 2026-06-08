@@ -24,7 +24,7 @@ function Set-CIPPDBCacheDefenderCVEs {
             return
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Retrieved $($AllVulns.Count) CVE records from Defender TVM" -sev 'Info'
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Retrieved $($AllVulns.Count) CVE records from Defender TVM" -sev 'Debug'
         try{
             # Initialize a tracker for this tenant session
             $CveAggregator = @{}
@@ -116,16 +116,16 @@ function Set-CIPPDBCacheDefenderCVEs {
 
         $SuccessCount = 0
         $FailCount    = 0
+        
+        $UniqueCves    = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
 
         try {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Entities: ($Entities | Out-String)" -sev 'Info'
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $UniqueCves CVEs" -sev 'Info'
             $Entities | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs' -AddCount
         } catch {
             $ErrorMessage  = Get-CippException -Exception $_
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "CVE Cache failed: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
         }
-
-        $UniqueCves    = ($Entities | Select-Object -ExpandProperty cveId -Unique).Count
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
