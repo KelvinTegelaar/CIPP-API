@@ -54,11 +54,11 @@ function Invoke-CippTestGenericTest002 {
             $LicList = ($Entry.Value.Licenses | Sort-Object) -join ', '
             $null = $Result.Append("| $DisplayName | $LicList |`n")
             $DisplayCount++
-            if ($DisplayCount -ge 100) { break }
+            if ($DisplayCount -ge 500) { break }
         }
 
-        if ($UserLicenseMap.Count -gt 100) {
-            $null = $Result.Append("`n*Showing 100 of $($UserLicenseMap.Count) licensed users.*`n")
+        if ($UserLicenseMap.Count -gt 500) {
+            $null = $Result.Append("`n*Showing 500 of $($UserLicenseMap.Count) licensed users.*`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'GenericTest002' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'User License Overview' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Tenant Overview'
