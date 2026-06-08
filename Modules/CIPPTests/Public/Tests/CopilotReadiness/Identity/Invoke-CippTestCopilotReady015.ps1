@@ -20,9 +20,7 @@ function Invoke-CippTestCopilotReady015 {
         $ActiveUsers = @($UsageData | Where-Object { $_.userPrincipalName -and $_.userPrincipalName -ne 'Not applicable' })
 
         if ($ActiveUsers.Count -eq 0) {
-            $Result = "No Microsoft 365 Copilot usage was detected in the past 30 days.`n`n"
-            $Result += 'This tenant either has no Copilot licenses assigned, or users have not yet started using Copilot features. '
-            $Result += 'See tests CopilotReady001 and CopilotReady002 to check licensing status.'
+            $Result = "No Microsoft 365 Copilot usage was detected in the past 30 days.`n`nThis tenant either has no Copilot licenses assigned, or users have not yet started using Copilot features. See tests CopilotReady001 and CopilotReady002 to check licensing status."
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady015' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Microsoft 365 Copilot usage per user' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
             return
         }
@@ -33,27 +31,29 @@ function Invoke-CippTestCopilotReady015 {
             $_ -notin @('userPrincipalName', 'displayName', 'lastActivityDate', 'reportRefreshDate', 'reportPeriod', 'id')
         }
 
-        $Result = "**$($ActiveUsers.Count) users** had Copilot activity in the past 30 days.`n`n"
+        $sb = [System.Text.StringBuilder]::new()
+        $null = $sb.Append("**$($ActiveUsers.Count) users** had Copilot activity in the past 30 days.`n`n")
 
         # Build table header from available columns
         $Headers = @('User', 'Last Active') + $AppColumns
-        $Result += '| ' + ($Headers -join ' | ') + " |`n"
-        $Result += '| ' + (($Headers | ForEach-Object { '---' }) -join ' | ') + " |`n"
+        $null = $sb.Append('| ' + ($Headers -join ' | ') + " |`n")
+        $null = $sb.Append('| ' + (($Headers | ForEach-Object { '---' }) -join ' | ') + " |`n")
 
         $DisplayUsers = $ActiveUsers | Sort-Object lastActivityDate -Descending | Select-Object -First 50
         foreach ($User in $DisplayUsers) {
             $LastActive = if ($User.lastActivityDate) { $User.lastActivityDate } else { 'N/A' }
-            $Row = "| $($User.userPrincipalName) | $LastActive |"
+            $Row = [System.Text.StringBuilder]::new("| $($User.userPrincipalName) | $LastActive |")
             foreach ($Col in $AppColumns) {
                 $Val = $User.$Col
-                $Row += " $Val |"
+                $null = $Row.Append(" $Val |")
             }
-            $Result += "$Row`n"
+            $null = $sb.Append("$Row`n")
         }
 
         if ($ActiveUsers.Count -gt 50) {
-            $Result += "`n*Showing 50 of $($ActiveUsers.Count) active users.*"
+            $null = $sb.Append("`n*Showing 50 of $($ActiveUsers.Count) active users.*")
         }
+        $Result = $sb.ToString()
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady015' -TestType 'Identity' -Status 'Informational' -ResultMarkdown $Result -Risk 'Informational' -Name 'Microsoft 365 Copilot usage per user' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
 

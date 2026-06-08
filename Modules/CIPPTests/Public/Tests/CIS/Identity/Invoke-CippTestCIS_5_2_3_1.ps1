@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.1) - Microsoft Authenticator SHALL be configured to protect against MFA fatigue
+    Tests CIS M365 7.0.0 (5.2.3.1) - Microsoft Authenticator SHALL be configured to protect against MFA fatigue
     #>
     param($Tenant)
 

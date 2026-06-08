@@ -4,6 +4,8 @@ function Invoke-ListCSPLicenses {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists CSP (Cloud Solution Provider) license subscriptions for a tenant via the Sherweb integration.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

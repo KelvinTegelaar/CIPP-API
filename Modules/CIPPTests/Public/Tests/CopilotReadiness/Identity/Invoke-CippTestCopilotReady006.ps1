@@ -56,18 +56,18 @@ function Invoke-CippTestCopilotReady006 {
 
         if ($ActivityPercent -ge $ActivityThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** worked on OneDrive or SharePoint files in the past 30 days \u2014 above the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'These users are strong candidates for Copilot, which provides the most value when users actively collaborate on files in Microsoft 365.'
+            $Result = [System.Text.StringBuilder]::new("**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** worked on OneDrive or SharePoint files in the past 30 days \u2014 above the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('These users are strong candidates for Copilot, which provides the most value when users actively collaborate on files in Microsoft 365.')
         } else {
             $Status = 'Failed'
-            $Result = "Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** worked on OneDrive or SharePoint files in the past 30 days \u2014 below the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'Copilot delivers the most value when users regularly store and collaborate on files in OneDrive and SharePoint. '
-            $Result += "Consider driving file collaboration adoption before or alongside a Copilot rollout.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** worked on OneDrive or SharePoint files in the past 30 days \u2014 below the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('Copilot delivers the most value when users regularly store and collaborate on files in OneDrive and SharePoint. ')
+            $null = $Result.Append("Consider driving file collaboration adoption before or alongside a Copilot rollout.`n`n")
             if ($InactiveUsers.Count -gt 0 -and $InactiveUsers.Count -le 20) {
-                $Result += "**Inactive users (no Office doc activity in 30 days):**`n"
-                foreach ($Upn in $InactiveUsers) { $Result += "- $Upn`n" }
+                $null = $Result.Append("**Inactive users (no Office doc activity in 30 days):**`n")
+                foreach ($Upn in $InactiveUsers) { $null = $Result.Append("- $Upn`n") }
             } elseif ($InactiveUsers.Count -gt 20) {
-                $Result += "**$($InactiveUsers.Count) users** had no OneDrive or SharePoint file activity in the past 30 days."
+                $null = $Result.Append("**$($InactiveUsers.Count) users** had no OneDrive or SharePoint file activity in the past 30 days.")
             }
         }
 

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_5_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.5.1) - Modern authentication for Exchange Online SHALL be enabled
+    Tests CIS M365 7.0.0 (6.5.1) - Modern authentication for Exchange Online SHALL be enabled
     #>
     param($Tenant)
 

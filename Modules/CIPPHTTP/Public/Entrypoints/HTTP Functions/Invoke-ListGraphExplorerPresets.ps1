@@ -4,6 +4,8 @@ function Invoke-ListGraphExplorerPresets {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists saved Graph Explorer query presets for the current user or shared presets.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

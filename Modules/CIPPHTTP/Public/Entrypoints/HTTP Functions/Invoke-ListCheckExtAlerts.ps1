@@ -4,6 +4,8 @@ function Invoke-ListCheckExtAlerts {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists extension alert check results from third-party integrations for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

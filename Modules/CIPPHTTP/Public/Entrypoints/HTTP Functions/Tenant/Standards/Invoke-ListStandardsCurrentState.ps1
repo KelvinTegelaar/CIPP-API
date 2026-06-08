@@ -4,6 +4,8 @@ function Invoke-ListStandardsCurrentState {
         Entrypoint
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists the current remediation state of standards applied to a specific tenant, including last check results.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

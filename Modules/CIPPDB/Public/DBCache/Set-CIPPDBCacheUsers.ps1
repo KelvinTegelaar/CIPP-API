@@ -19,7 +19,7 @@ function Set-CIPPDBCacheUsers {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching users' -sev Debug
 
-        $SignInLogsCapable = Test-CIPPStandardLicense -StandardName 'UserSignInLogsCapable' -TenantFilter $TenantFilter -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2') -SkipLog
+        $SignInLogsCapable = Test-CIPPStandardLicense -StandardName 'UserSignInLogsCapable' -TenantFilter $TenantFilter -Preset Entra -SkipLog
 
         # Base properties needed by tests, standards, reports, UI, and integrations (Hudu, NinjaOne)
         $BaseSelect = @(

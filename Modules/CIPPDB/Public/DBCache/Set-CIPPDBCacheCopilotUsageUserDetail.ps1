@@ -22,12 +22,11 @@ function Set-CIPPDBCacheCopilotUsageUserDetail {
         $Data = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUsageUserDetail(period='D30')" -tenantid $TenantFilter -AsApp $true
 
         if ($Data) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Copilot usage user detail records" -sev Debug
         } else {
             # Write an empty marker so tests can distinguish "no data yet" from "cache not run"
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data @() -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUsageUserDetail' -Data @() -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Copilot usage user detail: no records returned (no active Copilot usage)' -sev Debug
         }
 

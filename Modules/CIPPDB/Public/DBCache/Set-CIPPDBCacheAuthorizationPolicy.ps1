@@ -19,8 +19,7 @@ function Set-CIPPDBCacheAuthorizationPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching authorization policy' -sev Debug
         $AuthPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy' -tenantid $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthorizationPolicy' -Data @($AuthPolicy)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthorizationPolicy' -Data @($AuthPolicy) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthorizationPolicy' -Data @($AuthPolicy) -AddCount
         $AuthPolicy = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached authorization policy successfully' -sev Debug

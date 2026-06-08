@@ -47,21 +47,21 @@ function Invoke-CippTestCopilotReady012 {
 
         if ($Issues.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All user self-service creation permissions are restricted — users cannot create groups, tenants, or register applications without admin involvement.`n`n"
-            $Result += 'This reduces shadow IT risk and ensures governance controls apply to new M365 resources before Copilot can interact with them.'
+            $Result = [System.Text.StringBuilder]::new("All user self-service creation permissions are restricted — users cannot create groups, tenants, or register applications without admin involvement.`n`n")
+            $null = $Result.Append('This reduces shadow IT risk and ensures governance controls apply to new M365 resources before Copilot can interact with them.')
         } else {
             $Status = 'Failed'
-            $Result = "**$($Issues.Count) user permission$(if ($Issues.Count -eq 1) { '' } else { 's' })** allow unrestricted self-service creation.`n`n"
-            $Result += "| Permission | Status |`n"
-            $Result += "|------------|--------|`n"
+            $Result = [System.Text.StringBuilder]::new("**$($Issues.Count) user permission$(if ($Issues.Count -eq 1) { '' } else { 's' })** allow unrestricted self-service creation.`n`n")
+            $null = $Result.Append("| Permission | Status |`n")
+            $null = $Result.Append("|------------|--------|`n")
             foreach ($Issue in $Issues) {
-                $Result += "| $Issue | ⚠️ Unrestricted |`n"
+                $null = $Result.Append("| $Issue | ⚠️ Unrestricted |`n")
             }
             foreach ($Ok in $Restricted) {
-                $Result += "| $Ok | ✅ Restricted |`n"
+                $null = $Result.Append("| $Ok | ✅ Restricted |`n")
             }
-            $Result += "`nWith Copilot deployed, unrestricted group and app creation increases the risk of uncontrolled data exposure. "
-            $Result += 'Restrict these permissions via **Entra ID → User settings** and **Group settings** to ensure new resources go through a governed process.'
+            $null = $Result.Append("`nWith Copilot deployed, unrestricted group and app creation increases the risk of uncontrolled data exposure. ")
+            $null = $Result.Append('Restrict these permissions via **Entra ID → User settings** and **Group settings** to ensure new resources go through a governed process.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady012' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'User self-service creation is restricted (groups, tenants, apps)' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

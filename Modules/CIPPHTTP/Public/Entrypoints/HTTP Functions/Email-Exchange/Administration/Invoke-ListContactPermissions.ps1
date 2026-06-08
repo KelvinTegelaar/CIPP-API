@@ -4,6 +4,8 @@ Function Invoke-ListContactPermissions {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists folder-level permissions on a user's Contacts folder in Exchange Online.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

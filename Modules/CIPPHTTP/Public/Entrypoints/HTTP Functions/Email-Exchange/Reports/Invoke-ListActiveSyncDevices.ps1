@@ -4,6 +4,8 @@ function Invoke-ListActiveSyncDevices {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists all ActiveSync mobile devices registered across Exchange Online mailboxes in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -26,16 +26,16 @@ function Invoke-CippTestORCA139 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have Spam action set to move to Junk Email folder or Quarantine.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have Spam action set to move to Junk Email folder or Quarantine.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies do not have Spam action set appropriately.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Spam Action |`n"
-            $Result += "|------------|------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies do not have Spam action set appropriately.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Spam Action |`n")
+            $null = $Result.Append("|------------|------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.SpamAction) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.SpamAction) |`n")
             }
         }
 

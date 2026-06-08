@@ -4,6 +4,8 @@ function Invoke-ListExtensionsConfig {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
+    .DESCRIPTION
+        Lists the current CIPP extension configuration, including settings for HaloPSA, NinjaOne, Hudu, and other integrations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

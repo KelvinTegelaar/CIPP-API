@@ -1,9 +1,11 @@
-Function Invoke-ListOAuthApps {
+function Invoke-ListOAuthApps {
     <#
     .FUNCTIONALITY
         Entrypoint
     .ROLE
         Tenant.Application.Read
+    .DESCRIPTION
+        Lists OAuth application consent grants and permissions for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

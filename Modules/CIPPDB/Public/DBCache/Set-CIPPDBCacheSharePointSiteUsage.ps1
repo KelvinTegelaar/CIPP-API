@@ -37,12 +37,21 @@ function Set-CIPPDBCacheSharePointSiteUsage {
 
         $Result = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests) -asapp $true
         $Sites = @(($Result | Where-Object { $_.id -eq 'listAllSites' }).body.value)
-        $UsageBase64 = ($Result | Where-Object { $_.id -eq 'usage' }).body
-        $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBase64))
-        $UsageRows = @(($UsageJson | ConvertFrom-Json).value)
+        $UsageResponse = $Result | Where-Object { $_.id -eq 'usage' }
+        if ($UsageResponse.status -and $UsageResponse.status -ne 200) {
+            throw ($UsageResponse.body.error.message ?? "Usage report request failed with status $($UsageResponse.status)")
+        }
+        $UsageBody = $UsageResponse.body
+        if ($UsageBody -is [string]) {
+            $UsageJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($UsageBody))
+            $UsageRows = @(($UsageJson | ConvertFrom-Json).value)
+        } else {
+            $UsageRows = @($UsageBody.value)
+        }
 
         # Ensure a stable row key for usage rows.
         foreach ($UsageRow in $UsageRows) {
+            if ($null -eq $UsageRow) { continue }
             $UsageRow | Add-Member -NotePropertyName 'id' -NotePropertyValue $UsageRow.siteId -Force
         }
 
@@ -82,11 +91,9 @@ function Set-CIPPDBCacheSharePointSiteUsage {
             $Site.AutoMapUrl = "tenantId=$($TenantId)&webId={$($Site.sharepointIds.webId)}&siteid={$($Site.sharepointIds.siteId)}&webUrl=$($Site.webUrl)&listId={$($ListId)}"
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing) -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint site listing and usage successfully' -sev Debug
 

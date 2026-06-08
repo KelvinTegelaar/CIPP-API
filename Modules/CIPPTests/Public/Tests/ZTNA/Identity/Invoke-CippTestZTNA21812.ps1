@@ -19,16 +19,16 @@ function Invoke-CippTestZTNA21812 {
         $Passed = $GlobalAdmins.Count -le 5
 
         if ($Passed) {
-            $ResultMarkdown = "Maximum number of Global Administrators doesn't exceed five users/service principals.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Maximum number of Global Administrators doesn't exceed five users/service principals.`n`n")
         } else {
-            $ResultMarkdown = "Maximum number of Global Administrators exceeds five users/service principals.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Maximum number of Global Administrators exceeds five users/service principals.`n`n")
         }
 
         if ($GlobalAdmins.Count -gt 0) {
-            $ResultMarkdown += "## Global Administrators`n`n"
-            $ResultMarkdown += "### Total number of Global Administrators: $($GlobalAdmins.Count)`n`n"
-            $ResultMarkdown += "| Display Name | Object Type | User Principal Name |`n"
-            $ResultMarkdown += "| :----------- | :---------- | :------------------ |`n"
+            $null = $ResultMarkdown.Append("## Global Administrators`n`n")
+            $null = $ResultMarkdown.Append("### Total number of Global Administrators: $($GlobalAdmins.Count)`n`n")
+            $null = $ResultMarkdown.Append("| Display Name | Object Type | User Principal Name |`n")
+            $null = $ResultMarkdown.Append("| :----------- | :---------- | :------------------ |`n")
 
             foreach ($GlobalAdmin in $GlobalAdmins) {
                 $DisplayName = $GlobalAdmin.displayName
@@ -45,7 +45,7 @@ function Invoke-CippTestZTNA21812 {
                     default { 'https://entra.microsoft.com' }
                 }
 
-                $ResultMarkdown += "| [$DisplayName]($PortalLink) | $ObjectType | $UserPrincipalName |`n"
+                $null = $ResultMarkdown.Append("| [$DisplayName]($PortalLink) | $ObjectType | $UserPrincipalName |`n")
             }
         }
 

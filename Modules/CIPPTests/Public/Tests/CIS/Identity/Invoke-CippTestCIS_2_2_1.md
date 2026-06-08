@@ -7,7 +7,7 @@ Break-glass accounts must only be used in actual emergencies. Every sign-in need
 3. Tabletop the alert path quarterly.
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 2.2.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 2.2.1](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

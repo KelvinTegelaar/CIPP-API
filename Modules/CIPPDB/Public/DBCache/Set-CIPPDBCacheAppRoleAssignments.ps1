@@ -39,8 +39,7 @@ function Set-CIPPDBCacheAppRoleAssignments {
         }
 
         if ($AllAppRoleAssignments.Count -gt 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllAppRoleAssignments.Count) app role assignments" -sev Debug
         }
         $AllAppRoleAssignments = $null

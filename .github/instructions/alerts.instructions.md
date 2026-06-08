@@ -97,14 +97,11 @@ if ($InputValue -is [string] -and $InputValue.Trim().StartsWith('{')) {
 If the alert depends on a specific M365 capability (Intune, Exchange, Defender, etc.), gate it early with `Test-CIPPStandardLicense`. Never inspect raw SKU IDs manually.
 
 ```powershell
-$Licensed = Test-CIPPStandardLicense -StandardName '<AlertName>' -TenantFilter $TenantFilter -RequiredCapabilities @(
-    'INTUNE_A',
-    'MDM_Services'
-)
+$Licensed = Test-CIPPStandardLicense -StandardName '<AlertName>' -TenantFilter $TenantFilter -Preset Intune
 if (-not $Licensed) { return }
 ```
 
-Reference existing alerts in the same domain for common capability strings. The `Test-CIPPStandardLicense` function source documents the capability matching logic.
+Use presets for common service families: `Exchange`, `SharePoint`, `Intune`, `Entra`, `EntraP2`, `Teams`, and `Compliance`. Use `-RequiredCapabilities` only when no preset matches, or combine it with `-Preset` when an alert needs a preset plus extra edge-case capabilities.
 
 ## Querying data
 

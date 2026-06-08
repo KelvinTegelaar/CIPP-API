@@ -116,7 +116,7 @@ function Test-CIPPAccessTenant {
         $ExchangeLicenseCapable = $true
         $ExchangeSkippedByLicense = $false
         try {
-            $ExchangeLicenseCapable = Test-CIPPStandardLicense -StandardName 'ExchangeAccessCheck' -TenantFilter $Tenant.customerId -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE') -SkipLog
+            $ExchangeLicenseCapable = Test-CIPPStandardLicense -StandardName 'ExchangeAccessCheck' -TenantFilter $Tenant.customerId -Preset Exchange -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Exchange license capability check failed. Continuing with Exchange access validation. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage

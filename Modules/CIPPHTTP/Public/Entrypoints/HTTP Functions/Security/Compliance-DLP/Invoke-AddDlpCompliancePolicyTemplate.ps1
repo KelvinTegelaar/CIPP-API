@@ -11,19 +11,43 @@ Function Invoke-AddDlpCompliancePolicyTemplate {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
+    $AllowedFields = @(
+        'Name', 'Comment', 'Mode', 'Priority',
+        'ExchangeLocation', 'ExchangeLocationException',
+        'SharePointLocation', 'SharePointLocationException',
+        'OneDriveLocation', 'OneDriveLocationException',
+        'TeamsLocation', 'TeamsLocationException',
+        'EndpointDlpLocation', 'EndpointDlpLocationException',
+        'OnPremisesScannerDlpLocation', 'OnPremisesScannerDlpLocationException',
+        'ThirdPartyAppDlpLocation', 'ThirdPartyAppDlpLocationException',
+        'PowerBIDlpLocation', 'PowerBIDlpLocationException',
+        'ModernGroupLocation', 'ModernGroupLocationException',
+        'RuleParams'
+    )
+
+    $LocationFields = $AllowedFields | Where-Object { $_ -like '*Location*' }
+
     try {
         $GUID = (New-Guid).GUID
-        $JSON = if ($Request.Body.PowerShellCommand) {
+
+        $Source = if ($Request.Body.PowerShellCommand) {
             $Request.Body.PowerShellCommand | ConvertFrom-Json
         } else {
-            ([pscustomobject]$Request.Body | Select-Object Name, Comment, Mode, Workload, Enabled, ExchangeLocation, ExchangeSenderMemberOf, ExchangeSenderMemberOfException, SharePointLocation, SharePointLocationException, OneDriveLocation, OneDriveLocationException, TeamsLocation, TeamsLocationException, EndpointDlpLocation, EndpointDlpLocationException, OnPremisesScannerDlpLocation, OnPremisesScannerDlpLocationException, ThirdPartyAppDlpLocation, ThirdPartyAppDlpLocationException, PowerBIDlpLocation, PowerBIDlpLocationException, RuleParams) | ForEach-Object {
-                $NonEmptyProperties = $_.PSObject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
-                $_ | Select-Object -Property $NonEmptyProperties
-            }
+            [pscustomobject]$Request.Body
         }
 
-        # Allow Name to be sourced from displayName/name fields and ensure templated comments preserved
-        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.Name ?? $_.name } }, @{n = 'comments'; e = { $_.Comment ?? $_.comments } }, * | ConvertTo-Json -Depth 10)
+        $Clean = Format-CIPPCompliancePolicyParams -Source $Source -AllowedFields $AllowedFields -LocationFields $LocationFields
+
+        $Ordered = [ordered]@{
+            name     = $Clean['Name'] ?? $Source.Name ?? $Source.name
+            comments = $Source.Comment ?? $Source.comments
+        }
+        foreach ($k in $Clean.Keys) {
+            if ($Ordered.Contains($k)) { continue }
+            $Ordered[$k] = $Clean[$k]
+        }
+
+        $JSON = ([pscustomobject]$Ordered | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -31,7 +55,7 @@ Function Invoke-AddDlpCompliancePolicyTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'DlpCompliancePolicyTemplate'
         }
-        $Result = "Successfully created DLP Compliance Policy Template: $($Request.Body.Name ?? $Request.Body.name) with GUID $GUID"
+        $Result = "Successfully created DLP Compliance Policy Template: $($Ordered['name']) with GUID $GUID"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
         $StatusCode = [HttpStatusCode]::OK
     } catch {

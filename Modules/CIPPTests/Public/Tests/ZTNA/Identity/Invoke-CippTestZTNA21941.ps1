@@ -129,23 +129,23 @@ function Invoke-CippTestZTNA21941 {
 
         # Build result markdown
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: Token protection policies are properly configured for Windows devices.`n`n"
-            $ResultMarkdown += "Token protection binds authentication tokens to devices, making stolen tokens unusable on other devices.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Token protection policies are properly configured for Windows devices.`n`n")
+            $null = $ResultMarkdown.Append("Token protection binds authentication tokens to devices, making stolen tokens unusable on other devices.`n`n")
         } else {
             if ($TokenProtectionPolicies.Count -eq 0) {
-                $ResultMarkdown = "❌ **Fail**: No token protection policies found for Windows devices.`n`n"
-                $ResultMarkdown += "Without token protection, authentication tokens can be stolen and replayed from other devices.`n`n"
-                $ResultMarkdown += '[Create token protection policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)'
+                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: No token protection policies found for Windows devices.`n`n")
+                $null = $ResultMarkdown.Append("Without token protection, authentication tokens can be stolen and replayed from other devices.`n`n")
+                $null = $ResultMarkdown.Append('[Create token protection policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)')
             } else {
-                $ResultMarkdown = "❌ **Fail**: Token protection policies exist but are not properly configured.`n`n"
-                $ResultMarkdown += "Policies must target users and include both Office 365 and Microsoft Graph applications.`n`n"
+                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: Token protection policies exist but are not properly configured.`n`n")
+                $null = $ResultMarkdown.Append("Policies must target users and include both Office 365 and Microsoft Graph applications.`n`n")
             }
         }
 
         if ($TokenProtectionPolicies.Count -gt 0) {
-            $ResultMarkdown += "## Token protection policies`n`n"
-            $ResultMarkdown += "| Policy Name | State | Has Users | Has Required Apps | Status |`n"
-            $ResultMarkdown += "| :---------- | :---- | :-------- | :---------------- | :----- |`n"
+            $null = $ResultMarkdown.Append("## Token protection policies`n`n")
+            $null = $ResultMarkdown.Append("| Policy Name | State | Has Users | Has Required Apps | Status |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :---- | :-------- | :---------------- | :----- |`n")
 
             foreach ($policy in $TokenProtectionPolicies) {
                 $stateIcon = if ($policy.State -eq 'enabled') { '✅' } else { '❌' }
@@ -153,10 +153,10 @@ function Invoke-CippTestZTNA21941 {
                 $appsIcon = if ($policy.HasRequiredApps) { '✅' } else { '❌' }
                 $statusIcon = if ($policy.Status -eq 'Pass') { '✅' } else { '❌' }
 
-                $ResultMarkdown += "| $($policy.Name) | $stateIcon $($policy.State) | $usersIcon | $appsIcon | $statusIcon $($policy.Status) |`n"
+                $null = $ResultMarkdown.Append("| $($policy.Name) | $stateIcon $($policy.State) | $usersIcon | $appsIcon | $statusIcon $($policy.Status) |`n")
             }
 
-            $ResultMarkdown += "`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)"
+            $null = $ResultMarkdown.Append("`n[Review policies](https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies)")
         }
 
         $TestParams = @{

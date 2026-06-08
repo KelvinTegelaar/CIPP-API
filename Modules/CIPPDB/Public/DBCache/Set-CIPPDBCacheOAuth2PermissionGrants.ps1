@@ -22,8 +22,7 @@ function Set-CIPPDBCacheOAuth2PermissionGrants {
         $OAuth2PermissionGrants = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/oauth2PermissionGrants?$top=999' -tenantid $TenantFilter
 
         if ($OAuth2PermissionGrants) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Data $OAuth2PermissionGrants
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Data $OAuth2PermissionGrants -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Data $OAuth2PermissionGrants -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($OAuth2PermissionGrants.Count) OAuth2 permission grants" -sev Debug
         }
         $OAuth2PermissionGrants = $null

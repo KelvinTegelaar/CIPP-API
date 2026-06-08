@@ -24,8 +24,7 @@ function Set-CIPPDBCacheExoOrganizationConfig {
         if ($OrgConfig) {
             # OrganizationConfig returns a single object, wrap in array for consistency
             $OrgConfigArray = @($OrgConfig)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOrganizationConfig' -Data $OrgConfigArray
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOrganizationConfig' -Data $OrgConfigArray -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoOrganizationConfig' -Data $OrgConfigArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Organization configuration' -sev Debug
         }
         $OrgConfig = $null

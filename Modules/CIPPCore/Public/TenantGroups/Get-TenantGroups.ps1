@@ -1,19 +1,3 @@
-if (-not $script:TenantGroupsCache) {
-    $script:TenantGroupsCache = @{
-        Groups         = $null
-        Members        = $null
-        LastRefresh    = $null
-        MembersByGroup = $null  # Dictionary: GroupId -> members array
-    }
-}
-
-# Result cache: keyed by "GroupId|TenantFilter|Dynamic"
-if (-not $script:TenantGroupsResultCache) {
-    $script:TenantGroupsResultCache = @{}
-}
-
-$script:TenantGroupsCacheTTL = (New-TimeSpan -Minutes 5)
-
 function Get-TenantGroups {
     <#
     .SYNOPSIS
@@ -35,6 +19,22 @@ function Get-TenantGroups {
         [switch]$Dynamic,
         [switch]$SkipCache
     )
+
+    if (-not $script:TenantGroupsCache) {
+        $script:TenantGroupsCache = @{
+            Groups         = $null
+            Members        = $null
+            LastRefresh    = $null
+            MembersByGroup = $null
+        }
+    }
+    if (-not $script:TenantGroupsResultCache) {
+        $script:TenantGroupsResultCache = @{}
+    }
+    if (-not $script:TenantGroupsCacheTTL) {
+        $script:TenantGroupsCacheTTL = (New-TimeSpan -Minutes 5)
+    }
+
     $CacheKey = "$GroupId|$TenantFilter|$($Dynamic.IsPresent)"
 
     if ($SkipCache) {
@@ -180,13 +180,14 @@ function Get-TenantGroups {
             }
 
             $Results.Add([PSCustomObject]@{
-                    Id           = $Group.RowKey
-                    Name         = $Group.Name
-                    Description  = $Group.Description
-                    GroupType    = $Group.GroupType ?? 'static'
-                    RuleLogic    = $Group.RuleLogic ?? 'and'
-                    DynamicRules = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
-                    Members      = @($SortedMembers)
+                    Id                   = $Group.RowKey
+                    Name                 = $Group.Name
+                    Description          = $Group.Description
+                    GroupType            = $Group.GroupType ?? 'static'
+                    RuleLogic            = $Group.RuleLogic ?? 'and'
+                    ExcludePartnerTenant = [bool]($Group.ExcludePartnerTenant)
+                    DynamicRules         = $Group.DynamicRules ? @($Group.DynamicRules | ConvertFrom-Json) : @()
+                    Members              = @($SortedMembers)
                 })
         }
 

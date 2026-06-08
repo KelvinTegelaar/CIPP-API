@@ -4,6 +4,8 @@ Function Invoke-ListInactiveAccounts {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists user accounts that have not signed in for a configurable number of days (default 180), based on sign-in activity data.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

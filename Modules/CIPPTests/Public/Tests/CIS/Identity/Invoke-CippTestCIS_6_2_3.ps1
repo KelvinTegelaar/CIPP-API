@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_2_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.2.3) - Email from external senders SHALL be identified
+    Tests CIS M365 7.0.0 (6.2.3) - Email from external senders SHALL be identified
     #>
     param($Tenant)
 

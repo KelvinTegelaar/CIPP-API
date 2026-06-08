@@ -4,6 +4,8 @@ Function Invoke-ListUserMailboxRules {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists inbox rules configured on a specific user's Exchange Online mailbox.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

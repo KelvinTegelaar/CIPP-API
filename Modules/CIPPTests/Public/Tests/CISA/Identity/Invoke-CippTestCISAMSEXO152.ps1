@@ -26,14 +26,14 @@ function Invoke-CippTestCISAMSEXO152 {
         $FailedPolicies = $SafeLinksPolicies | Where-Object { -not $_.ScanUrls }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have real-time URL scanning enabled."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have real-time URL scanning enabled.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have real-time URL scanning enabled:`n`n"
-            $Result += "| Policy Name | Scan URLs |`n"
-            $Result += "| :---------- | :-------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($SafeLinksPolicies.Count) Safe Links policy/policies do not have real-time URL scanning enabled:`n`n")
+            $null = $Result.Append("| Policy Name | Scan URLs |`n")
+            $null = $Result.Append("| :---------- | :-------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Name) | $($Policy.ScanUrls) |`n"
+                $null = $Result.Append("| $($Policy.Name) | $($Policy.ScanUrls) |`n")
             }
             $Status = 'Failed'
         }

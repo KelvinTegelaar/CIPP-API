@@ -26,13 +26,21 @@ function Invoke-CIPPStandardExternalMFATrusted {
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyCrossTenantAccessPolicyDefault
         RECOMMENDEDBY
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ExternalMFATrusted' -TenantFilter $Tenant -Preset Entra
+
+    if ($TestResult -eq $false) {
+        return $true
+    } #we're done.
 
     try {
         $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)

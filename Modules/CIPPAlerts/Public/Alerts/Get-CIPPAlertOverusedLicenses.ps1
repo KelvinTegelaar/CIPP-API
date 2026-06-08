@@ -13,31 +13,23 @@ function Get-CIPPAlertOverusedLicenses {
 
 
     try {
-        $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-        $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
-        $AlertData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter | ForEach-Object {
-            $skuid = $_
-            foreach ($sku in $skuid) {
-                if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-                $PrettyName = Convert-SKUname -SkuID $sku.skuId
-                if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
-                if ($sku.prepaidUnits.enabled - $sku.consumedUnits -lt 0) {
-                    [PSCustomObject]@{
-                        Message       = "$PrettyName has Overused licenses. Using $($sku.consumedUnits) of $($sku.prepaidUnits.enabled)."
-                        LicenseName   = $PrettyName
-                        SkuId         = $sku.skuId
-                        SkuPartNumber = $sku.skuPartNumber
-                        ConsumedUnits = $sku.consumedUnits
-                        EnabledUnits  = $sku.prepaidUnits.enabled
-                        Tenant        = $TenantFilter
-                    }
+        $AlertData = Get-CIPPLicenseOverview -TenantFilter $TenantFilter -AlertMode | ForEach-Object {
+            if ([int]$_.CountAvailable -lt 0) {
+                [PSCustomObject]@{
+                    Message       = "$($_.License) has Overused licenses. Using $($_.CountUsed) of $($_.TotalLicenses)."
+                    LicenseName   = $_.License
+                    SkuId         = $_.skuId
+                    SkuPartNumber = $_.skuPartNumber
+                    ConsumedUnits = $_.CountUsed
+                    EnabledUnits  = $_.TotalLicenses
+                    Tenant        = $TenantFilter
                 }
             }
         }
+
         if ($AlertData) {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
-
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Overused Licenses Alert Error occurred: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

@@ -4,6 +4,8 @@ function Invoke-ListConnectionFilter {
         Entrypoint
     .ROLE
         Exchange.ConnectionFilter.Read
+    .DESCRIPTION
+        Lists hosted connection filter policies (IP allow/block lists) in Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

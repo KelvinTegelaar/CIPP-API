@@ -11,8 +11,8 @@ function Push-OrchestratorBatchItems {
         $Entities = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Item.Parameters.BatchId)'"
         $BatchItems = [system.Collections.Generic.List[object]]::new()
         $Entities | ForEach-Object {
-            $Item = $_.BatchItem | ConvertFrom-Json
-            $BatchItems.Add($Item)
+            $BatchItem = $_.BatchItem | ConvertFrom-Json
+            $BatchItems.Add($BatchItem)
         }
         Write-Information "Retrieved $($BatchItems.Count) batch items for BatchId: $($Item.Parameters.BatchId)"
     } else {

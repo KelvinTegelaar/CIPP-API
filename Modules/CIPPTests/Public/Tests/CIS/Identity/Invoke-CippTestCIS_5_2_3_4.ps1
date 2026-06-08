@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.4) - All member users SHALL be 'MFA capable'
+    Tests CIS M365 7.0.0 (5.2.3.4) - All member users SHALL be 'MFA capable'
     #>
     param($Tenant)
 
@@ -14,12 +14,20 @@ function Invoke-CippTestCIS_5_2_3_4 {
             return
         }
 
-        $Members = $Users | Where-Object { $_.userType -eq 'Member' -and $_.accountEnabled -eq $true }
-        $NotCapable = @()
+        $Members = $Users.Where({ $_.userType -eq 'Member' -and $_.accountEnabled -eq $true })
+        $RegById = @{}
+        $RegByUpn = @{}
+        foreach ($R in $Reg) {
+            if ($R.id) { $RegById[$R.id] = $R }
+            if ($R.userPrincipalName) { $RegByUpn[$R.userPrincipalName] = $R }
+        }
+        $NotCapable = [System.Collections.Generic.List[object]]::new()
         foreach ($U in $Members) {
-            $R = $Reg | Where-Object { $_.id -eq $U.id -or $_.userPrincipalName -eq $U.userPrincipalName } | Select-Object -First 1
+            $R = $null
+            if ($U.id -and $RegById.ContainsKey($U.id)) { $R = $RegById[$U.id] }
+            elseif ($U.userPrincipalName -and $RegByUpn.ContainsKey($U.userPrincipalName)) { $R = $RegByUpn[$U.userPrincipalName] }
             if (-not $R -or $R.isMfaCapable -ne $true) {
-                $NotCapable += $U
+                $NotCapable.Add($U)
             }
         }
 

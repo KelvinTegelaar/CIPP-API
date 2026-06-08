@@ -39,8 +39,7 @@ function Set-CIPPDBCacheSPOTenantSyncClientRestriction {
                 TenantFilter             = $TenantFilter
             }
             $Data = @($SyncRestriction)
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenantSyncClientRestriction' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenantSyncClientRestriction' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOTenantSyncClientRestriction' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint sync client restriction' -sev Debug
         }
         $SPOTenant = $null

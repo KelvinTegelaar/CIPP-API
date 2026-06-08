@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_1_1_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.1.2) - At least two emergency access (break-glass) accounts SHALL be defined
+    Tests CIS M365 7.0.0 (1.1.2) - At least two emergency access (break-glass) accounts SHALL be defined
 
     .DESCRIPTION
     Identifies likely break-glass accounts by looking for cloud-only Global Administrator
@@ -11,24 +11,37 @@ function Invoke-CippTestCIS_1_1_2 {
 
     try {
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $RoleAssignments = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignments'
+        $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
-        if (-not $Roles -or -not $RoleAssignments -or -not $Users) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles, RoleAssignments, or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        if ($null -eq $Roles -or $null -eq $Users) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (Roles or Users) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
-        $GA = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GA = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First', 1)[0]
         if (-not $GA) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_2' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Global Administrator role not found in tenant role definitions.' -Risk 'High' -Name 'Two emergency access accounts have been defined' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
             return
         }
 
-        $GAUserIds = ($RoleAssignments | Where-Object { $_.roleDefinitionId -eq $GA.id }).principalId
-        $GAUsers = $Users | Where-Object { $_.id -in $GAUserIds }
+        $GAUserIds = [System.Collections.Generic.HashSet[string]]::new()
+
+        foreach ($Member in @($GA.members)) {
+            if ($Member.id) {
+                [void]$GAUserIds.Add([string]$Member.id)
+            }
+        }
+
+        foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
+            if ($Assignment.roleDefinitionId -eq $GA.id -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $Assignment.principalId) {
+                [void]$GAUserIds.Add([string]$Assignment.principalId)
+            }
+        }
+
+        $GAUsers = $Users.Where({ $GAUserIds.Contains($_.id) })
         $BreakGlassPattern = 'breakglass|break-glass|emergency|cipp-bg|bg-admin'
-        $LikelyBG = $GAUsers | Where-Object { $_.userPrincipalName -match $BreakGlassPattern -and $_.onPremisesSyncEnabled -ne $true }
+        $LikelyBG = $GAUsers.Where({ $_.userPrincipalName -match $BreakGlassPattern -and $_.onPremisesSyncEnabled -ne $true })
 
         if ($LikelyBG.Count -ge 2) {
             $Status = 'Passed'

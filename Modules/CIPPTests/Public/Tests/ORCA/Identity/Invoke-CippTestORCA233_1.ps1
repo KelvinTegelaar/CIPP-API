@@ -26,12 +26,12 @@ function Invoke-CippTestORCA233_1 {
 
         if ($EnhancedFilteringEnabled) {
             $Status = 'Passed'
-            $Result = "Enhanced filtering appears to be properly configured.`n`n"
-            $Result += "**Configuration:** Reviewed"
+            $Result = [System.Text.StringBuilder]::new("Enhanced filtering appears to be properly configured.`n`n")
+            $null = $Result.Append("**Configuration:** Reviewed")
         } else {
             $Status = 'Informational'
-            $Result = "Unable to fully determine enhanced filtering status. Manual review recommended.`n`n"
-            $Result += "**Action Required:** Review inbound connectors for enhanced filtering configuration"
+            $Result = [System.Text.StringBuilder]::new("Unable to fully determine enhanced filtering status. Manual review recommended.`n`n")
+            $null = $Result.Append("**Action Required:** Review inbound connectors for enhanced filtering configuration")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA233_1' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Enhanced filtering on default connectors' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Configuration'

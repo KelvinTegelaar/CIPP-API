@@ -11,7 +11,14 @@
     Write-Host "PowerShell queue trigger function processed work item: $($Tenant.defaultDomainName)"
 
     try {
-        $quarantineMessages = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 } | Select-Object -ExcludeProperty *data.type*
+        $Page = 1
+        $PageSize = 1000
+        $quarantineMessages = [System.Collections.Generic.List[object]]::new()
+        do {
+            $Results = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = $PageSize; Page = $Page } | Select-Object -ExcludeProperty *data.type*
+            if ($Results) { $quarantineMessages.AddRange(@($Results)) }
+            $Page++
+        } while (@($Results).Count -eq $PageSize)
         foreach ($message in $quarantineMessages) {
             $messageData = @{
                 QuarantineMessage = [string]($message | ConvertTo-Json -Depth 10 -Compress)

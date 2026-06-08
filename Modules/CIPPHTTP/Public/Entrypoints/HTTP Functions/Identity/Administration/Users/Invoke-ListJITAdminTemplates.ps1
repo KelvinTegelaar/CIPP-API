@@ -4,6 +4,8 @@ function Invoke-ListJITAdminTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Identity.Role.Read
+    .DESCRIPTION
+        Lists Just-in-Time admin role templates that define temporary admin role assignments.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -48,13 +48,13 @@ function Invoke-CippTestZTNA22659 {
         $Status = if ($RiskySignIns.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: No risky workload identity sign-ins detected or all have been triaged.`n`n"
-            $ResultMarkdown += '[View identity protection](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/IdentityProtectionMenuBlade/~/RiskyServicePrincipals)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: No risky workload identity sign-ins detected or all have been triaged.`n`n")
+            $null = $ResultMarkdown.Append('[View identity protection](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/IdentityProtectionMenuBlade/~/RiskyServicePrincipals)')
         } else {
-            $ResultMarkdown = "❌ **Fail**: There are $($RiskySignIns.Count) risky workload identity sign-in(s) that require investigation.`n`n"
-            $ResultMarkdown += "## Risky service principal sign-ins`n`n"
-            $ResultMarkdown += "| Service Principal | App ID | Risk State | Risk Level | Last Updated |`n"
-            $ResultMarkdown += "| :---------------- | :----- | :--------- | :--------- | :----------- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: There are $($RiskySignIns.Count) risky workload identity sign-in(s) that require investigation.`n`n")
+            $null = $ResultMarkdown.Append("## Risky service principal sign-ins`n`n")
+            $null = $ResultMarkdown.Append("| Service Principal | App ID | Risk State | Risk Level | Last Updated |`n")
+            $null = $ResultMarkdown.Append("| :---------------- | :----- | :--------- | :--------- | :----------- |`n")
 
             foreach ($signin in $RiskySignIns) {
                 $spName = if ($signin.servicePrincipalDisplayName) { $signin.servicePrincipalDisplayName } else { 'N/A' }
@@ -73,10 +73,10 @@ function Invoke-CippTestZTNA22659 {
                     }
                 }
 
-                $ResultMarkdown += "| $spName | $appId | $riskState | $riskLevel | $lastUpdated |`n"
+                $null = $ResultMarkdown.Append("| $spName | $appId | $riskState | $riskLevel | $lastUpdated |`n")
             }
 
-            $ResultMarkdown += "`n[Investigate and remediate](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/IdentityProtectionMenuBlade/~/RiskyServicePrincipals)"
+            $null = $ResultMarkdown.Append("`n[Investigate and remediate](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/IdentityProtectionMenuBlade/~/RiskyServicePrincipals)")
         }
 
         $TestParams = @{

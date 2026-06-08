@@ -4,6 +4,8 @@ function Invoke-ListCSPsku {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists available CSP SKUs and current subscriptions for a tenant via the Sherweb integration.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

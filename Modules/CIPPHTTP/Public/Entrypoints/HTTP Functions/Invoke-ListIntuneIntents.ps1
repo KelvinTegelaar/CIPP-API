@@ -4,6 +4,8 @@ Function Invoke-ListIntuneIntents {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists Intune security baseline and endpoint protection intents (legacy template-based policies) with their settings and categories.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

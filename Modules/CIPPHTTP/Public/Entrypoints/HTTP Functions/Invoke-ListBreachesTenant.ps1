@@ -4,6 +4,8 @@ function Invoke-ListBreachesTenant {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists cached data breach results for user accounts in a tenant from the CIPP breach monitoring cache.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.2.1) - All forms of mail forwarding SHALL be blocked and/or disabled
+    Tests CIS M365 7.0.0 (6.2.1) - All forms of mail forwarding SHALL be blocked and/or disabled
     #>
     param($Tenant)
 

@@ -26,12 +26,12 @@ function Invoke-CippTestCISAMSEXO71 {
         $OrgConfigObject = $OrgConfig | Select-Object -First 1
 
         if ($OrgConfigObject.ExternalInOutlook -eq $true) {
-            $Result = '✅ **Pass**: External sender warnings are enabled in Outlook.'
+            $Result = [System.Text.StringBuilder]::new('✅ **Pass**: External sender warnings are enabled in Outlook.')
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: External sender warnings are not enabled in Outlook.`n`n"
-            $Result += "**Current Setting:**`n"
-            $Result += "- ExternalInOutlook: $($OrgConfigObject.ExternalInOutlook)"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: External sender warnings are not enabled in Outlook.`n`n")
+            $null = $Result.Append("**Current Setting:**`n")
+            $null = $Result.Append("- ExternalInOutlook: $($OrgConfigObject.ExternalInOutlook)")
             $Status = 'Failed'
         }
 

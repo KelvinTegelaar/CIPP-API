@@ -4,6 +4,8 @@ Function Invoke-ListExtensionSync {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
+    .DESCRIPTION
+        Lists extension synchronization tasks and their status, including last sync results for configured third-party integrations (Hudu, Halo, NinjaOne, etc.).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

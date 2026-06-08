@@ -4,6 +4,8 @@ function Invoke-ListContactTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.Contact.Read
+    .DESCRIPTION
+        Lists saved mail contact templates used for creating new Exchange contacts.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

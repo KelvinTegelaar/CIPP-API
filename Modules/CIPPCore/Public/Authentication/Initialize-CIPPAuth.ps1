@@ -4,8 +4,11 @@ function Initialize-CIPPAuth {
     Bootstraps authentication state for CIPP.
 
     .DESCRIPTION
-    Loads SAM credentials from Key Vault (or DevSecrets table)
-    and auto-patches redirect URIs on the SAM app registration.
+    Loads SAM credentials from Key Vault (or DevSecrets table),
+    auto-patches redirect URIs on the SAM and SSO app registrations,
+    and configures EasyAuth if SSO credentials are provisioned but
+    EasyAuth is not yet enabled. On a fresh deployment with nothing
+    configured, requests Craft's setup wizard mode.
     #>
     [CmdletBinding()]
     param()
@@ -17,33 +20,192 @@ function Initialize-CIPPAuth {
         NeedsSetup        = $true
     }
 
-    # 1. Determine Key Vault name
+    # -- Entry logging --
+    $EasyAuthEnabled = [Craft.Services.AppLifecycleBridge]::IsEasyAuthConfigured()
+    $IsDevStorage = ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') -or ($env:NonLocalHostAzurite -eq 'true')
     $KVName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
 
-    # 2. Try loading SAM credentials
-    if ($KVName -or $env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+    Write-Information "[Auth-Init] Starting — EasyAuth=$EasyAuthEnabled, DevStorage=$IsDevStorage, KVName='$KVName', DeploymentId='$env:WEBSITE_DEPLOYMENT_ID'"
+
+    # 1. Try loading SAM credentials
+    if ($KVName -or $IsDevStorage) {
         $AuthState.HasKeyVault = [bool]$KVName
+        Write-Information "[Auth-Init] Credential source available (KV=$($AuthState.HasKeyVault), DevStorage=$IsDevStorage) — attempting SAM load"
         try {
             $Auth = Get-CIPPAuthentication
             if ($Auth -and $env:ApplicationID -and $env:TenantID) {
                 $AuthState.HasSAMCredentials = $true
                 $AuthState.NeedsSetup = $false
                 $AuthState.IsConfigured = $true
-                Write-Information "[Auth-Init] SAM credentials loaded (AppID: $($env:ApplicationID))"
+                Write-Information "[Auth-Init] SAM credentials loaded (AppID: $($env:ApplicationID), TenantID: $($env:TenantID))"
+            } else {
+                Write-Information '[Auth-Init] SAM credential load returned but env vars not populated — credentials not available yet (expected on fresh deployment)'
             }
         } catch {
-            Write-Information "[Auth-Init] Could not load SAM credentials: $_"
+            $ErrorMessage = "$_"
+            # Distinguish "not found" from real access errors
+            if ($ErrorMessage -match 'SecretNotFound|not found|does not exist|Development variables not set') {
+                Write-Information "[Auth-Init] SAM credentials not found in storage — expected on fresh deployment"
+            } else {
+                Write-Information "[Auth-Init] ERROR accessing credential storage (possible permission/network issue): $ErrorMessage"
+            }
         }
+    } else {
+        Write-Information '[Auth-Init] No credential source available — WEBSITE_DEPLOYMENT_ID is not set and not using dev storage. Cannot load SAM credentials.'
     }
 
-    # 3. Auto-patch redirect URIs if we have credentials
+    # 2. Auto-patch redirect URIs if we have credentials
     if ($AuthState.HasSAMCredentials) {
         try {
             Update-CIPPSAMRedirectUri
         } catch {
-            Write-Information "[Auth-Init] Redirect URI patch failed (non-fatal): $_"
+            Write-Information "[Auth-Init] SAM redirect URI patch failed (non-fatal): $_"
+        }
+
+        try {
+            Update-CIPPSSORedirectUri
+        } catch {
+            Write-Information "[Auth-Init] SSO redirect URI patch failed (non-fatal): $_"
         }
     }
+
+    # 3. Handle EasyAuth configuration based on current state
+    if ($EasyAuthEnabled) {
+        Write-Information '[Auth-Init] EasyAuth is already configured'
+
+        # 3a. If CIPP_SSO_MIGRATION_APPID is set, check if migration is complete
+        if ($env:CIPP_SSO_MIGRATION_APPID) {
+            Write-Information '[Auth-Init] EasyAuth is active but CIPP_SSO_MIGRATION_APPID still set — checking if migration is complete...'
+            try {
+                $AuthConfigJson = $env:WEBSITE_AUTH_V2_CONFIG_JSON
+                if ($AuthConfigJson) {
+                    $AuthConfig = $AuthConfigJson | ConvertFrom-Json -ErrorAction Stop
+                    $ConfiguredAppId = $AuthConfig.identityProviders.azureActiveDirectory.registration.clientId
+
+                    if ($ConfiguredAppId -eq $env:CIPP_SSO_MIGRATION_APPID) {
+                        Write-Information '[Auth-Init] EasyAuth clientId matches migration app — migration still pending'
+                    } elseif ($ConfiguredAppId) {
+                        Write-Information "[Auth-Init] EasyAuth clientId ($ConfiguredAppId) differs from migration app — migration complete, cleaning up"
+                        $Removed = Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_MIGRATION_APPID'
+                        if ($Removed) {
+                            Request-CIPPRestart -Reason 'SSO migration env var cleaned up during warmup'
+                        }
+                    } else {
+                        Write-Information '[Auth-Init] No clientId found in EasyAuth config — skipping cleanup'
+                    }
+                }
+            } catch {
+                Write-Information "[Auth-Init] Migration cleanup check failed (non-fatal): $_"
+            }
+        }
+
+        # 3b. Reconcile EasyAuth issuer with SSOMultiTenant setting
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID) {
+            try {
+                $AuthConfigJson = $env:WEBSITE_AUTH_V2_CONFIG_JSON
+                if ($AuthConfigJson) {
+                    $AuthConfig = $AuthConfigJson | ConvertFrom-Json -ErrorAction Stop
+                    $CurrentIssuer = $AuthConfig.identityProviders.azureActiveDirectory.registration.openIdIssuer
+                    $ConfiguredAppId = $AuthConfig.identityProviders.azureActiveDirectory.registration.clientId
+
+                    if ($CurrentIssuer -and $ConfiguredAppId) {
+                        $SSOMultiTenant = $false
+                        if ($IsDevStorage) {
+                            try {
+                                $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+                                $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'" -ErrorAction SilentlyContinue
+                                $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
+                            } catch { }
+                        } elseif ($KVName) {
+                            try {
+                                $MtVal = Get-CippKeyVaultSecret -VaultName $KVName -Name 'SSOMultiTenant' -AsPlainText -ErrorAction Stop
+                                $SSOMultiTenant = $MtVal -eq 'True'
+                            } catch { }
+                        }
+
+                        $ExpectedIssuer = if ($SSOMultiTenant) {
+                            'https://login.microsoftonline.com/common/v2.0'
+                        } else {
+                            "https://login.microsoftonline.com/$($env:TenantID)/v2.0"
+                        }
+
+                        if ($CurrentIssuer -ne $ExpectedIssuer) {
+                            Write-Information "[Auth-Init] EasyAuth issuer mismatch: current=$CurrentIssuer expected=$ExpectedIssuer — updating"
+                            $Configured = Set-CIPPSSOEasyAuth -AppId $ConfiguredAppId -MultiTenant $SSOMultiTenant -TenantId $env:TenantID
+                            if ($Configured) {
+                                Write-Information '[Auth-Init] EasyAuth issuer updated — requesting container restart'
+                                Request-CIPPRestart -Reason 'EasyAuth issuer updated to match SSOMultiTenant setting during warmup'
+                            }
+                        } else {
+                            Write-Information "[Auth-Init] EasyAuth issuer matches SSOMultiTenant setting ($SSOMultiTenant) — no update needed"
+                        }
+                    }
+                }
+            } catch {
+                Write-Information "[Auth-Init] EasyAuth issuer reconciliation failed (non-fatal): $_"
+            }
+        }
+    } elseif ($AuthState.HasSAMCredentials) {
+        # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
+        Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'
+
+        if ($env:CIPP_SSO_MIGRATION_APPID) {
+            Write-Information "[Auth-Init] CIPP_SSO_MIGRATION_APPID is set ($($env:CIPP_SSO_MIGRATION_APPID)) — configuring implicit auth EasyAuth"
+            try {
+                $Configured = Set-CIPPSSOEasyAuth -AppId $env:CIPP_SSO_MIGRATION_APPID -MultiTenant $false -TenantId $env:TenantID -UseKvReferences -ImplicitAuth
+                if ($Configured) {
+                    Write-Information '[Auth-Init] Implicit auth EasyAuth configured — requesting restart'
+                    Request-CIPPRestart -Reason 'Implicit auth EasyAuth configured with central migration app during warmup'
+                }
+            } catch {
+                Write-Information "[Auth-Init] Implicit auth EasyAuth setup failed (non-fatal): $_"
+            }
+            return $AuthState
+        }
+
+        # Try to find SSO credentials and configure EasyAuth automatically
+        try {
+            $SSOAppId = $null
+            $SSOMultiTenant = $false
+
+            if ($IsDevStorage) {
+                $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+                $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'" -ErrorAction SilentlyContinue
+                $SSOAppId = $Secret.SSOAppId
+                $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
+            } elseif ($KVName) {
+                try { $SSOAppId = Get-CippKeyVaultSecret -VaultName $KVName -Name 'SSOAppId' -AsPlainText -ErrorAction Stop } catch { }
+                try {
+                    $mtVal = Get-CippKeyVaultSecret -VaultName $KVName -Name 'SSOMultiTenant' -AsPlainText -ErrorAction Stop
+                    $SSOMultiTenant = $mtVal -eq 'True'
+                } catch { }
+            }
+
+            if ($SSOAppId) {
+                Write-Information "[Auth-Init] Found SSO AppId ($SSOAppId) — configuring EasyAuth via ARM"
+                $Configured = Set-CIPPSSOEasyAuth -AppId $SSOAppId -MultiTenant $SSOMultiTenant -TenantId $env:TenantID -UseKvReferences
+                if ($Configured) {
+                    Write-Information '[Auth-Init] EasyAuth configured — requesting container restart'
+                    Request-CIPPRestart -Reason 'EasyAuth configured from SSO credentials during warmup'
+                }
+            } else {
+                Write-Information '[Auth-Init] SAM credentials loaded but no SSO AppId found — enabling setup wizard'
+                [Craft.Services.AppLifecycleBridge]::RequestSetupMode('SAM credentials available but no SSO app configured — setup wizard needed')
+            }
+        } catch {
+            Write-Information "[Auth-Init] SSO EasyAuth setup failed (non-fatal): $_"
+            [Craft.Services.AppLifecycleBridge]::RequestSetupMode('SSO setup failed — setup wizard needed for manual configuration')
+        }
+    } else {
+        # No EasyAuth AND no SAM credentials — this is a fresh/unconfigured deployment
+        Write-Information '[Auth-Init] Fresh deployment detected — no EasyAuth configured and no SAM credentials available'
+        Write-Information '[Auth-Init] Requesting setup wizard mode for initial configuration'
+        [Craft.Services.AppLifecycleBridge]::RequestSetupMode('Fresh deployment — no credentials or EasyAuth configured')
+        $AuthState.NeedsSetup = $true
+    }
+
+    # -- Exit logging --
+    Write-Information "[Auth-Init] Complete — IsConfigured=$($AuthState.IsConfigured), HasSAM=$($AuthState.HasSAMCredentials), NeedsSetup=$($AuthState.NeedsSetup), EasyAuth=$EasyAuthEnabled"
 
     return $AuthState
 }

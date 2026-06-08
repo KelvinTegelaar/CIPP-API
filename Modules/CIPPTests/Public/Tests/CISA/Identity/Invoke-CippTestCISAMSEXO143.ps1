@@ -40,14 +40,14 @@ function Invoke-CippTestCISAMSEXO143 {
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have no spam filter bypasses configured."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have no spam filter bypasses configured.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have spam filter bypasses configured:`n`n"
-            $Result += "| Policy Name | Allowed Senders | Allowed Domains | Issue |`n"
-            $Result += "| :---------- | :-------------- | :-------------- | :---- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have spam filter bypasses configured:`n`n")
+            $null = $Result.Append("| Policy Name | Allowed Senders | Allowed Domains | Issue |`n")
+            $null = $Result.Append("| :---------- | :-------------- | :-------------- | :---- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.'Policy Name') | $($Policy.'Allowed Senders') | $($Policy.'Allowed Domains') | $($Policy.Issue) |`n"
+                $null = $Result.Append("| $($Policy.'Policy Name') | $($Policy.'Allowed Senders') | $($Policy.'Allowed Domains') | $($Policy.Issue) |`n")
             }
             $Status = 'Failed'
         }

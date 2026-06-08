@@ -4,6 +4,8 @@ function Invoke-ListAssignmentFilters {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists Intune assignment filters for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,8 +16,23 @@ function Invoke-ListAssignmentFilters {
     # Get the tenant filter
     $TenantFilter = $Request.Query.tenantFilter
     $FilterId = $Request.Query.filterId
+    $UseReportDB = $Request.Query.UseReportDB
 
     try {
+        if (-not $FilterId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+            try {
+                $AssignmentFilters = Get-CIPPAssignmentFilterReport -TenantFilter $TenantFilter -ErrorAction Stop
+                $StatusCode = [HttpStatusCode]::OK
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $AssignmentFilters = $_.Exception.Message
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @($AssignmentFilters)
+                })
+        }
+
         if ($FilterId) {
             # Get specific filter
             $AssignmentFilters = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/assignmentFilters/$($FilterId)" -tenantid $TenantFilter

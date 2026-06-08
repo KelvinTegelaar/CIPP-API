@@ -4,6 +4,8 @@ Function Invoke-ListAzureADConnectStatus {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Retrieves Entra ID Connect (Azure AD Connect) synchronization status and configuration for a tenant, including sync intervals, password sync, and pass-through authentication settings.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

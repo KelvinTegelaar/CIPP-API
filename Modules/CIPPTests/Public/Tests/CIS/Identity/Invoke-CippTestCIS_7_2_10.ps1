@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_10 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.10) - Reauthentication with verification code SHALL be restricted
+    Tests CIS M365 7.0.0 (7.2.10) - Reauthentication with verification code SHALL be restricted
     #>
     param($Tenant)
 

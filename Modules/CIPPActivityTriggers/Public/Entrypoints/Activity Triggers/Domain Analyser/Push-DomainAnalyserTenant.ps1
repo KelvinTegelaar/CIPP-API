@@ -99,8 +99,8 @@ function Push-DomainAnalyserTenant {
                             }
 
                             if ($OldDomain) {
-                                $DomainObject.DkimSelectors = $OldDomain.DkimSelectors
-                                $DomainObject.MailProviders = $OldDomain.MailProviders
+                                $Domain.DkimSelectors = $OldDomain.DkimSelectors
+                                $Domain.MailProviders = $OldDomain.MailProviders
                             }
                         } else {
                             $Domain.TenantDetails = $TenantDetails

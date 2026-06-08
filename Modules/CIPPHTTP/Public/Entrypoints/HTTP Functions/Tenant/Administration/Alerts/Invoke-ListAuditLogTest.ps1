@@ -5,6 +5,8 @@ function Invoke-ListAuditLogTest {
 
     .ROLE
     Tenant.Alert.Read
+    .DESCRIPTION
+        Tests audit log webhook rules against a specific search to validate rule matching and alert triggering.
     #>
     Param($Request, $TriggerMetadata)
     $AuditLogQuery = @{

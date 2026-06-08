@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_2_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.2.4) - Organization SHALL NOT communicate with accounts in trial Teams tenants
+    Tests CIS M365 7.0.0 (8.2.4) - Organization SHALL NOT communicate with accounts in trial Teams tenants
     #>
     param($Tenant)
 

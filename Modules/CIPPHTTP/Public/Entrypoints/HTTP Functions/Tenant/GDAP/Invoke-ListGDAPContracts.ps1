@@ -4,6 +4,8 @@ function Invoke-ListGDAPContracts {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Lists Microsoft partner contracts (customer tenant relationships) from the Graph API.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

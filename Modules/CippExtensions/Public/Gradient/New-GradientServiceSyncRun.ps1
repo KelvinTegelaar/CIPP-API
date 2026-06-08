@@ -30,6 +30,10 @@ function New-GradientServiceSyncRun {
     $Table = Get-CIPPTable -TableName cachelicenses
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
+    # Only exclude licenses marked as ExcludedEverywhere (not alert-only exclusions)
+    $ExcludedEverywhereRowKeys = @($ExcludedSkuList | Where-Object {
+        $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
+    } | ForEach-Object { $_.RowKey })
 
     $RawGraphRequest = $Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
@@ -37,7 +41,7 @@ function New-GradientServiceSyncRun {
         Import-Module (Join-Path $env:CIPPRootPath 'Modules\CIPPCore')
         Write-Host "Doing $domainName"
         try {
-            $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop | Where-Object -Property skuId -NotIn $ExcludedSkuList.RowKey
+            $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop | Where-Object -Property skuId -NotIn $using:ExcludedEverywhereRowKeys
             [PSCustomObject]@{
                 Tenant   = $domainName
                 Licenses = $Licrequest

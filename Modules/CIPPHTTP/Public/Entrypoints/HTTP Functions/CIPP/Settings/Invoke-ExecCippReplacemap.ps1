@@ -29,9 +29,22 @@ function Invoke-ExecCippReplacemap {
 
     switch ($Action) {
         'List' {
-            $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'"
+            $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" | ForEach-Object {
+                $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue $(if ($customerId -eq 'AllTenants') { 'Global' } else { 'Tenant' }) -PassThru
+            }
             if (!$Variables) {
                 $Variables = @()
+            }
+            $IncludeGlobal = $Request.Query.includeGlobal ?? $Request.Body.includeGlobal
+            if ($IncludeGlobal -eq 'true' -and $customerId -ne 'AllTenants') {
+                $GlobalVariables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" | ForEach-Object {
+                    $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue 'Global' -PassThru
+                }
+                if ($GlobalVariables) {
+                    $TenantVarNames = @($Variables | ForEach-Object { $_.RowKey })
+                    $GlobalVariables = @($GlobalVariables | Where-Object { $_.RowKey -notin $TenantVarNames })
+                    $Variables = @($Variables) + @($GlobalVariables)
+                }
             }
             $Body = @{ Results = @($Variables) }
         }

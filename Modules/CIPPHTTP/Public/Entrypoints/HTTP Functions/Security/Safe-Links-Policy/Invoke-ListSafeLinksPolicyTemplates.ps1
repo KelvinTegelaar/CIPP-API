@@ -4,6 +4,8 @@ Function Invoke-ListSafeLinksPolicyTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.SafeLinks.Read
+    .DESCRIPTION
+        Lists saved Safe Links policy templates for deploying standardized Safe Links configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

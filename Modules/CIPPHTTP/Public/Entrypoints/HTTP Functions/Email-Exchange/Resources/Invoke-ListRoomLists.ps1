@@ -4,6 +4,8 @@ Function Invoke-ListRoomLists {
         Entrypoint
     .ROLE
         Exchange.Room.Read
+    .DESCRIPTION
+        Lists room list distribution groups and their members in Exchange Online.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

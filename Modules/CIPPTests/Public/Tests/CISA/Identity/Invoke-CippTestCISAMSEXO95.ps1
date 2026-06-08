@@ -51,16 +51,16 @@ function Invoke-CippTestCISAMSEXO95 {
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = '✅ **Pass**: All malware filter policies block click-to-run files (.exe, .cmd, .vbe).'
+            $Result = [System.Text.StringBuilder]::new('✅ **Pass**: All malware filter policies block click-to-run files (.exe, .cmd, .vbe).')
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) malware filter policy/policies do not properly block click-to-run executables:`n`n"
-            $Result += "| Policy Name | File Filter Enabled | Missing Blocked Types |`n"
-            $Result += "| :---------- | :------------------ | :-------------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) malware filter policy/policies do not properly block click-to-run executables:`n`n")
+            $null = $Result.Append("| Policy Name | File Filter Enabled | Missing Blocked Types |`n")
+            $null = $Result.Append("| :---------- | :------------------ | :-------------------- |`n")
             foreach ($Policy in $FailedPolicies) {
                 $fileFilterValue = if ($Policy.'File Filter Enabled') { $Policy.'File Filter Enabled' } else { $Policy.'Issue' }
                 $missingTypes = if ($Policy.'Missing Blocked Types') { $Policy.'Missing Blocked Types' } else { 'N/A' }
-                $Result += "| $($Policy.'Policy Name') | $fileFilterValue | $missingTypes |`n"
+                $null = $Result.Append("| $($Policy.'Policy Name') | $fileFilterValue | $missingTypes |`n")
             }
             $Status = 'Failed'
         }

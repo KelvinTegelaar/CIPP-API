@@ -4,6 +4,8 @@ Function Invoke-ListPotentialApps {
         Entrypoint
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Searches application repositories (WinGet, Chocolatey) for available applications matching a search string.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

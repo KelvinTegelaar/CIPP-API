@@ -4,6 +4,8 @@ function Invoke-ListEquipment {
         Entrypoint
     .ROLE
         Exchange.Equipment.Read
+    .DESCRIPTION
+        Lists equipment mailboxes (projectors, vehicles, etc.) in Exchange Online for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

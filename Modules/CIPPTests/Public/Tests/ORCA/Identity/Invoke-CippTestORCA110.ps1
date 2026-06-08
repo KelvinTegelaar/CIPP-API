@@ -26,16 +26,16 @@ function Invoke-CippTestORCA110 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have internal sender notifications disabled.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have internal sender notifications disabled.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies have internal sender notifications enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Inline Safety Tips Enabled |`n"
-            $Result += "|------------|---------------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies have internal sender notifications enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Inline Safety Tips Enabled |`n")
+            $null = $Result.Append("|------------|---------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.InlineSafetyTipsEnabled) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.InlineSafetyTipsEnabled) |`n")
             }
         }
 

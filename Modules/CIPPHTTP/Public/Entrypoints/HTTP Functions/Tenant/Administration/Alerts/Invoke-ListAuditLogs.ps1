@@ -4,6 +4,8 @@ function Invoke-ListAuditLogs {
         Entrypoint
     .ROLE
         CIPP.Alert.Read
+    .DESCRIPTION
+        Lists audit log entries from the CIPP audit log store, filterable by tenant, date range, and log ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

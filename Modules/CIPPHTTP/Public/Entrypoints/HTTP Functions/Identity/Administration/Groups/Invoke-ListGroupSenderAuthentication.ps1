@@ -4,6 +4,8 @@ function Invoke-ListGroupSenderAuthentication {
         Entrypoint
     .ROLE
         Exchange.Groups.Read
+    .DESCRIPTION
+        Lists sender authentication settings for an Exchange distribution group or mail-enabled security group, controlling who can send to the group.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

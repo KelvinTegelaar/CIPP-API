@@ -4,6 +4,8 @@ function Invoke-ListSharepointAdminUrl {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Retrieves the SharePoint Admin Center URL for a tenant.
     #>
     [CmdletBinding()]
     param(

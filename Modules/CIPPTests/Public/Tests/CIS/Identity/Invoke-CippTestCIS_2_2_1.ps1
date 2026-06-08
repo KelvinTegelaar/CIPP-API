@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.2.1) - Emergency access account activity SHALL be monitored
+    Tests CIS M365 7.0.0 (2.2.1) - Emergency access account activity SHALL be monitored
     #>
     param($Tenant)
 

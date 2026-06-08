@@ -26,14 +26,14 @@ function Invoke-CippTestCISAMSEXO103 {
         $FailedPolicies = $MalwarePolicies | Where-Object { -not $_.ZapEnabled }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($MalwarePolicies.Count) malware filter policy/policies have ZAP (Zero-hour Auto Purge) enabled."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($MalwarePolicies.Count) malware filter policy/policies have ZAP (Zero-hour Auto Purge) enabled.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($MalwarePolicies.Count) malware filter policy/policies do not have ZAP enabled:`n`n"
-            $Result += "| Policy Name | ZAP Enabled |`n"
-            $Result += "| :---------- | :---------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($MalwarePolicies.Count) malware filter policy/policies do not have ZAP enabled:`n`n")
+            $null = $Result.Append("| Policy Name | ZAP Enabled |`n")
+            $null = $Result.Append("| :---------- | :---------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Name) | $($Policy.ZapEnabled) |`n"
+                $null = $Result.Append("| $($Policy.Name) | $($Policy.ZapEnabled) |`n")
             }
             $Status = 'Failed'
         }

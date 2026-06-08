@@ -9,9 +9,14 @@ function Invoke-ExecWebhookSubscriptions {
     param($Request, $TriggerMetadata)
 
     $Table = Get-CIPPTable -TableName webhookTable
+    $WebhookId = $Request.Query.WebhookID
+    $SafeWebhookId = if (![string]::IsNullOrEmpty($WebhookId)) {
+        ConvertTo-CIPPODataFilterValue -Value $WebhookId -Type String
+    }
+
     switch ($Request.Query.Action) {
         'Delete' {
-            $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.WebhookID)'" -Property PartitionKey, RowKey
+            $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$SafeWebhookId'" -Property PartitionKey, RowKey
             if ($Webhook) {
                 Remove-CIPPGraphSubscription -TenantFilter $Webhook.PartitionKey -CIPPID $Webhook.RowKey
                 Remove-AzDataTableEntity -Force @Table -Entity $Webhook
@@ -27,7 +32,7 @@ function Invoke-ExecWebhookSubscriptions {
             }
         }
         'Unsubscribe' {
-            $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.WebhookID)'" -Property PartitionKey, RowKey
+            $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$SafeWebhookId'" -Property PartitionKey, RowKey
             if ($Webhook) {
                 $Unsubscribe = @{
                     TenantFilter = $Webhook.PartitionKey
@@ -82,7 +87,7 @@ function Invoke-ExecWebhookSubscriptions {
         }
         'Resubscribe' {
             Write-Host "Resubscribing to $($Request.Query.WebhookID)"
-            $Row = Get-AzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.WebhookID)'"
+            $Row = Get-AzDataTableEntity @Table -Filter "RowKey eq '$SafeWebhookId'"
             if ($Row) {
                 $NewSubParams = @{
                     TenantFilter = $Row.PartitionKey
