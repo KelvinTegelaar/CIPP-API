@@ -23,6 +23,7 @@ function Invoke-ExecAssignApp {
     $AssignmentMode = $Request.Body.assignmentMode
     $AssignmentFilterName = $Request.Body.AssignmentFilterName
     $AssignmentFilterType = $Request.Body.AssignmentFilterType
+    $ExcludeGroup = $Request.Body.excludeGroup
 
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
 
@@ -103,6 +104,10 @@ function Invoke-ExecAssignApp {
     }
     if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterType)) {
         $setParams.AssignmentFilterType = $AssignmentFilterType
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExcludeGroup)) {
+        $setParams.ExcludeGroup = $ExcludeGroup
     }
 
     try {

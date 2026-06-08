@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.1) - Modern authentication for SharePoint applications SHALL be required
+    Tests CIS M365 7.0.0 (7.2.1) - Modern authentication for SharePoint applications SHALL be required
     #>
     param($Tenant)
 

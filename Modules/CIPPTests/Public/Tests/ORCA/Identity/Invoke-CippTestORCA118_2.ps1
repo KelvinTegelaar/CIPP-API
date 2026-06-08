@@ -24,17 +24,17 @@ function Invoke-CippTestORCA118_2 {
 
         if ($FailedRules.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "No transport rules allow list domains by setting SCL to -1.`n`n"
-            $Result += "**Total Transport Rules Checked:** $($TransportRules.Count)"
+            $Result = [System.Text.StringBuilder]::new("No transport rules allow list domains by setting SCL to -1.`n`n")
+            $null = $Result.Append("**Total Transport Rules Checked:** $($TransportRules.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedRules.Count) transport rules allow list domains by setting SCL to -1.`n`n"
-            $Result += "**Non-Compliant Rules:** $($FailedRules.Count)`n`n"
-            $Result += "| Rule Name | Sender Domains |`n"
-            $Result += "|-----------|---------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedRules.Count) transport rules allow list domains by setting SCL to -1.`n`n")
+            $null = $Result.Append("**Non-Compliant Rules:** $($FailedRules.Count)`n`n")
+            $null = $Result.Append("| Rule Name | Sender Domains |`n")
+            $null = $Result.Append("|-----------|---------------|`n")
             foreach ($Rule in $FailedRules) {
                 $Domains = if ($Rule.SenderDomainIs) { ($Rule.SenderDomainIs -join ', ') } else { 'N/A' }
-                $Result += "| $($Rule.Name) | $Domains |`n"
+                $null = $Result.Append("| $($Rule.Name) | $Domains |`n")
             }
         }
 

@@ -141,7 +141,7 @@ function Set-CIPPDBCacheMyNewType {
 
     try {
         # 1. Optional license check
-        $Licensed = Test-CIPPStandardLicense -StandardName 'MyFeature' -TenantFilter $TenantFilter -RequiredCapabilities @('REQUIRED_SKU')
+        $Licensed = Test-CIPPStandardLicense -StandardName 'MyFeature' -TenantFilter $TenantFilter -Preset Intune
         if (-not $Licensed) { return }
 
         # 2. Fetch data from API
@@ -160,7 +160,7 @@ function Set-CIPPDBCacheMyNewType {
 
 - **Always use `-AddCount`** unless you handle count rows manually
 - **Pipeline streaming** for large datasets: pipe directly from `New-GraphGetRequest` into `Add-CIPPDbItem`
-- **License gating**: use `Test-CIPPStandardLicense` when the API requires specific SKUs
+- **License gating**: use `Test-CIPPStandardLicense -Preset <Name>` for common capability sets (`Exchange`, `SharePoint`, `Intune`, `Entra`, `EntraP2`, `Teams`, `Compliance`); use `-RequiredCapabilities` only for non-preset capabilities or additional edge-case capabilities
 - **Conditional `$select`**: expand Graph `$select` fields based on license capabilities
 - **Error handling**: catch, log with `Write-LogMessage`, do not rethrow (allows other types in the collection to continue)
 - **No explicit return** of data — these functions write to the table as a side effect

@@ -21,7 +21,7 @@ function Push-CIPPStandard {
         $API = "$($Standard)_$($Item.TemplateId)"
     }
 
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API -BaseTime ([int64]$Item.QueuedTime)
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
         return
@@ -38,6 +38,12 @@ function Push-CIPPStandard {
     }
     if ($Standard -eq 'ConditionalAccessTemplate') {
         $StandardInfo.ConditionalAccessTemplateId = $Item.Settings.TemplateList.value
+    }
+
+    if (-not (Get-Command -Name $FunctionName -Module CIPPStandards -ErrorAction SilentlyContinue)) {
+        Write-LogMessage -tenant $Tenant -message "The standard $Standard was not found. This may have been deprecated or replaced with a new standard." -sev 'Warning' -API 'Standards'
+        Write-Warning "Function $FunctionName not found"
+        return
     }
 
     # Initialize AsyncLocal storage for thread-safe per-invocation context

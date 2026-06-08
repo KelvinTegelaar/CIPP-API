@@ -4,6 +4,8 @@ function Invoke-ListUserMailboxDetails {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Retrieves detailed Exchange Online mailbox properties for a specific user, including quotas, archive status, and protocols.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -83,11 +85,16 @@ function Invoke-ListUserMailboxDetails {
                 $ArchiveEnabled = $false
             }
 
-            # Get organization config of auto-expanding archive if it's disabled on user level
-            if (-not $MailboxDetailedRequest.AutoExpandingArchiveEnabled -and $ArchiveEnabled) {
-                $AutoExpandingArchiveEnabled = $OrgConfig.AutoExpandingArchiveEnabled
+            # Check org-level first; if enabled org-wide, report that. Otherwise use mailbox-specific value.
+            if ($OrgConfig.AutoExpandingArchiveEnabled) {
+                $AutoExpandingArchiveEnabled = $true
+                $AutoExpandingArchiveScope = 'Organization'
+            } elseif ($MailboxDetailedRequest.AutoExpandingArchiveEnabled) {
+                $AutoExpandingArchiveEnabled = $true
+                $AutoExpandingArchiveScope = 'Mailbox'
             } else {
-                $AutoExpandingArchiveEnabled = $MailboxDetailedRequest.AutoExpandingArchiveEnabled
+                $AutoExpandingArchiveEnabled = $false
+                $AutoExpandingArchiveScope = 'None'
             }
         } catch {
             $ArchiveEnabled = $false
@@ -260,6 +267,7 @@ function Invoke-ListUserMailboxDetails {
         BlockedForSpam           = $BlockedForSpam
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
+        AutoExpandingArchiveScope = $AutoExpandingArchiveScope
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
         RetentionPolicy          = $MailboxDetailedRequest.RetentionPolicy

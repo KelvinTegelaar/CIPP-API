@@ -4,6 +4,8 @@ function Invoke-ListTenantDrift {
         Entrypoint
     .ROLE
         Tenant.Standards.Read
+    .DESCRIPTION
+        Lists configuration drift for tenants, comparing current state against the desired state defined by applied standards.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

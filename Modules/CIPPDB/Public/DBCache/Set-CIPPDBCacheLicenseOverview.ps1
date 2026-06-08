@@ -20,8 +20,7 @@ function Set-CIPPDBCacheLicenseOverview {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching license overview' -sev Debug
 
         $LicenseOverview = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'LicenseOverview' -Data @($LicenseOverview)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'LicenseOverview' -Data @($LicenseOverview) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'LicenseOverview' -Data @($LicenseOverview) -AddCount
         $LicenseOverview = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached license overview successfully' -sev Debug

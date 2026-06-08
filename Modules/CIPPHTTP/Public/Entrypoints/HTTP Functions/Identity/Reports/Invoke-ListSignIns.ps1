@@ -4,6 +4,8 @@ Function Invoke-ListSignIns {
         Entrypoint
     .ROLE
         Identity.AuditLog.Read
+    .DESCRIPTION
+        Lists recent sign-in log entries for a tenant, filterable by various criteria. Supports AllTenants queries.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

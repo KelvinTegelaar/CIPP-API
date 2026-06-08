@@ -18,6 +18,10 @@ function Start-DurableCleanup {
         [int]$MaxDuration = 86400
     )
 
+    if ($env:CIPPNG -eq 'true') {
+        return
+    }
+
     $WarningPreference = 'SilentlyContinue'
     $TargetTime = (Get-Date).ToUniversalTime().AddSeconds(-$MaxDuration)
     $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage

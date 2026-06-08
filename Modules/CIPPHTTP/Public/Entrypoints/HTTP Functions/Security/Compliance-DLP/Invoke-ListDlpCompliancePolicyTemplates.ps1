@@ -4,6 +4,8 @@ Function Invoke-ListDlpCompliancePolicyTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Security.DlpCompliancePolicy.Read
+    .DESCRIPTION
+        Lists saved DLP compliance policy templates for deploying standardized DLP configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

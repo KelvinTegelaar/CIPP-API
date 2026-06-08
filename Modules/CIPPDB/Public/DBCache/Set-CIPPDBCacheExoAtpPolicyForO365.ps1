@@ -21,8 +21,7 @@ function Set-CIPPDBCacheExoAtpPolicyForO365 {
 
         $AtpPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AtpPolicyForO365'
         if ($AtpPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAtpPolicyForO365' -Data $AtpPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAtpPolicyForO365' -Data $AtpPolicies -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAtpPolicyForO365' -Data $AtpPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AtpPolicies.Count) ATP policies for Office 365" -sev Debug
         }
         $AtpPolicies = $null

@@ -4,6 +4,8 @@ function Invoke-ListLicenses {
         Entrypoint
     .ROLE
         Tenant.Directory.Read
+    .DESCRIPTION
+        Lists Microsoft 365 license SKUs and their assigned/available counts for a tenant. For AllTenants queries, consider using ListDBCache for better performance.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

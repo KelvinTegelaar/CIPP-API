@@ -57,14 +57,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
         return
     }
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -RequiredCapabilities @(
-        'INTUNE_A',
-        'MDM_Services',
-        'EMS',
-        'SCCM',
-        'MICROSOFTINTUNEPLAN1'
-    )
-
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -Preset Intune
     if (-not $HasLicense) {
         return
     }

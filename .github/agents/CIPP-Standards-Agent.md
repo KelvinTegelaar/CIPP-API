@@ -82,6 +82,7 @@ When adding or modifying standards:
   - Similar logging and error handling
 - Reuse helper functions instead of inlining raw Graph calls or custom HTTP code.
 - Keep behaviour predictable.
+- If a standard needs license gating, use `Test-CIPPStandardLicense` with `-Preset` for common capability sets (`Exchange`, `SharePoint`, `Intune`, `Entra`, `EntraP2`, `Teams`, `Compliance`). Use `-RequiredCapabilities` only when no preset matches, or combine it with `-Preset` for extra edge-case capabilities.
 
 ### 2. Return the code for the frontend.
 

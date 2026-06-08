@@ -192,6 +192,19 @@ function New-CIPPGroup {
             } catch {
                 Write-Warning "Failed to write group creation cache for $($GroupObject.displayName): $($_.Exception.Message)"
             }
+
+            # Assign licenses for Security groups
+            if ($NormalizedGroupType -eq 'Generic' -and $GroupObject.licenses) {
+                $LicenseSkuIds = @($GroupObject.licenses | Where-Object { $_ } | ForEach-Object { $_.value ?? $_ })
+                if ($LicenseSkuIds.Count -gt 0) {
+                    try {
+                        $null = Set-CIPPGroupLicense -GroupId $GraphRequest.id -GroupName $GroupObject.displayName -AddLicenses $LicenseSkuIds -TenantFilter $TenantFilter -APIName $APIName
+                    } catch {
+                        Write-Warning "Failed to assign licenses to group $($GroupObject.displayName): $($_.Exception.Message)"
+                    }
+                }
+            }
+
             if ($GroupObject.subscribeMembers) {
                 #Waiting for group to become available in Exo.
                 Start-Sleep -Seconds 10

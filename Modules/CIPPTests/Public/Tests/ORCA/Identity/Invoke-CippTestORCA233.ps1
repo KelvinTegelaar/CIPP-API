@@ -34,14 +34,14 @@ function Invoke-CippTestORCA233 {
 
         if ($NonCompliantDomains.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All domains are properly configured for mail flow.`n`n"
-            $Result += "**Compliant Domains:** $($CompliantDomains.Count)"
+            $Result = [System.Text.StringBuilder]::new("All domains are properly configured for mail flow.`n`n")
+            $null = $Result.Append("**Compliant Domains:** $($CompliantDomains.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($NonCompliantDomains.Count) domains may not be properly configured for mail flow.`n`n"
-            $Result += "**Domains Needing Review:**`n`n"
+            $Result = [System.Text.StringBuilder]::new("$($NonCompliantDomains.Count) domains may not be properly configured for mail flow.`n`n")
+            $null = $Result.Append("**Domains Needing Review:**`n`n")
             foreach ($Domain in $NonCompliantDomains) {
-                $Result += "- $Domain`n"
+                $null = $Result.Append("- $Domain`n")
             }
         }
 

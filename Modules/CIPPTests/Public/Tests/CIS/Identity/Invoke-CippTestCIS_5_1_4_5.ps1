@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_4_5 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.4.5) - Local Administrator Password Solution (LAPS) SHALL be enabled
+    Tests CIS M365 7.0.0 (5.1.4.5) - Local Administrator Password Solution (LAPS) SHALL be enabled
     #>
     param($Tenant)
 

@@ -4,6 +4,8 @@ Function Invoke-ListUsers {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. For AllTenants or cached data, consider using ListDBCache with type=Users for significantly better performance.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_2_8 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.2.8) - 'sign-in risk' SHALL be blocked for medium and high risk
+    Tests CIS M365 7.0.0 (5.2.2.8) - 'sign-in risk' SHALL be blocked for medium and high risk
     #>
     param($Tenant)
 

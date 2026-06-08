@@ -65,18 +65,20 @@ function Invoke-CippTestZTNA21773 {
             $Result = 'Applications in your tenant do not have certificates valid for more than 180 days'
         } else {
             $Status = 'Failed'
-            $Result = "Found $($AppsWithLongCerts.Count) applications and $($SPsWithLongCerts.Count) service principals with certificates longer than 180 days`n`n"
+            $sb = [System.Text.StringBuilder]::new()
+            $null = $sb.Append("Found $($AppsWithLongCerts.Count) applications and $($SPsWithLongCerts.Count) service principals with certificates longer than 180 days`n`n")
 
             if ($AppsWithLongCerts.Count -gt 0) {
-                $Result += "## Apps with long-lived certificates:`n`n"
-                $Result += ($AppsWithLongCerts | ForEach-Object { "- $($_.displayName) (AppId: $($_.appId))" }) -join "`n"
-                $Result += "`n`n"
+                $null = $sb.Append("## Apps with long-lived certificates:`n`n")
+                $null = $sb.Append((($AppsWithLongCerts | ForEach-Object { "- $($_.displayName) (AppId: $($_.appId))" }) -join "`n"))
+                $null = $sb.Append("`n`n")
             }
 
             if ($SPsWithLongCerts.Count -gt 0) {
-                $Result += "## Service principals with long-lived certificates:`n`n"
-                $Result += ($SPsWithLongCerts | ForEach-Object { "- $($_.displayName) (AppId: $($_.appId))" }) -join "`n"
+                $null = $sb.Append("## Service principals with long-lived certificates:`n`n")
+                $null = $sb.Append((($SPsWithLongCerts | ForEach-Object { "- $($_.displayName) (AppId: $($_.appId))" }) -join "`n"))
             }
+            $Result = $sb.ToString()
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21773' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Applications do not have certificates with expiration longer than 180 days' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'

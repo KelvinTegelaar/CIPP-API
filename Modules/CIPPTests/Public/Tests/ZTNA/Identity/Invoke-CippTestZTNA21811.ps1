@@ -44,12 +44,12 @@ function Invoke-CippTestZTNA21811 {
 
         if ($misconfiguredDomains) {
             $reportTitle1 = 'Domains with password expiration enabled'
-            $mdInfo1 = "`n## $reportTitle1`n`n"
-            $mdInfo1 += "| Domain Name | Password Validity Interval |`n"
-            $mdInfo1 += "| :---------- | :------------------------- |`n"
+            $mdInfo1 = [System.Text.StringBuilder]::new("`n## $reportTitle1`n`n")
+            $null = $mdInfo1.Append("| Domain Name | Password Validity Interval |`n")
+            $null = $mdInfo1.Append("| :---------- | :------------------------- |`n")
 
             foreach ($domain in $misconfiguredDomains) {
-                $mdInfo1 += "| $($domain.id) | $($domain.passwordValidityPeriodInDays) |`n"
+                $null = $mdInfo1.Append("| $($domain.id) | $($domain.passwordValidityPeriodInDays) |`n")
             }
 
             $testResultMarkdown = $testResultMarkdown + $mdInfo1
@@ -57,16 +57,16 @@ function Invoke-CippTestZTNA21811 {
 
         if ($misconfiguredUsers) {
             $reportTitle2 = 'Users with password expiration enabled'
-            $mdInfo2 = "`n## $reportTitle2`n`n"
-            $mdInfo2 += "| Display Name | User Principal Name | User Password Expiration setting | Domain Password Expiration setting |`n"
-            $mdInfo2 += "| :----------- | :------------------ | :------------------------------- | :--------------------------------- |`n"
+            $mdInfo2 = [System.Text.StringBuilder]::new("`n## $reportTitle2`n`n")
+            $null = $mdInfo2.Append("| Display Name | User Principal Name | User Password Expiration setting | Domain Password Expiration setting |`n")
+            $null = $mdInfo2.Append("| :----------- | :------------------ | :------------------------------- | :--------------------------------- |`n")
 
             foreach ($misconfiguredUser in $misconfiguredUsers) {
                 $displayName = $misconfiguredUser.displayName
                 $userPrincipalName = $misconfiguredUser.userPrincipalName
                 $userPasswordExpiration = $misconfiguredUser.passwordPolicies
                 $domainPasswordExpiration = $misconfiguredUser.DomainPasswordValidity
-                $mdInfo2 += "| $displayName | $userPrincipalName | $userPasswordExpiration | $domainPasswordExpiration |`n"
+                $null = $mdInfo2.Append("| $displayName | $userPrincipalName | $userPasswordExpiration | $domainPasswordExpiration |`n")
             }
 
             $testResultMarkdown = $testResultMarkdown + $mdInfo2

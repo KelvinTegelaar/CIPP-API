@@ -1,22 +1,20 @@
 function Invoke-CippTestCIS_1_3_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (1.3.4) - 'User owned apps and services' SHALL be restricted
+    Tests CIS M365 7.0.0 (1.3.4) - 'User owned apps and services' SHALL be restricted
     #>
     param($Tenant)
 
     try {
-        $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-
-        if (-not $Settings) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_3_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Settings cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name "'User owned apps and services' is restricted" -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Application Management'
-            return
-        }
-
-        $AppsAndServices = $Settings | Where-Object { $_.id -eq 'appsAndServices' -or $_.PSObject.Properties.Name -contains 'isOfficeStoreEnabled' } | Select-Object -First 1
+        $AppsAndServices = Get-CIPPTestData -TenantFilter $Tenant -Type 'AppsAndServices'
 
         if (-not $AppsAndServices) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_3_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'appsAndServices settings not present in the Settings cache.' -Risk 'Medium' -Name "'User owned apps and services' is restricted" -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Application Management'
+            $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
+            $AppsAndServices = $Settings | Where-Object { $_.id -eq 'appsAndServices' -or $_.PSObject.Properties.Name -contains 'isOfficeStoreEnabled' } | Select-Object -First 1
+        }
+
+        if (-not $AppsAndServices -or $AppsAndServices.PSObject.Properties.Name -notcontains 'isOfficeStoreEnabled' -or $AppsAndServices.PSObject.Properties.Name -notcontains 'isAppAndServicesTrialEnabled') {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_3_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'appsAndServices settings not present in cache. Please refresh the AppsAndServices (or Settings) cache for this tenant.' -Risk 'Medium' -Name "'User owned apps and services' is restricted" -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Application Management'
             return
         }
 

@@ -4,6 +4,8 @@ Function Invoke-ListUserCounts {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Returns summary counts of total users, licensed users, and global administrators for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

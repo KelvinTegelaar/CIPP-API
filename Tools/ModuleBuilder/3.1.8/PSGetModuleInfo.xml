@@ -1,0 +1,165 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">ModuleBuilder</S>
+      <Version N="Version">3.1.8</Version>
+      <S N="Type">Module</S>
+      <S N="Description">A module for authoring and building PowerShell modules</S>
+      <S N="Author">Joel Bennett</S>
+      <S N="CompanyName">Jaykul</S>
+      <S N="Copyright">Copyright 2018 Joel Bennett</S>
+      <DT N="PublishedDate">2025-04-12T21:57:27+08:00</DT>
+      <Obj N="InstalledDate" RefId="1">
+        <DT>2025-12-08T22:53:42.0930546+08:00</DT>
+        <MS>
+          <Obj N="DisplayHint" RefId="2">
+            <TN RefId="1">
+              <T>Microsoft.PowerShell.Commands.DisplayHintType</T>
+              <T>System.Enum</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>DateTime</ToString>
+            <I32>2</I32>
+          </Obj>
+        </MS>
+      </Obj>
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://github.com/PoshCode/ModuleBuilder/blob/master/LICENSE</URI>
+      <URI N="ProjectUri">https://github.com/PoshCode/ModuleBuilder</URI>
+      <URI N="IconUri">https://github.com/PoshCode/ModuleBuilder/blob/resources/ModuleBuilder.png?raw=true</URI>
+      <Obj N="Tags" RefId="3">
+        <TN RefId="2">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>Authoring</S>
+          <S>Build</S>
+          <S>Development</S>
+          <S>BestPractices</S>
+          <S>PSModule</S>
+          <S>PSEdition_Core</S>
+          <S>PSEdition_Desktop</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="4">
+        <TN RefId="3">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">Workflow</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="2" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Build-Module</S>
+                <S>Convert-Breakpoint</S>
+                <S>Convert-CodeCoverage</S>
+                <S>ConvertFrom-SourceLineNumber</S>
+                <S>ConvertTo-SourceLineNumber</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="7">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Build-Module</S>
+                <S>Convert-Breakpoint</S>
+                <S>Convert-CodeCoverage</S>
+                <S>ConvertFrom-SourceLineNumber</S>
+                <S>ConvertTo-SourceLineNumber</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">ModuleBuilder v3.1.8+Build.local.Branch.main.Sha.b4d5aaf9df98194aa7d40c46cd3d7ca787011c54.Date.20250412T215606_x000A_            Fix case sensitivity of defaults for SourceDirectories and PublicFilter</S>
+      <Obj N="Dependencies" RefId="8">
+        <TNRef RefId="2" />
+        <LST>
+          <Obj RefId="9">
+            <TN RefId="4">
+              <T>System.Collections.Specialized.OrderedDictionary</T>
+              <T>System.Object</T>
+            </TN>
+            <DCT>
+              <En>
+                <S N="Key">Name</S>
+                <S N="Value">Configuration</S>
+              </En>
+              <En>
+                <S N="Key">CanonicalId</S>
+                <S N="Value">nuget:Configuration</S>
+              </En>
+            </DCT>
+          </Obj>
+        </LST>
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="10">
+        <TN RefId="5">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Copyright 2018 Joel Bennett</S>
+          <S N="description">A module for authoring and building PowerShell modules</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="releaseNotes">ModuleBuilder v3.1.8+Build.local.Branch.main.Sha.b4d5aaf9df98194aa7d40c46cd3d7ca787011c54.Date.20250412T215606_x000A_            Fix case sensitivity of defaults for SourceDirectories and PublicFilter</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">False</S>
+          <S N="versionDownloadCount">26117</S>
+          <S N="downloadCount">273822</S>
+          <S N="packageSize">20183</S>
+          <S N="published">12/04/2025 9:57:27 PM +08:00</S>
+          <S N="created">12/04/2025 9:57:27 PM +08:00</S>
+          <S N="lastUpdated">8/12/2025 2:50:00 PM +08:00</S>
+          <S N="tags">Authoring Build Development BestPractices PSModule PSEdition_Core PSEdition_Desktop PSFunction_Build-Module PSCommand_Build-Module PSFunction_Convert-Breakpoint PSCommand_Convert-Breakpoint PSFunction_Convert-CodeCoverage PSCommand_Convert-CodeCoverage PSFunction_ConvertFrom-SourceLineNumber PSCommand_ConvertFrom-SourceLineNumber PSFunction_ConvertTo-SourceLineNumber PSCommand_ConvertTo-SourceLineNumber PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2025-12-08T14:50:00Z</S>
+          <S N="NormalizedVersion">3.1.8</S>
+          <S N="Authors">Joel Bennett</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">ModuleBuilder.nuspec|ModuleBuilder.psd1|ModuleBuilder.psm1|en-US\about_ModuleBuilder.help.txt</S>
+          <S N="GUID">4775ad56-8f64-432f-8da7-87ddf7a34653</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="CompanyName">PoshCode</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\Zac\Documents\PowerShell\Modules\ModuleBuilder\3.1.8</S>
+    </MS>
+  </Obj>
+</Objs>

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_6_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.6.1) - Collaboration invitations SHALL be sent to allowed domains only
+    Tests CIS M365 7.0.0 (5.1.6.1) - Collaboration invitations SHALL be sent to allowed domains only
     #>
     param($Tenant)
 

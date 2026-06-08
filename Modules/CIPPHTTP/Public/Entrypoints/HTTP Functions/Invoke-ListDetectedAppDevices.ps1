@@ -4,6 +4,8 @@ function Invoke-ListDetectedAppDevices {
         Entrypoint
     .ROLE
         Identity.Device.Read
+    .DESCRIPTION
+        Lists Intune-managed devices that have a specific detected application installed, identified by App ID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

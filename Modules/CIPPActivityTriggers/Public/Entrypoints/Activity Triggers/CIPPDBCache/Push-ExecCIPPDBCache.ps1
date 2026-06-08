@@ -44,8 +44,6 @@ function Push-ExecCIPPDBCache {
 
         # Build the full function name
         $FullFunctionName = "Set-CIPPDBCache$Name"
-
-        # Check if function exists
         $Function = Get-Command -Name $FullFunctionName -ErrorAction SilentlyContinue
         if (-not $Function) {
             throw "Function $FullFunctionName does not exist"

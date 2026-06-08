@@ -4,6 +4,8 @@ function Invoke-ListLogs {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -96,7 +98,6 @@ function Invoke-ListLogs {
             $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
 
             if ($StartDate -and $EndDate) {
-                # Collect logs for date range
                 $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
             } elseif ($StartDate) {
                 $Filter = "PartitionKey eq '{0}'" -f $StartDate
@@ -108,70 +109,82 @@ function Invoke-ListLogs {
             $PartitionKey = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
             $username = '*'
             $TenantFilter = $null
+            $ApiFilter = $null
+            $StandardFilter = $null
+            $ScheduledTaskFilter = $null
             $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
         }
+
+        # Severity stays client-side: Azurite/Azure Table OData has been unreliable
+        # on long OR chains. Per-partition row counts are small enough that this is fine.
+        if ($StandardFilter) {
+            $SafeStd = ConvertTo-CIPPODataFilterValue -Value $StandardFilter -Type Guid
+            $Filter = "$Filter and StandardTemplateId eq '$SafeStd'"
+        }
+        if ($ScheduledTaskFilter) {
+            $SafeSched = ConvertTo-CIPPODataFilterValue -Value $ScheduledTaskFilter -Type Guid
+            $Filter = "$Filter and ScheduledTaskId eq '$SafeSched'"
+        }
+
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
-
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
-            $_.Severity -in $LogLevel -and
-            $_.Username -like $username -and
-            ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
-            ([string]::IsNullOrEmpty($ApiFilter) -or $_.API -match "$ApiFilter") -and
-            ([string]::IsNullOrEmpty($StandardFilter) -or $_.StandardTemplateId -eq $StandardFilter) -and
-            ([string]::IsNullOrEmpty($ScheduledTaskFilter) -or $_.ScheduledTaskId -eq $ScheduledTaskFilter)
-        }
 
         if ($AllowedTenants -notcontains 'AllTenants') {
             $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
         }
 
-        foreach ($Row in $Rows) {
-            if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)) ) {
-                if ($StandardTaskFilter -and $Row.StandardTemplateId) {
-                    $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+        $ReturnedLog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
+            $_.Severity -in $LogLevel -and
+            ($username -eq '*' -or $_.Username -like $username) -and
+            ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ([string]::IsNullOrEmpty($ApiFilter) -or $_.API -match "$ApiFilter") -and
+            ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $_.Tenant -or $_.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $_.TenantId)
+        } | ForEach-Object {
+            $Row = $_
+            if ($ScheduledTaskFilter -and $Row.StandardTemplateId) {
+                $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
 
-                    $StandardInfo = @{
-                        Template = $Standard.templateName
-                        Standard = $Row.Standard
-                    }
+                $StandardInfo = @{
+                    Template = $Standard.templateName
+                    Standard = $Row.Standard
+                }
 
-                    if ($Row.IntuneTemplateId) {
-                        $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
-                        $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
-                    }
-                    if ($Row.ConditionalAccessTemplateId) {
-                        $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
-                        $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
-                    }
+                if ($Row.IntuneTemplateId) {
+                    $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                    $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                }
+                if ($Row.ConditionalAccessTemplateId) {
+                    $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                    $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                }
+            } else {
+                $StandardInfo = @{}
+            }
+
+            $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
+                $Row.LogData | ConvertFrom-Json
+            } else { $Row.LogData }
+            [PSCustomObject]@{
+                DateTime     = $Row.Timestamp
+                Tenant       = $Row.Tenant
+                API          = $Row.API
+                Message      = $Row.Message
+                User         = $Row.Username
+                Severity     = $Row.Severity
+                LogData      = $LogData
+                TenantID     = if ($Row.TenantID -ne $null) {
+                    $Row.TenantID
                 } else {
-                    $StandardInfo = @{}
+                    'None'
                 }
-
-                $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
-                    $Row.LogData | ConvertFrom-Json
-                } else { $Row.LogData }
-                [PSCustomObject]@{
-                    DateTime     = $Row.Timestamp
-                    Tenant       = $Row.Tenant
-                    API          = $Row.API
-                    Message      = $Row.Message
-                    User         = $Row.Username
-                    Severity     = $Row.Severity
-                    LogData      = $LogData
-                    TenantID     = if ($Row.TenantID -ne $null) {
-                        $Row.TenantID
-                    } else {
-                        'None'
-                    }
-                    AppId        = $Row.AppId
-                    IP           = $Row.IP
-                    RowKey       = $Row.RowKey
-                    StandardInfo = $StandardInfo
-                    DateFilter   = $Row.PartitionKey
-                }
+                AppId        = $Row.AppId
+                IP           = $Row.IP
+                RowKey       = $Row.RowKey
+                StandardInfo = $StandardInfo
+                DateFilter   = $Row.PartitionKey
             }
         }
+        $ReturnedLog
     }
 
     return [HttpResponseContext]@{

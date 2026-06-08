@@ -7,7 +7,7 @@ Invoke-MgGraphRequest -Method PATCH -Uri 'https://graph.microsoft.com/v1.0/devic
 ```
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 4.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 4.1](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

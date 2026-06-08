@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_4 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.4) - Users dialing in SHALL NOT bypass the lobby
+    Tests CIS M365 7.0.0 (8.5.4) - Users dialing in SHALL NOT bypass the lobby
     #>
     param($Tenant)
 

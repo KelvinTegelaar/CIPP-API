@@ -16,9 +16,19 @@ function Invoke-CippTestCustomScripts {
             return
         }
 
-        $LatestScripts = $Scripts | Group-Object -Property ScriptGuid | ForEach-Object {
-            $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
+        # Pick the latest version per ScriptGuid in a single pass instead of the
+        # original Group-Object | ForEach-Object { Sort-Object | Select -First 1 }
+        # pipeline (item 8).
+        $LatestByGuid = @{}
+        foreach ($S in $Scripts) {
+            $Guid = $S.ScriptGuid
+            if (-not $Guid) { continue }
+            $Existing = $LatestByGuid[$Guid]
+            if (-not $Existing -or [int]$S.Version -gt [int]$Existing.Version) {
+                $LatestByGuid[$Guid] = $S
+            }
         }
+        $LatestScripts = @($LatestByGuid.Values)
 
         if (-not [string]::IsNullOrWhiteSpace($ScriptGuid) -and $LatestScripts.Count -eq 0) {
             Write-Information "No latest custom script found for ScriptGuid: $ScriptGuid"
@@ -26,20 +36,31 @@ function Invoke-CippTestCustomScripts {
         }
 
         foreach ($Script in $LatestScripts) {
+            # Cache PSObject property lookups once per script so we don't pay the
+            # member-resolution cost repeatedly inside the hot loop (item 13).
+            $Props = $Script.PSObject.Properties
+            $EnabledProp = $Props['Enabled']
+            $AlertProp = $Props['AlertOnFailure']
+            $ResultModeProp = $Props['ResultMode']
+            $AlertStatusesProp = $Props['AlertStatuses']
+
             # We can't prefilter this on table lookup as each script version has its own Enabled property, so we need to check here if the latest version is enabled
-            $IsEnabled = if ($Script.PSObject.Properties['Enabled']) { [bool]$Script.Enabled } else { $true }
+            $IsEnabled = if ($EnabledProp) { [bool]$EnabledProp.Value } else { $true }
             if (-not $IsEnabled) {
                 continue
             }
-            $ShouldAlert = $false
-            if ($Script.PSObject.Properties['AlertOnFailure']) {
-                $ShouldAlert = [bool]$Script.AlertOnFailure
-            }
+            $ShouldAlert = if ($AlertProp) { [bool]$AlertProp.Value } else { $false }
 
-            $ResultMode = if ($Script.PSObject.Properties['ResultMode'] -and -not [string]::IsNullOrWhiteSpace($Script.ResultMode)) { $Script.ResultMode } else { 'Auto' }
+            $ResultMode = if ($ResultModeProp -and -not [string]::IsNullOrWhiteSpace($ResultModeProp.Value)) { $ResultModeProp.Value } else { 'Auto' }
 
             $TestId = "CustomScript-$($Script.ScriptGuid)"
             $ScriptName = if ([string]::IsNullOrWhiteSpace($Script.ScriptName)) { $TestId } else { $Script.ScriptName }
+
+            $AlertStatuses = @('Failed')
+            if ($AlertStatusesProp -and -not [string]::IsNullOrWhiteSpace($AlertStatusesProp.Value)) {
+                $AlertStatuses = $AlertStatusesProp.Value | ConvertFrom-Json
+            }
+
             try {
                 $Result = New-CippCustomScriptExecution -ScriptGuid $Script.ScriptGuid -TenantFilter $Tenant -Parameters @{}
 
@@ -83,7 +104,7 @@ function Invoke-CippTestCustomScripts {
                 $ResultMarkdown = if (-not [string]::IsNullOrWhiteSpace($ExplicitMarkdown)) { $ExplicitMarkdown } else { '' }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultDataJson $ResultDataJson -ResultMarkdown $ResultMarkdown -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
 
-                if ($ShouldAlert -and $AutoStatus -eq 'Failed') {
+                if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
                     Write-AlertMessage -tenant $Tenant -message "Custom script test failed: $ScriptName ($($Script.ScriptGuid))"
                 }
             } catch {
@@ -95,13 +116,13 @@ function Invoke-CippTestCustomScripts {
                     default { 'Failed' }
                 }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultMarkdown "Custom script execution failed: $($ErrorMessage.NormalizedError)" -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
-                if ($ShouldAlert -and $ResultMode -eq 'Auto') {
+                if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
                     Write-AlertMessage -tenant $Tenant -message "Custom script execution failed: $ScriptName ($($Script.ScriptGuid)) - $($ErrorMessage.NormalizedError)"
                 }
             }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run custom script tests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        Write-LogMessage -API 'CustomTests' -tenant $Tenant -message "Failed to run custom script tests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

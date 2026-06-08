@@ -7,6 +7,8 @@ function Invoke-ListContacts {
         Entrypoint
     .ROLE
         Exchange.Contact.Read
+    .DESCRIPTION
+        Lists Exchange Online mail contacts for a tenant, with optional filtering by contact ID for detailed view.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_7_2_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (7.2.2) - SharePoint and OneDrive integration with Azure AD B2B SHALL be enabled
+    Tests CIS M365 7.0.0 (7.2.2) - SharePoint and OneDrive integration with Azure AD B2B SHALL be enabled
     #>
     param($Tenant)
 
