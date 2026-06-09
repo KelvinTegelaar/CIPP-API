@@ -3,7 +3,7 @@ function Invoke-ListMessageTrace {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.TransportRule.Read
+        Exchange.Mailbox.Read
     .DESCRIPTION
         Traces email message delivery in Exchange Online, searchable by message ID, sender, recipient, and date range.
     #>
@@ -11,6 +11,8 @@ function Invoke-ListMessageTrace {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     try {
         $TenantFilter = $Request.Body.tenantFilter
 
@@ -51,13 +53,13 @@ function Invoke-ListMessageTrace {
         }
 
         if ($Request.Body.recipient) {
-            $Searchparams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
+            $SearchParams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
         }
         if ($Request.Body.sender) {
-            $Searchparams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
+            $SearchParams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
         }
 
-        $trace = if ($Request.Body.traceDetail) {
+        $Trace = if ($Request.Body.traceDetail) {
             $CmdParams = @{
                 MessageTraceId   = $Request.Body.ID
                 RecipientAddress = $Request.Body.recipient
@@ -67,17 +69,18 @@ function Invoke-ListMessageTrace {
             Write-Information ($SearchParams | ConvertTo-Json)
 
             New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTraceV2' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
-            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
 
         }
     } catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev 'Error'
-        $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Failed executing Message Trace. Error: $($_.Exception.Message)" -Sev 'Error'
+        $Trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($trace)
+            StatusCode = ($StatusCode ?? [HttpStatusCode]::OK)
+            Body       = @($Trace)
         })
 
 }

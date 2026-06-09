@@ -238,6 +238,16 @@
     "IsSystem": true
   },
   {
+    "Id": "5e8a9b4c-2d6f-4a3e-b7c1-9d0e5f3a8b2c",
+    "Command": "Start-IntuneReportExportOrchestrator",
+    "Description": "Submit Intune report-export jobs ahead of nightly DB cache run",
+    "Cron": "0 0 2 * * *",
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "IsSystem": true
+  },
+  {
     "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
     "Command": "Start-CIPPDBCacheOrchestrator",
     "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
