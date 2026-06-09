@@ -6,8 +6,9 @@ function New-CIPPSSOApp {
         Creates a new or updates an existing Entra ID app registration for CIPP-SSO with
         openid, profile, and email delegated permissions. If ExistingAppId is provided,
         looks up that specific app by clientId. If the app no longer exists in the tenant,
-        creates a new one. Generates a client secret and returns the details needed to
-        configure EasyAuth.
+        creates a new one. Does NOT create a client secret — call Add-CIPPSSOAppSecret
+        for that as a separate step so the AppId can be persisted before the (sometimes
+        flaky) secret creation runs.
     #>
     [CmdletBinding()]
     param(
@@ -120,37 +121,12 @@ function New-CIPPSSOApp {
         Write-Warning "[SSO-App] App management policy update failed (secret creation may still work): $($_.Exception.Message)"
     }
 
-    # Create client secret with retry
-    $SecretText = $null
-    $SecretAttempt = 0
-    $MaxSecretRetries = 5
-    while ($SecretAttempt -lt $MaxSecretRetries -and -not $SecretText) {
-        try {
-            $PasswordBody = '{"passwordCredential":{"displayName":"CIPP-SSO-Secret"}}'
-            $PasswordResult = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$AppObjectId/addPassword" -body $PasswordBody -type POST -NoAuthCheck $true -AsApp $true
-            $SecretText = $PasswordResult.secretText
-            Write-Information "[SSO-App] Client secret created"
-        } catch {
-            $SecretAttempt++
-            Write-Warning "[SSO-App] Secret creation attempt $SecretAttempt/$MaxSecretRetries failed: $($_.Exception.Message)"
-            if ($SecretAttempt -lt $MaxSecretRetries) {
-                $Delay = @(2, 5, 10, 15, 30)[$SecretAttempt - 1]
-                Start-Sleep -Seconds $Delay
-            }
-        }
-    }
-
-    if (-not $SecretText) {
-        throw "Failed to create client secret for $AppDisplayName after $MaxSecretRetries attempts"
-    }
-
     return [PSCustomObject]@{
-        AppId        = $AppClientId
-        ObjectId     = $AppObjectId
-        ClientSecret = $SecretText
-        TenantId     = $env:TenantID
-        DisplayName  = $AppDisplayName
-        State        = $State
-        MultiTenant  = $MultiTenant
+        AppId       = $AppClientId
+        ObjectId    = $AppObjectId
+        TenantId    = $env:TenantID
+        DisplayName = $AppDisplayName
+        State       = $State
+        MultiTenant = $MultiTenant
     }
 }

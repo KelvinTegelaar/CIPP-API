@@ -49,7 +49,7 @@ function Invoke-CIPPStandardSPOVersionControl {
         return $true
     }
 
-    $DesiredAutoTrim = [bool]$Settings.EnableAutoTrim
+    $DesiredAutoTrim = [System.Convert]::ToBoolean($Settings.EnableAutoTrim)
     $DesiredMajorVersionLimit = [int]($Settings.MajorVersionLimit ?? 50)
     $DesiredExpireVersionsAfterDays = [int]($Settings.ExpireVersionsAfterDays ?? 0)
 
