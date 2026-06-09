@@ -179,7 +179,7 @@ function Push-ExecScheduledCommand {
         return
     }
 
-    if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB')) {
+    if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB', 'CippExtensions')) {
         $State = 'Failed'
         Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$($Item.Command)" -Sev 'Warning'
         $Results = "Task blocked: The command '$($Item.Command)' is not permitted to run as a scheduled task."
