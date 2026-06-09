@@ -70,7 +70,7 @@ function New-CIPPUserTask {
 
     # Add to groups
     if ($UserObj.AddToGroups) {
-        $ExoGroupTypes = @('Distribution list', 'Distribution List', 'Mail-Enabled Security', 'distributionList', 'security')
+        $ExoGroupTypes = @('Distribution list', 'Mail-Enabled Security')
         $UserObj.AddToGroups | ForEach-Object {
             $Group = $_
             $GroupType = $Group.addedFields.groupType

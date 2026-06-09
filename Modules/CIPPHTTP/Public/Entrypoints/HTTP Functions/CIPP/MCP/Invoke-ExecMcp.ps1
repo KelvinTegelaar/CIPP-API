@@ -63,7 +63,7 @@ function Invoke-ExecMcp {
                 }
             }
             'ping' { $Result = @{} }
-            'tools/list' { $Result = [ordered]@{ tools = @(Get-CippMcpToolList) } }
+            'tools/list' { $Result = [ordered]@{ tools = @(Get-CippMcpToolList -Request $Request) } }
             'tools/call' {
                 $Result = Get-CippMcpToolResult -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $Rpc.params.name -Arguments $Rpc.params.arguments
             }
