@@ -2,7 +2,7 @@ function Register-CIPPExtensionScheduledTasks {
     param(
         [switch]$Reschedule,
         [int64]$NextSync = (([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds,
-        [string[]]$Extensions = @('Hudu', 'NinjaOne', 'CustomData')
+        [string[]]$Extensions = @('Hudu', 'NinjaOne', 'CustomData', 'Sherweb')
     )
 
     # get extension configuration and mappings table
@@ -29,6 +29,38 @@ function Register-CIPPExtensionScheduledTasks {
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
         if ($ExtensionConfig.Enabled -eq $true -or $Extension -eq 'CustomData') {
+            if ($Extension -eq 'Sherweb') {
+                # Sherweb migration tasks - schedule per mapped tenant
+                $SherwebMappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq 'SherwebMapping'"
+                $SherwebMigTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Invoke-SherwebMigration' }
+                foreach ($Mapping in $SherwebMappings) {
+                    $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
+                    if (-not $Tenant) { continue }
+                    $MappedTenants.Add($Tenant.defaultDomainName)
+                    $ExistingMigTask = $SherwebMigTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName }
+                    if (-not $ExistingMigTask -or $Reschedule.IsPresent) {
+                        $Task = [pscustomobject]@{
+                            Name          = 'Sherweb Migration Check'
+                            Command       = @{
+                                value = 'Invoke-SherwebMigration'
+                                label = 'Invoke-SherwebMigration'
+                            }
+                            Parameters    = [pscustomobject]@{
+                                TenantFilter = $Tenant.defaultDomainName
+                            }
+                            Recurrence    = '1d'
+                            ScheduledTime = $NextSync
+                            TenantFilter  = $Tenant.defaultDomainName
+                        }
+                        if ($ExistingMigTask) {
+                            $Task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingMigTask.RowKey -Force
+                        }
+                        $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType 'Sherweb'
+                        Write-Information "Creating Sherweb migration task for tenant $($Tenant.defaultDomainName)"
+                    }
+                }
+                continue
+            }
             if ($Extension -eq 'CustomData') {
                 $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
@@ -77,7 +109,7 @@ function Register-CIPPExtensionScheduledTasks {
                     continue
                 }
                 $MappedTenants.Add($Tenant.defaultDomainName)
-                
+
                 # Legacy Sync-CippExtensionData tasks are no longer needed - extensions now use CippReportingDB
                 # All cache data is now collected by Push-CIPPDBCacheData scheduled tasks
 
