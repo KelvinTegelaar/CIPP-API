@@ -7,8 +7,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     .SYNOPSIS
         (Label) Default Spam Filter Policy
     .DESCRIPTION
-        (Helptext) This standard creates a Spam filter policy similar to the default strict policy.
-        (DocsDescription) This standard creates a Spam filter policy similar to the default strict policy, the following settings are configured to on by default: IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, MarkAsSpamEmptyMessages, MarkAsSpamJavaScriptInHtml, MarkAsSpamSpfRecordHardFail, MarkAsSpamFromAddressAuthFail, MarkAsSpamNdrBackscatter, MarkAsSpamBulkMail, InlineSafetyTipsEnabled, PhishZapEnabled, SpamZapEnabled
+        (Helptext) This standard creates a Spam filter policy aligned with the Microsoft Strict preset.
+        (DocsDescription) This standard creates a Spam filter policy aligned with the Microsoft Strict preset. All Advanced Spam Filter (ASF) settings are left Off per Microsoft guidance (ASF is deprecated and prevents false-positive reporting). The following settings are configured On by default: MarkAsSpamBulkMail, InlineSafetyTipsEnabled, PhishZapEnabled, SpamZapEnabled.
     .NOTES
         CAT
             Defender Standards
@@ -127,20 +127,20 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         ($CurrentState.BulkThreshold -eq [int]$Settings.BulkThreshold) -and
         ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
         ($CurrentState.IncreaseScoreWithImageLinks -eq $IncreaseScoreWithImageLinks) -and
-        ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
-        ($CurrentState.IncreaseScoreWithRedirectToOtherPort -eq 'On') -and
+        ($CurrentState.IncreaseScoreWithNumericIps -eq 'Off') -and
+        ($CurrentState.IncreaseScoreWithRedirectToOtherPort -eq 'Off') -and
         ($CurrentState.IncreaseScoreWithBizOrInfoUrls -eq $IncreaseScoreWithBizOrInfoUrls) -and
-        ($CurrentState.MarkAsSpamEmptyMessages -eq 'On') -and
-        ($CurrentState.MarkAsSpamJavaScriptInHtml -eq 'On') -and
+        ($CurrentState.MarkAsSpamEmptyMessages -eq 'Off') -and
+        ($CurrentState.MarkAsSpamJavaScriptInHtml -eq 'Off') -and
         ($CurrentState.MarkAsSpamFramesInHtml -eq $MarkAsSpamFramesInHtml) -and
         ($CurrentState.MarkAsSpamObjectTagsInHtml -eq $MarkAsSpamObjectTagsInHtml) -and
         ($CurrentState.MarkAsSpamEmbedTagsInHtml -eq $MarkAsSpamEmbedTagsInHtml) -and
         ($CurrentState.MarkAsSpamFormTagsInHtml -eq $MarkAsSpamFormTagsInHtml) -and
         ($CurrentState.MarkAsSpamWebBugsInHtml -eq $MarkAsSpamWebBugsInHtml) -and
         ($CurrentState.MarkAsSpamSensitiveWordList -eq $MarkAsSpamSensitiveWordList) -and
-        ($CurrentState.MarkAsSpamSpfRecordHardFail -eq 'On') -and
-        ($CurrentState.MarkAsSpamFromAddressAuthFail -eq 'On') -and
-        ($CurrentState.MarkAsSpamNdrBackscatter -eq 'On') -and
+        ($CurrentState.MarkAsSpamSpfRecordHardFail -eq 'Off') -and
+        ($CurrentState.MarkAsSpamFromAddressAuthFail -eq 'Off') -and
+        ($CurrentState.MarkAsSpamNdrBackscatter -eq 'Off') -and
         ($CurrentState.MarkAsSpamBulkMail -eq 'On') -and
         ($CurrentState.InlineSafetyTipsEnabled -eq $true) -and
         ($CurrentState.PhishZapEnabled -eq $true) -and
@@ -183,20 +183,20 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 BulkThreshold                        = [int]$Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithImageLinks          = $IncreaseScoreWithImageLinks
-                IncreaseScoreWithNumericIps          = 'On'
-                IncreaseScoreWithRedirectToOtherPort = 'On'
+                IncreaseScoreWithNumericIps          = 'Off'
+                IncreaseScoreWithRedirectToOtherPort = 'Off'
                 IncreaseScoreWithBizOrInfoUrls       = $IncreaseScoreWithBizOrInfoUrls
-                MarkAsSpamEmptyMessages              = 'On'
-                MarkAsSpamJavaScriptInHtml           = 'On'
+                MarkAsSpamEmptyMessages              = 'Off'
+                MarkAsSpamJavaScriptInHtml           = 'Off'
                 MarkAsSpamFramesInHtml               = $MarkAsSpamFramesInHtml
                 MarkAsSpamObjectTagsInHtml           = $MarkAsSpamObjectTagsInHtml
                 MarkAsSpamEmbedTagsInHtml            = $MarkAsSpamEmbedTagsInHtml
                 MarkAsSpamFormTagsInHtml             = $MarkAsSpamFormTagsInHtml
                 MarkAsSpamWebBugsInHtml              = $MarkAsSpamWebBugsInHtml
                 MarkAsSpamSensitiveWordList          = $MarkAsSpamSensitiveWordList
-                MarkAsSpamSpfRecordHardFail          = 'On'
-                MarkAsSpamFromAddressAuthFail        = 'On'
-                MarkAsSpamNdrBackscatter             = 'On'
+                MarkAsSpamSpfRecordHardFail          = 'Off'
+                MarkAsSpamFromAddressAuthFail        = 'Off'
+                MarkAsSpamNdrBackscatter             = 'Off'
                 MarkAsSpamBulkMail                   = 'On'
                 InlineSafetyTipsEnabled              = $true
                 PhishZapEnabled                      = $true
