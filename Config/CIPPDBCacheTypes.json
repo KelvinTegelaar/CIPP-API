@@ -215,6 +215,11 @@
     "description": "Exchange Online quarantine policy"
   },
   {
+    "type": "ExoGlobalQuarantinePolicy",
+    "friendlyName": "Exchange Global Quarantine Policy",
+    "description": "Exchange Online tenant-wide Global Quarantine policy (end-user notification settings)"
+  },
+  {
     "type": "ExoRemoteDomain",
     "friendlyName": "Exchange Remote Domain",
     "description": "Exchange Online remote domain configuration"
