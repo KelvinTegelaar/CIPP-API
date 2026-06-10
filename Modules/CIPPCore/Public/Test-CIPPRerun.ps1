@@ -62,9 +62,9 @@ function Test-CIPPRerun {
                 $NewSettings = $($Settings | ConvertTo-Json -Depth 10 -Compress)
                 if ($NewSettings.Length -ne $PreviousSettings.Length) {
                     Write-Host "$($NewSettings.Length) vs $($PreviousSettings.Length) - settings have changed."
-                    $RerunData.EstimatedNextRun = $EstimatedNextRun
-                    $RerunData.LastScheduledTime = "$CurrentUnixTime"
-                    $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
+                    $RerunData | Add-Member -MemberType NoteProperty -Name 'EstimatedNextRun' -Value $EstimatedNextRun -Force
+                    $RerunData | Add-Member -MemberType NoteProperty -Name 'LastScheduledTime' -Value "$CurrentUnixTime" -Force
+                    $RerunData | Add-Member -MemberType NoteProperty -Name 'Settings' -Value "$($Settings | ConvertTo-Json -Depth 10 -Compress)" -Force
                     Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData -Force
                     return $false # Not a rerun because settings have changed.
                 }
@@ -73,9 +73,9 @@ function Test-CIPPRerun {
             # treat it as a new execution rather than a duplicate.
             if ($BaseTime -gt 0 -and $RerunData.LastScheduledTime -and [int64]$RerunData.LastScheduledTime -ne $BaseTime) {
                 Write-Information "Task $API has a new ScheduledTime ($BaseTime vs cached $($RerunData.LastScheduledTime)). Treating as new execution."
-                $RerunData.EstimatedNextRun = $EstimatedNextRun
-                $RerunData.LastScheduledTime = "$BaseTime"
-                $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'EstimatedNextRun' -Value $EstimatedNextRun -Force
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'LastScheduledTime' -Value "$BaseTime" -Force
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'Settings' -Value "$($Settings | ConvertTo-Json -Depth 10 -Compress)" -Force
                 Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData -Force
                 return $false
             }
@@ -83,9 +83,9 @@ function Test-CIPPRerun {
                 Write-LogMessage -API $API -message "$Type rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -headers $Headers -Sev 'Info'
                 return $true
             } else {
-                $RerunData.EstimatedNextRun = $EstimatedNextRun
-                $RerunData.LastScheduledTime = "$BaseTime"
-                $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'EstimatedNextRun' -Value $EstimatedNextRun -Force
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'LastScheduledTime' -Value "$BaseTime" -Force
+                $RerunData | Add-Member -MemberType NoteProperty -Name 'Settings' -Value "$($Settings | ConvertTo-Json -Depth 10 -Compress)" -Force
                 Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData -Force
                 return $false
             }
