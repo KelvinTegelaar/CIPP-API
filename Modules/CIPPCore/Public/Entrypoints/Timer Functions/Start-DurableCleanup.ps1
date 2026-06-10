@@ -18,7 +18,7 @@ function Start-DurableCleanup {
         [int]$MaxDuration = 86400
     )
 
-    if $env:CIPPNG -eq 'true' {
+    if ($env:CIPPNG -eq 'true') {
         return
     }
 

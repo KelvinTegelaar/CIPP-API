@@ -11,7 +11,7 @@ function Invoke-ExecMcp {
         is enforced for each tool exactly as it would be for a normal API request. This
         endpoint's own role (CIPP.Core.Read) is only the floor required to use MCP at all.
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
@@ -63,7 +63,7 @@ function Invoke-ExecMcp {
                 }
             }
             'ping' { $Result = @{} }
-            'tools/list' { $Result = [ordered]@{ tools = @(Get-CippMcpToolList) } }
+            'tools/list' { $Result = [ordered]@{ tools = @(Get-CippMcpToolList -Request $Request) } }
             'tools/call' {
                 $Result = Get-CippMcpToolResult -Request $Request -TriggerMetadata $TriggerMetadata -ToolName $Rpc.params.name -Arguments $Rpc.params.arguments
             }
