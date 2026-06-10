@@ -245,6 +245,11 @@
     "description": "Exchange Online tenant allow/block list"
   },
   {
+    "type": "ExoInboundConnector",
+    "friendlyName": "Exchange Inbound Connectors",
+    "description": "Exchange Online inbound connectors (includes enhanced filtering settings)"
+  },
+  {
     "type": "Mailboxes",
     "friendlyName": "Mailboxes",
     "description": "All Exchange Online mailboxes"
