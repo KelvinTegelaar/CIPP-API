@@ -10,7 +10,6 @@ function Push-NinjaOneQueue {
         'AutoMapTenant'    { Invoke-NinjaOneOrgMappingTenant -QueueItem $Item }
         'SyncTenant'       { Invoke-NinjaOneTenantSync -QueueItem $Item }
         'SyncTenants'      { Invoke-NinjaOneSync }
-        'CveSyncTenant'    { Invoke-NinjaOneCveSyncTenant -QueueItem $Item }
     }
     return $true
 }
