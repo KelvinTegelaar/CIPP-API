@@ -12,14 +12,9 @@ function Invoke-ListTenantAlignment {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Granular = $Request.Query.granular -eq 'true'
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     try {
-        $AlignmentParams = @{}
-        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
-            $AlignmentParams.TenantFilter = $TenantFilter
-        }
         # Use the new Get-CIPPTenantAlignment function to get alignment data
-        $AlignmentData = Get-CIPPTenantAlignment @AlignmentParams
+        $AlignmentData = Get-CIPPTenantAlignment
 
         # Build a GUID -> displayName lookup from the templates table for all template types
         $TemplateLookup = @{}
