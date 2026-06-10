@@ -250,6 +250,11 @@
     "description": "Exchange Online inbound connectors (includes enhanced filtering settings)"
   },
   {
+    "type": "ExoProtectionAlert",
+    "friendlyName": "Exchange Protection Alerts",
+    "description": "Microsoft 365 protection alert policies (Security & Compliance endpoint)"
+  },
+  {
     "type": "Mailboxes",
     "friendlyName": "Mailboxes",
     "description": "All Exchange Online mailboxes"

@@ -88,6 +88,7 @@ function Invoke-CIPPDBCacheCollection {
             'ExoPresetSecurityPolicy'
             'ExoTenantAllowBlockList'
             'ExoInboundConnector'
+            'ExoProtectionAlert'
             'OwaMailboxPolicy'
             'ReportSubmissionPolicy'
             'ExoTransportConfig'
