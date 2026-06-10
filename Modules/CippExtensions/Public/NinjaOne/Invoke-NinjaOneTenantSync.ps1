@@ -2247,15 +2247,13 @@ function Invoke-NinjaOneTenantSync {
                                 }
                                 if ($Item.deviceDetailsJson) {
                                     $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
-                                    $AffectedDevices = [System.Collections.Generic.List[PSCustomObject]]::new()
                                     foreach ($Dev in $Devices) {
-                                        [void]$AffectedDevices.Add(@{ deviceName = $Dev.deviceName })
-                                        }
+                                        [void]$CsvRows.Add([PSCustomObject]@{
+                                        $DeviceIdHeader = $Dev.deviceName.Trim()
+                                        $CveIdHeader    = $Item.cveId.Trim()
+                                        })
+                                    }
                                 }
-                                [void]$CsvRows.Add([PSCustomObject]@{
-                                    $DeviceIdHeader = $Dev.deviceName.Trim()
-                                    $CveIdHeader    = $Item.cveId.Trim()
-                                })
                             }
 
                             if ($SkippedCount -gt 0) {
