@@ -20,17 +20,17 @@ function Invoke-CippTestORCA103 {
             $IsCompliant = $true
             $Issues = [System.Collections.Generic.List[string]]::new()
 
-            if ($Policy.RecipientLimitExternalPerHour -ne 500) {
+            if ($Policy.RecipientLimitExternalPerHour -le 0 -or $Policy.RecipientLimitExternalPerHour -gt 500) {
                 $IsCompliant = $false
-                $Issues.Add("RecipientLimitExternalPerHour: $($Policy.RecipientLimitExternalPerHour) (should be 500)") | Out-Null
+                $Issues.Add("RecipientLimitExternalPerHour: $($Policy.RecipientLimitExternalPerHour) (should be between 1 and 500)") | Out-Null
             }
-            if ($Policy.RecipientLimitInternalPerHour -ne 1000) {
+            if ($Policy.RecipientLimitInternalPerHour -le 0 -or $Policy.RecipientLimitInternalPerHour -gt 1000) {
                 $IsCompliant = $false
-                $Issues.Add("RecipientLimitInternalPerHour: $($Policy.RecipientLimitInternalPerHour) (should be 1000)") | Out-Null
+                $Issues.Add("RecipientLimitInternalPerHour: $($Policy.RecipientLimitInternalPerHour) (should be between 1 and 1000)") | Out-Null
             }
-            if ($Policy.ActionWhenThresholdReached -ne 'BlockUserForToday') {
+            if ($Policy.ActionWhenThresholdReached -ne 'BlockUser') {
                 $IsCompliant = $false
-                $Issues.Add("ActionWhenThresholdReached: $($Policy.ActionWhenThresholdReached) (should be BlockUserForToday)") | Out-Null
+                $Issues.Add("ActionWhenThresholdReached: $($Policy.ActionWhenThresholdReached) (should be BlockUser)") | Out-Null
             }
 
             if ($IsCompliant) {
