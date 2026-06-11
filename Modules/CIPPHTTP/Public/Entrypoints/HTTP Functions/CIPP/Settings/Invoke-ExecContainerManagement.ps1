@@ -65,7 +65,7 @@ function Invoke-ExecContainerManagement {
                 $config = Invoke-RestMethod -Uri "https://ghcr.io/v2/$imagePath/blobs/$($manifest.config.digest)" -Method GET -Headers $authHeader -ErrorAction Stop
                 $version = $config.config.Labels.'org.opencontainers.image.version'
             } catch {
-                Write-Information "Could not read image config labels for $imagePath:$Tag — $($_.Exception.Message)"
+                Write-Information "Could not read image config labels for $($imagePath):$Tag — $($_.Exception.Message)"
             }
         }
 
@@ -107,14 +107,14 @@ function Invoke-ExecContainerManagement {
                 # Read update settings and last check result
                 $Settings = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 $UpdateInfo = @{
-                    AutoUpdate       = $false
-                    CheckInterval    = '0'
-                    CheckTime        = $null
-                    LastCheck        = $null
-                    UpdateAvailable  = $false
-                    RunningVersion   = $null
-                    RemoteVersion    = $null
-                    RemoteDigest     = $null
+                    AutoUpdate      = $false
+                    CheckInterval   = '0'
+                    CheckTime       = $null
+                    LastCheck       = $null
+                    UpdateAvailable = $false
+                    RunningVersion  = $null
+                    RemoteVersion   = $null
+                    RemoteDigest    = $null
                 }
                 if ($Settings) {
                     $UpdateInfo.AutoUpdate = $Settings.AutoUpdate -eq 'true'
