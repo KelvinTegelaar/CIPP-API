@@ -145,6 +145,20 @@ function Initialize-CIPPAuth {
                 Write-Information "[Auth-Init] EasyAuth issuer reconciliation failed (non-fatal): $_"
             }
         }
+
+        # 3c. Reconcile EasyAuth policy (UnauthenticatedClientAction, ExcludedPaths) with appsettings configuration
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID) {
+            try {
+                $PolicyReconciled = [Craft.Services.AppLifecycleBridge]::ReconcileAuthPolicy('CIPP warmup')
+                if ($PolicyReconciled) {
+                    Write-Information '[Auth-Init] EasyAuth policy reconciled from Craft appsettings (drift detected and corrected)'
+                } else {
+                    Write-Information '[Auth-Init] EasyAuth policy matches appsettings — no update needed'
+                }
+            } catch {
+                Write-Information "[Auth-Init] EasyAuth policy reconcile failed (non-fatal): $_"
+            }
+        }
     } elseif ($AuthState.HasSAMCredentials) {
         # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
         Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'
