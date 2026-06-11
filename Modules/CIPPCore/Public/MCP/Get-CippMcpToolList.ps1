@@ -155,7 +155,9 @@ function Resolve-CippMcpNode {
     }
 
     if ($Node -is [System.Collections.IEnumerable]) {
-        return @($Node | ForEach-Object { Resolve-CippMcpNode -Node $_ -Spec $Spec -Depth ($Depth + 1) -Seen $Seen })
+        # The unary comma prevents PowerShell from unrolling single-element arrays on return,
+        # which would turn e.g. a one-entry allOf into a bare object (invalid JSON Schema).
+        return , @($Node | ForEach-Object { Resolve-CippMcpNode -Node $_ -Spec $Spec -Depth ($Depth + 1) -Seen $Seen })
     }
 
     return $Node
