@@ -152,6 +152,8 @@ function Initialize-CIPPAuth {
                 $PolicyReconciled = [Craft.Services.AppLifecycleBridge]::ReconcileAuthPolicy('CIPP warmup')
                 if ($PolicyReconciled) {
                     Write-Information '[Auth-Init] EasyAuth policy reconciled from Craft appsettings (drift detected and corrected)'
+                } else {
+                    Write-Information '[Auth-Init] EasyAuth policy matches appsettings — no update needed'
                 }
             } catch {
                 Write-Information "[Auth-Init] EasyAuth policy reconcile failed (non-fatal): $_"
