@@ -29,7 +29,9 @@ function Invoke-ExecStandardsRun {
     # Call the wrapper - it handles queuing internally via Start-CIPPOrchestrator
     try {
         $null = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually ([bool]$Templates.runManually) -Force
-        $Results = "Successfully started Standards Run for tenant: $TenantFilter"
+        $TemplateName = if ($TemplateId -eq '*') { 'All' } else { "$($Templates.templateName) ($($Templates.GUID))" }
+        $RunMode = if ([bool]$Templates.runManually) { ' (Manual Only)' } else { '' }
+        $Results = "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
