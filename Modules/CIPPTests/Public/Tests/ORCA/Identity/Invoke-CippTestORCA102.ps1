@@ -54,12 +54,28 @@ function Invoke-CippTestORCA102 {
             $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
             $null = $Result.Append("| Policy Name | Enabled ASF Options |`n")
             $null = $Result.Append("|------------|---------------------|`n")
+            $ASFSettingMap = [ordered]@{
+                IncreaseScoreWithImageLinks          = 'ImageLinks'
+                IncreaseScoreWithNumericIps          = 'NumericIPs'
+                IncreaseScoreWithRedirectToOtherPort = 'RedirectToOtherPort'
+                IncreaseScoreWithBizOrInfoUrls       = 'BizOrInfoUrls'
+                MarkAsSpamEmptyMessages              = 'EmptyMessages'
+                MarkAsSpamJavaScriptInHtml           = 'JavaScript'
+                MarkAsSpamFramesInHtml               = 'Frames'
+                MarkAsSpamObjectTagsInHtml           = 'ObjectTags'
+                MarkAsSpamEmbedTagsInHtml            = 'EmbedTags'
+                MarkAsSpamFormTagsInHtml             = 'FormTags'
+                MarkAsSpamWebBugsInHtml              = 'WebBugs'
+                MarkAsSpamSensitiveWordList          = 'SensitiveWordList'
+                MarkAsSpamSpfRecordHardFail          = 'SpfRecordHardFail'
+                MarkAsSpamFromAddressAuthFail        = 'FromAddressAuthFail'
+                MarkAsSpamNdrBackscatter             = 'NdrBackscatter'
+            }
             foreach ($Policy in $FailedPolicies) {
                 $EnabledOptions = [System.Collections.Generic.List[string]]::new()
-                if ($Policy.IncreaseScoreWithImageLinks -eq 'On') { $EnabledOptions.Add('ImageLinks') | Out-Null }
-                if ($Policy.IncreaseScoreWithNumericIps -eq 'On') { $EnabledOptions.Add('NumericIPs') | Out-Null }
-                if ($Policy.MarkAsSpamEmptyMessages -eq 'On') { $EnabledOptions.Add('EmptyMessages') | Out-Null }
-                if ($Policy.MarkAsSpamJavaScriptInHtml -eq 'On') { $EnabledOptions.Add('JavaScript') | Out-Null }
+                foreach ($Property in $ASFSettingMap.Keys) {
+                    if ($Policy.$Property -eq 'On') { $EnabledOptions.Add($ASFSettingMap[$Property]) | Out-Null }
+                }
                 $null = $Result.Append("| $($Policy.Identity) | $($EnabledOptions -join ', ') |`n")
             }
         }

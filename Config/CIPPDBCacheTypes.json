@@ -215,6 +215,11 @@
     "description": "Exchange Online quarantine policy"
   },
   {
+    "type": "ExoGlobalQuarantinePolicy",
+    "friendlyName": "Exchange Global Quarantine Policy",
+    "description": "Exchange Online tenant-wide Global Quarantine policy (end-user notification settings)"
+  },
+  {
     "type": "ExoRemoteDomain",
     "friendlyName": "Exchange Remote Domain",
     "description": "Exchange Online remote domain configuration"
@@ -238,6 +243,16 @@
     "type": "ExoTenantAllowBlockList",
     "friendlyName": "Exchange Tenant Allow/Block List",
     "description": "Exchange Online tenant allow/block list"
+  },
+  {
+    "type": "ExoInboundConnector",
+    "friendlyName": "Exchange Inbound Connectors",
+    "description": "Exchange Online inbound connectors (includes enhanced filtering settings)"
+  },
+  {
+    "type": "ExoProtectionAlert",
+    "friendlyName": "Exchange Protection Alerts",
+    "description": "Microsoft 365 protection alert policies (Security & Compliance endpoint)"
   },
   {
     "type": "Mailboxes",

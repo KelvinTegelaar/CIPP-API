@@ -26,15 +26,21 @@ function Get-CIPPStandards {
     # can compute correct precedence. The $TemplateId filter is applied after merge so that
     # manual runs of a single template don't bypass tenant-specific overrides.
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
-    ForEach-Object {
-        try {
-            # Fix old "Action" => "action"
-            $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
-            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
-        } catch {}
-    } |
-    Where-Object {
-        $_.runManually -eq $runManually
+        ForEach-Object {
+            try {
+                # Fix old "Action" => "action"
+                $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+                ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+            } catch {}
+        } |
+        Where-Object {
+            $_.runManually -eq $runManually
+        }
+
+    if ($TemplateId -ne '*' -and ![string]::IsNullOrEmpty($TemplateId)) {
+        $Templates = $Templates | Where-Object {
+            $_.GUID -like $TemplateId
+        }
     }
 
     # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
@@ -50,35 +56,35 @@ function Get-CIPPStandards {
 
             if ($IsArray) {
                 $NewArray = @(foreach ($Item in $StandardValue) {
-                    if ($Item.'TemplateList-Tags'.value) {
-                        $HasExpansions = $true
-                        $Table = Get-CippTable -tablename 'templates'
-                        $PartitionKey = switch ($StandardName) {
-                            'ConditionalAccessTemplate' { 'CATemplate' }
-                            'IntuneTemplate' { 'IntuneTemplate' }
-                            default { 'IntuneTemplate' }
-                        }
-                        $Filter = "PartitionKey eq '$PartitionKey'"
-                        $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $Item.'TemplateList-Tags'.value
-                        Write-Information "Expanding $StandardName tag '$($Item.'TemplateList-Tags'.value)' from partition '$PartitionKey': found $(@($TemplatesList).Count) templates"
+                        if ($Item.'TemplateList-Tags'.value) {
+                            $HasExpansions = $true
+                            $Table = Get-CippTable -tablename 'templates'
+                            $PartitionKey = switch ($StandardName) {
+                                'ConditionalAccessTemplate' { 'CATemplate' }
+                                'IntuneTemplate' { 'IntuneTemplate' }
+                                default { 'IntuneTemplate' }
+                            }
+                            $Filter = "PartitionKey eq '$PartitionKey'"
+                            $TemplatesList = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property package -EQ $Item.'TemplateList-Tags'.value
+                            Write-Information "Expanding $StandardName tag '$($Item.'TemplateList-Tags'.value)' from partition '$PartitionKey': found $(@($TemplatesList).Count) templates"
 
-                        foreach ($TemplateItem in $TemplatesList) {
-                            $TemplateJSON = $TemplateItem.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                            $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
-                            $NewItem = $Item.PSObject.Copy()
-                            $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
-                            $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
-                                    label = $TemplateLabel
-                                    value = "$($TemplateItem.RowKey)"
-                                }) -Force
-                            $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
-                            $NewItem
+                            foreach ($TemplateItem in $TemplatesList) {
+                                $TemplateJSON = $TemplateItem.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                                $TemplateLabel = if ($TemplateJSON.displayName) { $TemplateJSON.displayName } else { "$($TemplateItem.RowKey)" }
+                                $NewItem = $Item.PSObject.Copy()
+                                $NewItem.PSObject.Properties.Remove('TemplateList-Tags')
+                                $NewItem | Add-Member -NotePropertyName TemplateList -NotePropertyValue ([pscustomobject]@{
+                                        label = $TemplateLabel
+                                        value = "$($TemplateItem.RowKey)"
+                                    }) -Force
+                                $NewItem | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
+                                $NewItem
+                            }
+                        } else {
+                            $Item | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
+                            $Item
                         }
-                    } else {
-                        $Item | Add-Member -NotePropertyName TemplateId -NotePropertyValue $Template.GUID -Force
-                        $Item
-                    }
-                })
+                    })
                 if ($NewArray.Count -gt 0) {
                     $ExpandedStandards[$StandardName] = $NewArray
                 }

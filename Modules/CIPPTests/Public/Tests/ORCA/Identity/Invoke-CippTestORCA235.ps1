@@ -6,31 +6,53 @@ function Invoke-CippTestORCA235 {
     param($Tenant)
 
     try {
-        $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
+        $Results = Get-CIPPDomainAnalyser -TenantFilter $Tenant
 
-        if (-not $AcceptedDomains) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'
+        if (-not $Results) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Domain Analyser results found for this tenant. Run the CIPP Domain Analyser to populate domain health data.' -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'
             return
         }
 
-        # Note: This test would ideally check DNS SPF records
-        # Since we don't have DNS query capability here, we'll provide informational guidance
+        # ORCA scopes this to custom domains; onmicrosoft.com is handled by Microsoft.
+        $CustomDomains = $Results | Where-Object { $_.Domain -notlike '*.onmicrosoft.com' }
 
-        $CustomDomains = $AcceptedDomains | Where-Object { $_.DomainName -notlike '*.onmicrosoft.com' }
-
-        if ($CustomDomains.Count -eq 0) {
+        if (-not $CustomDomains -or $CustomDomains.Count -eq 0) {
             $Status = 'Passed'
-            $Result = [System.Text.StringBuilder]::new("No custom domains found. Only using onmicrosoft.com domain.`n`n")
-            $null = $Result.Append("**Total Domains:** $($AcceptedDomains.Count)")
-        } else {
-            $Status = 'Informational'
-            $Result = [System.Text.StringBuilder]::new("Found $($CustomDomains.Count) custom domains that should have SPF records configured.`n`n")
-            $null = $Result.Append("**Custom Domains:**`n`n")
-            foreach ($Domain in $CustomDomains) {
-                $null = $Result.Append("- $($Domain.DomainName)`n")
+            $Result = [System.Text.StringBuilder]::new('No custom domains found. Only onmicrosoft.com in use.')
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'
+            return
+        }
+
+        $FailedDomains = [System.Collections.Generic.List[object]]::new()
+        $PassedDomains = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($Domain in $CustomDomains) {
+            # Valid SPF must start with v=spf1 AND end with -all (hard fail).
+            # ~all (soft fail), ?all (neutral), and +all (pass all) are insufficient.
+            # Third-party includes/IPs (Mimecast/Proofpoint/marketing) are fine alongside -all.
+            $Spf = [string]$Domain.ActualSPFRecord
+            $HasSpf = $Spf -match 'v=spf1'
+            $HasHardFail = $Spf -match '-all\s*$'
+
+            if ($HasSpf -and $HasHardFail) {
+                $PassedDomains.Add($Domain) | Out-Null
+            } else {
+                $FailedDomains.Add($Domain) | Out-Null
             }
-            $null = $Result.Append("`n**Action Required:** Verify that each custom domain has an SPF record including Microsoft 365:`n")
-            $null = $Result.Append("``v=spf1 include:spf.protection.outlook.com -all``")
+        }
+
+        if ($FailedDomains.Count -eq 0) {
+            $Status = 'Passed'
+            $Result = [System.Text.StringBuilder]::new("All $($PassedDomains.Count) custom domains have a valid SPF record ending in -all.")
+        } else {
+            $Status = 'Failed'
+            $Result = [System.Text.StringBuilder]::new("$($FailedDomains.Count) of $($CustomDomains.Count) custom domains are missing a valid SPF record or do not end in -all (hard fail).`n`n")
+            $null = $Result.Append("| Domain | SPF Record |`n| :----- | :--------- |`n")
+            foreach ($Domain in ($FailedDomains | Select-Object -First 25)) {
+                $Display = if ([string]::IsNullOrWhiteSpace($Domain.ActualSPFRecord)) { '*(none)*' } else { $Domain.ActualSPFRecord }
+                $null = $Result.Append("| $($Domain.Domain) | $Display |`n")
+            }
+            $null = $Result.Append("`n**Remediation:** Publish an SPF TXT record ending in `-all` (hard fail). For Microsoft 365 only: `v=spf1 include:spf.protection.outlook.com -all`. If routing through a third-party gateway, include that provider alongside (e.g. Mimecast, Proofpoint, marketing services), but keep `-all` at the end. Avoid `~all`, `?all`, and especially `+all`.")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'
