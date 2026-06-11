@@ -23,12 +23,13 @@ function Invoke-ListTenantAlignment {
             $TemplatePartitions = @('IntuneTemplate', 'ConditionalAccessTemplate', 'QuarantineTemplate')
             foreach ($Partition in $TemplatePartitions) {
                 Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq '$Partition'" | ForEach-Object {
+                    $TemplateRow = $_
                     try {
-                        $Parsed = $_.JSON | ConvertFrom-Json -ErrorAction Stop
-                        $DisplayName = $Parsed.displayName ?? $Parsed.Displayname ?? $Parsed.DisplayName ?? $Parsed.name ?? $_.RowKey
-                        $TemplateLookup[$_.RowKey] = $DisplayName
+                        $Parsed = $TemplateRow.JSON | ConvertFrom-Json -ErrorAction Stop
+                        $DisplayName = $Parsed.displayName ?? $Parsed.Displayname ?? $Parsed.DisplayName ?? $Parsed.name ?? $TemplateRow.RowKey
+                        $TemplateLookup[$TemplateRow.RowKey] = $DisplayName
                     } catch {
-                        $TemplateLookup[$_.RowKey] = $_.RowKey
+                        $TemplateLookup[$TemplateRow.RowKey] = $TemplateRow.RowKey
                     }
                 }
             }
@@ -42,44 +43,51 @@ function Invoke-ListTenantAlignment {
                 $TemplateId = $Row.StandardId
                 $StandardType = $Row.standardType ? $Row.standardType : 'Classic Standard'
                 $Row.ComparisonDetails | ForEach-Object {
-                    $StandardId = $_.StandardName
-                    $FriendlyType = $StandardType
-                    $ResolvedName = if ($StandardId -match '^standards\.(\w+Template)\.(.+)$') {
-                        $LookupKey = if ($Matches[1] -eq 'QuarantineTemplate') {
-                            $KeyBytes = [byte[]]::new($Matches[2].Length / 2)
-                            for ($i = 0; $i -lt $KeyBytes.Length; $i++) {
-                                $KeyBytes[$i] = [Convert]::ToByte($Matches[2].Substring($i * 2, 2), 16)
+                    $Detail = $_
+                    try {
+                        $StandardId = $Detail.StandardName
+                        $FriendlyType = $StandardType
+                        $ResolvedName = if ($StandardId -and $StandardId -match '^standards\.(\w+Template)\.(.+)$') {
+                            $MatchType = $Matches[1]
+                            $MatchValue = $Matches[2]
+                            $LookupKey = if ($MatchType -eq 'QuarantineTemplate') {
+                                $KeyBytes = [byte[]]::new($MatchValue.Length / 2)
+                                for ($i = 0; $i -lt $KeyBytes.Length; $i++) {
+                                    $KeyBytes[$i] = [Convert]::ToByte($MatchValue.Substring($i * 2, 2), 16)
+                                }
+                                [System.Text.Encoding]::UTF8.GetString($KeyBytes)
+                            } else {
+                                $MatchValue
                             }
-                            [System.Text.Encoding]::UTF8.GetString($KeyBytes)
+                            $PolicyName = $TemplateLookup[$LookupKey] ?? $LookupKey
+                            $FriendlyType = switch ($MatchType) {
+                                'IntuneTemplate' { 'Intune Template' }
+                                'ConditionalAccessTemplate' { 'Conditional Access Template' }
+                                'QuarantineTemplate' { 'Quarantine Template' }
+                                default { $MatchType }
+                            }
+                            "$FriendlyType - $PolicyName"
                         } else {
-                            $Matches[2]
+                            $StandardId
                         }
-                        $PolicyName = $TemplateLookup[$LookupKey] ?? $LookupKey
-                        $FriendlyType = switch ($Matches[1]) {
-                            'IntuneTemplate' { 'Intune Template' }
-                            'ConditionalAccessTemplate' { 'Conditional Access Template' }
-                            'QuarantineTemplate' { 'Quarantine Template' }
-                            default { $Matches[1] }
+                        [PSCustomObject]@{
+                            tenantFilter         = $Row.TenantFilter
+                            templateName         = $TemplateName
+                            templateId           = $TemplateId
+                            templateType         = $Row.standardType
+                            standardType         = $FriendlyType
+                            standardId           = $StandardId
+                            standardName         = $ResolvedName
+                            complianceStatus     = $Detail.ComplianceStatus
+                            compliant            = $Detail.Compliant
+                            deviationStatus      = $Detail.DeviationStatus
+                            licenseAvailable     = $Detail.LicenseAvailable
+                            currentValue         = $Detail.CurrentValue
+                            expectedValue        = $Detail.ExpectedValue
+                            latestDataCollection = $Row.LatestDataCollection
                         }
-                        "$FriendlyType - $PolicyName"
-                    } else {
-                        $StandardId
-                    }
-                    [PSCustomObject]@{
-                        tenantFilter         = $Row.TenantFilter
-                        templateName         = $TemplateName
-                        templateId           = $TemplateId
-                        templateType         = $Row.standardType
-                        standardType         = $FriendlyType
-                        standardId           = $StandardId
-                        standardName         = $ResolvedName
-                        complianceStatus     = $_.ComplianceStatus
-                        compliant            = $_.Compliant
-                        deviationStatus      = $_.DeviationStatus
-                        licenseAvailable     = $_.LicenseAvailable
-                        currentValue         = $_.CurrentValue
-                        expectedValue        = $_.ExpectedValue
-                        latestDataCollection = $Row.LatestDataCollection
+                    } catch {
+                        Write-LogMessage -API $APIName -tenant $Row.TenantFilter -message "Failed to flatten alignment row for $($Row.TenantFilter)/$($Detail.StandardName): $($_.Exception.Message)" -sev Warning
                     }
                 }
             }
@@ -106,7 +114,8 @@ function Invoke-ListTenantAlignment {
                 Body       = @($Results)
             })
     } catch {
-        Write-LogMessage -API $APIName -message "Failed to get tenant alignment data: $($_.Exception.Message)" -sev Error
+        $ErrorDetail = "$($_.Exception.Message) at $($_.InvocationInfo.PositionMessage -replace '\r?\n', ' ')"
+        Write-LogMessage -API $APIName -message "Failed to get tenant alignment data: $ErrorDetail" -sev Error -LogData (Get-CippException -Exception $_)
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{ error = "Failed to get tenant alignment data: $($_.Exception.Message)" }
