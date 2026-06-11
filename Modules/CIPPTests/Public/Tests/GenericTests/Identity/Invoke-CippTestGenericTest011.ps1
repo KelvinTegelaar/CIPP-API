@@ -51,7 +51,7 @@ function Invoke-CippTestGenericTest011 {
         } catch { $AllCATemplates = @() }
 
         $AlignmentItems = @($AlignmentData)
-        $Result = ''
+        $Result = [System.Text.StringBuilder]::new()
 
         # Helper: resolve a standard name to a friendly display name
         # Mirrors the resolution chain from Get-CIPPDrift.ps1 and the frontend drift.js
@@ -139,80 +139,80 @@ function Invoke-CippTestGenericTest011 {
 
             $ScoreIcon = if ($Score -ge 80) { '✅' } elseif ($Score -ge 50) { '🟡' } else { '🔴' }
 
-            $Result += "### $TemplateName`n`n"
-            $Result += "**Alignment Score:** $ScoreIcon $Score% | **Compliant:** $Compliant / $Total"
-            if ($LicenseMissing -gt 0) { $Result += " | **License Missing:** $LicenseMissing" }
-            if ($ReportingDisabled -gt 0) { $Result += " | **Reporting Disabled:** $ReportingDisabled" }
+            $null = $Result.Append("### $TemplateName`n`n")
+            $null = $Result.Append("**Alignment Score:** $ScoreIcon $Score% | **Compliant:** $Compliant / $Total")
+            if ($LicenseMissing -gt 0) { $null = $Result.Append(" | **License Missing:** $LicenseMissing") }
+            if ($ReportingDisabled -gt 0) { $null = $Result.Append(" | **Reporting Disabled:** $ReportingDisabled") }
             if ($Template.LatestDataCollection) {
                 $CollectionDate = ([datetime]$Template.LatestDataCollection).ToString('yyyy-MM-dd HH:mm')
-                $Result += " | **Last Checked:** $CollectionDate"
+                $null = $Result.Append(" | **Last Checked:** $CollectionDate")
             }
-            $Result += "`n`n"
+            $null = $Result.Append("`n`n")
 
             $Details = $Template.ComparisonDetails
             if (-not $Details) {
-                $Result += "No comparison details available for this template.`n`n"
+                $null = $Result.Append("No comparison details available for this template.`n`n")
                 continue
             }
 
-            # Split into categories
-            $CompliantItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Compliant' })
-            $NonCompliantItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Non-Compliant' })
-            $LicenseMissingItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'License Missing' })
-            $ReportingDisabledItems = @($Details | Where-Object { $_.ComplianceStatus -eq 'Reporting Disabled' })
+            $ByStatus = $Details | Group-Object ComplianceStatus -AsHashTable -AsString
+            $CompliantItems = @($ByStatus['Compliant'])
+            $NonCompliantItems = @($ByStatus['Non-Compliant'])
+            $LicenseMissingItems = @($ByStatus['License Missing'])
+            $ReportingDisabledItems = @($ByStatus['Reporting Disabled'])
 
             # Helper to resolve and skip unresolvable template items
             $TemplateSettings = $Template.standardSettings
 
             # Compliant items
             if ($CompliantItems.Count -gt 0) {
-                $Result += "| Standard | Status |`n"
-                $Result += "|----------|--------|`n"
+                $null = $Result.Append("| Standard | Status |`n")
+                $null = $Result.Append("|----------|--------|`n")
                 foreach ($Item in $CompliantItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $Result += "| $FriendlyName | ✅ Compliant |`n"
+                    $null = $Result.Append("| $FriendlyName | ✅ Compliant |`n")
                 }
-                $Result += "`n"
+                $null = $Result.Append("`n")
             }
 
             # Non-compliant items
             if ($NonCompliantItems.Count -gt 0) {
-                $Result += "| Standard | Status |`n"
-                $Result += "|----------|--------|`n"
+                $null = $Result.Append("| Standard | Status |`n")
+                $null = $Result.Append("|----------|--------|`n")
                 foreach ($Item in $NonCompliantItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $Result += "| $FriendlyName | ❌ Non-Compliant |`n"
+                    $null = $Result.Append("| $FriendlyName | ❌ Non-Compliant |`n")
                 }
-                $Result += "`n"
+                $null = $Result.Append("`n")
             }
 
             # License missing items
             if ($LicenseMissingItems.Count -gt 0) {
-                $Result += "#### Standards Not Applied Due to Missing Licenses`n`n"
-                $Result += "These items are part of this baseline, but your environment does not meet the minimum required licenses for them to be applied.`n`n"
-                $Result += "| Standard | Status |`n"
-                $Result += "|----------|--------|`n"
+                $null = $Result.Append("#### Standards Not Applied Due to Missing Licenses`n`n")
+                $null = $Result.Append("These items are part of this baseline, but your environment does not meet the minimum required licenses for them to be applied.`n`n")
+                $null = $Result.Append("| Standard | Status |`n")
+                $null = $Result.Append("|----------|--------|`n")
                 foreach ($Item in $LicenseMissingItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $Result += "| $FriendlyName | ⚠️ License Missing |`n"
+                    $null = $Result.Append("| $FriendlyName | ⚠️ License Missing |`n")
                 }
-                $Result += "`n"
+                $null = $Result.Append("`n")
             }
 
             # Reporting disabled items
             if ($ReportingDisabledItems.Count -gt 0) {
-                $Result += "#### Standards With Reporting Disabled`n`n"
-                $Result += "| Standard | Status |`n"
-                $Result += "|----------|--------|`n"
+                $null = $Result.Append("#### Standards With Reporting Disabled`n`n")
+                $null = $Result.Append("| Standard | Status |`n")
+                $null = $Result.Append("|----------|--------|`n")
                 foreach ($Item in $ReportingDisabledItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $Result += "| $FriendlyName | ⏸️ Reporting Disabled |`n"
+                    $null = $Result.Append("| $FriendlyName | ⏸️ Reporting Disabled |`n")
                 }
-                $Result += "`n"
+                $null = $Result.Append("`n")
             }
         }
 

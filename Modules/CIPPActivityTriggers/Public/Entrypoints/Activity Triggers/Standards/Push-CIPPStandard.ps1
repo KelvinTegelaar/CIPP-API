@@ -21,7 +21,7 @@ function Push-CIPPStandard {
         $API = "$($Standard)_$($Item.TemplateId)"
     }
 
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $API -BaseTime ([int64]$Item.QueuedTime)
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
         return

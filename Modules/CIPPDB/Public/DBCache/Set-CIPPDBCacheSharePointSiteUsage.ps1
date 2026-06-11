@@ -51,6 +51,7 @@ function Set-CIPPDBCacheSharePointSiteUsage {
 
         # Ensure a stable row key for usage rows.
         foreach ($UsageRow in $UsageRows) {
+            if ($null -eq $UsageRow) { continue }
             $UsageRow | Add-Member -NotePropertyName 'id' -NotePropertyValue $UsageRow.siteId -Force
         }
 
@@ -90,11 +91,9 @@ function Set-CIPPDBCacheSharePointSiteUsage {
             $Site.AutoMapUrl = "tenantId=$($TenantId)&webId={$($Site.sharepointIds.webId)}&siteid={$($Site.sharepointIds.siteId)}&webUrl=$($Site.webUrl)&listId={$($ListId)}"
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteListing' -Data @($SiteListing) -AddCount
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SharePointSiteUsage' -Data @($UsageRows) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached SharePoint site listing and usage successfully' -sev Debug
 

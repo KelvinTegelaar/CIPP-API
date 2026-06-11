@@ -136,6 +136,19 @@ function Test-CIPPAccess {
         $swUserBranch = [System.Diagnostics.Stopwatch]::StartNew()
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
+       if ($User.claims -and [string]::IsNullOrWhiteSpace($User.userDetails)) {
+            $Claims = @($User.claims)
+            $Upn = ($Claims | Where-Object { $_.typ -in @('preferred_username', 'upn', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn', 'email', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') } | Select-Object -First 1).val
+            if ([string]::IsNullOrWhiteSpace($Upn)) { $Upn = $Request.Headers.'x-ms-client-principal-name' }
+            $Oid = ($Claims | Where-Object { $_.typ -in @('http://schemas.microsoft.com/identity/claims/objectidentifier', 'oid') } | Select-Object -First 1).val
+            $User = [pscustomobject]@{
+                identityProvider = 'aad'
+                userId           = $Oid
+                userDetails      = $Upn
+                userRoles        = @('authenticated', 'anonymous')
+            }
+        }
+
         # Check for roles granted via group membership
         if (($User.userRoles | Measure-Object).Count -eq 2 -and $User.userRoles -contains 'authenticated' -and $User.userRoles -contains 'anonymous') {
             $swResolveUserRoles = [System.Diagnostics.Stopwatch]::StartNew()
@@ -145,6 +158,9 @@ function Test-CIPPAccess {
         }
 
         $swIPCheck = [System.Diagnostics.Stopwatch]::StartNew()
+        if (-not $User.userRoles) {
+            throw 'Access denied: unable to resolve roles for the authenticated principal.'
+        }
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 
         if ($AllowedIPRanges -notcontains 'Any') {
@@ -160,7 +176,7 @@ function Test-CIPPAccess {
                     }
                 }
 
-                if (-not $IPAllowed -and -not $Request.Params.CIPPEndpoint -eq 'me') {
+                if ((-not $IPAllowed) -and ($Request.Params.CIPPEndpoint -ne 'me')) {
                     throw "Access to this CIPP API endpoint is not allowed, your IP address ($IPAddress) is not in the allowed range for your role(s)"
                 }
             } else {
@@ -209,6 +225,14 @@ function Test-CIPPAccess {
                 'permissions'     = $Permissions
             }
 
+            # Hosted payment status checks — shown to all users (no permission gating)
+            if ($env:cipp_hosted_subscription_ended) {
+                $MeResponse['hostedSubscriptionEnded'] = $true
+            }
+            if ($env:cipp_hosted_failed_payments) {
+                $MeResponse['hostedFailedPayments'] = $true
+            }
+
             # Forced SSO migration: non-dismissible prompt when migration env var is set
             if ($env:CIPP_SSO_MIGRATION_APPID -and $Permissions -contains 'CIPP.AppSettings.ReadWrite') {
                 $MeResponse['forceSsoMigration'] = @{
@@ -217,7 +241,7 @@ function Test-CIPPAccess {
                 }
             }
 
-            if ($Permissions -contains 'CIPP.AppSettings.ReadWrite' -and $env:CIPPNG -ne 'true' -and $env:CIPP_SSO_MIGRATION_PROMPT -eq 'true') {
+            if ($env:CIPPNG -ne 'true') {
                 try {
                     $SSOTable = Get-CIPPTable -tablename 'SSOMigration'
                     $SSOMigration = Get-CIPPAzDataTableEntity @SSOTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
@@ -312,7 +336,6 @@ function Test-CIPPAccess {
                     $PermissionsFound = $true
                 } catch {
                     Write-Information $_.Exception.Message
-                    continue
                 }
             }
             $swRolePerms.Stop()
@@ -469,38 +492,12 @@ function Test-CIPPAccess {
             } else {
                 # No permissions found for any roles
                 if ($TenantList.IsPresent) {
-                    return @('AllTenants')
+                    return @()
                 }
-                return $true
-                if ($APIAllowed) {
-                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId ?? $env:TenantID
-                    # Check tenant level access
-                    if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
-                        $TenantAllowed = $true
-                    } elseif ($TenantFilter -eq 'AllTenants') {
-                        $TenantAllowed = $false
-                    } else {
-                        $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
-
-                        if ($Role.AllowedTenants -contains 'AllTenants') {
-                            $AllowedTenants = $Tenants.customerId
-                        } else {
-                            $AllowedTenants = $Role.AllowedTenants
-                        }
-                        if ($Tenant) {
-                            $TenantAllowed = $AllowedTenants -contains $Tenant -and $Role.BlockedTenants -notcontains $Tenant
-                            if (!$TenantAllowed) { continue }
-                            break
-                        } else {
-                            $TenantAllowed = $true
-                            break
-                        }
-                    }
-                }
+                throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
             }
 
             if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
-
                 if (!$APIAllowed) {
                     throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
                 }
@@ -511,14 +508,13 @@ function Test-CIPPAccess {
                 } else {
                     return $true
                 }
-
             }
         } else {
             # No permissions found for any roles
             if ($TenantList.IsPresent) {
-                return @('AllTenants')
+                return @()
             }
-            return $true
+            throw 'Access to this CIPP API endpoint is not allowed, the user does not have the required permission'
         }
         $swUserBranch.Stop()
         $AccessTimings['UserBranch'] = $swUserBranch.Elapsed.TotalMilliseconds

@@ -281,6 +281,7 @@ function Push-CIPPStandardsList {
 
         Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
         # Return filtered standards
+        $QueuedTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
             [PSCustomObject]@{
                 Tenant       = $_.Tenant
@@ -288,6 +289,7 @@ function Push-CIPPStandardsList {
                 Settings     = $_.Settings
                 TemplateId   = $_.TemplateId
                 FunctionName = 'CIPPStandard'
+                QueuedTime   = $QueuedTime
             }
         }
         Write-Host "Sending back $($FilteredStandards.Count) standards"

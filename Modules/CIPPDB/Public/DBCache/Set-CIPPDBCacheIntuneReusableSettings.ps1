@@ -29,8 +29,7 @@ function Set-CIPPDBCacheIntuneReusableSettings {
         $Settings = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings$SelectQuery" -tenantid $TenantFilter
         if (-not $Settings) { $Settings = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' -Data @($Settings)
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' -Data @($Settings) -Count
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' -Data @($Settings) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(($Settings | Measure-Object).Count) reusable settings" -sev Debug
     } catch {

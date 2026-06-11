@@ -41,7 +41,8 @@ function Invoke-CIPPStandardMessageExpiration {
     } #we're done.
 
     try {
-        $MessageExpiration = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig').messageExpiration
+        $TransportConfig = New-CIPPDbRequest -TenantFilter $Tenant -Type 'ExoTransportConfig' | Select-Object -First 1
+        $MessageExpiration = $TransportConfig.messageExpiration
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MessageExpiration state for $Tenant. Error: $ErrorMessage" -Sev Error

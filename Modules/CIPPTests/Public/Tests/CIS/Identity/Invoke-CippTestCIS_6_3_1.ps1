@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_6_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (6.3.1) - Users installing Outlook add-ins SHALL NOT be allowed
+    Tests CIS M365 7.0.0 (6.3.1) - Users installing Outlook add-ins SHALL NOT be allowed
     #>
     param($Tenant)
 

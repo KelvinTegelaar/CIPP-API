@@ -7,7 +7,7 @@ Update-MgDomain -DomainId <domain> -PasswordValidityPeriodInDays 2147483647 -Pas
 ```
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 1.3.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 1.3.1](https://www.cisecurity.org/benchmark/microsoft_365)
 - [Set passwords to never expire](https://learn.microsoft.com/microsoft-365/admin/manage/set-password-to-never-expire)
 
 <!--- Results --->

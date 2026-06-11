@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_2_3_7 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.2.3.7) - The email OTP authentication method SHALL be disabled
+    Tests CIS M365 7.0.0 (5.2.3.7) - The email OTP authentication method SHALL be disabled
     #>
     param($Tenant)
 

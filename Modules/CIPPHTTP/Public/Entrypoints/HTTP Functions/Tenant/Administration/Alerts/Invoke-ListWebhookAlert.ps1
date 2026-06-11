@@ -4,6 +4,8 @@ Function Invoke-ListWebhookAlert {
         Entrypoint
     .ROLE
         CIPP.Alert.Read
+    .DESCRIPTION
+        Lists configured webhook alert rules that trigger on specific audit log events.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

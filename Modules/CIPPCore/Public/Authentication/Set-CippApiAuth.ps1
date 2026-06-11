@@ -4,7 +4,8 @@ function Set-CippApiAuth {
         [string]$RGName,
         [string]$FunctionAppName,
         [string]$TenantId,
-        [string[]]$ClientIds
+        [string[]]$ClientIds,
+        [string[]]$McpClientIds
     )
 
     if ($env:CIPPNG) {
@@ -18,6 +19,7 @@ function Set-CippApiAuth {
 
         Write-Information "[ApiAuth] SiteName=$SiteName, ResourceGroup=$ResourceGroup, SubscriptionId=$SubscriptionId"
         Write-Information "[ApiAuth] ClientIds to set: $($ClientIds -join ', ')"
+        Write-Information "[ApiAuth] MCP client IDs: $($McpClientIds -join ', ') | WEBSITE_HOSTNAME=$($env:WEBSITE_HOSTNAME)"
 
         if (-not $SiteName -or -not $ResourceGroup -or -not $SubscriptionId) {
             throw "[ApiAuth] Missing App Service env vars: WEBSITE_SITE_NAME=$SiteName, WEBSITE_RESOURCE_GROUP=$ResourceGroup, SubscriptionId=$SubscriptionId"
@@ -41,7 +43,7 @@ function Set-CippApiAuth {
         # The env var has the raw config (identityProviders at top level, no properties wrapper)
         # Safely navigate/create the full path — any level may be null
         if (-not $Current.ContainsKey('identityProviders') -or $null -eq $Current.identityProviders) { $Current.identityProviders = @{} }
-        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders.azureActiveDirectory = @{} }
+        if (-not $Current.identityProviders.ContainsKey('azureActiveDirectory') -or $null -eq $Current.identityProviders.azureActiveDirectory) { $Current.identityProviders | Add-Member -MemberType NoteProperty -Name 'azureActiveDirectory' -Value @{} -Force }
 
         $AAD = $Current.identityProviders.azureActiveDirectory
         Write-Information "[ApiAuth] AAD keys: $($AAD.Keys -join ', ')"
@@ -61,6 +63,16 @@ function Set-CippApiAuth {
         $AllAudiences = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         foreach ($id in $AllAppIds) {
             [void]$AllAudiences.Add("api://$id")
+        }
+
+        # MCP resource clients also accept tokens whose audience is the host-based identifier URI or
+        # the bare appId (v2 tokens), so the Claude connector's token validates against EasyAuth.
+        if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+            [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
+            [void]$AllAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+            foreach ($McpId in $McpClientIds) {
+                if (-not [string]::IsNullOrEmpty($McpId)) { [void]$AllAudiences.Add($McpId) }
+            }
         }
 
         Write-Information "[ApiAuth] Merged allowedApplications: $($AllAppIds -join ', ')"
@@ -89,21 +101,39 @@ function Set-CippApiAuth {
             $PutUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
             $PutResult = New-CIPPAzRestRequest -Uri $PutUri -Method PUT -Body $PutBody -ContentType 'application/json' -ErrorAction Stop
             Write-Information "[ApiAuth] PUT result: $($PutResult | ConvertTo-Json -Depth 10 -Compress)"
-            Write-Information "[ApiAuth] Updated EasyAuth successfully"
+            Write-Information '[ApiAuth] Updated EasyAuth successfully'
         }
     } else {
-        # Full overwrite path (no SSO EasyAuth config to preserve)
+        # Resolve subscription ID via helper (managed identity environment assumed for ARM).
         $SubscriptionId = Get-CIPPAzFunctionAppSubId
-        $BaseUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$FunctionAppName"
 
-        $getUri = "$BaseUri/config/authsettingsV2/list?api-version=2020-06-01"
-        $AuthSettings = New-CIPPAzRestRequest -Uri $getUri -Method POST
+        # Get auth settings via ARM REST (managed identity)
+        $getUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01"
+        $resp = New-CIPPAzRestRequest -Uri $getUri -Method 'GET'
+        $AuthSettings = $resp | Select-Object -ExpandProperty Content -ErrorAction SilentlyContinue
+        if ($AuthSettings -is [string]) { $AuthSettings = $AuthSettings | ConvertFrom-Json }
+        else { $AuthSettings = $resp }
 
         Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
-        $AllowedAudiences = foreach ($ClientId in $ClientIds) { "api://$ClientId" }
+        # Set allowed audiences (api://{id} for each, plus MCP resource URIs + bare appId for MCP clients)
+        $AudienceList = [System.Collections.Generic.List[string]]::new()
+        foreach ($ClientId in $ClientIds) {
+            $AudienceList.Add("api://$ClientId")
+        }
+        if ($McpClientIds -and $env:WEBSITE_HOSTNAME) {
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)")
+            $AudienceList.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+            foreach ($McpId in $McpClientIds) {
+                if (-not [string]::IsNullOrEmpty($McpId)) { $AudienceList.Add($McpId) }
+            }
+        }
+        $AllowedAudiences = @($AudienceList)
+
         if (!$AllowedAudiences) { $AllowedAudiences = @() }
         if (!$ClientIds) { $ClientIds = @() }
+
+        # Set auth settings
 
         if (($ClientIds | Measure-Object).Count -gt 0) {
             $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
@@ -138,9 +168,9 @@ function Set-CippApiAuth {
         }
 
         if ($PSCmdlet.ShouldProcess('Update auth settings')) {
-            $putUri = "$BaseUri/config/authsettingsV2?api-version=2020-06-01"
-            $Body = $AuthSettings | ConvertTo-Json -Depth 20
-            $null = New-CIPPAzRestRequest -Uri $putUri -Method PUT -Body $Body -ContentType 'application/json'
+            # Update auth settings via ARM REST
+            $putUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01"
+            $null = New-CIPPAzRestRequest -Uri $putUri -Method 'PUT' -Body $AuthSettings -ContentType 'application/json'
         }
 
         if ($PSCmdlet.ShouldProcess('Update allowed tenants')) {

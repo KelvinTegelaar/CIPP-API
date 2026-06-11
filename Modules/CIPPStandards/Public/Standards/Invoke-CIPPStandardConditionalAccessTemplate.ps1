@@ -60,6 +60,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         #Get from DB, as we just downloaded the latest before the standard runs.
         $AllCAPolicies = New-CIPPDbRequest -TenantFilter $tenant -Type 'ConditionalAccessPolicies'
         $PreloadedLocations = New-CIPPDbRequest -TenantFilter $tenant -Type 'NamedLocations'
+        $PreloadedSecurityDefaults = New-CIPPDbRequest -TenantFilter $tenant -Type 'SecurityDefaults'
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the ConditionalAccessTemplate state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -80,17 +81,18 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 }
             }
             $NewCAPolicy = @{
-                replacePattern      = 'displayName'
-                TenantFilter        = $Tenant
-                state               = $Settings.state
-                RawJSON             = $JSONObj
-                Overwrite           = $true
-                APIName             = 'Standards'
-                Headers             = $Request.Headers
-                DisableSD           = $Settings.DisableSD
-                CreateGroups        = $Settings.CreateGroups ?? $false
-                PreloadedCAPolicies = $AllCAPolicies
-                PreloadedLocations  = $PreloadedLocations
+                replacePattern            = 'displayName'
+                TenantFilter              = $Tenant
+                state                     = $Settings.state
+                RawJSON                   = $JSONObj
+                Overwrite                 = $true
+                APIName                   = 'Standards'
+                Headers                   = $Request.Headers
+                DisableSD                 = $Settings.DisableSD
+                CreateGroups              = $Settings.CreateGroups ?? $false
+                PreloadedCAPolicies       = $AllCAPolicies
+                PreloadedLocations        = $PreloadedLocations
+                PreloadedSecurityDefaults = $PreloadedSecurityDefaults
             }
 
             $null = New-CIPPCAPolicy @NewCAPolicy
@@ -139,7 +141,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 return
             }
             if (!$Compare) {
-                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue $true -Tenant $Tenant
+                $ExpectedValue = @{ 'Differences' = 'No Differences found' }
+                $CurrentValue = @{ 'Differences' = 'No Differences found' }
+                Set-CIPPStandardsCompareField -FieldName "standards.ConditionalAccessTemplate.$($Settings.TemplateList.value)" -FieldValue $true -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
             } else {
                 #this can still be prettified but is for later.
                 $ExpectedValue = @{ 'Differences' = @() }

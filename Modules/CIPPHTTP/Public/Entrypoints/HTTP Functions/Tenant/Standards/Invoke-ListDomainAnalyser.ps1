@@ -5,6 +5,8 @@ Function Invoke-ListDomainAnalyser {
         Entrypoint
     .ROLE
         Tenant.DomainAnalyser.Read
+    .DESCRIPTION
+        Lists domain analysis results (SPF, DKIM, DMARC, DNSSEC) for tenant domains.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

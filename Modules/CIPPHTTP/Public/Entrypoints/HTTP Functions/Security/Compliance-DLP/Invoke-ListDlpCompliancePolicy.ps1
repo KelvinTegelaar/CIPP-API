@@ -4,6 +4,8 @@ Function Invoke-ListDlpCompliancePolicy {
         Entrypoint
     .ROLE
         Security.DlpCompliancePolicy.Read
+    .DESCRIPTION
+        Lists Data Loss Prevention (DLP) compliance policies and their associated rules from the Security & Compliance Center.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

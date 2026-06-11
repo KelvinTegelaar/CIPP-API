@@ -4,6 +4,8 @@ function Invoke-ListGeneratedReports {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists generated reports from the CIPP Report Builder, filterable by tenant or report GUID.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

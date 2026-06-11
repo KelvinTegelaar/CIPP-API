@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_2_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.2.1) - 'Per-user MFA' SHALL be disabled
+    Tests CIS M365 7.0.0 (5.1.2.1) - 'Per-user MFA' SHALL be disabled
     #>
     param($Tenant)
 

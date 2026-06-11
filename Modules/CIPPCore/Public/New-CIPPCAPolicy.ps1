@@ -12,7 +12,8 @@ function New-CIPPCAPolicy {
         $APIName = 'Create CA Policy',
         $Headers,
         $PreloadedCAPolicies = $null,
-        $PreloadedLocations = $null
+        $PreloadedLocations = $null,
+        $PreloadedSecurityDefaults = $null
     )
 
     # Helper function to replace group display names with GUIDs
@@ -490,16 +491,30 @@ function New-CIPPCAPolicy {
         }
     }
     if ($DisableSD -eq $true) {
-        #Send request to disable security defaults.
-        $body = '{ "isEnabled": false }'
-        try {
-            $null = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -asApp $true
-            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
-            Start-Sleep 3
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-Information "Error disabling security defaults: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
-            Write-Information "Failed to disable security defaults for tenant $($TenantFilter): $($ErrorMessage.NormalizedError)"
+        # Check if Security Defaults is already disabled using preloaded or live data
+        $SDPolicy = $PreloadedSecurityDefaults
+        if ($null -eq $SDPolicy) {
+            try {
+                $SDPolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter -AsApp $true
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-Information "Error fetching Security Defaults status: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+            }
+        }
+
+        if ($SDPolicy.isEnabled -eq $false) {
+            Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Security Defaults already disabled, skipping.' -Sev 'Info'
+        } else {
+            $body = '{ "isEnabled": false }'
+            try {
+                $null = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -Type patch -Body $body -asApp $true
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Disabled Security Defaults for tenant $($TenantFilter)" -Sev 'Info'
+                Start-Sleep 3
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-Information "Error disabling security defaults: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
+                Write-Information "Failed to disable security defaults for tenant $($TenantFilter): $($ErrorMessage.NormalizedError)"
+            }
         }
     }
     $RawJSON = ConvertTo-Json -InputObject $JSONobj -Depth 10 -Compress

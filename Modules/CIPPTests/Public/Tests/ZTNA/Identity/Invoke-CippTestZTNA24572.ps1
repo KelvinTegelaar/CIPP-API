@@ -24,19 +24,19 @@ function Invoke-CippTestZTNA24572 {
         $Passed = $AssignedNotifications.Count -gt 0
 
         if ($Passed) {
-            $ResultMarkdown = "✅ At least one device enrollment notification is configured and assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ At least one device enrollment notification is configured and assigned.`n`n")
         } else {
-            $ResultMarkdown = "❌ No device enrollment notification is configured or assigned in Intune.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ No device enrollment notification is configured or assigned in Intune.`n`n")
         }
 
         if ($EnrollmentNotifications.Count -gt 0) {
-            $ResultMarkdown += "## Device Enrollment Notifications`n`n"
-            $ResultMarkdown += "| Policy Name | Assigned |`n"
-            $ResultMarkdown += "| :---------- | :------- |`n"
+            $null = $ResultMarkdown.Append("## Device Enrollment Notifications`n`n")
+            $null = $ResultMarkdown.Append("| Policy Name | Assigned |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :------- |`n")
 
             foreach ($policy in $EnrollmentNotifications) {
                 $assigned = if ($policy.assignments -and $policy.assignments.Count -gt 0) { '✅ Yes' } else { '❌ No' }
-                $ResultMarkdown += "| $($policy.displayName) | $assigned |`n"
+                $null = $ResultMarkdown.Append("| $($policy.displayName) | $assigned |`n")
             }
         }
 

@@ -46,21 +46,37 @@ function Invoke-CippTestORCA102 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All anti-spam policies have Advanced Spam Filter (ASF) options turned off.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All anti-spam policies have Advanced Spam Filter (ASF) options turned off.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) anti-spam policies have Advanced Spam Filter (ASF) options enabled.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Enabled ASF Options |`n"
-            $Result += "|------------|---------------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) anti-spam policies have Advanced Spam Filter (ASF) options enabled.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Enabled ASF Options |`n")
+            $null = $Result.Append("|------------|---------------------|`n")
+            $ASFSettingMap = [ordered]@{
+                IncreaseScoreWithImageLinks          = 'ImageLinks'
+                IncreaseScoreWithNumericIps          = 'NumericIPs'
+                IncreaseScoreWithRedirectToOtherPort = 'RedirectToOtherPort'
+                IncreaseScoreWithBizOrInfoUrls       = 'BizOrInfoUrls'
+                MarkAsSpamEmptyMessages              = 'EmptyMessages'
+                MarkAsSpamJavaScriptInHtml           = 'JavaScript'
+                MarkAsSpamFramesInHtml               = 'Frames'
+                MarkAsSpamObjectTagsInHtml           = 'ObjectTags'
+                MarkAsSpamEmbedTagsInHtml            = 'EmbedTags'
+                MarkAsSpamFormTagsInHtml             = 'FormTags'
+                MarkAsSpamWebBugsInHtml              = 'WebBugs'
+                MarkAsSpamSensitiveWordList          = 'SensitiveWordList'
+                MarkAsSpamSpfRecordHardFail          = 'SpfRecordHardFail'
+                MarkAsSpamFromAddressAuthFail        = 'FromAddressAuthFail'
+                MarkAsSpamNdrBackscatter             = 'NdrBackscatter'
+            }
             foreach ($Policy in $FailedPolicies) {
                 $EnabledOptions = [System.Collections.Generic.List[string]]::new()
-                if ($Policy.IncreaseScoreWithImageLinks -eq 'On') { $EnabledOptions.Add('ImageLinks') | Out-Null }
-                if ($Policy.IncreaseScoreWithNumericIps -eq 'On') { $EnabledOptions.Add('NumericIPs') | Out-Null }
-                if ($Policy.MarkAsSpamEmptyMessages -eq 'On') { $EnabledOptions.Add('EmptyMessages') | Out-Null }
-                if ($Policy.MarkAsSpamJavaScriptInHtml -eq 'On') { $EnabledOptions.Add('JavaScript') | Out-Null }
-                $Result += "| $($Policy.Identity) | $($EnabledOptions -join ', ') |`n"
+                foreach ($Property in $ASFSettingMap.Keys) {
+                    if ($Policy.$Property -eq 'On') { $EnabledOptions.Add($ASFSettingMap[$Property]) | Out-Null }
+                }
+                $null = $Result.Append("| $($Policy.Identity) | $($EnabledOptions -join ', ') |`n")
             }
         }
 

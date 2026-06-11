@@ -564,13 +564,11 @@ namespace CIPP
 
                 request.Content = new StringContent(body, encoding, mediaTypePart);
 
-                // Re-apply the full Content-Type (including charset) because
-                // StringContent's constructor strips parameters on some runtimes
-                if (ctParts.Length > 1)
-                {
-                    request.Content.Headers.Remove("Content-Type");
-                    request.Content.Headers.TryAddWithoutValidation("Content-Type", effectiveCt);
-                }
+                // Re-apply the exact Content-Type the caller specified.
+                // StringContent's constructor auto-appends "; charset=utf-8"
+                // which breaks APIs that require a bare media type (e.g. "text/css").
+                request.Content.Headers.Remove("Content-Type");
+                request.Content.Headers.TryAddWithoutValidation("Content-Type", effectiveCt);
             }
 
             // Apply any deferred content headers (e.g. Content-Encoding)

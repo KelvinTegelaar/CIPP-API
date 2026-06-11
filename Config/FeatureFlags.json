@@ -32,16 +32,29 @@
     "Endpoints": [
       "ExecCIPPUsers",
       "ListCIPPUsers",
-      "ExecSSOSetup",
       "ExecContainerManagement",
-      "ListContainerLogs"
+      "ListContainerLogs",
+      "ListWorkerHealth"
     ],
     "Pages": [
       "/cipp/advanced/super-admin/cipp-users",
-      "/cipp/advanced/super-admin/sso",
       "/cipp/advanced/super-admin/container",
-      "/cipp/advanced/container-logs"
+      "/cipp/advanced/container-logs",
+      "/cipp/advanced/worker-health"
     ],
     "Hidden": true
+  },
+  {
+    "Id": "MCPServer",
+    "Name": "MCP Server",
+    "Description": "Model Context Protocol (MCP) server endpoint that exposes CIPP's read-only API surface as tools for AI clients. Disabled by default; enable to allow MCP access.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [
+      "ExecMcp"
+    ],
+    "Pages": [],
+    "Hidden": false
   }
 ]

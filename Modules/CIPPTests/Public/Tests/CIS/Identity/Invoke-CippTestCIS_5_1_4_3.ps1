@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_4_3 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.4.3) - GA role SHALL NOT be added as local administrator during Entra join
+    Tests CIS M365 7.0.0 (5.1.4.3) - GA role SHALL NOT be added as local administrator during Entra join
     #>
     param($Tenant)
 

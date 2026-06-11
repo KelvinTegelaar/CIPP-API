@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA24552 {
             $_.platforms -match 'macOS'
         }
 
-        $MacOSFirewallPolicies = @()
+        $MacOSFirewallPolicies = [System.Collections.Generic.List[object]]::new()
         foreach ($MacOSPolicy in $MacOSPolicies) {
             $ValidSettingValues = @('com.apple.security.firewall_enablefirewall_true')
 
@@ -36,7 +36,7 @@ function Invoke-CippTestZTNA24552 {
                 }
 
                 if ($HasValidSetting) {
-                    $MacOSFirewallPolicies += $MacOSPolicy
+                    $MacOSFirewallPolicies.Add($MacOSPolicy)
                 }
             }
         }
@@ -47,14 +47,13 @@ function Invoke-CippTestZTNA24552 {
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $ResultLines = @(
-                'At least one macOS Firewall policy is configured and assigned.'
-                ''
-                '**macOS Firewall Policies:**'
-                ''
-                '| Policy Name | Status | Assignment Count |'
-                '| :---------- | :----- | :--------------- |'
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add('At least one macOS Firewall policy is configured and assigned.')
+            $ResultLines.Add('')
+            $ResultLines.Add('**macOS Firewall Policies:**')
+            $ResultLines.Add('')
+            $ResultLines.Add('| Policy Name | Status | Assignment Count |')
+            $ResultLines.Add('| :---------- | :----- | :--------------- |')
 
             foreach ($Policy in $MacOSFirewallPolicies) {
                 $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) {
@@ -63,21 +62,20 @@ function Invoke-CippTestZTNA24552 {
                     '❌ Not assigned'
                 }
                 $AssignmentCount = if ($Policy.assignments) { $Policy.assignments.Count } else { 0 }
-                $ResultLines += "| $($Policy.name) | $PolicyStatus | $AssignmentCount |"
+                $ResultLines.Add("| $($Policy.name) | $PolicyStatus | $AssignmentCount |")
             }
 
             $Result = $ResultLines -join "`n"
         } else {
             $Status = 'Failed'
             if ($MacOSFirewallPolicies.Count -gt 0) {
-                $ResultLines = @(
-                    'macOS Firewall policies exist but none are assigned.'
-                    ''
-                    '**Unassigned Firewall Policies:**'
-                    ''
-                )
+                $ResultLines = [System.Collections.Generic.List[string]]::new()
+                $ResultLines.Add('macOS Firewall policies exist but none are assigned.')
+                $ResultLines.Add('')
+                $ResultLines.Add('**Unassigned Firewall Policies:**')
+                $ResultLines.Add('')
                 foreach ($Policy in $MacOSFirewallPolicies) {
-                    $ResultLines += "- $($Policy.name)"
+                    $ResultLines.Add("- $($Policy.name)")
                 }
             } else {
                 $ResultLines = @('No macOS Firewall policy is configured or assigned.')

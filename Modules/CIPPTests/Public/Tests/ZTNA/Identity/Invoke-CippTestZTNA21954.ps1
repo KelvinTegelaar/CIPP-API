@@ -43,11 +43,11 @@ function Invoke-CippTestZTNA21954 {
         $Status = if ($IsRestricted) { 'Passed' } else { 'Failed' }
 
         if ($Status -eq 'Passed') {
-            $ResultMarkdown = "✅ **Pass**: Non-admin users cannot read BitLocker recovery keys, reducing the risk of unauthorized access.`n`n"
-            $ResultMarkdown += '[Review settings](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/PoliciesTemplateBlade)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Non-admin users cannot read BitLocker recovery keys, reducing the risk of unauthorized access.`n`n")
+            $null = $ResultMarkdown.Append('[Review settings](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/PoliciesTemplateBlade)')
         } else {
-            $ResultMarkdown = "❌ **Fail**: Non-admin users can read BitLocker recovery keys for their own devices, which may allow unauthorized access.`n`n"
-            $ResultMarkdown += '[Restrict access](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/PoliciesTemplateBlade)'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: Non-admin users can read BitLocker recovery keys for their own devices, which may allow unauthorized access.`n`n")
+            $null = $ResultMarkdown.Append('[Restrict access](https://entra.microsoft.com/#view/Microsoft_AAD_IAM/PoliciesTemplateBlade)')
         }
 
         $TestParams = @{

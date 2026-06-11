@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_8_5_6 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (8.5.6) - Only organizers and co-organizers SHALL be able to present
+    Tests CIS M365 7.0.0 (8.5.6) - Only organizers and co-organizers SHALL be able to present
     #>
     param($Tenant)
 

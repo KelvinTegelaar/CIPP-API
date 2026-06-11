@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_4_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.4.2) - Priority accounts SHALL have 'Strict protection' presets applied
+    Tests CIS M365 7.0.0 (2.4.2) - Priority accounts SHALL have 'Strict protection' presets applied
     #>
     param($Tenant)
 

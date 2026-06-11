@@ -4,6 +4,8 @@ function Invoke-ListMailQuarantine {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists quarantined email messages in Exchange Online Protection for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -12,7 +14,27 @@ function Invoke-ListMailQuarantine {
 
     try {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 } | Select-Object -ExcludeProperty *data.type*
+            $PageSize = 1000
+            if ($Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)) {
+                # Manual pagination: return one page per request. The frontend chains requests via
+                # Metadata.nextLink, which for this endpoint is the next Get-QuarantineMessage page number.
+                $Page = if ($Request.Query.nextLink -match '^\d+$') { [int]$Request.Query.nextLink } else { 1 }
+                $Results = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = $PageSize; Page = $Page } | Select-Object -ExcludeProperty *data.type*
+                # Get-QuarantineMessage supports a maximum Page of 1000
+                if (@($Results).Count -eq $PageSize -and $Page -lt 1000) {
+                    $Metadata = [PSCustomObject]@{ nextLink = [string]($Page + 1) }
+                }
+                $Results
+            } else {
+                $Page = 1
+                $AllMessages = [System.Collections.Generic.List[object]]::new()
+                do {
+                    $Results = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ PageSize = $PageSize; Page = $Page } | Select-Object -ExcludeProperty *data.type*
+                    if ($Results) { $AllMessages.AddRange(@($Results)) }
+                    $Page++
+                } while (@($Results).Count -eq $PageSize)
+                $AllMessages
+            }
         } else {
             $Table = Get-CIPPTable -TableName cacheQuarantineMessages
             $PartitionKey = 'QuarantineMessage'

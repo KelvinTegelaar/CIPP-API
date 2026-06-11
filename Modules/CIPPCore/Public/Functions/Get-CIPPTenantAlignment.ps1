@@ -80,6 +80,16 @@ function Get-CIPPTenantAlignment {
                 $TemplatesByPackage[$t.Package].Add($t)
             }
         }
+        $CATagTemplates = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'CATemplate'"
+        $CATemplatesByPackage = @{}
+        foreach ($t in $CATagTemplates) {
+            if ($t.Package) {
+                if (-not $CATemplatesByPackage.ContainsKey($t.Package)) {
+                    $CATemplatesByPackage[$t.Package] = [System.Collections.Generic.List[object]]::new()
+                }
+                $CATemplatesByPackage[$t.Package].Add($t)
+            }
+        }
         # Build tenant standards data structure
         $tenantData = @{}
         foreach ($Standard in $Standards) {
@@ -98,7 +108,8 @@ function Get-CIPPTenantAlignment {
                 }
             }
 
-            if ($Tenant -and -not $tenantData.ContainsKey($Tenant)) {
+            if (-not $Tenant) { continue }
+            if (-not $tenantData.ContainsKey($Tenant)) {
                 $tenantData[$Tenant] = @{}
             }
             $tenantData[$Tenant][$FieldName] = @{
@@ -214,7 +225,8 @@ function Get-CIPPTenantAlignment {
                             foreach ($Tag in $IntuneTemplate.'TemplateList-Tags') {
                                 $IntuneActions = if ($IntuneTemplate.action) { $IntuneTemplate.action } else { @() }
                                 $IntuneReportingEnabled = ($IntuneActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
-                                $TagTemplate = if ($TemplatesByPackage.ContainsKey($Tag.value)) { $TemplatesByPackage[$Tag.value] } else { @() }
+                                $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
+                                $TagTemplate = if ($TagValue -and $TemplatesByPackage.ContainsKey($TagValue)) { $TemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
                                     $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
                                     [PSCustomObject]@{
@@ -245,7 +257,8 @@ function Get-CIPPTenantAlignment {
                                 Write-Host "Processing CA Tag: $($Tag.value)"
                                 $CAActions = if ($CATemplate.action) { $CATemplate.action } else { @() }
                                 $CAReportingEnabled = ($CAActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
-                                $TagTemplate = $TagTemplates | Where-Object -Property package -EQ $Tag.value
+                                $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
+                                $TagTemplate = if ($CATemplatesByPackage.ContainsKey($TagValue)) { $CATemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
                                     $TagStandardId = "standards.ConditionalAccessTemplate.$($_.GUID)"
                                     [PSCustomObject]@{
@@ -278,8 +291,10 @@ function Get-CIPPTenantAlignment {
                 }
             }
 
-            $AllStandards = $StandardsData.StandardId
-            $AllStandardsArray = @($AllStandards)
+            if (-not $StandardsData) { continue }
+            $AllStandards = @($StandardsData.StandardId | Where-Object { $_ })
+            if ($AllStandards.Count -eq 0) { continue }
+            $AllStandardsArray = $AllStandards
             $ReportingDisabledStandards = ($StandardsData | Where-Object { -not $_.ReportingEnabled }).StandardId
             $ReportingDisabledSet = [System.Collections.Generic.HashSet[string]]::new()
             foreach ($item in $ReportingDisabledStandards) { [void]$ReportingDisabledSet.Add($item) }
@@ -438,8 +453,7 @@ function Get-CIPPTenantAlignment {
                                 $DeniedDeviationsCount++
                             }
                         }
-                    }
-                    elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
+                    } elseif ($item.ComplianceStatus -eq 'License Missing') { $LicenseMissingStandards++ }
                     if ($item.ReportingDisabled) { $ReportingDisabledStandardsCount++ }
                 }
 

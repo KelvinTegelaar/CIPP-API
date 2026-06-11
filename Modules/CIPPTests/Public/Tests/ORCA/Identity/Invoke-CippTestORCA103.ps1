@@ -20,17 +20,17 @@ function Invoke-CippTestORCA103 {
             $IsCompliant = $true
             $Issues = [System.Collections.Generic.List[string]]::new()
 
-            if ($Policy.RecipientLimitExternalPerHour -ne 500) {
+            if ($Policy.RecipientLimitExternalPerHour -le 0 -or $Policy.RecipientLimitExternalPerHour -gt 500) {
                 $IsCompliant = $false
-                $Issues.Add("RecipientLimitExternalPerHour: $($Policy.RecipientLimitExternalPerHour) (should be 500)") | Out-Null
+                $Issues.Add("RecipientLimitExternalPerHour: $($Policy.RecipientLimitExternalPerHour) (should be between 1 and 500)") | Out-Null
             }
-            if ($Policy.RecipientLimitInternalPerHour -ne 1000) {
+            if ($Policy.RecipientLimitInternalPerHour -le 0 -or $Policy.RecipientLimitInternalPerHour -gt 1000) {
                 $IsCompliant = $false
-                $Issues.Add("RecipientLimitInternalPerHour: $($Policy.RecipientLimitInternalPerHour) (should be 1000)") | Out-Null
+                $Issues.Add("RecipientLimitInternalPerHour: $($Policy.RecipientLimitInternalPerHour) (should be between 1 and 1000)") | Out-Null
             }
-            if ($Policy.ActionWhenThresholdReached -ne 'BlockUserForToday') {
+            if ($Policy.ActionWhenThresholdReached -ne 'BlockUser') {
                 $IsCompliant = $false
-                $Issues.Add("ActionWhenThresholdReached: $($Policy.ActionWhenThresholdReached) (should be BlockUserForToday)") | Out-Null
+                $Issues.Add("ActionWhenThresholdReached: $($Policy.ActionWhenThresholdReached) (should be BlockUser)") | Out-Null
             }
 
             if ($IsCompliant) {
@@ -45,16 +45,16 @@ function Invoke-CippTestORCA103 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All outbound spam filter policies are configured correctly.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All outbound spam filter policies are configured correctly.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) outbound spam filter policies are not configured correctly.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Issues |`n"
-            $Result += "|------------|--------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) outbound spam filter policies are not configured correctly.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Issues |`n")
+            $null = $Result.Append("|------------|--------|`n")
             foreach ($Failed in $FailedPolicies) {
-                $Result += "| $($Failed.Policy.Identity) | $($Failed.Issues -join '<br/>') |`n"
+                $null = $Result.Append("| $($Failed.Policy.Identity) | $($Failed.Issues -join '<br/>') |`n")
             }
         }
 

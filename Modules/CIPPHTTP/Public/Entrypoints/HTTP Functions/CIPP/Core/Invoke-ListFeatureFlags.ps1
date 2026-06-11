@@ -4,6 +4,8 @@ function Invoke-ListFeatureFlags {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists CIPP feature flags and their enabled/disabled state, including environment-driven overrides.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

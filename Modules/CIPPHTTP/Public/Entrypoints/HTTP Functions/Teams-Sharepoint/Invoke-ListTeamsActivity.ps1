@@ -4,6 +4,8 @@ Function Invoke-ListTeamsActivity {
         Entrypoint
     .ROLE
         Teams.Activity.Read
+    .DESCRIPTION
+        Lists Microsoft Teams user activity reports for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

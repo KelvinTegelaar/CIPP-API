@@ -4,6 +4,8 @@ Function Invoke-ListIPWhitelist {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Lists trusted IP addresses configured in CIPP for IP-based access control.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

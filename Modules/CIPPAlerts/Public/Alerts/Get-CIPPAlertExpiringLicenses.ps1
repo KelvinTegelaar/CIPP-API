@@ -24,7 +24,7 @@ function Get-CIPPAlertExpiringLicenses {
         }
 
         $AlertData = @(
-            Get-CIPPLicenseOverview -TenantFilter $TenantFilter | ForEach-Object {
+            Get-CIPPLicenseOverview -TenantFilter $TenantFilter -AlertMode | ForEach-Object {
 
                 $UnassignedCount = [int]$_.CountAvailable
 

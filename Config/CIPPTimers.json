@@ -18,14 +18,6 @@
     "PreferredProcessor": "usertasks"
   },
   {
-    "Id": "168decf3-7ddd-471e-ab46-8b40be0f18ae",
-    "Command": "Start-CIPPProcessorQueue",
-    "Description": "Timer to handle user initiated tasks",
-    "Cron": "0 */15 * * * *",
-    "Priority": 1,
-    "RunOnProcessor": true
-  },
-  {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to download audit logs",
@@ -246,6 +238,16 @@
     "IsSystem": true
   },
   {
+    "Id": "5e8a9b4c-2d6f-4a3e-b7c1-9d0e5f3a8b2c",
+    "Command": "Start-IntuneReportExportOrchestrator",
+    "Description": "Submit Intune report-export jobs ahead of nightly DB cache run",
+    "Cron": "0 0 2 * * *",
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "TZOffset": true,
+    "IsSystem": true
+  },
+  {
     "Id": "9a7f8e6d-5c4b-3a2d-1e0f-9b8c7d6e5f4a",
     "Command": "Start-CIPPDBCacheOrchestrator",
     "Description": "Timer to collect and cache Microsoft Graph data for all tenants",
@@ -271,6 +273,15 @@
     "Description": "Check for container image updates and optionally auto-restart",
     "Cron": "0 0 * * * *",
     "Priority": 30,
+    "RunOnProcessor": false,
+    "IsSystem": true
+  },
+  {
+    "Id": "7e2a9b4c-1d5f-4a8e-b3c6-0f9d2e7a4b1c",
+    "Command": "Start-UserSyncTimer",
+    "Description": "Sync partner tenant users and group-based roles into allowedUsers table",
+    "Cron": "0 */15 * * * *",
+    "Priority": 11,
     "RunOnProcessor": false,
     "IsSystem": true
   }

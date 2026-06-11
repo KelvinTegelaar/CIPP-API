@@ -29,8 +29,7 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
         try {
             $CAPolicies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
             if ($CAPolicies) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data $CAPolicies
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data $CAPolicies -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data $CAPolicies -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($CAPolicies.Count) CA policies" -sev Debug
             }
             $CAPolicies = $null
@@ -42,8 +41,7 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
             $NamedLocations = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
 
             if ($NamedLocations) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data $NamedLocations
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data $NamedLocations -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NamedLocations' -Data $NamedLocations -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($NamedLocations.Count) named locations" -sev Debug
             }
             $NamedLocations = $null
@@ -55,13 +53,22 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
             $AuthStrengths = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
 
             if ($AuthStrengths) {
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data $AuthStrengths
-                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data $AuthStrengths -Count
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' -Data $AuthStrengths -AddCount
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AuthStrengths.Count) authentication strengths" -sev Debug
             }
             $AuthStrengths = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache authentication strengths: $($_.Exception.Message)" -sev Warning
+        }
+
+        try {
+            $SecurityDefaults = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter -AsApp $true
+            if ($SecurityDefaults) {
+                Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SecurityDefaults' -Data @($SecurityDefaults)
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached Security Defaults policy (isEnabled=$($SecurityDefaults.isEnabled))" -sev Debug
+            }
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Security Defaults: $($_.Exception.Message)" -sev Warning
         }
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CA data successfully' -sev Debug

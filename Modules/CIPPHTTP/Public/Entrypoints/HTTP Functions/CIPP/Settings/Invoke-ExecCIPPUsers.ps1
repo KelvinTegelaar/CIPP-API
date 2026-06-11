@@ -45,12 +45,40 @@ function Invoke-ExecCIPPUsers {
                     }
                 }
 
+                # Check if user already exists to preserve auto-synced roles
+                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$UPN'"
+                $AutoRoles = @()
+                $Source = 'Manual'
+
+                if ($ExistingEntity -and $ExistingEntity.AutoRoles) {
+                    try {
+                        $AutoRoles = @($ExistingEntity.AutoRoles | ConvertFrom-Json -ErrorAction Stop)
+                    } catch {
+                        $AutoRoles = @()
+                    }
+                    if ($AutoRoles.Count -gt 0) {
+                        $Source = 'Both'
+                    }
+                }
+
+                # Compute effective roles = union of manual + auto
+                $EffectiveRoles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($R in $Roles) { [void]$EffectiveRoles.Add($R) }
+                foreach ($R in $AutoRoles) { [void]$EffectiveRoles.Add($R) }
+                $EffectiveRolesArray = @($EffectiveRoles | Sort-Object)
+
                 $Entity = @{
                     PartitionKey = 'User'
                     RowKey       = $UPN
-                    Roles        = [string](@($Roles) | ConvertTo-Json -Compress -AsArray)
+                    Roles        = [string]($EffectiveRolesArray | ConvertTo-Json -Compress -AsArray)
+                    ManualRoles  = [string](@($Roles) | ConvertTo-Json -Compress -AsArray)
+                    AutoRoles    = [string]($AutoRoles | ConvertTo-Json -Compress -AsArray)
+                    Source       = $Source
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+
+                # Trigger a user sync to reconcile auto + manual roles
+                try { Start-UserSyncTimer } catch {}
 
                 # Invalidate the in-memory user cache so changes apply immediately
                 try { [Craft.Services.AuthBridge]::InvalidateUsers() } catch {}

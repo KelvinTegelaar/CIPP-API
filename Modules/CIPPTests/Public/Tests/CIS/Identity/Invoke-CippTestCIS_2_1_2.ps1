@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_2_1_2 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (2.1.2) - Common Attachment Types Filter SHALL be enabled
+    Tests CIS M365 7.0.0 (2.1.2) - Common Attachment Types Filter SHALL be enabled
     #>
     param($Tenant)
 

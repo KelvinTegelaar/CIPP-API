@@ -1,13 +1,14 @@
 function Set-CIPPDBCacheDetectedApps {
     <#
     .SYNOPSIS
-        Caches all detected apps for a tenant, including devices that have each app
+        Caches detected apps using the AppInvRawData export submitted earlier,
+        enriched with the live /detectedApps catalog.
 
     .PARAMETER TenantFilter
-        The tenant to cache detected apps for
+        The tenant to cache detected apps for.
 
     .PARAMETER QueueId
-        The queue ID to update with total tasks (optional)
+        Optional queue ID for progress tracking.
     #>
     [CmdletBinding()]
     param(
@@ -16,89 +17,111 @@ function Set-CIPPDBCacheDetectedApps {
         [string]$QueueId
     )
 
+    $ReportName = 'AppInvRawData'
+
     try {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching detected apps' -sev Debug
+        $JobsTable = Get-CIPPTable -tablename 'IntuneReportJobs'
+        $JobRow = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
 
-        # Step 1: Get first page with noPaginate to avoid sequential chase, and read @odata.count
-        $FirstPageResult = New-GraphBulkRequest -Requests @(
-            [PSCustomObject]@{
-                id     = 'detectedApps-0'
-                method = 'GET'
-                url    = 'deviceManagement/detectedApps'
-            }
-        ) -tenantid $TenantFilter -NoPaginateIds @('detectedApps-0')
-
-        $FirstResponse = ($FirstPageResult | Where-Object { $_.id -eq 'detectedApps-0' }).body
-        $TotalCount = $FirstResponse.'@odata.count'
-        $DetectedApps = [System.Collections.Generic.List[PSCustomObject]]::new()
-        foreach ($app in $FirstResponse.value) { $DetectedApps.Add($app) }
-
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "DetectedApps total count: $TotalCount, first page: $($DetectedApps.Count)" -sev Debug
-
-        # Step 2: If more pages exist, pre-calculate all skip offsets and fire as batches
-        if ($FirstResponse.'@odata.nextLink' -and $TotalCount -gt 50) {
-            $SkipRequests = [System.Collections.Generic.List[PSCustomObject]]::new()
-            for ($skip = 50; $skip -lt $TotalCount; $skip += 50) {
-                $SkipRequests.Add([PSCustomObject]@{
-                    id     = "detectedApps-$skip"
-                    method = 'GET'
-                    url    = "deviceManagement/detectedApps?`$skip=$skip"
-                })
-            }
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching $($SkipRequests.Count) remaining pages in bulk" -sev Debug
-
-            # New-GraphBulkRequest auto-batches into groups of 20, NoPaginateIds prevents chasing empty nextLinks
-            $SkipResults = New-GraphBulkRequest -Requests @($SkipRequests) -tenantid $TenantFilter -NoPaginateIds @($SkipRequests.id)
-
-            foreach ($Result in $SkipResults) {
-                if ($Result.status -eq 200 -and $Result.body.value) {
-                    foreach ($app in $Result.body.value) { $DetectedApps.Add($app) }
-                }
-            }
-        }
-
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Retrieved $($DetectedApps.Count) detected apps (expected $TotalCount)" -sev Debug
-
-        if ($DetectedApps.Count -eq 0) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data @()
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data @() -Count
+        if (-not $JobRow) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "No $ReportName job submitted - skipping detected apps cache" -sev Info
             return
         }
 
-        # Step 3: Bulk fetch managed devices for each app (unchanged from original)
-        $DeviceRequests = $DetectedApps | Where-Object { $_.id } | ForEach-Object {
-            [PSCustomObject]@{
-                id     = $_.id
-                method = 'GET'
-                url    = "deviceManagement/detectedApps('$($_.id)')/managedDevices"
+        $JobId = $JobRow.JobId
+        if (-not $JobId) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "IntuneReportJobs row missing JobId - removing" -sev Warning
+            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+            return
+        }
+
+        try {
+            $Job = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs/$JobId" -tenantid $TenantFilter
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId not retrievable: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+            return
+        }
+
+        switch ($Job.status) {
+            'completed' { }
+            'failed' {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId failed" -sev Error
+                Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+                return
+            }
+            default {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId still '$($Job.status)' - skipping" -sev Info
+                return
             }
         }
 
-        if ($DeviceRequests) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching devices for $($DetectedApps.Count) detected apps" -sev Debug
-            $DeviceResults = New-GraphBulkRequest -Requests @($DeviceRequests) -tenantid $TenantFilter
-
-            # Add devices to each detected app object
-            $DetectedAppsWithDevices = foreach ($App in $DetectedApps) {
-                $Devices = Get-GraphBulkResultByID -Results $DeviceResults -ID $App.id -Value
-                $App | Add-Member -NotePropertyName 'managedDevices' -NotePropertyValue ($Devices ?? @()) -Force
-                $App
-            }
-
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedAppsWithDevices
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedAppsWithDevices -Count
-            $DetectedApps = $null
-            $DetectedAppsWithDevices = $null
-        } else {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -Count
-            $DetectedApps = $null
+        if (-not $Job.url) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "$ReportName job $JobId completed but no url returned" -sev Error
+            Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
+            return
         }
 
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached detected apps with devices successfully' -sev Debug
+        $ZipBytes = (Invoke-WebRequest -Uri $Job.url -UseBasicParsing -ErrorAction Stop).Content
+        if ($ZipBytes -isnot [byte[]]) { throw "Expected binary content from $ReportName download" }
 
+        $JsonText = $null
+        $ZipStream = [System.IO.MemoryStream]::new($ZipBytes, $false)
+        try {
+            $Archive = [System.IO.Compression.ZipArchive]::new($ZipStream, [System.IO.Compression.ZipArchiveMode]::Read)
+            try {
+                $Entry = $Archive.Entries | Where-Object { $_.Name -like '*.json' } | Select-Object -First 1
+                if (-not $Entry) { throw "No JSON entry in $ReportName archive" }
+                $EntryStream = $Entry.Open()
+                try {
+                    $Reader = [System.IO.StreamReader]::new($EntryStream)
+                    try { $JsonText = $Reader.ReadToEnd() } finally { $Reader.Dispose() }
+                } finally { $EntryStream.Dispose() }
+            } finally { $Archive.Dispose() }
+        } finally {
+            $ZipStream.Dispose()
+            $ZipBytes = $null
+        }
+
+        $ExportRows = @(($JsonText | ConvertFrom-Json).values)
+        $JsonText = $null
+
+        $AppsByKey = @{}
+        foreach ($Row in $ExportRows) {
+            $AppId = $Row.ApplicationKey
+            if (-not $AppId) { continue }
+            if (-not $AppsByKey.ContainsKey($AppId)) {
+                $AppsByKey[$AppId] = [pscustomobject]@{
+                    id             = $AppId
+                    displayName    = $Row.ApplicationName
+                    version        = $Row.ApplicationVersion
+                    publisher      = $Row.ApplicationPublisher
+                    platform       = $Row.Platform
+                    deviceCount    = 0
+                    managedDevices = [System.Collections.Generic.List[object]]::new()
+                }
+            }
+            $App = $AppsByKey[$AppId]
+            $App.managedDevices.Add([pscustomobject]@{
+                id                = $Row.DeviceId
+                deviceName        = $Row.DeviceName
+                osVersion         = $Row.OSVersion
+                platform          = $Row.Platform
+                userId            = $Row.UserId
+                userPrincipalName = $Row.UserName
+                emailAddress      = $Row.EmailAddress
+            })
+            $App.deviceCount++
+        }
+
+        $DetectedApps = @($AppsByKey.Values)
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'DetectedApps' -Data $DetectedApps -AddCount
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($DetectedApps.Count) detected apps with devices from export $JobId" -sev Info
+
+        Remove-AzDataTableEntity @JobsTable -Entity $JobRow -Force -ErrorAction SilentlyContinue
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter `
-            -message "Failed to cache detected apps: $($_.Exception.Message)" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache detected apps: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

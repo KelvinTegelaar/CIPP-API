@@ -4,6 +4,8 @@ Function Invoke-ListOoO {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Retrieves Out of Office (automatic reply) settings for a specific Exchange Online user.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

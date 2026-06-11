@@ -1,13 +1,13 @@
-A dynamic group containing every guest enables guest-aware Conditional Access policies, access reviews and lifecycle automation without manual maintenance.
+Security groups grant access to resources. Allowing standard users to create security groups bypasses access governance and is a common privilege escalation path — a compromised user can create deceptively named groups that an administrator later trusts with elevated access or excludes from Conditional Access.
 
 **Remediation Action**
 
 ```powershell
-New-MgGroup -DisplayName 'All Guest Users' -SecurityEnabled:$true -MailEnabled:$false -MailNickname 'allguests' -GroupTypes 'DynamicMembership' -MembershipRule '(user.userType -eq "Guest")' -MembershipRuleProcessingState 'On'
+Update-MgPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ AllowedToCreateSecurityGroups = $false }
 ```
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.1.3.1](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.1.3.1](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

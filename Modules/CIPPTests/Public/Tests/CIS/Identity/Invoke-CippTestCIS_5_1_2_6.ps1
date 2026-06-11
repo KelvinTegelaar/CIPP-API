@@ -1,7 +1,7 @@
 function Invoke-CippTestCIS_5_1_2_6 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.2.6) - 'LinkedIn account connections' SHALL be disabled
+    Tests CIS M365 7.0.0 (5.1.2.6) - 'LinkedIn account connections' SHALL be disabled
     #>
     param($Tenant)
 

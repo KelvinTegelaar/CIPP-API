@@ -46,19 +46,30 @@ function Invoke-CippTestCopilotReady003 {
 
         # For each licensed user, check if they have a desktop activation in the activation report.
         # Users absent from the report entirely are counted as unactivated.
+        # The Graph API returns activation counts nested inside userActivationCounts[] per product type,
+        # so we sum windows/mac across all product types to get the total desktop activation count.
         $NoDesktopUsers = [System.Collections.Generic.List[object]]::new()
         $DesktopCount = 0
         foreach ($User in $LicensedUsers) {
             $Activation = $ActivationLookup[$User.userPrincipalName.ToLower()]
-            if ($Activation -and (([int]($Activation.windows ?? 0) + [int]($Activation.mac ?? 0)) -gt 0)) {
+            $TotalWindows = 0
+            $TotalMac = 0
+            $TotalAndroid = 0
+            $TotalIos = 0
+            if ($Activation.userActivationCounts) {
+                $TotalWindows = ($Activation.userActivationCounts | Measure-Object -Property windows -Sum).Sum
+                $TotalMac = ($Activation.userActivationCounts | Measure-Object -Property mac -Sum).Sum
+                $TotalAndroid = ($Activation.userActivationCounts | Measure-Object -Property android -Sum).Sum
+                $TotalIos = ($Activation.userActivationCounts | Measure-Object -Property ios -Sum).Sum
+            }
+            if ($Activation -and (($TotalWindows + $TotalMac) -gt 0)) {
                 $DesktopCount++
             } else {
                 $NoDesktopUsers.Add([pscustomobject]@{
                     displayName       = $User.displayName
                     userPrincipalName = $User.userPrincipalName
-                    web               = if ($Activation) { $Activation.web } else { 0 }
-                    android           = if ($Activation) { $Activation.android } else { 0 }
-                    ios               = if ($Activation) { $Activation.ios } else { 0 }
+                    android           = if ($Activation) { $TotalAndroid } else { 0 }
+                    ios               = if ($Activation) { $TotalIos } else { 0 }
                     neverActivated    = ($null -eq $Activation)
                 })
             }
@@ -69,31 +80,30 @@ function Invoke-CippTestCopilotReady003 {
 
         if ($DesktopPercent -ge $DesktopThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$DesktopCount of $TotalUsers licensed users ($DesktopPercent%)** have Microsoft 365 Apps activated on a desktop platform (Windows or Mac) — above the $DesktopThresholdPercent% threshold.`n`n"
-            $Result += "These users can access Copilot features in desktop Word, Excel, PowerPoint, and Outlook."
+            $Result = [System.Text.StringBuilder]::new("**$DesktopCount of $TotalUsers licensed users ($DesktopPercent%)** have Microsoft 365 Apps activated on a desktop platform (Windows or Mac) — above the $DesktopThresholdPercent% threshold.`n`n")
+            $null = $Result.Append("These users can access Copilot features in desktop Word, Excel, PowerPoint, and Outlook.")
         } else {
             $Status = 'Failed'
-            $Result = "Only **$DesktopCount of $TotalUsers licensed users ($DesktopPercent%)** have Microsoft 365 Apps activated on a desktop platform — below the $DesktopThresholdPercent% threshold.`n`n"
-            $Result += "Copilot in Word, Excel, PowerPoint, and Outlook requires the M365 desktop application. "
-            $Result += "Users with only web or mobile activations, or who have never activated at all, cannot use Copilot's in-document features.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$DesktopCount of $TotalUsers licensed users ($DesktopPercent%)** have Microsoft 365 Apps activated on a desktop platform — below the $DesktopThresholdPercent% threshold.`n`n")
+            $null = $Result.Append("Copilot in Word, Excel, PowerPoint, and Outlook requires the M365 desktop application. ")
+            $null = $Result.Append("Users with only web or mobile activations, or who have never activated at all, cannot use Copilot's in-document features.`n`n")
             if ($NoDesktopUsers.Count -gt 0 -and $NoDesktopUsers.Count -le 20) {
-                $Result += "**Users without desktop activation:**`n"
+                $null = $Result.Append("**Users without desktop activation:**`n")
                 foreach ($User in $NoDesktopUsers) {
                     if ($User.neverActivated) {
                         $PlatformStr = ' (never activated)'
                     } else {
                         $Platforms = @()
-                        if ([int]($User.web ?? 0) -gt 0) { $Platforms += 'Web' }
                         if ([int]($User.android ?? 0) -gt 0 -or [int]($User.ios ?? 0) -gt 0) { $Platforms += 'Mobile' }
                         $PlatformStr = if ($Platforms) { " ($(($Platforms -join ', ')) only)" } else { ' (no activations)' }
                     }
-                    $Result += "- $($User.displayName) ($($User.userPrincipalName))$PlatformStr`n"
+                    $null = $Result.Append("- $($User.displayName) ($($User.userPrincipalName))$PlatformStr`n")
                 }
             } elseif ($NoDesktopUsers.Count -gt 20) {
                 $NeverActivated = @($NoDesktopUsers | Where-Object { $_.neverActivated }).Count
-                $Result += "**$($NoDesktopUsers.Count) users** have no desktop M365 Apps activation"
-                if ($NeverActivated -gt 0) { $Result += " ($NeverActivated have never activated on any platform)" }
-                $Result += '.`n'
+                $null = $Result.Append("**$($NoDesktopUsers.Count) users** have no desktop M365 Apps activation")
+                if ($NeverActivated -gt 0) { $null = $Result.Append(" ($NeverActivated have never activated on any platform)") }
+                $null = $Result.Append(".`n")
             }
         }
 

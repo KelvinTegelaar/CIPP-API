@@ -70,12 +70,40 @@ function New-CIPPUserTask {
 
     # Add to groups
     if ($UserObj.AddToGroups) {
+        $ExoGroupTypes = @('Distribution list', 'Mail-Enabled Security')
         $UserObj.AddToGroups | ForEach-Object {
+            $Group = $_
+            $GroupType = $Group.addedFields.groupType
             try {
-                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $_.addedFields.groupType -GroupId $_.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
+                $AddMemberResult = Add-CIPPGroupMember -Headers $Headers -GroupType $GroupType -GroupId $Group.value -Member @($CreationResults.Username) -TenantFilter $UserObj.tenantFilter
                 $Results.Add($AddMemberResult)
             } catch {
-                $Results.Add("Failed to add to group $($_.label): $_")
+                # EXO group adds frequently fail right after user creation due to Exchange directory replication lag.
+                # Schedule a delayed retry so the user lands in the group automatically once EXO sees the recipient.
+                if ($GroupType -in $ExoGroupTypes) {
+                    try {
+                        $TaskBody = [PSCustomObject]@{
+                            TenantFilter  = $UserObj.tenantFilter
+                            Name          = "Retry Add Group Member: $($CreationResults.Username) -> $($Group.label)"
+                            Command       = @{ value = 'Add-CIPPGroupMember' }
+                            Parameters    = [PSCustomObject]@{
+                                GroupType    = $GroupType
+                                GroupId      = $Group.value
+                                Member       = @($CreationResults.Username)
+                                TenantFilter = $UserObj.tenantFilter
+                                APIName      = 'Add Group Member (Retry)'
+                            }
+                            ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+                            PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                        }
+                        $null = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
+                        $Results.Add("Could not add $($CreationResults.Username) to $($Group.label) yet (Exchange replication delay). A retry has been scheduled in 15 minutes.")
+                    } catch {
+                        $Results.Add("Failed to add to group $($Group.label): $_")
+                    }
+                } else {
+                    $Results.Add("Failed to add to group $($Group.label): $_")
+                }
             }
         }
     }

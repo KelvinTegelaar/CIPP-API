@@ -35,8 +35,9 @@ function Push-CIPPDBCacheApplyBatch {
         Write-Information "Aggregated $($AllTasks.Count) cache tasks from all tenants"
 
         # Start a single flat orchestrator to execute all cache tasks
+        $TenantSuffix = if ($Item.Parameters.TenantFilter) { "_$($Item.Parameters.TenantFilter)" } else { '' }
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'CIPPDBCacheExecute'
+            OrchestratorName = "CIPPDBCacheExecute$TenantSuffix"
             Batch            = @($AllTasks)
             SkipLog          = $true
         }

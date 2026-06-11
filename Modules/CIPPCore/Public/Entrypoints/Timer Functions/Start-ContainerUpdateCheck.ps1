@@ -176,7 +176,7 @@ function Start-ContainerUpdateCheck {
             if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
                 Write-LogMessage -API 'ContainerUpdateCheck' -message "Auto-update: new container image detected (running: $RunningDigest, remote: $RemoteDigest). Restarting." -sev Info
                 try {
-                    [Craft.Services.AppLifecycleBridge]::RequestRestart('Auto-update: new container image available')
+                    Request-CIPPRestart -Reason 'Auto-update: new container image available'
                 } catch {
                     Write-LogMessage -API 'ContainerUpdateCheck' -message 'Auto-restart requested but AppLifecycleBridge is not available' -sev Warning
                 }

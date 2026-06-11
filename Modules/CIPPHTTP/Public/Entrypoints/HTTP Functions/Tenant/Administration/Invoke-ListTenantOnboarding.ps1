@@ -4,6 +4,8 @@ function Invoke-ListTenantOnboarding {
         Entrypoint
     .ROLE
         Tenant.Administration.Read
+    .DESCRIPTION
+        Lists tenant onboarding requests and their step-by-step progress, including GDAP relationship setup.
     #>
     Param($Request, $TriggerMetadata)
     try {

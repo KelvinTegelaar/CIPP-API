@@ -1,35 +1,31 @@
 function Invoke-CippTestCIS_5_1_3_1 {
     <#
     .SYNOPSIS
-    Tests CIS M365 6.0.1 (5.1.3.1) - A dynamic group for guest users SHALL be created
+    Tests CIS M365 7.0.0 (5.1.3.1) - Users SHALL NOT be able to create security groups
     #>
     param($Tenant)
 
     try {
-        $Groups = Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups'
+        $Auth = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthorizationPolicy'
 
-        if (-not $Groups) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Groups cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'A dynamic group for guest users is created' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Group Management'
+        if (-not $Auth) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'AuthorizationPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Users cannot create security groups' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Management'
             return
         }
 
-        $GuestDynamic = $Groups | Where-Object {
-            $_.groupTypes -contains 'DynamicMembership' -and
-            $_.membershipRule -match "userType\s*-eq\s*['""]Guest['""]"
-        }
+        $Cfg = $Auth | Select-Object -First 1
 
-        if ($GuestDynamic.Count -gt 0) {
+        if ($Cfg.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $false) {
             $Status = 'Passed'
-            $Result = "$($GuestDynamic.Count) dynamic group(s) target guest users:`n`n"
-            $Result += ($GuestDynamic | ForEach-Object { "- $($_.displayName)" }) -join "`n"
+            $Result = 'Users cannot create security groups (allowedToCreateSecurityGroups: false).'
         } else {
             $Status = 'Failed'
-            $Result = 'No dynamic security group targeting `userType -eq "Guest"` was found. Create one so guest-targeted Conditional Access can use it.'
+            $Result = "Users can create security groups (allowedToCreateSecurityGroups: $($Cfg.defaultUserRolePermissions.allowedToCreateSecurityGroups))."
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'A dynamic group for guest users is created' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Group Management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Users cannot create security groups' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Management'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'A dynamic group for guest users is created' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Group Management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_3_1' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'Users cannot create security groups' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Group Management'
     }
 }

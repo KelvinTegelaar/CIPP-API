@@ -5,7 +5,7 @@ Privileged role membership should not be permanent. Recurring access reviews for
 Microsoft Entra > PIM > Microsoft Entra roles > Access reviews — create a recurring review per privileged role, max duration 14 days.
 
 **Links**
-- [CIS Microsoft 365 Foundations Benchmark v6.0.1 - 5.3.3](https://www.cisecurity.org/benchmark/microsoft_365)
+- [CIS Microsoft 365 Foundations Benchmark v7.0.0 - 5.3.3](https://www.cisecurity.org/benchmark/microsoft_365)
 
 <!--- Results --->
 %TestResult%

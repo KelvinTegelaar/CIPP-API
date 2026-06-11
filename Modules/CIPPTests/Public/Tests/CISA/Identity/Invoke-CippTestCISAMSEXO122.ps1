@@ -26,14 +26,14 @@ function Invoke-CippTestCISAMSEXO122 {
         $FailedPolicies = $SpamPolicies | Where-Object { $_.EnableSafeList -eq $true }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have safe lists disabled."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have safe lists disabled.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have safe lists enabled:`n`n"
-            $Result += "| Policy Name | Safe List Enabled |`n"
-            $Result += "| :---------- | :---------------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($SpamPolicies.Count) anti-spam policy/policies have safe lists enabled:`n`n")
+            $null = $Result.Append("| Policy Name | Safe List Enabled |`n")
+            $null = $Result.Append("| :---------- | :---------------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Name) | $($Policy.EnableSafeList) |`n"
+                $null = $Result.Append("| $($Policy.Name) | $($Policy.EnableSafeList) |`n")
             }
             $Status = 'Failed'
         }

@@ -127,16 +127,73 @@ function Invoke-CIPPStandardDeployContactTemplates {
                 # Check if the contact already exists (using DisplayName as key)
                 $ExistingContact = $CurrentContacts | Where-Object { $_.DisplayName -eq $Template.displayName }
 
-                # If the contact exists, we'll overwrite it; if not, we'll create it
                 if ($ExistingContact) {
-                    $StateIsCorrect = $false  # Always update existing contacts to match template
-                    $Action = 'Update'
+                    # Fetch extended properties (Company/City/Phone/etc. live on Get-Contact, not Get-MailContact)
+                    $ExtendedContact = $null
+                    try {
+                        $ExtendedContact = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Contact' -cmdParams @{ Identity = $ExistingContact.Identity } -UseSystemMailbox $true -ErrorAction Stop
+                    } catch {
+                        Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: Failed to fetch extended contact properties for $($Template.displayName): $($_.Exception.Message)" -sev Warning
+                    }
+
+                    # Map template field => current value (null/empty when current source missing)
+                    # ExternalEmailAddress comes back as "SMTP:foo@bar.com" — strip the prefix for comparison.
+                    $CurrentEmail = $ExistingContact.ExternalEmailAddress -replace '^SMTP:', '' -replace '^smtp:', ''
+                    $FieldMap = @(
+                        @{ Template = 'email';         Current = $CurrentEmail }
+                        @{ Template = 'firstName';     Current = $ExtendedContact.FirstName }
+                        @{ Template = 'lastName';      Current = $ExtendedContact.LastName }
+                        @{ Template = 'mailTip';       Current = $ExistingContact.MailTip }
+                        @{ Template = 'hidefromGAL';   Current = $ExistingContact.HiddenFromAddressListsEnabled; IsBool = $true }
+                        @{ Template = 'companyName';   Current = $ExtendedContact.Company }
+                        @{ Template = 'state';         Current = $ExtendedContact.StateOrProvince }
+                        @{ Template = 'streetAddress'; Current = $ExtendedContact.Office }
+                        @{ Template = 'businessPhone'; Current = $ExtendedContact.Phone }
+                        @{ Template = 'website';       Current = $ExtendedContact.WebPage }
+                        @{ Template = 'jobTitle';      Current = $ExtendedContact.Title }
+                        @{ Template = 'city';          Current = $ExtendedContact.City }
+                        @{ Template = 'postalCode';    Current = $ExtendedContact.PostalCode }
+                        @{ Template = 'country';       Current = $ExtendedContact.CountryOrRegion }
+                        @{ Template = 'mobilePhone';   Current = $ExtendedContact.MobilePhone }
+                    )
+
+                    $Differences = [System.Collections.Generic.List[string]]::new()
+                    foreach ($Field in $FieldMap) {
+                        $TemplateValue = $Template.($Field.Template)
+                        $CurrentValue = $Field.Current
+
+                        if ($Field.IsBool) {
+                            if ([bool]$TemplateValue -ne [bool]$CurrentValue) {
+                                $Differences.Add($Field.Template)
+                            }
+                            continue
+                        }
+
+                        # Only compare if template specifies a value; empty template fields are not enforced.
+                        if ([string]::IsNullOrWhiteSpace($TemplateValue)) { continue }
+
+                        # Case-insensitive compare for email; exact for everything else.
+                        $IsEmail = $Field.Template -eq 'email'
+                        $Mismatch = if ($IsEmail) {
+                            [string]::IsNullOrWhiteSpace($CurrentValue) -or -not $TemplateValue.Equals($CurrentValue, [System.StringComparison]::OrdinalIgnoreCase)
+                        } else {
+                            [string]::IsNullOrWhiteSpace($CurrentValue) -or $TemplateValue -ne $CurrentValue
+                        }
+
+                        if ($Mismatch) {
+                            $Differences.Add($Field.Template)
+                        }
+                    }
+
+                    $StateIsCorrect = $Differences.Count -eq 0
+                    $Action = if ($StateIsCorrect) { 'None' } else { 'Update' }
                     $Missing = $false
                 } else {
                     # Contact doesn't exist, needs to be created
                     $StateIsCorrect = $false
                     $Action = 'Create'
                     $Missing = $true
+                    $Differences = $null
                 }
 
                 [PSCustomObject]@{
@@ -145,12 +202,13 @@ function Invoke-CIPPStandardDeployContactTemplates {
                     Action         = $Action
                     Template       = $Template
                     TemplateGUID   = $TemplateGUID
+                    Differences    = $Differences
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 $Message = "Failed to process template $TemplateGUID, Error: $ErrorMessage"
                 Write-LogMessage -API $APIName -tenant $tenant -message $Message -sev 'Error'
-                return $Message
+                continue
             }
         }
 
@@ -350,19 +408,20 @@ function Invoke-CIPPStandardDeployContactTemplates {
 
         if ($AlertEnabled) {
             $MissingContacts = ($CompareList | Where-Object { $_.missing }).Count
-            $ExistingContacts = ($CompareList | Where-Object { -not $_.missing }).Count
+            $ContactsNeedingUpdate = ($CompareList | Where-Object { -not $_.missing -and -not $_.StateIsCorrect }).Count
 
-            if ($MissingContacts -gt 0 -or $ExistingContacts -gt 0) {
-                foreach ($Contact in $CompareList) {
+            if ($MissingContacts -gt 0 -or $ContactsNeedingUpdate -gt 0) {
+                foreach ($Contact in $CompareList | Where-Object { -not $_.StateIsCorrect }) {
                     if ($Contact.missing) {
                         $CurrentInfo = $Contact.Template | Select-Object -Property displayName, email, missing
-                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
+                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplates'
                     } else {
                         $CurrentInfo = $CurrentContacts | Where-Object -Property DisplayName -EQ $Contact.Template.displayName | Select-Object -Property DisplayName, ExternalEmailAddress, FirstName, LastName
-                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) will be updated to match template." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplate'
+                        $DiffList = ($Contact.Differences -join ', ')
+                        Write-StandardsAlert -message "Mail contact $($Contact.Template.displayName) from template $($Contact.TemplateGUID) does not match template (differences: $DiffList)." -object $CurrentInfo -tenant $Tenant -standardName 'DeployContactTemplates'
                     }
                 }
-                Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: $MissingContacts missing, $ExistingContacts to update" -sev Info
+                Write-LogMessage -API $APIName -tenant $Tenant -message "DeployContactTemplate: $MissingContacts missing, $ContactsNeedingUpdate to update" -sev Info
             } else {
                 Write-LogMessage -API $APIName -tenant $Tenant -message 'DeployContactTemplate: No contacts need processing' -sev Info
             }
@@ -372,19 +431,24 @@ function Invoke-CIPPStandardDeployContactTemplates {
             $ExpectedValue = [PSCustomObject]@{
                 state = 'Correctly configured'
             }
-            $CurrentValue = if ($CompareList.StateIsCorrect -eq $true) {
+            $AllCorrect = -not ($CompareList | Where-Object { -not $_.StateIsCorrect })
+            $CurrentValue = if ($AllCorrect) {
                 [PSCustomObject]@{ state = 'Correctly configured' }
             } else {
                 [PSCustomObject]@{
-                    MissingContacts  = $CompareList | Where-Object { $_.missing } | ForEach-Object {
-                        $_.Template | Select-Object -Property displayName, Email
-                    }
-                    ContactsToUpdate = $CompareList | Where-Object { -not $_.missing } | ForEach-Object {
-                        $_.Template | Select-Object -Property displayName, Email
-                    }
+                    MissingContacts  = @($CompareList | Where-Object { $_.missing } | ForEach-Object {
+                            $_.Template | Select-Object -Property displayName, Email
+                        })
+                    ContactsToUpdate = @($CompareList | Where-Object { -not $_.missing -and -not $_.StateIsCorrect } | ForEach-Object {
+                            [PSCustomObject]@{
+                                displayName = $_.Template.displayName
+                                Email       = $_.Template.email
+                                Differences = $_.Differences
+                            }
+                        })
                 }
             }
-            Set-CIPPStandardsCompareField -FieldName 'standards.DeployContactTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+            Set-CIPPStandardsCompareField -FieldName 'standards.DeployContactTemplates' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -4,6 +4,8 @@ Function Invoke-ListNamedLocations {
         Entrypoint
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Lists Conditional Access named locations (IP ranges and country-based locations) configured in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

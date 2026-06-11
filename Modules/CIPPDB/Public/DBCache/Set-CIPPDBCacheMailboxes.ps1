@@ -25,23 +25,37 @@ function Set-CIPPDBCacheMailboxes {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching mailboxes' -sev Debug
 
-        # Get mailboxes with select properties
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy'
-        $ExoRequest = @{
-            tenantid  = $TenantFilter
-            cmdlet    = 'Get-Mailbox'
-            cmdParams = @{}
-            Select    = $Select
-        }
-        # Use Generic List for better memory efficiency with large datasets
-        $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
-        $RawMailboxes = New-ExoRequest @ExoRequest
+        # Get mailboxes and user details in a single bulk request
+        $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity'
+        $BulkRequests = @(
+            @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
+            @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
+        )
+        $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $BulkRequests -useSystemMailbox $true -Select $Select -ReturnWithCommand $true
 
-        foreach ($Mailbox in $RawMailboxes) {
+        # Build a lookup hashtable from Get-User results for O(1) matching
+        $UserLookup = @{}
+        foreach ($User in @($BulkResults.'Get-User')) {
+            if ($User.ExternalDirectoryObjectId) {
+                $UserLookup[$User.ExternalDirectoryObjectId] = $User
+            }
+        }
+
+        # Transform Get-Mailbox results and merge Get-User properties
+        $Mailboxes = [System.Collections.Generic.List[PSObject]]::new()
+        foreach ($Mailbox in @($BulkResults.'Get-Mailbox')) {
+            $MatchedUser = $UserLookup[$Mailbox.ExternalDirectoryObjectId]
             $Mailboxes.Add(($Mailbox | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
                     @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+                    @{ Name = 'ArchiveEnabled'; Expression = { $_.ArchiveGuid -and $_.ArchiveGuid.ToString() -ne $ZeroArchiveGuid } },
+                    @{ Name = 'ArchiveSize'; Expression = { 0 } },
+                    @{ Name = 'ArchiveItemCount'; Expression = { 0 } },
+                    @{ Name = 'storageUsedInBytes'; Expression = { 0 } },
+                    @{ Name = 'prohibitSendReceiveQuotaInBytes'; Expression = { 0 } },
+                    @{ Name = 'MailboxItemCount'; Expression = { 0 } },
                     @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
                     @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
                     @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
@@ -60,7 +74,65 @@ function Set-CIPPDBCacheMailboxes {
                     RetentionHoldEnabled,
                     InPlaceHolds,
                     RetentionPolicy,
-                    GrantSendOnBehalfTo))
+                    GrantSendOnBehalfTo,
+                    @{ Name = 'RemotePowerShellEnabled'; Expression = { $MatchedUser.RemotePowerShellEnabled } },
+                    @{ Name = 'Guid'; Expression = { $MatchedUser.Guid } },
+                    @{ Name = 'Identity'; Expression = { $MatchedUser.Identity } }))
+        }
+
+        # $MailboxByUPN is the only lookup that stores mailbox objects. Enrichment steps below
+        # resolve back through this lookup before updating the objects written by Add-CIPPDbItem.
+        $MailboxByUPN = @{}
+        foreach ($Mailbox in @($Mailboxes)) {
+            if ($Mailbox.UPN) {
+                $MailboxByUPN[$Mailbox.UPN] = $Mailbox
+            }
+        }
+
+        try {
+            $MailboxUsage = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application%2fjson" -tenantid $TenantFilter
+            foreach ($Usage in @($MailboxUsage)) {
+                if ($Usage.userPrincipalName -and $MailboxByUPN.ContainsKey($Usage.userPrincipalName)) {
+                    $Mailbox = $MailboxByUPN[$Usage.userPrincipalName]
+                    $Mailbox.storageUsedInBytes = try { [int64]$Usage.storageUsedInBytes } catch { 0 }
+                    $Mailbox.prohibitSendReceiveQuotaInBytes = try { [int64]$Usage.prohibitSendReceiveQuotaInBytes } catch { 0 }
+                    $Mailbox.MailboxItemCount = try { [int64]$Usage.itemCount } catch { 0 }
+                }
+            }
+        } catch {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache mailbox usage details: $($_.Exception.Message)" -sev Warning
+        }
+
+        $ArchiveMailboxes = @($Mailboxes | Where-Object { $_.ArchiveEnabled -eq $true -and $_.UPN })
+        if ($ArchiveMailboxes.Count -gt 0) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Caching archive statistics for $($ArchiveMailboxes.Count) mailboxes" -sev Debug
+
+            $MailboxUPNByArchiveStatsRequestId = @{}
+            $ArchiveStatsRequests = @(foreach ($Mailbox in $ArchiveMailboxes) {
+                    $OperationGuid = [Guid]::NewGuid().ToString()
+                    $MailboxUPNByArchiveStatsRequestId[$OperationGuid] = $Mailbox.UPN
+
+                    @{
+                        CmdletInput   = @{
+                            CmdletName = 'Get-MailboxStatistics'
+                            Parameters = @{
+                                Identity = $Mailbox.UPN
+                                Archive  = $true
+                            }
+                        }
+                        OperationGuid = $OperationGuid
+                    }
+                })
+
+            $ArchiveStatsResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $ArchiveStatsRequests -useSystemMailbox $true
+            foreach ($ArchiveStat in @($ArchiveStatsResults)) {
+                if ($ArchiveStat.OperationGuid -and $MailboxUPNByArchiveStatsRequestId.ContainsKey($ArchiveStat.OperationGuid) -and -not $ArchiveStat.error) {
+                    $ArchiveMailboxUPN = $MailboxUPNByArchiveStatsRequestId[$ArchiveStat.OperationGuid]
+                    $ArchiveMailbox = $MailboxByUPN[$ArchiveMailboxUPN]
+                    $ArchiveMailbox.ArchiveSize = try { Get-ExoOnlineStringBytes -SizeString $ArchiveStat.TotalItemSize } catch { 0 }
+                    $ArchiveMailbox.ArchiveItemCount = try { [int64]$ArchiveStat.ItemCount } catch { 0 }
+                }
+            }
         }
 
         $Mailboxes | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' -AddCount

@@ -22,11 +22,17 @@ function Push-CIPPTestsList {
     try {
         Write-Information "Building test suite list for tenant: $TenantFilter"
 
-        # Check if tenant has data before emitting any work
-        $DbCounts = Get-CIPPDbItem -TenantFilter $TenantFilter -CountsOnly
-        if (($DbCounts | Measure-Object -Property DataCount -Sum).Sum -eq 0) {
-            Write-Information "Tenant $TenantFilter has no data in database. Skipping tests."
-            return @()
+        # The orchestrator (Start-CIPPDBTestsRun) already filtered the tenant list to those
+        # with cached data, so the previous per-tenant `Get-CIPPDbItem -CountsOnly` recheck
+        # was a redundant Table query (one extra round-trip per tenant). The orchestrator
+        # may pass SkipDbCheck=$true when it has already verified data presence; otherwise
+        # we fall back to a check here for any direct invocations.
+        if (-not $Item.SkipDbCheck) {
+            $DbCounts = Get-CIPPDbItem -TenantFilter $TenantFilter -CountsOnly
+            if (($DbCounts | Measure-Object -Property DataCount -Sum).Sum -eq 0) {
+                Write-Information "Tenant $TenantFilter has no data in database. Skipping tests."
+                return @()
+            }
         }
 
         # Emit one task per suite — suite names must match the ValidateSet in Invoke-CIPPTestCollection.

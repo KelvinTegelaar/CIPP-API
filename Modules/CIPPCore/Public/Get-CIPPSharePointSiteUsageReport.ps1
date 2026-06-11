@@ -18,23 +18,56 @@ function Get-CIPPSharePointSiteUsageReport {
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
-            $AllSiteItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SharePointSiteListing'
-            $Tenants = @($AllSiteItems | Where-Object { $_.RowKey -ne 'SharePointSiteListing-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
+            # Bulk-fetch all site listings and usage data in 2 queries instead of per-tenant
+            $AllSiteItems = @(Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SharePointSiteListing' | Where-Object { $_.RowKey -ne 'SharePointSiteListing-Count' })
+            $AllUsageItems = @(Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SharePointSiteUsage' | Where-Object { $_.RowKey -ne 'SharePointSiteUsage-Count' })
 
             $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ValidTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($T in $TenantList) { [void]$ValidTenants.Add($T.defaultDomainName) }
+
+            # Build usage lookup keyed by siteId across all tenants
+            $UsageBySiteId = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($UsageItem in $AllUsageItems) {
+                $UsageRow = $UsageItem.Data | ConvertFrom-Json -Depth 10
+                if (-not [string]::IsNullOrWhiteSpace($UsageRow.siteId)) {
+                    $UsageBySiteId[[string]$UsageRow.siteId] = $UsageRow
+                }
+            }
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
-                try {
-                    $TenantResults = Get-CIPPSharePointSiteUsageReport -TenantFilter $Tenant
-                    foreach ($Result in $TenantResults) {
-                        $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
-                        $AllResults.Add($Result)
-                    }
-                } catch {
-                    Write-LogMessage -API 'SharePointSiteUsageReport' -tenant $Tenant -message "Failed to get report for tenant: $($_.Exception.Message)" -sev Warning
-                }
+            foreach ($SiteItem in $AllSiteItems) {
+                $Tenant = $SiteItem.PartitionKey
+                if (-not $ValidTenants.Contains($Tenant)) { continue }
+
+                $Site = $SiteItem.Data | ConvertFrom-Json -Depth 10
+                if ($Site.isPersonalSite -eq $true) { continue }
+
+                $SiteUsage = $null
+                [void]$UsageBySiteId.TryGetValue([string]$Site.sharepointIds.siteId, [ref]$SiteUsage)
+
+                $StorageUsedInBytes = [double]($SiteUsage.storageUsedInBytes ?? 0)
+                $StorageAllocatedInBytes = [double]($SiteUsage.storageAllocatedInBytes ?? 0)
+
+                $AllResults.Add([PSCustomObject]@{
+                    Tenant                      = $Tenant
+                    siteId                      = $Site.sharepointIds.siteId
+                    webId                       = $Site.sharepointIds.webId
+                    createdDateTime             = $Site.createdDateTime
+                    displayName                 = $Site.displayName
+                    webUrl                      = $Site.webUrl
+                    ownerDisplayName            = $SiteUsage.ownerDisplayName
+                    ownerPrincipalName          = $SiteUsage.ownerPrincipalName
+                    lastActivityDate            = $SiteUsage.lastActivityDate
+                    fileCount                   = $SiteUsage.fileCount
+                    storageUsedInGigabytes      = [math]::round($StorageUsedInBytes / 1GB, 2)
+                    storageAllocatedInGigabytes = [math]::round($StorageAllocatedInBytes / 1GB, 2)
+                    storageUsedInBytes          = $SiteUsage.storageUsedInBytes
+                    storageAllocatedInBytes     = $SiteUsage.storageAllocatedInBytes
+                    rootWebTemplate             = $SiteUsage.rootWebTemplate
+                    reportRefreshDate           = $SiteUsage.reportRefreshDate
+                    AutoMapUrl                  = $Site.AutoMapUrl
+                })
             }
             return $AllResults
         }
