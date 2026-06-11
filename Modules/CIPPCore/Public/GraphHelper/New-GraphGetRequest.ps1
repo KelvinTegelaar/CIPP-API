@@ -18,6 +18,7 @@ function New-GraphGetRequest {
         [switch]$IncludeResponseHeaders,
         [hashtable]$extraHeaders,
         [switch]$ReturnRawResponse,
+        [switch]$SkipValueExtraction,
         $Headers
     )
 
@@ -105,7 +106,8 @@ function New-GraphGetRequest {
                         $Data.'@odata.count'
                         $NextURL = $null
                     } else {
-                        if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
+
+                        if (!$SkipValueExtraction -and $Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
                         if ($noPagination -eq $true) {
                             if ($Caller -eq 'Get-GraphRequestList' -and $data.'@odata.nextLink') {
                                 @{ 'nextLink' = $data.'@odata.nextLink' }

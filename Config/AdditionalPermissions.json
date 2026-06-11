@@ -60,5 +60,26 @@
         "type": "Scope"
       }
     ]
+  },
+  {
+    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+    "resourceAccess": [
+      {
+        "id": "CopilotPolicySettings.ReadWrite",
+        "type": "Scope"
+      },
+      {
+        "id": "CopilotSettings-LimitedMode.ReadWrite",
+        "type": "Scope"
+      },
+      {
+        "id": "CopilotPackages.Read.All",
+        "type": "Scope"
+      },
+      {
+        "id": "CopilotPackages.ReadWrite.All",
+        "type": "Scope"
+      }
+    ]
   }
 ]
