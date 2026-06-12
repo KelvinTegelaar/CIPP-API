@@ -11,10 +11,12 @@ function Push-ExecScheduledCommand {
     $OrchestratorBasedCommands = @('Invoke-CIPPOffboardingJob')
 
     # Initialize AsyncLocal storage for thread-safe per-invocation context
-    if (-not $global:CippScheduledTaskIdStorage) {
-        $global:CippScheduledTaskIdStorage = [System.Threading.AsyncLocal[string]]::new()
-    }
-    $global:CippScheduledTaskIdStorage.Value = $Item.TaskInfo.RowKey
+    # Store task id in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage can read it -
+    # global vars are unreliable in Azure Functions
+    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey
+
+    # Store action source + creating user identity (from stored headers) for outbound User-Agent attribution
+    Set-CippUserAgentContext -Headers $Item.Parameters.Headers -Source 'scheduled-task' -TaskId $Item.TaskInfo.RowKey
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
