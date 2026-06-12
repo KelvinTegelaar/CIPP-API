@@ -32,14 +32,22 @@ function Invoke-ExecContainerManagement {
     }
 
     # Helper: query GHCR for the image at $Tag and return its digest + version label.
-    # The version label is set by the CI build (org.opencontainers.image.version) and contains
-    # the same string as $env:APP_VERSION in the running container — comparing them tells us
-    # whether the channel tag has been republished to a different build.
+    # The version label is set by the CI build (org.opencontainers.image.version) and matches
+    # $env:APP_VERSION in the running container — comparing them tells us whether the channel
+    # tag has been republished to a different build.
     function Get-GHCRImageInfo {
         param([string]$ImageRef, [string]$Tag)
 
         $imagePath = $ImageRef -replace '^ghcr\.io/', '' -replace ':.*$', ''
         if (-not $imagePath) { throw 'Could not parse image path from reference' }
+
+        # PS7's Invoke-WebRequest returns .Content as byte[] when the response lacks a charset
+        # (GHCR manifest media types omit it), so piping straight to ConvertFrom-Json yields
+        # an int array. Decode bytes first.
+        function ConvertFrom-RawJson($Content) {
+            if ($Content -is [byte[]]) { $Content = [System.Text.Encoding]::UTF8.GetString($Content) }
+            return $Content | ConvertFrom-Json
+        }
 
         $tokenResp = Invoke-RestMethod -Uri "https://ghcr.io/token?scope=repository:${imagePath}:pull" -Method GET -ErrorAction Stop
         $authHeader = @{ Authorization = "Bearer $($tokenResp.token)" }
@@ -50,13 +58,13 @@ function Invoke-ExecContainerManagement {
         $resp = Invoke-WebRequest -Uri $manifestUri -Method GET -Headers $manifestHeaders -ErrorAction Stop
         $digest = $resp.Headers['Docker-Content-Digest']
         if ($digest -is [array]) { $digest = $digest[0] }
-        $manifest = $resp.Content | ConvertFrom-Json
+        $manifest = ConvertFrom-RawJson $resp.Content
 
         if ($manifest.manifests) {
             $child = $manifest.manifests | Where-Object { $_.platform.architecture -eq 'amd64' -and $_.platform.os -eq 'linux' } | Select-Object -First 1
             if (-not $child) { $child = $manifest.manifests | Select-Object -First 1 }
             $childResp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$($child.digest)" -Method GET -Headers $manifestHeaders -ErrorAction Stop
-            $manifest = $childResp.Content | ConvertFrom-Json
+            $manifest = ConvertFrom-RawJson $childResp.Content
         }
 
         $version = $manifest.annotations.'org.opencontainers.image.version'
