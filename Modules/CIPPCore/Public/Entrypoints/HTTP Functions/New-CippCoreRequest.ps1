@@ -61,6 +61,9 @@ function New-CippCoreRequest {
         }
     }
 
+    # Store action source + acting identity for outbound User-Agent attribution
+    Set-CippUserAgentContext -Headers $Request.Headers
+
     # Check if endpoint is disabled via feature flags
     $FeatureFlags = Get-CIPPFeatureFlag
 

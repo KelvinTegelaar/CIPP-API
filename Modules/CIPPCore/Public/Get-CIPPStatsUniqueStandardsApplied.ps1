@@ -19,7 +19,7 @@ function Get-CIPPStatsUniqueStandardsApplied {
             $Id = if ([string]::IsNullOrWhiteSpace($TemplateValue)) {
                 [string]$Standard.Standard
             } else {
-                "{0}|{1}" -f $Standard.Standard, $TemplateValue
+                '{0}|{1}' -f $Standard.Standard, $TemplateValue
             }
 
             if ([string]::IsNullOrWhiteSpace($Id)) { continue }

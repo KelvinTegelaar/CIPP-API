@@ -27,7 +27,6 @@ function New-GraphPOSTRequest {
             $Headers = $Headers
         } else {
             $Headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
-            $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
         }
         if ($AddedHeaders) {
             foreach ($header in $AddedHeaders.GetEnumerator()) {
@@ -35,8 +34,11 @@ function New-GraphPOSTRequest {
             }
         }
 
+        $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
+
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = "CIPP/$($env:CippVersion ?? '1.0')"
+            $headers['User-Agent'] = Get-CippUserAgent
+            Write-Information "User-Agent: $($headers['User-Agent'])"
         }
 
         if (!$contentType) {
