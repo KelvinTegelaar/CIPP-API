@@ -7,13 +7,36 @@ function Set-SherwebSubscription {
         [int]$Quantity,
         [int]$Add,
         [int]$Remove,
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        $Headers
     )
-    if ($TenantFilter) {
-        Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | ForEach-Object {
-            Write-Host "Extracted customer id from tenant filter - It's $($_.IntegrationId)"
-            $CustomerId = $_.IntegrationId
+
+    if ($Headers) {
+        # Get extension config and check for AllowedCustomRoles
+        $Table = Get-CIPPTable -TableName Extensionsconfig
+        $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
+        $Config = $ExtensionConfig.Sherweb
+
+        $AllowedRoles = $Config.AllowedCustomRoles.value
+        if ($AllowedRoles -and $Headers.'x-ms-client-principal') {
+            $UserRoles = Get-CIPPAccessRole -Headers $Headers
+            $Allowed = $false
+            foreach ($Role in $UserRoles) {
+                if ($AllowedRoles -contains $Role) {
+                    Write-Information "User has allowed CIPP role: $Role"
+                    $Allowed = $true
+                    break
+                }
+            }
+            if (-not $Allowed) {
+                throw 'This user is not allowed to modify Sherweb subscriptions.'
+            }
         }
+    }
+
+    if ($TenantFilter) {
+        $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter).customerId
+        $CustomerId = Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | Select-Object -ExpandProperty IntegrationId
     }
     $AuthHeader = Get-SherwebAuthentication
     $ExistingSubscription = Get-SherwebCurrentSubscription -CustomerId $CustomerId -SKU $SKU
@@ -37,6 +60,9 @@ function Set-SherwebSubscription {
         }
         $OrderUri = "https://api.sherweb.com/service-provider/v1/orders?customerId=$CustomerId"
         $Order = Invoke-RestMethod -Uri $OrderUri -Method POST -Headers $AuthHeader -Body $OrderBody -ContentType 'application/json'
+        if ($Order -match 'Internal Server Error' -and $Add -gt 0) {
+            throw 'An error occurred while attempting to create a new subscription. Please check the Cumulus portal to ensure this customer has been provisioned for Microsoft 365.'
+        }
         return $Order
 
     } else {

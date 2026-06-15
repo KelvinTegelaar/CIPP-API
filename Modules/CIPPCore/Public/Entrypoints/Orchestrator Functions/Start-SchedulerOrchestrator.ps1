@@ -2,6 +2,9 @@ function Start-SchedulerOrchestrator {
     <#
     .SYNOPSIS
     Start the Scheduler Orchestrator
+
+    .FUNCTIONALITY
+    Entrypoint
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
@@ -58,6 +61,6 @@ function Start-SchedulerOrchestrator {
     }
 
     if ($PSCmdlet.ShouldProcess('Start-ScheduleOrchestrator', 'Starting Scheduler Orchestrator')) {
-        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        Start-CIPPOrchestrator -InputObject $InputObject
     }
 }

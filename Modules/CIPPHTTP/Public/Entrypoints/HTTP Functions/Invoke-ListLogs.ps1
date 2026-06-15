@@ -1,0 +1,195 @@
+function Invoke-ListLogs {
+    <#
+    .FUNCTIONALITY
+        Entrypoint,AnyTenant
+    .ROLE
+        CIPP.Core.Read
+    .DESCRIPTION
+        Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    $Table = Get-CIPPTable
+    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+
+    $TemplatesTable = Get-CIPPTable -tablename 'templates'
+    $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
+
+    $ReturnedLog = if ($Request.Query.ListLogs) {
+        Get-AzDataTableEntity @Table -Property PartitionKey | Sort-Object -Unique PartitionKey | Select-Object PartitionKey | ForEach-Object {
+            @{
+                value = $_.PartitionKey
+                label = $_.PartitionKey
+            }
+        }
+    } elseif ($Request.Query.logentryid) {
+        # Return single log entry by RowKey
+        $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+        $DateFilter = ConvertTo-CIPPODataFilterValue -Value ($Request.Query.DateFilter ?? $LocalNow.ToString('yyyyMMdd')) -Type Date
+        $SafeLogEntryId = ConvertTo-CIPPODataFilterValue -Value $Request.Query.logentryid -Type Guid
+        $Filter = "RowKey eq '{0}' and PartitionKey eq '{1}'" -f $SafeLogEntryId, $DateFilter
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        Write-Host "Getting single log entry for RowKey: $($Request.Query.logentryid)"
+
+        $Row = Get-AzDataTableEntity @Table -Filter $Filter
+
+        if ($Row) {
+            if ($AllowedTenants -notcontains 'AllTenants') {
+                $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
+            }
+
+            if ($AllowedTenants -contains 'AllTenants' -or ($AllowedTenants -notcontains 'AllTenants' -and ($TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId -or $TenantList.initialDomainName -contains $Row.Tenant)) ) {
+                if ($Row.StandardTemplateId) {
+                    $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+
+                    $StandardInfo = @{
+                        Template = $Standard.templateName
+                        Standard = $Row.Standard
+                    }
+
+                    if ($Row.IntuneTemplateId) {
+                        $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                    }
+                    if ($Row.ConditionalAccessTemplateId) {
+                        $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                        $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                    }
+
+                } else {
+                    $StandardInfo = @{}
+                }
+
+                $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
+                    $Row.LogData | ConvertFrom-Json
+                } else { $Row.LogData }
+                [PSCustomObject]@{
+                    DateTime   = $Row.Timestamp
+                    Tenant     = $Row.Tenant
+                    API        = $Row.API
+                    Message    = $Row.Message
+                    User       = $Row.Username
+                    Severity   = $Row.Severity
+                    LogData    = $LogData
+                    TenantID   = if ($Row.TenantID -ne $null) {
+                        $Row.TenantID
+                    } else {
+                        'None'
+                    }
+                    AppId      = $Row.AppId
+                    IP         = $Row.IP
+                    RowKey     = $Row.RowKey
+                    Standard   = $StandardInfo
+                    DateFilter = $Row.PartitionKey
+                }
+            }
+        }
+    } else {
+        if ($request.Query.Filter -eq 'True') {
+            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert' }
+            $PartitionKey = $Request.Query.DateFilter
+            $username = $Request.Query.User ?? '*'
+            $TenantFilter = $Request.Query.Tenant
+            $ApiFilter = $Request.Query.API
+            $StandardFilter = $Request.Query.StandardTemplateId
+            $ScheduledTaskFilter = $Request.Query.ScheduledTaskId
+
+            $StartDate = if ($Request.Query.StartDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.StartDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
+            $EndDate = if ($Request.Query.EndDate ?? $Request.Query.DateFilter) { ConvertTo-CIPPODataFilterValue -Value ($Request.Query.EndDate ?? $Request.Query.DateFilter) -Type Date } else { $null }
+
+            if ($StartDate -and $EndDate) {
+                $Filter = "PartitionKey ge '$StartDate' and PartitionKey le '$EndDate'"
+            } elseif ($StartDate) {
+                $Filter = "PartitionKey eq '{0}'" -f $StartDate
+            } else {
+                $Filter = "PartitionKey eq '{0}'" -f [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
+            }
+        } else {
+            $LogLevel = 'Info', 'Warn', 'Warning', 'Error', 'Critical', 'Alert'
+            $PartitionKey = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId).ToString('yyyyMMdd')
+            $username = '*'
+            $TenantFilter = $null
+            $ApiFilter = $null
+            $StandardFilter = $null
+            $ScheduledTaskFilter = $null
+            $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+        }
+
+        # Severity stays client-side: Azurite/Azure Table OData has been unreliable
+        # on long OR chains. Per-partition row counts are small enough that this is fine.
+        if ($StandardFilter) {
+            $SafeStd = ConvertTo-CIPPODataFilterValue -Value $StandardFilter -Type Guid
+            $Filter = "$Filter and StandardTemplateId eq '$SafeStd'"
+        }
+        if ($ScheduledTaskFilter) {
+            $SafeSched = ConvertTo-CIPPODataFilterValue -Value $ScheduledTaskFilter -Type Guid
+            $Filter = "$Filter and ScheduledTaskId eq '$SafeSched'"
+        }
+
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
+
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -in $AllowedTenants }
+        }
+
+        $ReturnedLog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object {
+            $_.Severity -in $LogLevel -and
+            ($username -eq '*' -or $_.Username -like $username) -and
+            ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+            ([string]::IsNullOrEmpty($ApiFilter) -or $_.API -match "$ApiFilter") -and
+            ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $_.Tenant -or $_.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $_.TenantId)
+        } | ForEach-Object {
+            $Row = $_
+            if ($ScheduledTaskFilter -and $Row.StandardTemplateId) {
+                $Standard = ($Templates | Where-Object { $_.RowKey -eq $Row.StandardTemplateId }).JSON | ConvertFrom-Json
+
+                $StandardInfo = @{
+                    Template = $Standard.templateName
+                    Standard = $Row.Standard
+                }
+
+                if ($Row.IntuneTemplateId) {
+                    $IntuneTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.IntuneTemplateId }).JSON | ConvertFrom-Json
+                    $StandardInfo.IntunePolicy = $IntuneTemplate.displayName
+                }
+                if ($Row.ConditionalAccessTemplateId) {
+                    $ConditionalAccessTemplate = ($Templates | Where-Object { $_.RowKey -eq $Row.ConditionalAccessTemplateId }).JSON | ConvertFrom-Json
+                    $StandardInfo.ConditionalAccessPolicy = $ConditionalAccessTemplate.displayName
+                }
+            } else {
+                $StandardInfo = @{}
+            }
+
+            $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
+                $Row.LogData | ConvertFrom-Json
+            } else { $Row.LogData }
+            [PSCustomObject]@{
+                DateTime     = $Row.Timestamp
+                Tenant       = $Row.Tenant
+                API          = $Row.API
+                Message      = $Row.Message
+                User         = $Row.Username
+                Severity     = $Row.Severity
+                LogData      = $LogData
+                TenantID     = if ($Row.TenantID -ne $null) {
+                    $Row.TenantID
+                } else {
+                    'None'
+                }
+                AppId        = $Row.AppId
+                IP           = $Row.IP
+                RowKey       = $Row.RowKey
+                StandardInfo = $StandardInfo
+                DateFilter   = $Row.PartitionKey
+            }
+        }
+        $ReturnedLog
+    }
+
+    return [HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
+    }
+
+}

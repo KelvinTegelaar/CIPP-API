@@ -1,0 +1,161 @@
+function Invoke-AddUserDefaults {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
+    try {
+        # Extract data from request body - matching CippAddEditUser.jsx field names
+        $TenantFilter = $Request.Body.tenantFilter
+        $TemplateName = $Request.Body.templateName
+        $DefaultForTenant = $Request.Body.defaultForTenant
+
+        Write-Host "Creating template '$TemplateName' for tenant: $TenantFilter"
+
+        # User fields
+        $GivenName = $Request.Body.givenName
+        $Surname = $Request.Body.surname
+        $DisplayName = $Request.Body.displayName
+
+        # Handle autocomplete fields - extract value if it's an object
+        $UsernameFormat = if ($Request.Body.usernameFormat -is [string]) {
+            $Request.Body.usernameFormat
+        } else {
+            $Request.Body.usernameFormat.value
+        }
+
+        $UsernameSpaceHandling = if ($Request.Body.usernameSpaceHandling -is [string]) {
+            $Request.Body.usernameSpaceHandling
+        } else {
+            $Request.Body.usernameSpaceHandling.value
+        }
+
+        $UsernameSpaceReplacement = $Request.Body.usernameSpaceReplacement
+
+        $PrimDomain = if ($Request.Body.primDomain -is [string]) {
+            $Request.Body.primDomain
+        } else {
+            $Request.Body.primDomain.value
+        }
+
+        $AddedAliases = $Request.Body.addedAliases
+
+        # Settings
+        $Autopassword = $Request.Body.Autopassword
+        $Password = $Request.Body.password
+        $MustChangePass = $Request.Body.MustChangePass
+
+        $UsageLocation = if ($Request.Body.usageLocation -is [string]) {
+            $Request.Body.usageLocation
+        } else {
+            $Request.Body.usageLocation.value
+        }
+
+        $Licenses = $Request.Body.licenses
+        $RemoveLicenses = $Request.Body.removeLicenses
+
+        # Job and Location fields
+        $JobTitle = $Request.Body.jobTitle
+        $StreetAddress = $Request.Body.streetAddress
+        $City = $Request.Body.city
+        $State = $Request.Body.state
+        $PostalCode = $Request.Body.postalCode
+        $Country = $Request.Body.country
+        $CompanyName = $Request.Body.companyName
+        $Department = $Request.Body.department
+
+        # Contact fields
+        $MobilePhone = $Request.Body.mobilePhone
+        $BusinessPhones = if ($null -ne $Request.Body.businessPhones) {
+            if ($Request.Body.businessPhones -is [array]) { $Request.Body.businessPhones[0] } else { $Request.Body.businessPhones }
+        } elseif ($null -ne $Request.Body.'businessPhones[0]') {
+            $Request.Body.'businessPhones[0]'
+        } else {
+            $null
+        }
+        $OtherMails = $Request.Body.otherMails
+
+        # User relations
+        $SetManager = $Request.Body.setManager
+        $SetSponsor = $Request.Body.setSponsor
+        $CopyFrom = $Request.Body.copyFrom
+
+        # Groups
+        $GroupMemberships = if ($Request.Body.addToGroups) { $Request.Body.addToGroups } else { $Request.Body.groupMemberships }
+
+        # Create template object with all fields from CippAddEditUser
+        $TemplateObject = @{
+            tenantFilter             = $TenantFilter
+            templateName             = $TemplateName
+            defaultForTenant         = [bool]$DefaultForTenant
+            givenName                = $GivenName
+            surname                  = $Surname
+            displayName              = $DisplayName
+            usernameFormat           = $UsernameFormat
+            usernameSpaceHandling    = $UsernameSpaceHandling
+            usernameSpaceReplacement = $UsernameSpaceReplacement
+            primDomain               = $PrimDomain
+            addedAliases             = $AddedAliases
+            Autopassword             = $Autopassword
+            password                 = $Password
+            MustChangePass           = $MustChangePass
+            usageLocation            = $UsageLocation
+            licenses                 = $Licenses
+            removeLicenses           = $RemoveLicenses
+            jobTitle                 = $JobTitle
+            streetAddress            = $StreetAddress
+            city                     = $City
+            state                    = $State
+            postalCode               = $PostalCode
+            country                  = $Country
+            companyName              = $CompanyName
+            department               = $Department
+            mobilePhone              = $MobilePhone
+            businessPhones           = $BusinessPhones
+            otherMails               = $OtherMails
+            setManager               = $SetManager
+            setSponsor               = $SetSponsor
+            copyFrom                 = $CopyFrom
+            groupMemberships         = $GroupMemberships
+        }
+
+        # Use existing GUID if editing, otherwise generate new one
+        $GUID = if ($Request.Body.GUID) { $Request.Body.GUID } else { (New-Guid).GUID }
+
+        # Convert to JSON
+        $JSON = ConvertTo-Json -InputObject $TemplateObject -Depth 100 -Compress
+
+        # Store in table
+        $Table = Get-CippTable -tablename 'templates'
+        $Table.Force = $true
+        Add-CIPPAzDataTableEntity @Table -Entity @{
+            JSON         = "$JSON"
+            RowKey       = "$GUID"
+            PartitionKey = 'UserDefaultTemplate'
+            GUID         = "$GUID"
+        }
+
+        $Action = if ($Request.Body.GUID) { 'Updated' } else { 'Created' }
+        $Result = "$Action User Default Template '$($TemplateName)' with GUID $GUID"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to create User Default Template: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @{'Results' = "$Result" }
+        })
+}

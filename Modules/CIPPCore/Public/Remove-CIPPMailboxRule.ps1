@@ -1,8 +1,8 @@
 function Remove-CIPPMailboxRule {
     [CmdletBinding()]
     param (
-        $userid,
-        $username,
+        $UserId,
+        $Username,
         $TenantFilter,
         $APIName = 'Mailbox Rules Removal',
         $Headers,
@@ -14,35 +14,47 @@ function Remove-CIPPMailboxRule {
     if ($RemoveAllRules.IsPresent -eq $true) {
         # Delete all rules
         try {
-            Write-Host "Checking rules for $username"
-            $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' }
-            Write-Host "$($rules.count) rules found"
-            if ($null -eq $rules) {
-                Write-LogMessage -headers $Headers -API $APIName -message "No Rules for $($username) to delete" -Sev 'Info' -tenant $TenantFilter
-                return "No rules for $($username) to delete"
+            Write-Host "Checking rules for $Username"
+            $Rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' }
+            Write-Host "$($Rules.count) rules found"
+            if ($null -eq $Rules) {
+                $Message = "No rules found for $($Username) to delete"
+                Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter
+                return $Message
             } else {
-                ForEach ($rule in $rules) {
-                    New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $username -cmdParams @{Identity = $rule.Identity }
+                foreach ($rule in $Rules) {
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $Username -cmdParams @{Identity = $rule.Identity }
                 }
-                Write-LogMessage -headers $Headers -API $APIName -message "Deleted Rules for $($username)" -Sev 'Info' -tenant $TenantFilter
-                return "Deleted Rules for $($username)"
+                $Message = "Successfully deleted all rules for $($Username)"
+                Write-LogMessage -headers $Headers -API $APIName -message "Deleted rules for $($Username)" -Sev 'Info' -tenant $TenantFilter
+                return $Message
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Headers -API $APIName -message "Could not delete rules for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-            return "Could not delete rules for $($username). Error: $($ErrorMessage.NormalizedError)"
+            $Message = "Failed to delete rules for $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            throw $Message
         }
     } else {
         # Only delete 1 rule
         try {
-            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $username -cmdParams @{Identity = $RuleId }
-            Write-LogMessage -headers $Headers -API $APIName -message "Deleted mailbox rule $($RuleName) for $($username)" -Sev 'Info' -tenant $TenantFilter
-            return "Deleted mailbox rule $($RuleName) for $($username)"
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $Username -cmdParams @{Identity = $RuleId }
+            $Message = "Successfully deleted mailbox rule $($RuleName) for $($Username)"
+            Write-LogMessage -headers $Headers -API $APIName -message "Deleted mailbox rule $($RuleName) for $($Username)" -Sev 'Info' -tenant $TenantFilter
+
+            # Remove from cache if it exists
+            try {
+                Remove-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' -ItemId $RuleId
+            } catch {
+                Write-LogMessage -headers $Headers -API $APIName -message "Rule deleted but failed to remove from cache: $($_.Exception.Message)" -sev 'Warning' -tenant $TenantFilter
+            }
+
+            return $Message
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -headers $Headers -API $APIName -message "Could not delete rule for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-            return "Could not delete rule for $($username). Error: $($ErrorMessage.NormalizedError)"
+            $Message = "Failed to delete rule for $($Username). Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            throw $Message
         }
     }
 }
-

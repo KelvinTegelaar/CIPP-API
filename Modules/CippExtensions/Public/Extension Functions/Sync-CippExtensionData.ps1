@@ -9,6 +9,9 @@ function Sync-CippExtensionData {
         $SyncType
     )
 
+    # Legacy cache system is deprecated - all extensions now use CippReportingDB
+    throw 'Sync-CippExtensionData is deprecated. This scheduled task should be removed. Extensions now use Push-CIPPDBCacheData and Get-CippExtensionReportingData.'
+
     $Table = Get-CIPPTable -TableName ExtensionSync
     $Extensions = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($SyncType)'"
     $LastSync = $Extensions | Where-Object { $_.RowKey -eq $TenantFilter }
@@ -151,20 +154,26 @@ function Sync-CippExtensionData {
                 )
             }
             'Mailboxes' {
-                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ProhibitSendQuota,ProhibitSendReceiveQuota,LitigationHoldEnabled,InPlaceHolds,HiddenFromAddressListsEnabled'
+                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
                 $ExoRequest = @{
                     tenantid  = $TenantFilter
                     cmdlet    = 'Get-Mailbox'
                     cmdParams = @{}
                     Select    = $Select
                 }
-                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, ProhibitSendQuota, ProhibitSendReceiveQuota, LitigationHoldEnabled, InplaceHolds, HiddenFromAddressListsEnabled, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-
+                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                 @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                 @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
                 @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
                 @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
-                @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } }
+                @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+                @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+                @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+                DeliverToMailboxAndForward,
+                HiddenFromAddressListsEnabled,
+                ExternalDirectoryObjectId,
+                MessageCopyForSendOnBehalfEnabled,
+                MessageCopyForSentAsEnabled
 
                 $Entity = @{
                     PartitionKey = $TenantFilter
@@ -211,7 +220,7 @@ function Sync-CippExtensionData {
             try {
                 $TenantResults = New-GraphBulkRequest -Requests @($TenantRequests) -tenantid $TenantFilter
             } catch {
-                Throw "Failed to fetch bulk company data: $_"
+                throw "Failed to fetch bulk company data: $_"
             }
 
             $TenantResults | Select-Object id, body | ForEach-Object {
@@ -220,6 +229,19 @@ function Sync-CippExtensionData {
                     # base64 decode
                     $Data = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Data)) | ConvertFrom-Json
                     $Data = $Data.Value
+                }
+
+                # Filter out excluded licenses to respect the ExcludedLicenses table
+                if ($_.id -eq 'Licenses') {
+                    $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
+                    $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
+                    if ($ExcludedSkuList) {
+                        # Only exclude licenses marked as ExcludedEverywhere (not alert-only exclusions)
+                        $ExcludedEverywhereGuids = @($ExcludedSkuList | Where-Object {
+                            $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
+                        } | ForEach-Object { $_.GUID })
+                        $Data = $Data | Where-Object { $_.skuId -notin $ExcludedEverywhereGuids }
+                    }
                 }
 
                 $Entity = @{
@@ -296,7 +318,6 @@ function Sync-CippExtensionData {
             }
         }
 
-
         $LastSync.LastSync = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         $LastSync.Status = 'Completed'
         $LastSync.Error = ''
@@ -307,4 +328,5 @@ function Sync-CippExtensionData {
     } finally {
         Add-CIPPAzDataTableEntity @Table -Entity $LastSync -Force
     }
+    return $LastSync
 }

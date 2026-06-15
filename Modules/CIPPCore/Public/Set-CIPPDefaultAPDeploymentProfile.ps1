@@ -1,88 +1,111 @@
 function Set-CIPPDefaultAPDeploymentProfile {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        $tenantFilter,
-        $displayname,
-        $description,
-        $devicenameTemplate,
-        $allowWhiteGlove,
+        $TenantFilter,
+        $DisplayName,
+        $Description,
+        $DeviceNameTemplate,
+        $AllowWhiteGlove,
         $CollectHash,
-        $usertype,
+        $UserType,
         $DeploymentMode,
-        $hideChangeAccount,
+        $HideChangeAccount = $true,
         $AssignTo,
-        $hidePrivacy,
-        $hideTerms,
-        $Autokeyboard,
+        $HidePrivacy,
+        $HideTerms,
+        $AutoKeyboard,
         $Headers,
         $Language = 'os-default',
-        $APIName = 'Add Default Enrollment Status Page'
+        $APIName = 'Add Default Autopilot Deployment Profile'
     )
 
-    $User = $Request.Headers
-
     try {
-        $ObjBody = [pscustomobject]@{
-            '@odata.type'                            = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
-            'displayName'                            = "$($displayname)"
-            'description'                            = "$($description)"
-            'deviceNameTemplate'                     = "$($DeviceNameTemplate)"
-            'language'                               = "$($Language)"
-            'enableWhiteGlove'                       = $([bool]($allowWhiteGlove))
-            'deviceType'                             = 'windowsPc'
-            'extractHardwareHash'                    = $([bool]($CollectHash))
-            'roleScopeTagIds'                        = @()
-            'hybridAzureADJoinSkipConnectivityCheck' = $false
-            'outOfBoxExperienceSettings'             = @{
-                'deviceUsageType'           = "$DeploymentMode"
-                'hideEscapeLink'            = $([bool]($hideChangeAccount))
-                'hidePrivacySettings'       = $([bool]($hidePrivacy))
-                'hideEULA'                  = $([bool]($hideTerms))
-                'userType'                  = "$usertype"
-                'skipKeyboardSelectionPage' = $([bool]($Autokeyboard))
-            }
+        # Map language selection to Graph API locale values:
+        # 'user-select' -> empty string (lets user choose during OOBE)
+        # 'os-default' or $null -> $null (uses operating system default)
+        # Specific tag (e.g. 'en-US') -> passed through as-is
+        if ($Language -eq 'os-default') {
+            $Language = $null
         }
-        $Body = ConvertTo-Json -InputObject $ObjBody
 
-        $Profiles = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $tenantfilter | Where-Object -Property displayName -EQ $displayname
+        # userType in outOfBoxExperienceSetting is only valid for user-driven (singleUser) mode.
+        # The Intune API rejects it for self-deploying (shared) mode.
+        $OutOfBoxSetting = [ordered]@{
+            'deviceUsageType'              = "$DeploymentMode"
+            'escapeLinkHidden'             = $([bool]($true))
+            'privacySettingsHidden'        = $([bool]($HidePrivacy))
+            'eulaHidden'                   = $([bool]($HideTerms))
+            'keyboardSelectionPageSkipped' = $([bool]($AutoKeyboard))
+        }
+        if ($DeploymentMode -ne 'shared') {
+            $OutOfBoxSetting['userType'] = "$UserType"
+        }
+
+        $ObjBody = [pscustomobject]@{
+            '@odata.type'                   = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
+            'displayName'                   = "$($DisplayName)"
+            'description'                   = "$($Description)"
+            'deviceNameTemplate'            = "$($DeviceNameTemplate)"
+            'locale'                        = "$($Language)"
+            'preprovisioningAllowed'        = $([bool]($AllowWhiteGlove))
+            'deviceType'                    = 'windowsPc'
+            'hardwareHashExtractionEnabled' = $([bool]($CollectHash))
+            'roleScopeTagIds'               = @()
+            'outOfBoxExperienceSetting'     = $OutOfBoxSetting
+        }
+        if ($Language -eq 'user-select') {
+            #Add language query to body only if user-select, as Graph API treats empty string differently than null
+            $ObjBody.locale = ''
+            $ObjBody | Add-Member -MemberType NoteProperty -Name 'language' -Value '' -Force
+        }
+        $Body = ConvertTo-Json -InputObject $ObjBody -Depth 10
+        Write-Information $Body
+
+        $Profiles = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $DisplayName
         if ($Profiles.count -gt 1) {
             $Profiles | ForEach-Object {
                 if ($_.id -ne $Profiles[0].id) {
                     if ($PSCmdlet.ShouldProcess($_.displayName, 'Delete duplicate Autopilot profile')) {
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $tenantfilter -type DELETE
-                        Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $TenantFilter -type DELETE
+                        Write-LogMessage -Headers $Headers -API $APIName -tenant $($TenantFilter) -message "Deleted duplicate Autopilot profile $($DisplayName)" -Sev 'Info'
                     }
                 }
             }
             $Profiles = $Profiles[0]
         }
         if (!$Profiles) {
-            if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
+            if ($PSCmdlet.ShouldProcess($DisplayName, 'Add Autopilot profile')) {
                 $Type = 'Add'
-                $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
-                Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
+                $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $Body -tenantid $TenantFilter
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added Autopilot profile $($DisplayName)" -Sev 'Info'
             }
         } else {
             $Type = 'Edit'
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($Profiles.id)" -tenantid $tenantfilter -body $body -type PATCH
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($Profiles.id)" -tenantid $TenantFilter -body $Body -type PATCH
             $GraphRequest = $Profiles | Select-Object -Last 1
         }
 
         if ($AssignTo -eq $true) {
-            $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-            if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $displayname")) {
-                #Get assignments
-                $Assignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter
-                if (!$Assignments) {
-                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
+            try {
+                $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
+                if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $DisplayName")) {
+                    #Get assignments
+                    $Assignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter
+                    if (!$Assignments) {
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $TenantFilter -type POST -body $AssignBody
+                    }
+                    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Assigned autopilot profile $($DisplayName) to $($AssignTo)" -Sev 'Info'
                 }
-                Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to assign Autopilot profile $($DisplayName) to $($AssignTo): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
         }
-        "Successfully $($Type)ed profile for $($tenantfilter)"
+        "Successfully $($Type)ed profile for $($TenantFilter)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Failed $($Type)ing Autopilot Profile $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        throw "Failed to add profile for $($tenantfilter): $($ErrorMessage.NormalizedError)"
+        $Result = "Failed $($Type)ing Autopilot Profile $($DisplayName). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
+        throw $Result
     }
 }

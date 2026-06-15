@@ -10,7 +10,7 @@ function Test-CIPPGDAPRelationships {
     $MissingGroups = [System.Collections.Generic.List[object]]@()
     try {
         #Get graph request to list all relationships.
-        $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'" -tenantid $ENV:TenantID -NoAuthCheck $true
+        $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'" -tenantid $env:TenantID -NoAuthCheck $true
         #Group relationships by tenant. The tenant information is in $relationships.customer.TenantId.
         $RelationshipsByTenant = $Relationships | Group-Object -Property { $_.customer.TenantId }
         foreach ($Tenant in $RelationshipsByTenant) {
@@ -20,7 +20,7 @@ function Test-CIPPGDAPRelationships {
                         Issue        = 'This tenant only has a MLT(Microsoft Led Transition) relationship. This is a read-only relationship. You must migrate this tenant to GDAP.'
                         Tenant       = [string]$Tenant.Group.customer.displayName
                         Relationship = [string]$Tenant.Group.displayName
-                        Link         = 'https://docs.cipp.app/setup/gdap/index'
+                        Link         = 'https://docs.cipp.app/setup/installation/gdap-invite-wizard'
                     }) | Out-Null
             }
             foreach ($Group in $Tenant.Group) {
@@ -30,7 +30,7 @@ function Test-CIPPGDAPRelationships {
                             Issue        = 'The relationship has global administrator access. Auto-Extend is not available.'
                             Tenant       = [string]$Group.customer.displayName
                             Relationship = [string]$Group.displayName
-                            Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#autoextend'
+                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
                         }) | Out-Null
                 }
@@ -50,47 +50,53 @@ function Test-CIPPGDAPRelationships {
             'M365 GDAP Cloud App Security Administrator',
             'M365 GDAP Cloud Device Administrator',
             'M365 GDAP Teams Administrator',
-            'M365 GDAP Sharepoint Administrator',
+            'M365 GDAP SharePoint Administrator',
             'M365 GDAP Authentication Policy Administrator',
             'M365 GDAP Privileged Role Administrator',
-            'M365 GDAP Privileged Authentication Administrator'
+            'M365 GDAP Privileged Authentication Administrator',
+            'M365 GDAP Billing Administrator',
+            'M365 GDAP Global Reader',
+            'M365 GDAP Domain Name Administrator'
         )
         $RoleAssignableGroups = $SAMUserMemberships | Where-Object { $_.isAssignableToRole }
-        $NestedGroups = foreach ($Group in $RoleAssignableGroups) {
-            New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($Group.id)/memberOf?`$select=id,displayName" -NoAuthCheck $true
+        $NestedGroups = [System.Collections.Generic.List[object]]::new()
+        foreach ($RoleGroup in $RoleAssignableGroups) {
+            Write-Information "Getting nested group memberships for $($RoleGroup.displayName)"
+            $NestedGroups.AddRange(@(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($RoleGroup.id)/memberOf?`$select=id,displayName" -NoAuthCheck $true))
         }
-        foreach ($Group in $ExpectedGroups) {
+        foreach ($ExpectedGroup in $ExpectedGroups) {
             $GroupFound = $false
             foreach ($Membership in ($SAMUserMemberships + $NestedGroups)) {
-                if ($Membership.displayName -match $Group -and (($CIPPGroupCount -gt 0 -and $Group -match 'M365 GDAP') -or $Group -notmatch 'M365 GDAP')) {
+                if ($Membership.displayName -match $ExpectedGroup) {
+                    Write-Information "Found $ExpectedGroup in group memberships"
                     $GroupFound = $true
                 }
             }
             if (-not $GroupFound) {
-                if ($Group -eq 'AdminAgents') { $Type = 'Error' } else { $Type = 'Warning' }
+                if ($ExpectedGroup -eq 'AdminAgents') { $Type = 'Error' } else { $Type = 'Warning' }
                 $GDAPissues.add([PSCustomObject]@{
                         Type         = $Type
-                        Issue        = "$($Group) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                        Issue        = "$($ExpectedGroup) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = '*Partner Tenant'
                         Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+                        Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
                     }) | Out-Null
                 $MissingGroups.Add([PSCustomObject]@{
-                        Name = $Group
+                        Name = $ExpectedGroup
                         Type = 'SAM User Membership'
                     }) | Out-Null
             }
-            if ($CIPPGroupCount -lt 12) {
-                $GDAPissues.add([PSCustomObject]@{
-                        Type         = 'Warning'
-                        Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
-                        Tenant       = '*Partner Tenant'
-                        Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+        }
+        if ($CIPPGroupCount -lt 15) {
+            $GDAPissues.add([PSCustomObject]@{
+                    Type         = 'Warning'
+                    Issue        = "We only found $($CIPPGroupCount) of the 15 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                    Tenant       = '*Partner Tenant'
+                    Relationship = 'None'
+                    Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
 
-                    }) | Out-Null
-            }
+                }) | Out-Null
         }
 
     } catch {
@@ -101,7 +107,7 @@ function Test-CIPPGDAPRelationships {
     $GDAPRelationships = [PSCustomObject]@{
         GDAPIssues     = @($GDAPissues)
         MissingGroups  = @($MissingGroups)
-        Memberships    = @($SAMUserMemberships)
+        Memberships    = @($SAMUserMemberships + $NestedGroups)
         CIPPGroupCount = $CIPPGroupCount
     }
 

@@ -1,0 +1,9 @@
+{
+  "Name": "Symantec Cloud",
+  "MxMatch": "cluster[0-9].{3,4}.messagelabs.com",
+  "SpfInclude": "spf.messagelabs.com",
+  "Selectors": [""],
+  "_MxComment": "https://knowledge.broadcom.com/external/article/161419/mail-exchanger-mx-record-setup-with-emai.html",
+  "_SpfComment": "https://knowledge.broadcom.com/external/article/161394/implement-spf-records-for-email-security.html",
+  "_DkimComment": "https://knowledge.broadcom.com/external/article/171225/configuring-dkim-signing-for-outbound-ma.html"
+}

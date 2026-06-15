@@ -1,18 +1,32 @@
 function Get-CIPPSPOTenant {
     [CmdletBinding()]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-        [string]$SharepointPrefix
+        [string]$SharepointPrefix,
+        [switch]$SkipCache
     )
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
-        $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
+        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+        $tenantName = $SharePointInfo.TenantName
+        $AdminUrl = $SharePointInfo.AdminUrl
     } else {
         $tenantName = $SharepointPrefix
+        $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
     }
-    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
+
+    $Table = Get-CIPPTable -tablename 'cachespotenant'
+    $SafeTenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
+    $Filter = "PartitionKey eq 'Tenant' and RowKey eq '$SafeTenantFilter' and Timestamp gt datetime'$( (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
+    if (!$SkipCache.IsPresent) {
+        $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {
+            $Results = $CachedTenant.JSON | ConvertFrom-Json
+            return $Results
+        }
+    }
 
     # Query tenant settings
     $XML = @'
@@ -21,7 +35,17 @@ function Get-CIPPSPOTenant {
     $AdditionalHeaders = @{
         'Accept' = 'application/json;odata=verbose'
     }
-    $Results = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
 
-    $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
+    $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+
+    $Results = $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
+
+    # Cache result
+    $Entity = @{
+        PartitionKey = 'Tenant'
+        RowKey       = $TenantFilter
+        JSON         = [string]($Results | ConvertTo-Json -Depth 10 -Compress)
+    }
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+    return $Results
 }

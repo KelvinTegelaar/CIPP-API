@@ -1,0 +1,29 @@
+Function Invoke-ListPotentialApps {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Endpoint.Application.Read
+    .DESCRIPTION
+        Searches application repositories (WinGet, Chocolatey) for available applications matching a search string.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    if ($request.body.type -eq 'WinGet') {
+        $body = @"
+{"MaximumResults":50,"Filters":[{"PackageMatchField":"Market","RequestMatch":{"KeyWord":"US","MatchType":"CaseInsensitive"}}],"Query":{"KeyWord":"$($Request.Body.SearchString)","MatchType":"Substring"}}
+"@
+        $DataRequest = (Invoke-RestMethod -Uri 'https://storeedgefd.dsx.mp.microsoft.com/v9.0/manifestSearch' -Method POST -Body $body -ContentType 'Application/json').data | Select-Object @{l = 'applicationName'; e = { $_.packagename } }, @{l = 'packagename'; e = { $_.packageIdentifier } } | Sort-Object -Property applicationName
+    }
+
+    if ($Request.Body.type -eq 'Choco') {
+        $DataRequest = Invoke-RestMethod -Uri "https://community.chocolatey.org/api/v2/Search()?`$filter=IsLatestVersion&`$skip=0&`$top=999&searchTerm=%27$($Request.Body.SearchString)%27&targetFramework=%27%27&includePrerelease=false" -ContentType 'application/json' | Select-Object @{l = 'applicationName'; e = { $_.properties.Title } }, @{l = 'packagename'; e = { $_.title.'#text' } } | Sort-Object -Property applicationName
+    }
+
+
+    return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @($DataRequest)
+        }
+
+}

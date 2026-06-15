@@ -16,8 +16,6 @@ function New-CippAuditLogSearch {
         The record types to filter on.
     .PARAMETER KeywordFilter
         The keyword to filter on.
-    .PARAMETER ServiceFilter
-        The service to filter on.
     .PARAMETER OperationsFilters
         The operations to filter on.
     .PARAMETER UserPrincipalNameFilters
@@ -109,8 +107,6 @@ function New-CippAuditLogSearch {
         [Parameter()]
         [string]$KeywordFilters,
         [Parameter()]
-        [string[]]$ServiceFilters,
-        [Parameter()]
         [string[]]$OperationsFilters,
         [Parameter()]
         [string[]]$UserPrincipalNameFilters,
@@ -125,21 +121,18 @@ function New-CippAuditLogSearch {
     )
 
     $SearchParams = @{
-        displayName         = 'CIPP Audit Search - ' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        displayName         = $DisplayName
         filterStartDateTime = $StartTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
-        filterEndDateTime   = $EndTime.AddHours(1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+        filterEndDateTime   = $EndTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
     }
     if ($OperationsFilters) {
-        $SearchParams.operationsFilters = $OperationsFilters
+        $SearchParams.operationFilters = @($OperationsFilters)
     }
     if ($RecordTypeFilters) {
         $SearchParams.recordTypeFilters = @($RecordTypeFilters)
     }
     if ($KeywordFilters) {
-        $SearchParams.keywordFilters = $KeywordFilters
-    }
-    if ($ServiceFilters) {
-        $SearchParams.serviceFilters = $ServiceFilters
+        $SearchParams.keywordFilter = $KeywordFilters
     }
     if ($UserPrincipalNameFilters) {
         $SearchParams.userPrincipalNameFilters = @($UserPrincipalNameFilters)
@@ -147,17 +140,106 @@ function New-CippAuditLogSearch {
     if ($IPAddressFilters) {
         $SearchParams.ipAddressFilters = @($IPAddressFilters)
     }
-    if ($ObjectIdFilterss) {
+    if ($ObjectIdFilters) {
         $SearchParams.objectIdFilters = @($ObjectIdFilters)
     }
     if ($AdministrativeUnitFilters) {
-        $SearchParams.administrativeUnitFilters = @($AdministrativeUnitFilters)
+        $SearchParams.administrativeUnitIdFilters = @($AdministrativeUnitFilters)
     }
 
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
-        $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+        try {
+            $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+        } catch {
+            $AuditLogError = $null
+            $AuditLogErrorMessage = [string]$_.Exception.Message
+            $RawErrorBody = $_.Exception.Data['RawErrorBody']
+            if ($RawErrorBody) {
+                $AuditLogError = [string]$RawErrorBody | ConvertFrom-Json -ErrorAction SilentlyContinue
+            } else {
+                $TrimmedAuditLogErrorMessage = $AuditLogErrorMessage.TrimStart()
+                if ($TrimmedAuditLogErrorMessage.StartsWith('{') -or $TrimmedAuditLogErrorMessage.StartsWith('[')) {
+                    $AuditLogError = $AuditLogErrorMessage | ConvertFrom-Json -ErrorAction SilentlyContinue
+                }
+            }
+
+            if (($null -ne $AuditLogError) -and $AuditLogError.Status -eq 'AuditingDisabledTenant') {
+                try {
+                    $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
+                    $DisabledEntity = [PSCustomObject]@{
+                        PartitionKey  = [string]'AuditDisabledTenant'
+                        RowKey        = [string]$TenantFilter
+                        TenantFilter  = [string]$TenantFilter
+                        Status        = [string]'AuditingDisabledTenant'
+                        ExpiresAtUnix = [int64]([datetimeoffset]::UtcNow.AddHours(24).ToUnixTimeSeconds())
+                    }
+                    Add-CIPPAzDataTableEntity @AuditDisabledTable -Entity $DisabledEntity -Force | Out-Null
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Failed to update audit-disabled tenant cache: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+                }
+
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]$AuditLogError.Status
+                    cippStatus  = [string]'Skipped'
+                    message     = [string]'Unified auditing is disabled for this tenant.'
+                }
+            }
+
+            # Handle HTML error pages (e.g. Azure Front Door 502/504 gateway timeouts)
+            if ($TrimmedAuditLogErrorMessage -match '<!DOCTYPE|<html' -and $TrimmedAuditLogErrorMessage -match '<title>([^<]+)</title>') {
+                $HtmlTitle = $Matches[1].Trim()
+                $GatewayLogData = [PSCustomObject]@{
+                    HtmlTitle         = $HtmlTitle
+                    NormalizedMessage = $AuditLogErrorMessage
+                    RawResponseBody   = if ($RawErrorBody) { [string]$RawErrorBody } else { $AuditLogErrorMessage }
+                }
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed with gateway error for tenant $TenantFilter ($HtmlTitle)" -sev Warning -LogData $GatewayLogData
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]'GatewayError'
+                    cippStatus  = [string]'TransientError'
+                    message     = [string]"Microsoft returned gateway error ($HtmlTitle)."
+                }
+            }
+
+            # Handle Microsoft-side timeouts / transient errors (e.g. UnknownError with empty message)
+            $ErrorCode = $AuditLogError.error.code ?? $AuditLogError.code
+            if ($ErrorCode -in @('UnknownError', 'ServiceUnavailable', 'RequestTimeout', 'GatewayTimeout', 'TooManyRequests')) {
+                $TransientLogData = [PSCustomObject]@{
+                    ErrorCode         = $ErrorCode
+                    ErrorMessage      = $AuditLogError.error.message ?? $AuditLogError.message
+                    InnerRequestId    = $AuditLogError.error.innerError.'request-id' ?? $AuditLogError.error.innererror.'request-id'
+                    InnerClientReqId  = $AuditLogError.error.innerError.'client-request-id' ?? $AuditLogError.error.innererror.'client-request-id'
+                    InnerErrorDate    = $AuditLogError.error.innerError.date ?? $AuditLogError.error.innererror.date
+                    NormalizedMessage = $AuditLogErrorMessage
+                    RawResponseBody   = if ($RawErrorBody) { [string]$RawErrorBody } else { $AuditLogErrorMessage }
+                    ParsedError       = $AuditLogError
+                }
+                Write-LogMessage -API 'Audit Logs' -tenant $TenantFilter -message "Audit log search creation failed for tenant $TenantFilter - Microsoft returned $ErrorCode" -sev Warning -LogData $TransientLogData
+                return [PSCustomObject]@{
+                    id          = $null
+                    displayName = [string]$DisplayName
+                    status      = [string]$ErrorCode
+                    cippStatus  = [string]'TransientError'
+                    message     = [string]"Microsoft returned $ErrorCode."
+                }
+            }
+
+            throw
+        }
+
 
         if ($ProcessLogs.IsPresent -and $Query.id) {
+            $CippStatus = 'Pending'
+        } else {
+            $CippStatus = 'N/A'
+        }
+
+        if ($Query.id) {
             $Entity = [PSCustomObject]@{
                 PartitionKey = [string]'Search'
                 RowKey       = [string]$Query.id
@@ -166,11 +248,12 @@ function New-CippAuditLogSearch {
                 StartTime    = [datetime]$StartTime.ToUniversalTime()
                 EndTime      = [datetime]$EndTime.ToUniversalTime()
                 Query        = [string]($Query | ConvertTo-Json -Compress)
-                CippStatus   = [string]'Pending'
+                CippStatus   = [string]$CippStatus
             }
             $Table = Get-CIPPTable -TableName 'AuditLogSearches'
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
         }
+
         return $Query
     }
 }

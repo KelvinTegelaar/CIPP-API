@@ -1,19 +1,28 @@
 function Set-CIPPMessageCopy {
     [CmdletBinding()]
     param (
-        $userid,
-        $MessageCopyForSentAsEnabled,
+        $UserId,
+        [bool]$MessageCopyForSentAsEnabled,
+        [bool]$MessageCopyForSendOnBehalfEnabled,
         $TenantFilter,
-        $APIName = 'Manage OneDrive Access',
+        $APIName = 'Set message copy for sent',
         $Headers
     )
-    Try {
-        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; MessageCopyForSentAsEnabled = $MessageCopyForSentAsEnabled }
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "Successfully set MessageCopyForSentAsEnabled as $MessageCopyForSentAsEnabled on $($userid)." -Sev 'Info'
-        return "Successfully set MessageCopyForSentAsEnabled as $MessageCopyForSentAsEnabled on $($userid)."
+    try {
+        $cmdParams = @{
+            Identity                          = $UserId
+            MessageCopyForSentAsEnabled       = $MessageCopyForSentAsEnabled
+            MessageCopyForSendOnBehalfEnabled = $MessageCopyForSendOnBehalfEnabled
+
+        }
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams $cmdParams
+        $Result = "Successfully set message copy for 'Send as' as $MessageCopyForSentAsEnabled and 'Sent on behalf' as $MessageCopyForSendOnBehalfEnabled on $($UserId)."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        return "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed - $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to set message copy for 'Send as' as $MessageCopyForSentAsEnabled and 'Sent on behalf' as $MessageCopyForSendOnBehalfEnabled - $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Error' -LogData $ErrorMessage
+        throw $Result
     }
 }

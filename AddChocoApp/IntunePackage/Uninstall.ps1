@@ -4,6 +4,6 @@ param (
     [string]
     $Packagename
 )
-$chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
+$chocoPath = "$($env:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
 & $Chocopath uninstall $Packagename -y
 

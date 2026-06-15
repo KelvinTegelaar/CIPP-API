@@ -6,6 +6,7 @@ function Invoke-CippWebhookProcessing {
         $Resource,
         $Operations,
         $CIPPURL,
+        $AlertComment,
         $APIName = 'Process webhook',
         $Headers
     )
@@ -18,44 +19,78 @@ function Invoke-CippWebhookProcessing {
         return
     }
 
-    $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
-    Write-Host "Received data. Our Action List is $($data.CIPPAction)"
+    # Immediately claim this event ID to prevent concurrent workers from processing the same event.
+    # Uses Insert (no -Force) so a 409 conflict means another worker already claimed it.
+    # -ErrorAction Stop ensures non-terminating errors enter the catch block.
+    try {
+        Add-CIPPAzDataTableEntity @AuditLogTable -Entity @{
+            PartitionKey = $TenantFilter
+            RowKey       = $Data.Id
+            Title        = 'Processing'
+            Tenant       = $TenantFilter
+        } -ErrorAction Stop
+    } catch {
+        Write-Host "Audit log $($Data.Id) already claimed by another worker. Skipping."
+        return
+    }
 
-    $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
+    $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
+    Write-Host "Received data. Our Action List is $($Data.CIPPAction)"
+
+    $ActionList = ($Data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
     $ActionResults = foreach ($action in $ActionList) {
         Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress)"
         switch ($action) {
             'disableUser' {
-                Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
+                try {
+                    Set-CIPPSignInState -TenantFilter $TenantFilter -User $Data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to disable user $($Data.UserId)`: $($_.Exception.Message)"
+                }
             }
             'becremediate' {
-                $username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($data.UserId)" -tenantid $TenantFilter).UserPrincipalName
-                Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
-                Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
-                Revoke-CIPPSessions -userid $username -username $username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
+                $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Data.UserId)" -tenantid $TenantFilter).UserPrincipalName
+                try {
+                    Set-CIPPResetPassword -UserID $Username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to reset password for $Username`: $($_.Exception.Message)"
+                }
+                try {
+                    Set-CIPPSignInState -userid $Username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                } catch {
+                    Write-Host "Failed to disable sign-in for $Username`: $($_.Exception.Message)"
+                }
+                try {
+                    Revoke-CIPPSessions -userid $Username -username $Username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
+                } catch {
+                    Write-Host "Failed to revoke sessions for $Username`: $($_.Exception.Message)"
+                }
                 $RuleDisabled = 0
-                New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
-                    $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-                    "Disabled Inbox Rule $($_.Identity) for $username"
+                New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
+                    $null = New-ExoRequest -anchor $Username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
+                    "Disabled Inbox Rule $($_.Identity) for $Username"
                     $RuleDisabled++
                 }
                 if ($RuleDisabled) {
-                    "Disabled $RuleDisabled Inbox Rules for $username"
+                    "Disabled $RuleDisabled Inbox Rules for $Username"
                 } else {
-                    "No Inbox Rules found for $username. We have not disabled any rules."
+                    "No Inbox Rules found for $Username. We have not disabled any rules."
                 }
-                "Completed BEC Remediate for $username"
-                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $username" -sev 'Info'
+                "Completed BEC Remediate for $Username"
+                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $Username" -sev 'Info'
             }
-            'cippcommand' {
+            <#'cippcommand' {
                 $CommandSplat = @{}
                 $action.parameters.psobject.properties | ForEach-Object { $CommandSplat.Add($_.name, $_.value) }
-                if ($CommandSplat['userid']) { $CommandSplat['userid'] = $data.userid }
-                if ($CommandSplat['tenantfilter']) { $CommandSplat['tenantfilter'] = $tenantfilter }
-                if ($CommandSplat['tenant']) { $CommandSplat['tenant'] = $tenantfilter }
-                if ($CommandSplat['user']) { $CommandSplat['user'] = $data.userid }
-                if ($CommandSplat['username']) { $CommandSplat['username'] = $data.userid }
+                if ($CommandSplat['userid']) { $CommandSplat['userid'] = $Data.UserId }
+                if ($CommandSplat['tenantfilter']) { $CommandSplat['tenantfilter'] = $TenantFilter }
+                if ($CommandSplat['tenant']) { $CommandSplat['tenant'] = $TenantFilter }
+                if ($CommandSplat['user']) { $CommandSplat['user'] = $Data.UserId }
+                if ($CommandSplat['username']) { $CommandSplat['username'] = $Data.UserId }
                 & $action.command.value @CommandSplat
+            }#>
+            default {
+                Write-Host "Unknown action: $action"
             }
         }
     }
@@ -63,30 +98,31 @@ function Invoke-CippWebhookProcessing {
     # Save audit log entry to table
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
     $AuditRecord = $Data.AuditRecord | ConvertFrom-Json -ErrorAction SilentlyContinue
-    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -AlertComment $AlertComment -CustomSubject $Data.CIPPCustomSubject -Tenant $Tenant.defaultDomainName
     $JsonContent = @{
         Title                 = $GenerateJSON.Title
         ActionUrl             = $GenerateJSON.ButtonUrl
         ActionText            = $GenerateJSON.ButtonText
         RawData               = $Data
-        IP                    = $data.ClientIP
+        IP                    = $Data.ClientIP
         PotentialLocationInfo = $LocationInfo
         ActionsTaken          = $ActionResults
         AuditRecord           = $AuditRecord
+        AlertComment          = $AlertComment
     } | ConvertTo-Json -Depth 15 -Compress
 
-    $CIPPAlert = @{
-        Type         = 'table'
-        Title        = $GenerateJSON.Title
-        JSONContent  = $JsonContent
-        TenantFilter = $TenantFilter
-        TableName    = 'AuditLogs'
+    # Update the sentinel row claimed earlier with full audit log data
+    Add-CIPPAzDataTableEntity @AuditLogTable -Entity @{
+        PartitionKey = $TenantFilter
         RowKey       = $Data.Id
-    }
-    $LogId = Send-CIPPAlert @CIPPAlert
+        Title        = $GenerateJSON.Title
+        Data         = [string]$JsonContent
+        Tenant       = $TenantFilter
+    } -Force
+    $LogId = $Data.Id
 
-    $AuditLogLink = '{0}/tenant/administration/audit-logs?customerId={1}&logId={2}' -f $CIPPURL, $Tenant.customerId, $LogId
-    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+    $AuditLogLink = '{0}/tenant/administration/audit-logs/log?logId={1}&tenantFilter={2}' -f $CIPPURL, $LogId, $Tenant.defaultDomainName
+    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $AlertComment -CustomSubject $Data.CIPPCustomSubject
 
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
@@ -113,10 +149,13 @@ function Invoke-CippWebhookProcessing {
             }
             'generateWebhook' {
                 $CippAlert = @{
-                    Type         = 'webhook'
-                    Title        = $GenerateJSON.Title
-                    JSONContent  = $JsonContent
-                    TenantFilter = $TenantFilter
+                    Type            = 'webhook'
+                    Title           = $GenerateJSON.Title
+                    JSONContent     = $JsonContent
+                    TenantFilter    = $TenantFilter
+                    APIName         = 'Audit Log Alerts'
+                    SchemaSource    = 'Audit Log Alert'
+                    InvokingCommand = 'Start-AuditLogProcessingOrchestrator'
                 }
                 Write-Host 'Sending Webhook Content'
                 Send-CIPPAlert @CippAlert

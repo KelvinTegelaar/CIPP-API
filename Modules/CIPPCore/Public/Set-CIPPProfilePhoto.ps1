@@ -11,7 +11,7 @@ function Set-CIPPProfilePhoto {
     )
     try {
         $PhotoBytes = [Convert]::FromBase64String($PhotoBase64)
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$type/$id/photo/`$value" -tenantid $tenantfilter -type PUT -body $PhotoBytes -ContentType $ContentType
+        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$type/$id/photo/`$value" -tenantid $TenantFilter -type PUT -body $PhotoBytes -ContentType $ContentType
         "Successfully set profile photo for $id"
         Write-LogMessage -headers $Headers -API 'Set-CIPPUserProfilePhoto' -message "Successfully set profile photo for $id" -Sev 'Info' -tenant $TenantFilter
     } catch {

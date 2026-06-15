@@ -5,14 +5,17 @@ function Get-CIPPGeoIPLocation {
     )
 
     $CacheGeoIPTable = Get-CippTable -tablename 'cachegeoip'
-    $30DaysAgo = (Get-Date).AddDays(-30).ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Filter = "RowKey eq '$IP' and Timestamp ge datetime'$30DaysAgo'"
+    $1DayAgo = (Get-Date).AddDays(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $Filter = "PartitionKey eq 'IP' and RowKey eq '$IP' and Timestamp ge datetime'$1DayAgo'"
     $GeoIP = Get-CippAzDataTableEntity @CacheGeoIPTable -Filter $Filter
-    if ($GeoIP) {
+    if ($GeoIP -and $GeoIP.Data) {
         return ($GeoIP.Data | ConvertFrom-Json)
     }
-    $location = Invoke-RestMethod "https://geoipdb.azurewebsites.net/api/GetIPInfo?IP=$IP"
-    if ($location.status -eq 'FAIL') { throw "Could not get location for $IP" }
+    $location = Invoke-CIPPRestMethod -Uri "https://geoipdb.azurewebsites.net/api/GetIPInfo?IP=$IP"
+    if ($location.status -eq 'FAIL') {
+        Write-logMessage -API GeoIPLocation -message "Failed to get location for $IP. API returned status 'FAIL' with message: $($location.message)" -sev Warning
+        throw "Could not get location for $IP"
+    }
     $CacheGeo = @{
         PartitionKey = 'IP'
         RowKey       = $IP

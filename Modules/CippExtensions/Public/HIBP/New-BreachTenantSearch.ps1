@@ -6,31 +6,42 @@ function New-BreachTenantSearch {
     )
 
     $Table = Get-CIPPTable -TableName UserBreaches
-    $LatestBreach = Get-BreachInfo -TenantFilter $TenantFilter
+    $LatestBreach = Get-BreachInfo -TenantFilter $TenantFilter | ForEach-Object {
+        $_ | Where-Object { $_ -and $_.email }
+    } | Group-Object -Property clientDomain
 
     $usersResults = foreach ($domain in $LatestBreach) {
-        $ExistingBreaches = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TenantFilter'"
-        if ($null -eq $domain.result) {
-            Write-Host "No breaches found for domain $($domain.domain)"
+        $ExistingBreaches = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($domain.name)'"
+        if ($null -eq $domain.Group) {
+            Write-Host "No breaches found for domain $($domain.name)"
             continue
         }
-        $SumOfBreaches = ($LatestBreach | Measure-Object -Sum -Property found).sum
-        if ($ExistingBreaches.sum -eq $SumOfBreaches -and $Force.IsPresent -eq $false) {
-            Write-Host "No new breaches found for tenant $TenantFilter"
-            continue
+        $SumOfBreaches = $domain.Count
+        if ($ExistingBreaches.sum -eq $SumOfBreaches) {
+            if ($Force.IsPresent -eq $true) {
+                Write-Host "Forcing update for tenant $TenantFilter"
+            } else {
+                Write-Host "No new breaches found for tenant $TenantFilter"
+                continue
+            }
         }
 
         @{
-            RowKey       = $domain.domain
+            RowKey       = $domain.name
             PartitionKey = $TenantFilter
-            breaches     = "$($LatestBreach.Result | ConvertTo-Json -Depth 10 -Compress)"
+            breaches     = "$($domain.Group | ConvertTo-Json -Depth 10 -Compress)"
             sum          = $SumOfBreaches
         }
     }
 
     #Add user breaches to table
     if ($usersResults) {
-        $entity = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
-        return $LatestBreach.Result
+        try {
+            $null = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
+            return $LatestBreach.Group
+        } catch {
+            Write-Error "Failed to add breaches to table: $($_.Exception.Message)"
+            return $null
+        }
     }
 }

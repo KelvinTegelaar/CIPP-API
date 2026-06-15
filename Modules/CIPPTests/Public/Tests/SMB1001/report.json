@@ -1,0 +1,30 @@
+{
+  "name": "SMB1001:2026 Cybersecurity Standard",
+  "description": "Dynamic Standards International (DSI) SMB1001:2026 — multi-tiered cybersecurity certification for small and medium-sized businesses. The standard prescribes a five-level pathway across Technology Management, Access Management, Backup and Recovery, Policies/Processes/Plans, and Education and Training. CIPP tests cover the technical controls implementable against a Microsoft 365 tenant (Identity) and via Intune-managed workstations (Devices).",
+  "version": "2026 v1.0",
+  "source": "https://dsi.org",
+  "category": "SMB Security Baselines",
+  "IdentityTests": [
+    "SMB1001_1_11",
+    "SMB1001_2_1",
+    "SMB1001_2_3",
+    "SMB1001_2_5",
+    "SMB1001_2_5_L4",
+    "SMB1001_2_6",
+    "SMB1001_2_8",
+    "SMB1001_2_9",
+    "SMB1001_2_12",
+    "SMB1001_3_1"
+  ],
+  "DevicesTests": [
+    "SMB1001_1_2",
+    "SMB1001_1_3",
+    "SMB1001_1_4",
+    "SMB1001_1_8",
+    "SMB1001_1_9",
+    "SMB1001_1_10",
+    "SMB1001_1_12",
+    "SMB1001_2_2",
+    "SMB1001_4_7"
+  ]
+}

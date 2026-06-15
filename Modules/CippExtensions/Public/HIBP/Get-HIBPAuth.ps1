@@ -1,15 +1,31 @@
 function Get-HIBPAuth {
-    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-        $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
-        $Secret = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'HIBP' and RowKey eq 'HIBP'").APIKey
+    $Var = 'Ext_HIBP'
+    $APIKey = Get-Item -Path "env:$Var" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Value
+    if ($APIKey) {
+        Write-Information 'Using cached API Key for HIBP'
+        $Secret = $APIKey
     } else {
-        $null = Connect-AzAccount -Identity
-        $VaultName = $ENV:WEBSITE_OWNER_NAME -like '3e625d35-bf18-4e55*' ? 'hibp-kv' : ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-        $Secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText
+        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+            $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
+            $Secret = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'HIBP' and RowKey eq 'HIBP'").APIKey
+        } else {
+            $VaultName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            try {
+                $Secret = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText -ErrorAction Stop
+            } catch {
+                $Secret = $null
+            }
+
+            if ([string]::IsNullOrEmpty($Secret) -and $env:CIPP_HOSTED -eq 'true') {
+                $VaultName = 'hibp-kv'
+                $Secret = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'HIBP' -AsPlainText
+            }
+        }
+        Set-Item -Path "env:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue
     }
 
     return @{
-        'User-Agent'   = "CIPP-$($ENV:TenantID)"
+        'User-Agent'   = "CIPP-$($env:TenantID)"
         'Accept'       = 'application/json'
         'api-version'  = '3'
         'hibp-api-key' = $Secret

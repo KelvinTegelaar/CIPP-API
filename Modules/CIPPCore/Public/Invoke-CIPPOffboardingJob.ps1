@@ -1,4 +1,3 @@
-
 function Invoke-CIPPOffboardingJob {
     [CmdletBinding()]
     param (
@@ -7,99 +6,340 @@ function Invoke-CIPPOffboardingJob {
         [switch]$RunScheduled,
         $Options,
         $APIName = 'Offboard user',
-        $Headers
+        $Headers,
+        $TaskInfo
     )
-    if ($Options -is [string]) {
-        $Options = $Options | ConvertFrom-Json
-    }
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)?`$select=id" -tenantid $Tenantfilter).id
-    Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
-    $Return = switch ($Options) {
-        { $_.'ConvertToShared' -eq $true } {
-            Set-CIPPMailboxType -Headers $Headers -tenantFilter $tenantFilter -userid $username -username $username -MailboxType 'Shared' -APIName $APIName
-        }
-        { $_.RevokeSessions -eq $true } {
-            Revoke-CIPPSessions -tenantFilter $tenantFilter -username $username -userid $userid -Headers $Headers -APIName $APIName
-        }
-        { $_.ResetPass -eq $true } {
-            Set-CIPPResetPassword -tenantFilter $tenantFilter -UserID $username -Headers $Headers -APIName $APIName
-        }
-        { $_.RemoveGroups -eq $true } {
-            Remove-CIPPGroups -userid $userid -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName -Username "$Username"
-        }
-        { $_.'HideFromGAL' -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $tenantFilter -UserID $username -hidefromgal $true -Headers $Headers -APIName $APIName
-        }
-        { $_.'DisableSignIn' -eq $true } {
-            Set-CIPPSignInState -TenantFilter $tenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
-        }
-        { $_.'OnedriveAccess' } {
-            $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointPerms -tenantFilter $tenantFilter -userid $username -OnedriveAccessUser $_.value -Headers $Headers -APIName $APIName }
-        }
-        { $_.'AccessNoAutomap' } {
-            $Options.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
-        }
-        { $_.'AccessAutomap' } {
-            $Options.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -Headers $Headers -APIName $APIName }
-        }
-        { $_.'OOO' } {
-            Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -Headers $Headers -APIName $APIName -state 'Enabled'
-        }
-        { $_.'forward' } {
-            if (!$Options.keepCopy) {
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -Headers $Headers -APIName $APIName
-            } else {
-                $KeepCopy = [boolean]$Options.keepCopy
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -KeepCopy $KeepCopy -Headers $Headers -APIName $APIName
-            }
-        }
-        { $_.'RemoveLicenses' -eq $true } {
-            Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName -Schedule
-        }
-        { $_.'deleteuser' -eq $true } {
-            Remove-CIPPUser -userid $userid -username $Username -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName
-        }
-        { $_.'removeRules' -eq $true } {
-            Write-Host "Removing rules for $username"
-            Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName -RemoveAllRules
-        }
-        { $_.'removeMobile' -eq $true } {
-            Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName
-        }
-        { $_.'removeCalendarInvites' -eq $true } {
-            Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName
-        }
-        { $_.'removePermissions' } {
-            if ($RunScheduled) {
-                Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid 'AllUsers' -AccessUser $UserName -TenantFilter $TenantFilter -APIName $APINAME -Headers $Headers
 
-            } else {
-                $Queue = New-CippQueueEntry -Name "Offboarding - Mailbox Permissions: $Username" -TotalTasks 1
-                $InputObject = [PSCustomObject]@{
-                    Batch            = @(
-                        [PSCustomObject]@{
-                            'FunctionName' = 'ExecOffboardingMailboxPermissions'
-                            'TenantFilter' = $TenantFilter
-                            'User'         = $Username
-                            'Headers'      = $Headers
-                            'APINAME'      = $APINAME
-                            'QueueId'      = $Queue.RowKey
-                        }
-                    )
-                    OrchestratorName = "OffboardingMailboxPermissions_$Username"
-                    SkipLog          = $true
+    try {
+        if ($Options -is [string]) {
+            $Options = $Options | ConvertFrom-Json
+        }
+
+        Write-Information "Starting offboarding job for $Username in tenant $TenantFilter"
+
+        # Get user information needed for various tasks
+        $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName,onPremisesSyncEnabled,onPremisesImmutableId" -tenantid $TenantFilter
+        $UserID = $User.id
+        $DisplayName = $User.displayName
+
+        # Build dynamic batch of offboarding tasks based on selected options
+        $Batch = [System.Collections.Generic.List[object]]::new()
+
+        # Build list of tasks in execution order with their cmdlets
+        $TaskOrder = @(
+            @{
+                Condition  = { $Options.RevokeSessions -eq $true }
+                Cmdlet     = 'Revoke-CIPPSessions'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    username     = $Username
+                    userid       = $UserID
+                    APIName      = $APIName
+                    Headers      = $Headers
                 }
-                $null = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
-                "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
+            }
+            @{
+                Condition  = { $Options.ResetPass -eq $true }
+                Cmdlet     = 'Set-CIPPResetPassword'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    DisplayName  = $DisplayName
+                    UserID       = $Username
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.DisableSignIn -eq $true }
+                Cmdlet     = 'Set-CIPPSignInState'
+                Parameters = @{
+                    TenantFilter   = $TenantFilter
+                    userid         = $Username
+                    AccountEnabled = $false
+                    APIName        = $APIName
+                    Headers        = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.HideFromGAL -eq $true }
+                Cmdlet     = 'Set-CIPPHideFromGAL'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    UserID       = $Username
+                    hidefromgal  = $true
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveGroups -eq $true }
+                Cmdlet     = 'Remove-CIPPGroups'
+                Parameters = @{
+                    userid       = $UserID
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Username     = $Username
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveRules -eq $true }
+                Cmdlet     = 'Remove-CIPPMailboxRule'
+                Parameters = @{
+                    userid         = $UserID
+                    username       = $Username
+                    tenantFilter   = $TenantFilter
+                    APIName        = $APIName
+                    RemoveAllRules = $true
+                    Headers        = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveMobile -eq $true }
+                Cmdlet     = 'Remove-CIPPMobileDevice'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.removeCalendarInvites -eq $true }
+                Cmdlet     = 'Remove-CIPPCalendarInvites'
+                Parameters = @{
+                    UserID       = $UserID
+                    Username     = $Username
+                    TenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { ![string]::IsNullOrEmpty($Options.OOO) }
+                Cmdlet     = 'Set-CIPPOutOfOffice'
+                Parameters = @{
+                    tenantFilter    = $TenantFilter
+                    UserID          = $Username
+                    InternalMessage = $Options.OOO
+                    ExternalMessage = $Options.OOO
+                    APIName         = $APIName
+                    state           = 'Enabled'
+                    Headers         = $Headers
+                }
+            }
+            @{
+                Condition  = { ![string]::IsNullOrEmpty($Options.forward) }
+                Cmdlet     = 'Set-CIPPForwarding'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    Forward      = $Options.forward.value
+                    KeepCopy     = [bool]$Options.KeepCopy
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.disableForwarding -eq $true }
+                Cmdlet     = 'Set-CIPPForwarding'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    Disable      = $true
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.OnedriveAccess.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPSharePointPerms'
+                Parameters = @{
+                    tenantFilter       = $TenantFilter
+                    userid             = $Username
+                    OnedriveAccessUser = $Options.OnedriveAccess
+                    APIName            = $APIName
+                    Headers            = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.DisableOneDriveSharing -eq $true }
+                Cmdlet     = 'Set-CIPPOneDriveSharing'
+                Parameters = @{
+                    TenantFilter      = $TenantFilter
+                    UserId            = $Username
+                    SharingCapability = 'Disabled'
+                    APIName           = $APIName
+                    Headers           = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.AccessNoAutomap.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    userid       = $Username
+                    AccessUser   = $Options.AccessNoAutomap
+                    Automap      = $false
+                    AccessRights = @('FullAccess')
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.AccessAutomap.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    userid       = $Username
+                    AccessUser   = $Options.AccessAutomap
+                    Automap      = $true
+                    AccessRights = @('FullAccess')
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.removePermissions -eq $true }
+                Cmdlet     = 'Remove-CIPPMailboxPermissions'
+                Parameters = @{
+                    AccessUser   = $Username
+                    TenantFilter = $TenantFilter
+                    UseCache     = $true
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.removeCalendarPermissions -eq $true }
+                Cmdlet     = 'Remove-CIPPCalendarPermissions'
+                Parameters = @{
+                    UserToRemove = $Username
+                    TenantFilter = $TenantFilter
+                    UseCache     = $true
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.ConvertToShared -eq $true }
+                Cmdlet     = 'Set-CIPPMailboxType'
+                Parameters = @{
+                    tenantFilter = $TenantFilter
+                    userid       = $UserID
+                    username     = $Username
+                    MailboxType  = 'Shared'
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveMFADevices -eq $true }
+                Cmdlet     = 'Remove-CIPPUserMFA'
+                Parameters = @{
+                    UserPrincipalName = $Username
+                    TenantFilter      = $TenantFilter
+                    APIName           = $APIName
+                    Headers           = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveTeamsPhoneDID -eq $true }
+                Cmdlet     = 'Remove-CIPPUserTeamsPhoneDIDs'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.RemoveLicenses -eq $true }
+                Cmdlet     = 'Remove-CIPPLicense'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Schedule     = $true
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.ClearImmutableId -eq $true }
+                Cmdlet     = 'Clear-CIPPImmutableID'
+                Parameters = @{
+                    UserID       = $UserID
+                    Username     = $Username
+                    TenantFilter = $TenantFilter
+                    User         = $User
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Condition  = { $Options.DeleteUser -eq $true }
+                Cmdlet     = 'Remove-CIPPUser'
+                Parameters = @{
+                    UserID       = $UserID
+                    Username     = $Username
+                    TenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+        )
+
+        # Build batch from selected tasks
+        foreach ($Task in $TaskOrder) {
+            if (& $Task.Condition) {
+                $Batch.Add(@{
+                        FunctionName = 'CIPPOffboardingTask'
+                        Cmdlet       = $Task.Cmdlet
+                        Parameters   = $Task.Parameters
+                    })
             }
         }
-        { $_.'RemoveMFADevices' } {
-            Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
-        }
-        { $_.'ClearImmutableId' -eq $true } {
-            Clear-CIPPImmutableId -userid $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
-        }
-    }
-    return $Return
 
+        if ($Batch.Count -eq 0) {
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message "No offboarding tasks selected for user $Username" -sev Warning
+            return "No offboarding tasks were selected for $Username"
+        }
+
+        Write-Information "Built batch of $($Batch.Count) offboarding tasks for $Username"
+
+        # Start orchestration
+        $InputObject = [PSCustomObject]@{
+            OrchestratorName = "OffboardingUser_$($Username)_$TenantFilter"
+            Batch            = @($Batch)
+            SkipLog          = $true
+            DurableMode      = 'Sequence'
+        }
+
+        # Add post-execution handler if TaskInfo is provided (from scheduled task)
+        $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
+            FunctionName = 'CIPPOffboardingComplete'
+            Parameters   = @{
+                TaskInfo     = $TaskInfo ?? $null
+                TenantFilter = $TenantFilter
+                Username     = $Username
+                Headers      = $Headers
+            }
+        }
+
+        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
+        Write-Information "Started offboarding job for $Username with ID = '$InstanceId'"
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Started offboarding job for $Username with $($Batch.Count) tasks. Instance ID: $InstanceId" -sev Info
+
+        return "Offboarding job started for $Username with $($Batch.Count) tasks"
+
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Failed to start offboarding job for $Username : $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        throw $ErrorMessage
+    }
 }

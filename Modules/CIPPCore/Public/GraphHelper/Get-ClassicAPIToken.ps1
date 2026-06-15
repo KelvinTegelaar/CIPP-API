@@ -11,7 +11,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         #Write-Host 'Using classic'
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
         $Body = @{
-            client_id     = $ENV:ApplicationID
+            client_id     = $env:ApplicationID
             client_secret = $env:ApplicationSecret
             resource      = $Resource
             refresh_token = $env:RefreshToken
@@ -19,7 +19,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         }
         try {
             if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }
-            $script:classictoken.$TokenKey = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+            $script:classictoken.$TokenKey = Invoke-CIPPRestMethod -Uri $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
             return $script:classictoken.$TokenKey
         } catch {
             # Track consecutive Graph API failures

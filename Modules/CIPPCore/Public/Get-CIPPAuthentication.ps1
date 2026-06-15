@@ -2,12 +2,13 @@
 function Get-CIPPAuthentication {
     [CmdletBinding()]
     param (
-        $APIName = 'Get Keyvault Authentication'
+        $APIName = 'Get Keyvault Authentication',
+        [switch]$Force
     )
     $Variables = @('ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken')
 
     try {
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
             $Table = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-AzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if (!$Secret) {
@@ -15,17 +16,17 @@ function Get-CIPPAuthentication {
             }
             foreach ($Var in $Variables) {
                 if ($Secret.$Var) {
-                    Set-Item -Path ENV:$Var -Value $Secret.$Var -Force -ErrorAction Stop
+                    Set-Item -Path env:$Var -Value $Secret.$Var -Force -ErrorAction Stop
                 }
             }
+            Write-Host "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
         } else {
-            Connect-AzAccount -Identity
-            $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $Variables | ForEach-Object {
-                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
+                Set-Item -Path env:$_ -Value (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
-        $ENV:SetFromProfile = $true
+        $env:SetFromProfile = $true
         Write-LogMessage -message 'Reloaded authentication data from KeyVault' -Sev 'debug' -API 'CIPP Authentication'
 
         return $true

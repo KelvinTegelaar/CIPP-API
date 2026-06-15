@@ -1,0 +1,48 @@
+[
+  {
+    "id": "cippUser",
+    "description": "CIPP User Schema",
+    "targetTypes": [
+      "User"
+    ],
+    "properties": [
+      {
+        "name": "jitAdminEnabled",
+        "type": "Boolean"
+      },
+      {
+        "name": "jitAdminExpiration",
+        "type": "DateTime"
+      },
+      {
+        "name": "jitAdminReason",
+        "type": "String"
+      },
+      {
+        "name": "jitAdminStartDate",
+        "type": "DateTime"
+      },
+      {
+        "name": "jitAdminCreatedBy",
+        "type": "String"
+      },
+      {
+        "name": "mailboxType",
+        "type": "String"
+      },
+      {
+        "name": "archiveEnabled",
+        "type": "Boolean"
+      },
+      {
+        "name": "autoExpandingArchiveEnabled",
+        "type": "Boolean"
+      },
+      {
+        "name": "perUserMfaState",
+        "type": "String"
+      }
+    ],
+    "status": "Available"
+  }
+]

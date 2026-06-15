@@ -10,7 +10,7 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
         $NextURL = $Uri
         $ReturnedData = do {
             try {
-                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                $Data = Invoke-CIPPRestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
                     Authorization            = "Bearer $($token.access_token)"
                     'x-ms-client-request-id' = [guid]::NewGuid().ToString()
                     'x-ms-client-session-id' = [guid]::NewGuid().ToString()
@@ -18,11 +18,11 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
                     'X-Requested-With'       = 'XMLHttpRequest'
                 }
                 $Data
-                if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
+                if ($noPagination -or $null -eq $data.NextLink) { $nextURL = $null } else { $nextURL = $data.NextLink }
             } catch {
                 throw "Failed to make Classic Get Request $_"
             }
-        } until ($null -eq $NextURL)
+        } until ($null -eq $NextURL -or ' ' -eq $NextURL)
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

@@ -1,0 +1,28 @@
+Function Invoke-ListRetentionCompliancePolicyTemplates {
+    <#
+    .FUNCTIONALITY
+        Entrypoint,AnyTenant
+    .ROLE
+        Security.RetentionCompliancePolicy.Read
+    .DESCRIPTION
+        Lists saved retention compliance policy templates for deploying standardized retention configurations.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    $Table = Get-CippTable -tablename 'templates'
+    $Filter = "PartitionKey eq 'RetentionCompliancePolicyTemplate'"
+    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+        $GUID = $_.RowKey
+        $data = $_.JSON | ConvertFrom-Json
+        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
+        $data
+    }
+
+    if ($Request.Query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.Query.ID }
+
+    return ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @($Templates)
+        })
+
+}

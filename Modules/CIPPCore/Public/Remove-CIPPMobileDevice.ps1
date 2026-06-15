@@ -1,28 +1,37 @@
 function Remove-CIPPMobileDevice {
     [CmdletBinding()]
     param(
-        $userid,
-        $tenantFilter,
-        $username,
+        $UserId,
+        $TenantFilter,
+        $Username,
         $APIName = 'Remove Mobile',
         $Headers
     )
 
     try {
-        $devices = New-ExoRequest -tenantid $tenantFilter -cmdlet 'Get-MobileDevice' -Anchor $username -cmdParams @{mailbox = $username } | ForEach-Object {
+        $RemovedDevices = [System.Collections.Generic.List[string]]::new()
+        $ErrorDevices = [System.Collections.Generic.List[string]]::new()
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MobileDevice' -Anchor $Username -cmdParams @{mailbox = $Username } | ForEach-Object {
             try {
-                New-ExoRequest -tenantid $tenantFilter -cmdlet 'Remove-MobileDevice' -Anchor $username -cmdParams @{Identity = $_.Identity }
-                "Removed device: $($_.FriendlyName)"
+                $MobileDevice = $_
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MobileDevice' -Anchor $Username -cmdParams @{Identity = $MobileDevice.Identity }
+                $RemovedDevices.Add("$($MobileDevice.FriendlyName)")
             } catch {
-                "Could not remove device: $($_.FriendlyName)"
+                $ErrorDevices.Add("$($MobileDevice.FriendlyName)")
             }
         }
-        if (!$Devices) { $Devices = 'No mobile devices have been removed as we could not find any' }
-        Write-LogMessage -headers $Headers -API $APIName -message "Deleted mobile devices for $($username)" -Sev 'Info' -tenant $tenantFilter
-        return $devices
+        if ($ErrorDevices.Count -eq 0) {
+            $Message = "Successfully removed $($RemovedDevices.Count) mobile devices for $($Username): $($RemovedDevices -join '; ')"
+        } else {
+            $Message = "Failed to remove all mobile devices for $($Username). Successfully removed $($RemovedDevices.Count) mobile devices: $($RemovedDevices -join '; '). Failed to remove $($ErrorDevices.Count) mobile devices: $($ErrorDevices -join '; ')"
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter
+        }
+        return $Message
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not delete mobile devices for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $tenantFilter -LogData $ErrorMessage
-        return "Could not delete mobile devices for $($username). Error: $($ErrorMessage.NormalizedError)"
+        $Message = "Failed to remove mobile devices for $($Username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Message
     }
 }
+

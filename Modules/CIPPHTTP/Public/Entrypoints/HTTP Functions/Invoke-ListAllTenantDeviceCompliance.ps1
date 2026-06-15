@@ -1,0 +1,37 @@
+Function Invoke-ListAllTenantDeviceCompliance {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Tenant.DeviceCompliance.Read
+    .DESCRIPTION
+        Lists device compliance summary across all managed tenants using the Lighthouse managedDeviceCompliances API, or for a single tenant via Intune.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.TenantFilter
+    try {
+        if ($TenantFilter -eq 'AllTenants') {
+            $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances'
+            $StatusCode = [HttpStatusCode]::OK
+        } else {
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"
+            $StatusCode = [HttpStatusCode]::OK
+        }
+
+        if ($GraphRequest.value.count -lt 1) {
+            $StatusCode = [HttpStatusCode]::Forbidden
+            $GraphRequest = 'No data found - This client might not be onboarded in Lighthouse'
+        }
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::Forbidden
+        $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
+    }
+    return [HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
+        }
+
+}

@@ -54,7 +54,7 @@
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": ["windowsProtectionState"],
-      "parameters": {},
+      "Parameters": {},
       "URL": "https://graph.microsoft.com/beta/deviceManagement/managedDevices?$expand=windowsProtectionState"
     },
     {
@@ -92,7 +92,10 @@
         "isMFARegistered",
         "defaultMFAMethod"
       ],
-      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails"
+      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails",
+      "Parameters": {
+        "asApp": "True"
+      }
     }
   ]
 }

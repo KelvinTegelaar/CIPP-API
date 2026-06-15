@@ -1,0 +1,891 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CIPP Security API",
+    "description": "API endpoints for the Security section of Cloud Identity and Policy Platform (CIPP)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "CIPP API Server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "Results": {
+            "type": "object",
+            "description": "The results of the operation"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/ListDefenderState": {
+      "get": {
+        "summary": "List Defender State",
+        "description": "Retrieves the status of Microsoft Defender across devices",
+        "tags": [
+          "Defender"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Defender state retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "deviceName": {
+                        "type": "string",
+                        "description": "The name of the device"
+                      },
+                      "windowsProtectionState": {
+                        "type": "object",
+                        "properties": {
+                          "malwareProtectionEnabled": {
+                            "type": "boolean",
+                            "description": "Whether malware protection is enabled"
+                          },
+                          "realTimeProtectionEnabled": {
+                            "type": "boolean",
+                            "description": "Whether real-time protection is enabled"
+                          },
+                          "networkInspectionSystemEnabled": {
+                            "type": "boolean",
+                            "description": "Whether network inspection is enabled"
+                          },
+                          "deviceState": {
+                            "type": "string",
+                            "description": "The state of the device"
+                          },
+                          "quickScanOverdue": {
+                            "type": "boolean",
+                            "description": "Whether a quick scan is overdue"
+                          },
+                          "fullScanOverdue": {
+                            "type": "boolean",
+                            "description": "Whether a full scan is overdue"
+                          },
+                          "signatureUpdateOverdue": {
+                            "type": "boolean",
+                            "description": "Whether a signature update is overdue"
+                          },
+                          "rebootRequired": {
+                            "type": "boolean",
+                            "description": "Whether a reboot is required"
+                          },
+                          "lastReportedDateTime": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The date and time of the last report"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListDefenderTVM": {
+      "get": {
+        "summary": "List Defender Threat & Vulnerability Management",
+        "description": "Retrieves software vulnerabilities detected by Microsoft Defender",
+        "tags": [
+          "Defender"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Defender TVM data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "affectedDevicesCount": {
+                        "type": "integer",
+                        "description": "The number of affected devices"
+                      },
+                      "affectedDevices": {
+                        "type": "array",
+                        "description": "The list of affected devices",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "osPlatform": {
+                        "type": "string",
+                        "description": "The OS platform"
+                      },
+                      "softwareVendor": {
+                        "type": "string",
+                        "description": "The software vendor"
+                      },
+                      "softwareName": {
+                        "type": "string",
+                        "description": "The software name"
+                      },
+                      "vulnerabilitySeverityLevel": {
+                        "type": "string",
+                        "description": "The severity level of the vulnerability"
+                      },
+                      "cvssScore": {
+                        "type": "number",
+                        "description": "The CVSS score"
+                      },
+                      "securityUpdateAvailable": {
+                        "type": "boolean",
+                        "description": "Whether a security update is available"
+                      },
+                      "exploitabilityLevel": {
+                        "type": "string",
+                        "description": "The exploitability level"
+                      },
+                      "cveId": {
+                        "type": "string",
+                        "description": "The CVE ID"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/AddDefenderDeployment": {
+      "post": {
+        "summary": "Add Defender Deployment",
+        "description": "Deploys Microsoft Defender policies to selected tenants",
+        "tags": [
+          "Defender"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "selectedTenants"
+                ],
+                "properties": {
+                  "selectedTenants": {
+                    "type": "array",
+                    "description": "The tenants to deploy to",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Tenant ID"
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Tenant display name"
+                        }
+                      }
+                    }
+                  },
+                  "Compliance": {
+                    "type": "object",
+                    "description": "Compliance settings",
+                    "properties": {
+                      "AllowMEMEnforceCompliance": {
+                        "type": "boolean",
+                        "description": "Allow Microsoft Defender for Endpoint to enforce Endpoint Security Configurations"
+                      },
+                      "ConnectIosCompliance": {
+                        "type": "boolean",
+                        "description": "Connect iOS/iPadOS devices version 13.0 and above to Microsoft Defender for Endpoint"
+                      },
+                      "ConnectAndroidCompliance": {
+                        "type": "boolean",
+                        "description": "Connect Android devices version 6.0.0 and above to Microsoft Defender for Endpoint"
+                      },
+                      "ConnectWindows": {
+                        "type": "boolean",
+                        "description": "Connect Windows devices version 10.0.15063 and above to Microsoft Defender for Endpoint"
+                      },
+                      "AppSync": {
+                        "type": "boolean",
+                        "description": "Enable App Sync for iOS/iPadOS devices"
+                      },
+                      "BlockunsupportedOS": {
+                        "type": "boolean",
+                        "description": "Block unsupported OS versions"
+                      },
+                      "ConnectAndroid": {
+                        "type": "boolean",
+                        "description": "Connect Android devices to Microsoft Defender for Endpoint"
+                      },
+                      "ConnectIos": {
+                        "type": "boolean",
+                        "description": "Connect iOS/iPadOS devices to Microsoft Defender for Endpoint"
+                      }
+                    }
+                  },
+                  "EDR": {
+                    "type": "object",
+                    "description": "EDR settings",
+                    "properties": {
+                      "Telemetry": {
+                        "type": "boolean",
+                        "description": "Expedite Telemetry Reporting Frequency"
+                      },
+                      "Config": {
+                        "type": "boolean",
+                        "description": "Connect Defender Configuration Package automatically from Connector"
+                      },
+                      "SampleSharing": {
+                        "type": "boolean",
+                        "description": "Enable Sample Sharing"
+                      }
+                    }
+                  },
+                  "Policy": {
+                    "type": "object",
+                    "description": "Policy settings",
+                    "properties": {
+                      "ScanArchives": {
+                        "type": "boolean",
+                        "description": "Allow Archive Scanning"
+                      },
+                      "AllowBehavior": {
+                        "type": "boolean",
+                        "description": "Allow behavior monitoring"
+                      },
+                      "AllowCloudProtection": {
+                        "type": "boolean",
+                        "description": "Allow Cloud Protection"
+                      },
+                      "AllowEmailScanning": {
+                        "type": "boolean",
+                        "description": "Allow e-mail scanning"
+                      },
+                      "AllowFullScanNetwork": {
+                        "type": "boolean",
+                        "description": "Allow Full Scan on Network Drives"
+                      },
+                      "AllowFullScanRemovable": {
+                        "type": "boolean",
+                        "description": "Allow Full Scan on Removable Drives"
+                      },
+                      "AllowScriptScan": {
+                        "type": "boolean",
+                        "description": "Allow Script Scanning"
+                      },
+                      "AllowIPS": {
+                        "type": "boolean",
+                        "description": "Allow Intrusion Prevention System"
+                      },
+                      "LowCPU": {
+                        "type": "boolean",
+                        "description": "Enable Low CPU priority"
+                      },
+                      "AllowDownloadable": {
+                        "type": "boolean",
+                        "description": "Allow scanning of downloaded files"
+                      },
+                      "AllowRealTime": {
+                        "type": "boolean",
+                        "description": "Allow Realtime monitoring"
+                      },
+                      "AllowNetwork": {
+                        "type": "boolean",
+                        "description": "Allow scanning of mapped drives"
+                      },
+                      "AllowUI": {
+                        "type": "boolean",
+                        "description": "Allow users to access UI"
+                      },
+                      "NetworkProtectionBlock": {
+                        "type": "boolean",
+                        "description": "Enable Network Protection in Block Mode"
+                      },
+                      "NetworkProtectionAudit": {
+                        "type": "boolean",
+                        "description": "Enable Network Protection in Audit Mode"
+                      },
+                      "CheckSigs": {
+                        "type": "boolean",
+                        "description": "Check Signatures before scan"
+                      },
+                      "DisableCatchupFullScan": {
+                        "type": "boolean",
+                        "description": "Disable Catchup Full Scan"
+                      },
+                      "DisableCatchupQuickScan": {
+                        "type": "boolean",
+                        "description": "Disable Catchup Quick Scan"
+                      },
+                      "AssignTo": {
+                        "type": "string",
+                        "description": "Assignment target",
+                        "enum": ["none", "allLicensedUsers", "AllDevices", "AllDevicesAndUsers"]
+                      }
+                    }
+                  },
+                  "ASR": {
+                    "type": "object",
+                    "description": "Attack Surface Reduction settings",
+                    "properties": {
+                      "BlockAdobeChild": {
+                        "type": "boolean",
+                        "description": "Block Adobe Reader from creating child processes"
+                      },
+                      "BlockWin32Macro": {
+                        "type": "boolean",
+                        "description": "Block Win32 API calls from Office macros"
+                      },
+                      "BlockCredentialStealing": {
+                        "type": "boolean",
+                        "description": "Block credential stealing from the Windows local security authority subsystem"
+                      },
+                      "BlockPSExec": {
+                        "type": "boolean",
+                        "description": "Block process creations originating from PSExec and WMI commands"
+                      },
+                      "WMIPersistence": {
+                        "type": "boolean",
+                        "description": "Block persistence through WMI event subscription"
+                      },
+                      "BlockOfficeExes": {
+                        "type": "boolean",
+                        "description": "Block Office applications from creating executable content"
+                      },
+                      "BlockOfficeApps": {
+                        "type": "boolean",
+                        "description": "Block Office applications from injecting code into other processes"
+                      },
+                      "BlockYoungExe": {
+                        "type": "boolean",
+                        "description": "Block executable files from running unless they meet a prevalence, age, or trusted list criterion"
+                      },
+                      "blockJSVB": {
+                        "type": "boolean",
+                        "description": "Block JavaScript or VBScript from launching downloaded executable content"
+                      },
+                      "blockOfficeComChild": {
+                        "type": "boolean",
+                        "description": "Block Office communication application from creating child processes"
+                      },
+                      "blockOfficeChild": {
+                        "type": "boolean",
+                        "description": "Block all Office applications from creating child processes"
+                      },
+                      "BlockUntrustedUSB": {
+                        "type": "boolean",
+                        "description": "Block untrusted and unsigned processes that run from USB"
+                      },
+                      "EnableRansomwareVac": {
+                        "type": "boolean",
+                        "description": "Use advanced protection against ransomware"
+                      },
+                      "BlockExesMail": {
+                        "type": "boolean",
+                        "description": "Block executable content from email client and webmail"
+                      },
+                      "BlockUnsignedDrivers": {
+                        "type": "boolean",
+                        "description": "Block abuse of exploited vulnerable signed drivers"
+                      },
+                      "AssignTo": {
+                        "type": "string",
+                        "description": "Assignment target",
+                        "enum": ["none", "allLicensedUsers", "AllDevices", "AllDevicesAndUsers"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Defender deployment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecAlertsList": {
+      "get": {
+        "summary": "List Security Alerts",
+        "description": "Retrieves a list of security alerts",
+        "tags": [
+          "Incidents"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Security alerts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "object",
+                      "properties": {
+                        "MSResults": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "EventDateTime": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "The date and time of the event"
+                              },
+                              "Status": {
+                                "type": "string",
+                                "description": "The status of the alert"
+                              },
+                              "Title": {
+                                "type": "string",
+                                "description": "The title of the alert"
+                              },
+                              "Severity": {
+                                "type": "string",
+                                "description": "The severity of the alert"
+                              },
+                              "Category": {
+                                "type": "string",
+                                "description": "The category of the alert"
+                              },
+                              "Tenant": {
+                                "type": "string",
+                                "description": "The tenant name"
+                              },
+                              "InvolvedUsers": {
+                                "type": "array",
+                                "description": "The users involved in the alert",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "Id": {
+                                "type": "string",
+                                "description": "The ID of the alert"
+                              },
+                              "RawResult": {
+                                "type": "object",
+                                "description": "The raw result data",
+                                "properties": {
+                                  "vendorInformation": {
+                                    "type": "object",
+                                    "properties": {
+                                      "vendor": {
+                                        "type": "string",
+                                        "description": "The vendor name"
+                                      },
+                                      "provider": {
+                                        "type": "string",
+                                        "description": "The provider name"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecSetSecurityAlert": {
+      "post": {
+        "summary": "Set Security Alert Status",
+        "description": "Updates the status of a security alert",
+        "tags": [
+          "Incidents"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "GUID",
+                  "Status",
+                  "Vendor",
+                  "Provider"
+                ],
+                "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "The ID of the alert"
+                  },
+                  "Status": {
+                    "type": "string",
+                    "description": "The new status of the alert",
+                    "enum": ["!inProgress", "!resolved"]
+                  },
+                  "Vendor": {
+                    "type": "string",
+                    "description": "The vendor name"
+                  },
+                  "Provider": {
+                    "type": "string",
+                    "description": "The provider name"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Security alert status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecIncidentsList": {
+      "get": {
+        "summary": "List Security Incidents",
+        "description": "Retrieves a list of security incidents",
+        "tags": [
+          "Incidents"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Security incidents retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Created": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The creation date and time"
+                          },
+                          "Updated": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The last update date and time"
+                          },
+                          "Tenant": {
+                            "type": "string",
+                            "description": "The tenant name"
+                          },
+                          "Id": {
+                            "type": "string",
+                            "description": "The ID of the incident"
+                          },
+                          "RedirectId": {
+                            "type": "string",
+                            "description": "The redirect ID"
+                          },
+                          "DisplayName": {
+                            "type": "string",
+                            "description": "The display name of the incident"
+                          },
+                          "Status": {
+                            "type": "string",
+                            "description": "The status of the incident"
+                          },
+                          "Severity": {
+                            "type": "string",
+                            "description": "The severity of the incident"
+                          },
+                          "AssignedTo": {
+                            "type": "string",
+                            "description": "The user assigned to the incident"
+                          },
+                          "Classification": {
+                            "type": "string",
+                            "description": "The classification of the incident"
+                          },
+                          "Determination": {
+                            "type": "string",
+                            "description": "The determination of the incident"
+                          },
+                          "IncidentUrl": {
+                            "type": "string",
+                            "description": "The URL to the incident"
+                          },
+                          "Tags": {
+                            "type": "array",
+                            "description": "The tags associated with the incident",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ExecSetSecurityIncident": {
+      "post": {
+        "summary": "Set Security Incident Status",
+        "description": "Updates the status of a security incident or assigns it to a user",
+        "tags": [
+          "Incidents"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "GUID"
+                ],
+                "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "The ID of the incident"
+                  },
+                  "Status": {
+                    "type": "string",
+                    "description": "The new status of the incident",
+                    "enum": ["!active", "!inProgress", "!resolved"]
+                  },
+                  "Assigned": {
+                    "type": "string",
+                    "description": "The user assigned to the incident"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Security incident updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/ListGraphRequest": {
+      "get": {
+        "summary": "List Graph Request",
+        "description": "Retrieves data from a Graph API request",
+        "tags": [
+          "Graph"
+        ],
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "The tenant to filter by",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpoint",
+            "in": "query",
+            "description": "The Graph API endpoint",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "$top",
+            "in": "query",
+            "description": "Number of records to return",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Graph request data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  }
+}

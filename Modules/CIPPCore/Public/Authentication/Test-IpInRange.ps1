@@ -31,7 +31,8 @@ function Test-IpInRange {
         $IP = [System.Net.IPAddress]::Parse($IPAddress)
         $rangeParts = $Range -split '/'
         $networkAddr = [System.Net.IPAddress]::Parse($rangeParts[0])
-        $prefix = [int]$rangeParts[1]
+        $maxBits = if ($networkAddr.AddressFamily -eq 'InterNetworkV6') { 128 } else { 32 }
+        $prefix = if ($rangeParts.Count -gt 1) { [int]$rangeParts[1] } else { $maxBits }
 
         if ($networkAddr.AddressFamily -ne $IP.AddressFamily) {
             return $false
@@ -39,7 +40,6 @@ function Test-IpInRange {
 
         $ipBig = ConvertIpToBigInteger $IP
         $netBig = ConvertIpToBigInteger $networkAddr
-        $maxBits = if ($networkAddr.AddressFamily -eq 'InterNetworkV6') { 128 } else { 32 }
         $shift = $maxBits - $prefix
         $mask = [System.Numerics.BigInteger]::Pow(2, $shift) - [System.Numerics.BigInteger]::One
         $invertedMask = [System.Numerics.BigInteger]::MinusOne -bxor $mask

@@ -24,7 +24,7 @@ function Set-CIPPUserSchemaProperties {
         [object]$Users
     )
 
-    $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+    $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
     $int = 0
     $Requests = foreach ($User in $Users) {
         @{

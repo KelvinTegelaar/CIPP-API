@@ -1,0 +1,168 @@
+function Invoke-CIPPStandardDisableGuests {
+    <#
+    .FUNCTIONALITY
+        Internal
+    .COMPONENT
+        (APIName) DisableGuests
+    .SYNOPSIS
+        (Label) Disable Guest accounts that have not logged on for a number of days
+    .DESCRIPTION
+        (Helptext) Blocks login for guest users that have not logged in for a number of days
+        (DocsDescription) Blocks login for guest users that have not logged in for a number of days
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "ZTNA21858"
+        EXECUTIVETEXT
+            Automatically disables external guest accounts that haven't been used for a number of days, reducing security risks from dormant accounts while maintaining access for active external collaborators. This helps maintain a clean user directory and reduces potential attack vectors.
+        ADDEDCOMPONENT
+            {"type":"number","name":"standards.DisableGuests.days","required":true,"defaultValue":90,"label":"Days of inactivity"}
+        IMPACT
+            Medium Impact
+        ADDEDDATE
+            2022-10-20
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+            "CIS"
+            "CIPP"
+        REQUIREDCAPABILITIES
+            "AAD_PREMIUM"
+            "AAD_PREMIUM_P2"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
+    #>
+
+    param($Tenant, $Settings)
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableGuests' -TenantFilter $Tenant -Preset Entra
+
+    if ($TestResult -eq $false) {
+        #writing to each item that the license is not present.
+        foreach ($Template in $settings.TemplateList) {
+            Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue 'This tenant does not have the required license for this standard.' -Tenant $Tenant
+        }
+        return $true
+    } #we're done.
+
+    $checkDays = if ($Settings.days) { $Settings.days } else { 90 } # Default to 90 days if not set. Pre v8.5.0 compatibility
+    $Days = (Get-Date).AddDays(-$checkDays).ToUniversalTime()
+    $Lookup = $Days.ToString('o')
+    $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
+
+    try {
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true &`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,createdDateTime,externalUserState" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
+
+        $EnrichedGuests = foreach ($guest in $GraphRequest) {
+            if ($guest.signInActivity -and $guest.signInActivity.lastSuccessfulSignInDateTime) {
+                $lastSignIn = [datetime]$guest.signInActivity.lastSuccessfulSignInDateTime
+                if ($lastSignIn.ToUniversalTime() -le $Days) {
+                    $guest
+                }
+            } elseif ($guest.externalUserState -eq 'PendingAcceptance') {
+                # Never accepted the invite; createdDateTime is already <= $Days due to the server-side filter
+                $guest
+            }
+        }
+        $GraphRequest = @($EnrichedGuests)
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableGuests state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    $AuditResults = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant
+    $RecentlyReactivatedUsers = @(foreach ($AuditEntry in $AuditResults) { $AuditEntry.targetResources[0].id }) | Select-Object -Unique
+
+    $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
+
+    if ($Settings.remediate -eq $true) {
+        if ($GraphRequest.Count -gt 0) {
+            $int = 0
+            $BulkRequests = foreach ($guest in $GraphRequest) {
+                @{
+                    id        = $int++
+                    method    = 'PATCH'
+                    url       = "users/$($guest.id)"
+                    body      = @{ accountEnabled = $false }
+                    'headers' = @{
+                        'Content-Type' = 'application/json'
+                    }
+                }
+            }
+
+            try {
+                $BulkResults = New-GraphBulkRequest -tenantid $tenant -Requests @($BulkRequests)
+
+                for ($i = 0; $i -lt $BulkResults.Count; $i++) {
+                    $result = $BulkResults[$i]
+                    $guest = $GraphRequest[$i]
+
+                    $lastSignIn = $guest.signInActivity?.lastSuccessfulSignInDateTime
+                    if (-not $lastSignIn -and $guest.EnrichedLastSignInDateTime) {
+                        $lastSignIn = $guest.EnrichedLastSignInDateTime
+                    }
+
+                    if ($result.status -eq 200 -or $result.status -eq 204) {
+                        $guest.accountEnabled = $false
+                        $reason = if ($guest.externalUserState -eq 'PendingAcceptance') {
+                            "unredeemed invite created $($guest.createdDateTime)"
+                        } else {
+                            "last sign-in: $lastSignIn"
+                        }
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled guest $($guest.UserPrincipalName) ($($guest.id)). Reason: $reason" -sev Info
+                    } else {
+                        $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guest $($guest.UserPrincipalName) ($($guest.id)): $errorMsg" -sev Error
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to process bulk disable guests request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No guests accounts with a login longer than $checkDays days ago - all guest accounts are already compliant." -sev Info
+        }
+    }
+    if ($Settings.alert -eq $true) {
+
+        if ($GraphRequest.Count -gt 0) {
+            $Filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled, externalUserState, createdDateTime
+            $PendingCount = @($Filtered | Where-Object { $_.externalUserState -eq 'PendingAcceptance' }).Count
+            $StaleCount = $Filtered.Count - $PendingCount
+            $AlertMessage = "Stale guest accounts found: $($GraphRequest.Count) total ($StaleCount inactive >$checkDays days, $PendingCount unredeemed invites >$checkDays days old)"
+            Write-StandardsAlert -message $AlertMessage -object $Filtered -tenant $tenant -standardName 'DisableGuests' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Info
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "No stale guest accounts found (threshold: $checkDays days)." -sev Info
+        }
+    }
+    if ($Settings.report -eq $true) {
+        $Filtered = $GraphRequest | Where-Object { $_.accountEnabled } | Select-Object -Property UserPrincipalName, id, signInActivity, EnrichedLastSignInDateTime, mail, userType, accountEnabled, externalUserState, createdDateTime
+        $PendingInvites = @($Filtered | Where-Object { $_.externalUserState -eq 'PendingAcceptance' })
+        $StaleSignIns = @($Filtered | Where-Object { $_.externalUserState -ne 'PendingAcceptance' })
+
+        $CurrentValue = [PSCustomObject]@{
+            GuestsDisabledAfterDays           = $checkDays
+            GuestsDisabledAccountCount        = $Filtered.Count
+            GuestsStaleSignInCount            = $StaleSignIns.Count
+            GuestsPendingAcceptanceCount      = $PendingInvites.Count
+            GuestsDisabledAccountDetails      = @($Filtered)
+            GuestsPendingAcceptanceDetails    = $PendingInvites
+        }
+
+        $ExpectedValue = [PSCustomObject]@{
+            GuestsDisabledAfterDays           = $checkDays
+            GuestsDisabledAccountCount        = 0
+            GuestsStaleSignInCount            = 0
+            GuestsPendingAcceptanceCount      = 0
+            GuestsDisabledAccountDetails      = @()
+            GuestsPendingAcceptanceDetails    = @()
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $Filtered -StoreAs json -Tenant $tenant
+    }
+}

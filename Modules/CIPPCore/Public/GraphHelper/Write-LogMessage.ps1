@@ -3,7 +3,7 @@ function Write-LogMessage {
     .FUNCTIONALITY
     Internal
     #>
-    Param(
+    param(
         $message,
         $tenant = 'None',
         $API = 'None',
@@ -44,14 +44,16 @@ function Write-LogMessage {
     if ($sev -eq 'Debug' -and $env:DebugMode -ne $true) {
         return
     }
-    $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
+    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+    $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
+    $PartitionKey = $LocalNow.ToString('yyyyMMdd')
     $TableRow = @{
         'Tenant'       = [string]$tenant
         'API'          = [string]$API
         'Message'      = [string]$message
         'Username'     = [string]$username
         'Severity'     = [string]$sev
-        'SentAsAlert'  = $false
+        'sentAsAlert'  = $false
         'PartitionKey' = [string]$PartitionKey
         'RowKey'       = [string]([guid]::NewGuid()).ToString()
         'FunctionNode' = [string]$env:WEBSITE_SITE_NAME
@@ -65,6 +67,19 @@ function Write-LogMessage {
     }
     if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
+    }
+    if ($global:CippStandardInfoStorage -and $global:CippStandardInfoStorage.Value) {
+        $TableRow.Standard = [string]$global:CippStandardInfoStorage.Value.Standard
+        $TableRow.StandardTemplateId = [string]$global:CippStandardInfoStorage.Value.StandardTemplateId
+        if ($global:CippStandardInfoStorage.Value.IntuneTemplateId) {
+            $TableRow.IntuneTemplateId = [string]$global:CippStandardInfoStorage.Value.IntuneTemplateId
+        }
+        if ($global:CippStandardInfoStorage.Value.ConditionalAccessTemplateId) {
+            $TableRow.ConditionalAccessTemplateId = [string]$global:CippStandardInfoStorage.Value.ConditionalAccessTemplateId
+        }
+    }
+    if ($global:CippScheduledTaskIdStorage -and $global:CippScheduledTaskIdStorage.Value) {
+        $TableRow.ScheduledTaskId = [string]$global:CippScheduledTaskIdStorage.Value
     }
 
     $Table.Entity = $TableRow

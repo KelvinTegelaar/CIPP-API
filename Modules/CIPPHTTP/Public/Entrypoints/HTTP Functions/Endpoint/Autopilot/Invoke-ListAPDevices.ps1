@@ -1,0 +1,28 @@
+Function Invoke-ListAPDevices {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Endpoint.Autopilot.Read
+    .DESCRIPTION
+        Lists Windows Autopilot device identities registered in a tenant.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.TenantFilter
+    try {
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999" -tenantid $TenantFilter
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::Forbidden
+        $GraphRequest = $ErrorMessage
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
+        })
+
+}
