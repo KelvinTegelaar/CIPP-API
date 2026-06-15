@@ -1,6 +1,9 @@
 # Pester tests for Set-CIPPMailboxAccess
-# Covers granting Add-MailboxPermission for a single user and an array of users, extraction of
-# frontend objects with a .value property, the automapping message wording, and per-user error handling.
+# Set-CIPPMailboxAccess now delegates each grant to Set-CIPPMailboxPermission (FullAccess / Add), so
+# these tests cover the per-user fan-out, extraction of frontend objects with a .value property,
+# AutoMap pass-through, and that one user's failure does not stop the rest (the delegate returns an
+# error string rather than throwing). The EXO cmdlet mapping itself is covered by
+# Set-CIPPMailboxPermission.Tests.ps1.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -8,42 +11,36 @@ BeforeAll {
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Set-CIPPMailboxAccess.ps1 under Modules/' }
 
-    function New-ExoRequest { param($Anchor, $tenantid, $cmdlet, $cmdParams) }
-    function Get-CippException { param($Exception) }
-    function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Set-CIPPMailboxPermission { param($UserId, $AccessUser, $PermissionLevel, $Action, $AutoMap, $TenantFilter, $APIName, $Headers) }
 
     . $FunctionPath
 }
 
 Describe 'Set-CIPPMailboxAccess' {
     BeforeEach {
-        Mock -CommandName New-ExoRequest -MockWith { }
-        Mock -CommandName Get-CippException -MockWith { [pscustomobject]@{ NormalizedError = 'boom' } }
-        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Set-CIPPMailboxPermission -MockWith { "Granted $AccessUser FullAccess to $UserId with automapping $AutoMap" }
     }
 
-    It 'grants Add-MailboxPermission for a single user with the requested access rights' {
+    It 'delegates a single user to Set-CIPPMailboxPermission as a FullAccess Add' {
         $result = Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser 'user@contoso.com' `
             -Automap $true -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Add-MailboxPermission' -and
-            $Anchor -eq 'shared@contoso.com' -and
-            $cmdParams.Identity -eq 'shared@contoso.com' -and
-            $cmdParams.user -eq 'user@contoso.com' -and
-            $cmdParams.AutoMapping -eq $true -and
-            $cmdParams.accessRights -contains 'FullAccess' -and
-            $cmdParams.InheritanceType -eq 'all'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter {
+            $UserId -eq 'shared@contoso.com' -and
+            $AccessUser -eq 'user@contoso.com' -and
+            $PermissionLevel -eq 'FullAccess' -and
+            $Action -eq 'Add' -and
+            $AutoMap -eq $true -and
+            $TenantFilter -eq 'contoso.com'
         }
-        $result | Should -Match 'Successfully added user@contoso.com to shared@contoso.com'
-        $result | Should -Match 'with AutoMapping'
+        $result | Should -Contain 'Granted user@contoso.com FullAccess to shared@contoso.com with automapping True'
     }
 
-    It 'processes an array of users, one Add-MailboxPermission per user' {
+    It 'processes an array of users, one delegate call per user' {
         $result = Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser @('a@contoso.com', 'b@contoso.com') `
             -Automap $true -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
-        Should -Invoke New-ExoRequest -Times 2 -Exactly
+        Should -Invoke Set-CIPPMailboxPermission -Times 2 -Exactly
         $result.Count | Should -Be 2
     }
 
@@ -53,29 +50,30 @@ Describe 'Set-CIPPMailboxAccess' {
         Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser $accessUsers `
             -Automap $true -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdParams.user -eq 'picked@contoso.com' }
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $AccessUser -eq 'picked@contoso.com' }
     }
 
-    It 'reports "without AutoMapping" when Automap is disabled' {
-        $result = Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser 'user@contoso.com' `
+    It 'passes AutoMap through to the delegate when disabled' {
+        Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser 'user@contoso.com' `
             -Automap $false -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdParams.AutoMapping -eq $false }
-        $result | Should -Match 'without AutoMapping'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $AutoMap -eq $false }
     }
 
-    It 'records a failure message but continues to the next user when one user throws' {
-        Mock -CommandName New-ExoRequest -MockWith {
-            param($Anchor, $tenantid, $cmdlet, $cmdParams)
-            if ($cmdParams.user -eq 'bad@contoso.com') { throw 'EXO down' }
+    It 'continues to the next user when one user returns a failure string' {
+        Mock -CommandName Set-CIPPMailboxPermission -MockWith {
+            if ($AccessUser -eq 'bad@contoso.com') {
+                'Failed to Add FullAccess for bad@contoso.com on shared@contoso.com: boom'
+            } else {
+                "Granted $AccessUser FullAccess to shared@contoso.com with automapping True"
+            }
         }
 
         $result = Set-CIPPMailboxAccess -userid 'shared@contoso.com' -AccessUser @('bad@contoso.com', 'good@contoso.com') `
             -Automap $true -TenantFilter 'contoso.com' -AccessRights @('FullAccess')
 
-        Should -Invoke New-ExoRequest -Times 2 -Exactly
-        ($result -join "`n") | Should -Match 'Failed to add mailbox permissions for bad@contoso.com on shared@contoso.com. Error: boom'
-        ($result -join "`n") | Should -Match 'Successfully added good@contoso.com'
-        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Error' }
+        Should -Invoke Set-CIPPMailboxPermission -Times 2 -Exactly
+        ($result -join "`n") | Should -Match 'Failed to Add FullAccess for bad@contoso.com on shared@contoso.com: boom'
+        ($result -join "`n") | Should -Match 'Granted good@contoso.com FullAccess to shared@contoso.com'
     }
 }

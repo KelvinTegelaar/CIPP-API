@@ -1,14 +1,22 @@
 # Pester tests for Invoke-ExecModifyMBPerms
-# Covers the permission-level -> EXO cmdlet/parameter mapping (mirrors Set-CIPPMailboxPermission, so
-# these tests double as a drift detector between the two implementations), the single-operation vs
-# bulk (New-ExoBulkRequest + GUID mapping) execution paths, the bulk-failure fallback, the three
-# accepted input shapes, the user-lookup fallback, and the request guards.
+# The endpoint delegates the permission-level -> EXO cmdlet/parameter mapping to
+# Set-CIPPMailboxPermission (dot-sourced below and called in -AsCmdletObject mode), so these tests
+# focus on what the endpoint owns: the single-operation vs bulk (New-ExoBulkRequest + GUID mapping)
+# execution paths, the bulk-failure fallback, the three accepted input shapes, the user-lookup
+# fallback, and the request guards. The mapping itself is covered by Set-CIPPMailboxPermission.Tests.ps1.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecModifyMBPerms.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Invoke-ExecModifyMBPerms.ps1 under Modules/' }
+
+    # Dot-source the REAL Set-CIPPMailboxPermission so -AsCmdletObject produces real mappings - the
+    # endpoint now delegates the level -> cmdlet mapping to it. Its -AsCmdletObject path only builds a
+    # hashtable and returns early, so none of the EXO / log stubs below are exercised by it.
+    $PermissionFunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Set-CIPPMailboxPermission.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $PermissionFunctionPath) { throw 'Could not locate Set-CIPPMailboxPermission.ps1 under Modules/' }
 
     class HttpResponseContext {
         [int]$StatusCode
@@ -27,6 +35,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
+    . $PermissionFunctionPath
     . $FunctionPath
 
     # Build a request in the bulk 'mailboxRequests' shape.
@@ -94,7 +103,7 @@ Describe 'Invoke-ExecModifyMBPerms' {
             $req = New-ModifyRequest -Mailboxes @(New-Mailbox -Permissions @(New-Perm -Level 'FullAccess' -Modification 'Remove'))
             $response = Invoke-ExecModifyMBPerms -Request $req -TriggerMetadata $null
             Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'Remove-MailboxPermission' }
-            $response.Body.Results | Should -Contain 'Removed user@contoso.com from shared@contoso.com FullAccess permissions'
+            $response.Body.Results | Should -Contain 'Removed user@contoso.com FullAccess from shared@contoso.com'
         }
 
         It 'SendAs Add -> Add-RecipientPermission with Trustee' {

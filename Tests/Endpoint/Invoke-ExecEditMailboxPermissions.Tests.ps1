@@ -1,7 +1,9 @@
 # Pester tests for Invoke-ExecEditMailboxPermissions
-# Covers each request body bucket (RemoveFullAccess / AddFullAccess / AddFullAccessNoAutoMap /
-# AddSendAs / RemoveSendAs / AddSendOnBehalf / RemoveSendOnBehalf) mapping to the right EXO cmdlet
-# and parameters, the success Results strings, cache syncing, and the per-item error path.
+# The endpoint now delegates every request bucket (RemoveFullAccess / AddFullAccess /
+# AddFullAccessNoAutoMap / AddSendAs / RemoveSendAs / AddSendOnBehalf / RemoveSendOnBehalf) to
+# Set-CIPPMailboxPermission, so these tests assert each bucket maps to the right
+# PermissionLevel / Action / AutoMap. The EXO cmdlet mapping, logging, and cache sync are the
+# delegate's responsibility and are covered by Set-CIPPMailboxPermission.Tests.ps1.
 #
 # NOTE: the early `if ($username -eq $null) { exit }` guard is deliberately NOT exercised - `exit`
 # inside a dot-sourced function terminates the Pester runspace, so it cannot be tested in-process.
@@ -25,9 +27,7 @@ BeforeAll {
         $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
 
-    function New-GraphGetRequest { param($uri, $tenantid) }
-    function New-ExoRequest { param($Anchor, $tenantid, $cmdlet, $cmdParams) }
-    function Sync-CIPPMailboxPermissionCache { param($TenantFilter, $MailboxIdentity, $User, $PermissionType, $Action) }
+    function Set-CIPPMailboxPermission { param($UserId, $AccessUser, $PermissionLevel, $Action, $AutoMap, $TenantFilter, $APIName, $Headers) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
@@ -48,102 +48,80 @@ BeforeAll {
 
 Describe 'Invoke-ExecEditMailboxPermissions' {
     BeforeEach {
-        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ id = 'user-guid' } }
-        Mock -CommandName New-ExoRequest -MockWith { }
-        Mock -CommandName Sync-CIPPMailboxPermissionCache -MockWith { }
+        Mock -CommandName Set-CIPPMailboxPermission -MockWith { "$Action $PermissionLevel for $AccessUser" }
         Mock -CommandName Write-LogMessage -MockWith { }
     }
 
-    It 'resolves the userID via Graph and returns OK' {
+    It 'returns OK and passes the mailbox UPN through as the identity' {
         $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
 
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*graph.microsoft.com/beta/users/shared@contoso.com*' }
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $UserId -eq 'shared@contoso.com' -and $TenantFilter -eq 'contoso.com' }
     }
 
-    It 'RemoveFullAccess -> Remove-MailboxPermission (FullAccess) and syncs cache' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'RemoveFullAccess -> FullAccess / Remove' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Remove-MailboxPermission' -and $cmdParams.Identity -eq 'user-guid' -and
-            $cmdParams.user -eq 'user@contoso.com' -and $cmdParams.accessRights -contains 'FullAccess'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter {
+            $PermissionLevel -eq 'FullAccess' -and $Action -eq 'Remove' -and $AccessUser -eq 'user@contoso.com'
         }
-        Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'FullAccess' -and $Action -eq 'Remove' }
-        $response.Body.Results | Should -Contain 'Removed user@contoso.com from shared@contoso.com Shared Mailbox permissions'
     }
 
-    It 'AddFullAccess -> Add-MailboxPermission with automapping $true and syncs cache' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'AddFullAccess -> FullAccess / Add with AutoMap $true' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Add-MailboxPermission' -and $cmdParams.automapping -eq $true -and $cmdParams.accessRights -contains 'FullAccess'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter {
+            $PermissionLevel -eq 'FullAccess' -and $Action -eq 'Add' -and $AutoMap -eq $true
         }
-        Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'FullAccess' -and $Action -eq 'Add' }
-        $response.Body.Results | Should -Contain 'Granted user@contoso.com access to shared@contoso.com Mailbox with automapping'
     }
 
-    It 'AddFullAccessNoAutoMap -> Add-MailboxPermission with automapping $false' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccessNoAutoMap' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'AddFullAccessNoAutoMap -> FullAccess / Add with AutoMap $false' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccessNoAutoMap' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Add-MailboxPermission' -and $cmdParams.automapping -eq $false
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter {
+            $PermissionLevel -eq 'FullAccess' -and $Action -eq 'Add' -and $AutoMap -eq $false
         }
-        $response.Body.Results | Should -Contain 'Granted user@contoso.com access to shared@contoso.com Mailbox without automapping'
     }
 
-    It 'AddSendAs -> Add-RecipientPermission (Trustee) and syncs cache' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddSendAs' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'AddSendAs -> SendAs / Add' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddSendAs' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Add-RecipientPermission' -and $cmdParams.Trustee -eq 'user@contoso.com' -and $cmdParams.accessRights -contains 'SendAs'
-        }
-        Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'SendAs' -and $Action -eq 'Add' }
-        $response.Body.Results | Should -Contain 'Granted user@contoso.com access to shared@contoso.com with Send As permissions'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $PermissionLevel -eq 'SendAs' -and $Action -eq 'Add' }
     }
 
-    It 'RemoveSendAs -> Remove-RecipientPermission (Trustee) and syncs cache' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveSendAs' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'RemoveSendAs -> SendAs / Remove' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveSendAs' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Remove-RecipientPermission' -and $cmdParams.Trustee -eq 'user@contoso.com'
-        }
-        Should -Invoke Sync-CIPPMailboxPermissionCache -Times 1 -Exactly -ParameterFilter { $PermissionType -eq 'SendAs' -and $Action -eq 'Remove' }
-        $response.Body.Results | Should -Contain 'Removed user@contoso.com from shared@contoso.com with Send As permissions'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $PermissionLevel -eq 'SendAs' -and $Action -eq 'Remove' }
     }
 
-    It 'AddSendOnBehalf -> Set-Mailbox with GrantSendonBehalfTo add hashtable' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddSendOnBehalf' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'AddSendOnBehalf -> SendOnBehalf / Add' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddSendOnBehalf' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Set-Mailbox' -and $cmdParams.GrantSendonBehalfTo.add -eq 'user@contoso.com' -and
-            $cmdParams.GrantSendonBehalfTo['@odata.type'] -eq '#Exchange.GenericHashTable'
-        }
-        $response.Body.Results | Should -Contain 'Granted user@contoso.com access to shared@contoso.com with Send On Behalf Permissions'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $PermissionLevel -eq 'SendOnBehalf' -and $Action -eq 'Add' }
     }
 
-    It 'RemoveSendOnBehalf -> Set-Mailbox with GrantSendonBehalfTo remove hashtable' {
-        $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveSendOnBehalf' -Users @('user@contoso.com')) -TriggerMetadata $null
+    It 'RemoveSendOnBehalf -> SendOnBehalf / Remove' {
+        Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'RemoveSendOnBehalf' -Users @('user@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
-            $cmdlet -eq 'Set-Mailbox' -and $cmdParams.GrantSendonBehalfTo.remove -eq 'user@contoso.com'
-        }
-        $response.Body.Results | Should -Contain 'Removed user@contoso.com from shared@contoso.com Send on Behalf Permissions'
+        Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly -ParameterFilter { $PermissionLevel -eq 'SendOnBehalf' -and $Action -eq 'Remove' }
     }
 
-    It 'processes every user in a multi-user bucket' {
+    It 'processes every user in a multi-user bucket and collects their results' {
         $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddSendAs' -Users @('a@contoso.com', 'b@contoso.com')) -TriggerMetadata $null
 
-        Should -Invoke New-ExoRequest -Times 2 -Exactly -ParameterFilter { $cmdlet -eq 'Add-RecipientPermission' }
+        Should -Invoke Set-CIPPMailboxPermission -Times 2 -Exactly -ParameterFilter { $PermissionLevel -eq 'SendAs' -and $Action -eq 'Add' }
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $response.Body.Results | Should -Contain 'Add SendAs for a@contoso.com'
+        $response.Body.Results | Should -Contain 'Add SendAs for b@contoso.com'
     }
 
-    It 'records a per-item failure message and logs an error when New-ExoRequest throws' {
-        Mock -CommandName New-ExoRequest -MockWith { throw 'EXO down' }
+    It 'surfaces the delegate failure string in Results and still returns OK' {
+        Mock -CommandName Set-CIPPMailboxPermission -MockWith { 'Failed to Add FullAccess for user@contoso.com on shared@contoso.com: boom' }
 
         $response = Invoke-ExecEditMailboxPermissions -Request (New-EditRequest -Bucket 'AddFullAccess' -Users @('user@contoso.com')) -TriggerMetadata $null
 
         $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        ($response.Body.Results -join "`n") | Should -Match 'Could not add user@contoso.com shared mailbox permissions for shared@contoso.com'
-        Should -Invoke Write-LogMessage -ParameterFilter { $Sev -eq 'Error' }
+        ($response.Body.Results -join "`n") | Should -Match 'Failed to Add FullAccess for user@contoso.com on shared@contoso.com: boom'
     }
 }
