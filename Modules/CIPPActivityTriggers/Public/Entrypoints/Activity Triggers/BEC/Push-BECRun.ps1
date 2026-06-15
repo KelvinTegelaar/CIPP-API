@@ -103,6 +103,21 @@ function Push-BECRun {
             $RulesLog = @()
         }
 
+        Write-Information 'Getting sent message trace'
+        try {
+            $MessageTraceParams = @{
+                SenderAddress = $UserName
+                StartDate     = $startDate.ToString('s')
+                EndDate       = $endDate.ToString('s')
+            }
+            $SentMessages = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MessageTraceV2' -cmdParams $MessageTraceParams -Anchor $UserName |
+                Select-Object MessageTraceId, Status, Subject, RecipientAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP)
+        } catch {
+            $SentMessages = @()
+            $CippTraceError = Get-CippException -Exception $_
+            Write-LogMessage -API 'BECRun' -message "Failed to retrieve message trace for $($UserName): $($CippTraceError.NormalizedError)" -tenant $TenantFilter -sev Warning -LogData $CippTraceError
+        }
+
         Write-Information 'Getting last 50 logons'
         try {
             $Last50Logons = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userDisplayName ne 'On-Premises Directory Synchronization Service Account'&`$top=50&`$orderby=createdDateTime desc" -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
@@ -155,6 +170,7 @@ function Push-BECRun {
             LastSuspectUserLogon     = @($LastSignIn)
             SuspectUserDevices       = @($Devices)
             NewRules                 = @($RulesLog)
+            SentMessages             = @($SentMessages)
             MailboxPermissionChanges = @($PermissionsLog)
             NewUsers                 = @($NewUsers)
             MFADevices               = @($MFADevices | Where-Object { $_.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod' })
