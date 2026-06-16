@@ -42,8 +42,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CALLER_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          summary="${{ needs.gitguardian.outputs.scan_summary }}"
           title="Security: GitGuardian detected secret(s) in ${CALLER_SHA}"
-          body="## Secret(s) detected by GitGuardian
+          body=$(cat <<EOF
+          ## Secret(s) detected by GitGuardian
 
           The reusable GitGuardian scan detected one or more potential secrets.
 
@@ -51,10 +53,19 @@ jobs:
           - Commit: ${CALLER_SHA}
           - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          Action required: rotate/revoke exposed credentials and remove secrets from git history if needed."
+          ### Scan summary
+          ```text
+          ${summary}
+          ```
 
-          gh issue create --title "$title" --body "$body" --label "security" || \
-          gh issue create --title "$title" --body "$body"
+          Action required: rotate/revoke exposed credentials and remove secrets from git history if needed.
+
+          cc @${{ github.repository_owner }}/AR_Kyos_GitHub_Admins
+          EOF
+          )
+
+          gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body" --label "security" || \
+          gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
 
 
 
