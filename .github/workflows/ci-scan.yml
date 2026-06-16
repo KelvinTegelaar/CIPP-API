@@ -54,15 +54,21 @@ jobs:
           - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
           ### Scan summary
-          ```text
+          ~~~text
           ${summary}
-          ```
+          ~~~
 
           Action required: rotate/revoke exposed credentials and remove secrets from git history if needed.
 
           cc @${{ github.repository_owner }}/AR_Kyos_GitHub_Admins
           EOF
           )
+
+          gh label create security \
+            --repo "${{ github.repository }}" \
+            --color "d73a4a" \
+            --description "Security findings" \
+            --force
 
           gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body" --label "security" || \
           gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
