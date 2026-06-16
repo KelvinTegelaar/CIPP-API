@@ -29,6 +29,33 @@ jobs:
       caller_token: ${{ secrets.GITHUB_TOKEN }}
       GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
 
+  create-secret-issue:
+    needs: [gitguardian]
+    if: ${{ always() && needs.gitguardian.outputs.secrets_found == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Create issue for detected secrets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CALLER_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          title="Security: GitGuardian detected secret(s) in ${CALLER_SHA}"
+          body="## Secret(s) detected by GitGuardian
+
+          The reusable GitGuardian scan detected one or more potential secrets.
+
+          - Repository: ${{ github.repository }}
+          - Commit: ${CALLER_SHA}
+          - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Action required: rotate/revoke exposed credentials and remove secrets from git history if needed."
+
+          gh issue create --title "$title" --body "$body" --label "security" || \
+          gh issue create --title "$title" --body "$body"
+
 
 
 
