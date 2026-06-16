@@ -1,0 +1,92 @@
+
+name: 'CI: Scan - Code & Security'
+
+permissions:
+  contents: read
+  packages: read
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ============================================
+  # MANDATORY: GitGuardian secret scanning
+  # ============================================
+  gitguardian:
+    uses: kyos-iac/library-cicd-iac/.github/workflows/gitguardian-only-check.yml@main
+    with:
+      runs-on: '["ubuntu-latest"]'
+      caller_repo: ${{ github.repository }}
+      caller_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      caller_token: ${{ secrets.GITHUB_TOKEN }}
+      GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+
+
+
+  # ============================================
+  # .NET: Format check
+  # ============================================
+  check-dotnet:
+    uses: kyos-iac/library-cicd-iac/.github/workflows/dotnet-only-check.yml@main
+    with:
+      runs-on: '["ubuntu-latest"]'
+      caller_repo: ${{ github.repository }}
+      caller_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      caller_token: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+  # ============================================
+  # PowerShell: PSScriptAnalyzer
+  # ============================================
+  check-powershell:
+    uses: kyos-iac/library-cicd-iac/.github/workflows/pwsh-only-check.yml@main
+    with:
+      runs-on: '["ubuntu-latest"]'
+      caller_repo: ${{ github.repository }}
+      caller_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      caller_token: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+
+
+  # ============================================
+  # Docker: Hadolint
+  # ============================================
+  check-docker:
+    uses: kyos-iac/library-cicd-iac/.github/workflows/dockerfile-only-check.yml@main
+    with:
+      runs-on: '["ubuntu-latest"]'
+      caller_repo: ${{ github.repository }}
+      caller_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      caller_token: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+
+
+
+
+
