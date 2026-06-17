@@ -48,8 +48,28 @@ function Invoke-ExecGDAPAccessAssignment {
 
                 $Groups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=id,displayName&`$filter=securityEnabled eq true" -asApp $true -NoAuthCheck $true
 
+                # Validate/correct the template's group mappings against the partner tenant before creating any
+                # access assignments - a stale GroupId would otherwise fail with "access container does not exist".
+                $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Mappings -PartnerGroups $Groups -WriteBack -TemplateId $RoleTemplateId -Headers $Request.Headers
+                $Mappings = $GroupCheck.RoleMappings
+
                 $Requests = [System.Collections.Generic.List[object]]::new()
                 $Messages = [System.Collections.Generic.List[object]]::new()
+
+                $MappingResults = [System.Collections.Generic.List[object]]::new()
+                foreach ($GroupResult in $GroupCheck.Results) {
+                    if ($GroupResult.Status -eq 'Stale') {
+                        $MappingResults.Add(@{ resultText = $GroupResult.Message; state = 'success' })
+                    } elseif ($GroupResult.Status -eq 'Missing') {
+                        $MappingResults.Add(@{ resultText = $GroupResult.Message; state = 'error' })
+                    }
+                }
+
+                # Drop mappings whose group could not be resolved so we never POST a non-existent access container
+                $MissingGroupIds = @($GroupCheck.Results | Where-Object { $_.Status -eq 'Missing' } | Select-Object -ExpandProperty GroupId)
+                if ($MissingGroupIds.Count -gt 0) {
+                    $Mappings = @($Mappings | Where-Object { $_.GroupId -notin $MissingGroupIds })
+                }
 
                 foreach ($AccessAssignment in $AccessAssignments) {
                     $RoleCount = ($AccessAssignment.accessDetails.unifiedRoles | Measure-Object).Count
@@ -159,11 +179,18 @@ function Invoke-ExecGDAPAccessAssignment {
                         }
                     }
 
-                } else {
+                } elseif ($MappingResults.Count -eq 0) {
                     $Results = @{
                         resultText = 'This relationship already has the correct access assignments'
                         state      = 'success'
                     }
+                } else {
+                    $Results = @()
+                }
+
+                # Surface any group mapping corrections / missing groups alongside the assignment changes
+                if ($MappingResults.Count -gt 0) {
+                    $Results = @($MappingResults) + @($Results)
                 }
 
                 $Body = @{
