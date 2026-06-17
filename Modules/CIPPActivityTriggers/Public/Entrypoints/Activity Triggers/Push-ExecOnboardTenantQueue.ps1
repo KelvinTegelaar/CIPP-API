@@ -118,6 +118,30 @@ function Push-ExecOnboardTenantQueue {
                 $OnboardingSteps.Step2.Status = 'succeeded'
                 $OnboardingSteps.Step2.Message = 'Your GDAP relationship has the required roles'
             }
+
+            # Validate (and correct) that the mapped security groups still exist in the partner tenant before
+            # Step 3 tries to POST the access assignments - a missing group surfaces as a raw Graph
+            # "access container does not exist" error otherwise.
+            if ($OnboardingSteps.Step2.Status -ne 'failed' -and ($Item.Roles | Measure-Object).Count -gt 0) {
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Validating GDAP security group mappings against the partner tenant' })
+                $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Item.Roles -CreateMissing:([bool]$Item.AddMissingGroups) -WriteBack
+                foreach ($GroupResult in $GroupCheck.Results) {
+                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing')) {
+                        $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $GroupResult.Message })
+                    }
+                }
+                # Use the corrected mappings for the remainder of the onboarding (group mapping, SAM membership, retries)
+                $Item.Roles = @($GroupCheck.RoleMappings)
+
+                if (-not $GroupCheck.Valid) {
+                    $MissingGroupNames = ($GroupCheck.MissingGroups.Name | Sort-Object -Unique) -join ', '
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Missing GDAP security groups in the partner tenant: $MissingGroupNames" })
+                    $TenantOnboarding.Status = 'failed'
+                    $OnboardingSteps.Step2.Status = 'failed'
+                    $OnboardingSteps.Step2.Message = "The following GDAP security groups are missing in the partner tenant, recreate the GDAP roles and retry: $MissingGroupNames"
+                }
+            }
+
             $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
