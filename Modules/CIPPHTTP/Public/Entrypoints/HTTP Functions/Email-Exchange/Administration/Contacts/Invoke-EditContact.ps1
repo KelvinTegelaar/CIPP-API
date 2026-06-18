@@ -36,8 +36,6 @@ Function Invoke-EditContact {
             'StateOrProvince'     = $contactInfo.State
             'CountryOrRegion'     = $contactInfo.CountryOrRegion
             'Company'             = $contactInfo.Company
-            'MobilePhone'         = $contactInfo.mobilePhone
-            'Phone'               = $contactInfo.phone
             'WebPage'             = $contactInfo.website
         }
 
@@ -46,6 +44,14 @@ Function Invoke-EditContact {
             if (![string]::IsNullOrWhiteSpace($Property.Value)) {
                 $bodyForSetContact[$Property.Key] = $Property.Value
             }
+        }
+
+        $BodyProperties = $contactInfo.PSObject.Properties.Name
+        if ($BodyProperties -contains 'mobilePhone') {
+            $bodyForSetContact['MobilePhone'] = if ([string]::IsNullOrWhiteSpace($contactInfo.mobilePhone)) { $null } else { $contactInfo.mobilePhone }
+        }
+        if ($BodyProperties -contains 'phone') {
+            $bodyForSetContact['Phone'] = if ([string]::IsNullOrWhiteSpace($contactInfo.phone)) { $null } else { $contactInfo.phone }
         }
 
         # Update contact only if we have properties to set beyond Identity
