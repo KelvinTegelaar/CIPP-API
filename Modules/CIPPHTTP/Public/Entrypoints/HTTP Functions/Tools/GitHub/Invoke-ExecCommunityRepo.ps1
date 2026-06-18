@@ -160,6 +160,7 @@ function Invoke-ExecCommunityRepo {
             $Path = $Request.Body.Path
             $FullName = $Request.Body.FullName
             $Branch = $Request.Body.Branch
+            $Force = [bool]$Request.Body.Force
             try {
                 $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
 
@@ -178,7 +179,7 @@ function Invoke-ExecCommunityRepo {
                         (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
                     }
                 }
-                $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName
+                $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Force:$Force
 
                 $Results = @{
                     resultText = $ImportResult ?? 'Template imported'

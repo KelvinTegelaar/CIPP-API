@@ -16,6 +16,8 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter()][string[]]$GroupIds,
         [Parameter()][ValidateRange(1, 395)]$QRCodeLifetimeInDays = 365,
         [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
+        [Parameter()][ValidateSet('default', 'enabled', 'disabled')]$EmailAllowExternalIdToUseEmailOtp,
+        [Parameter()][string[]]$EmailExcludeGroupIds,
         $APIName = 'Set Authentication Policy',
         $Headers
     )
@@ -99,7 +101,23 @@ function Set-CIPPAuthenticationPolicy {
 
         # Email OTP
         'Email' {
-            # No special configuration needed
+            if ($State -eq 'enabled') {
+                if ($EmailAllowExternalIdToUseEmailOtp) {
+                    $CurrentInfo.allowExternalIdToUseEmailOtp = $EmailAllowExternalIdToUseEmailOtp
+                    $OptionalLogMessage = "with allowExternalIdToUseEmailOtp set to $EmailAllowExternalIdToUseEmailOtp"
+                }
+                if ($EmailExcludeGroupIds) {
+                    $CurrentInfo.excludeTargets = @(
+                        foreach ($id in $EmailExcludeGroupIds) {
+                            [pscustomobject]@{
+                                targetType = 'group'
+                                id         = $id
+                            }
+                        }
+                    )
+                    $OptionalLogMessage += " and excluded groups set to $($EmailExcludeGroupIds -join ', ')"
+                }
+            }
         }
 
         # Certificate-based authentication

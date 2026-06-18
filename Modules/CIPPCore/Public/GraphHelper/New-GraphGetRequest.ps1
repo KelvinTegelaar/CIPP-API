@@ -18,6 +18,7 @@ function New-GraphGetRequest {
         [switch]$IncludeResponseHeaders,
         [hashtable]$extraHeaders,
         [switch]$ReturnRawResponse,
+        [switch]$SkipValueExtraction,
         $Headers
     )
 
@@ -53,7 +54,7 @@ function New-GraphGetRequest {
         }
 
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = "CIPP/$($global:CippVersion ?? '1.0')"
+            $headers['User-Agent'] = Get-CippUserAgent
         }
 
 
@@ -105,7 +106,8 @@ function New-GraphGetRequest {
                         $Data.'@odata.count'
                         $NextURL = $null
                     } else {
-                        if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
+
+                        if (!$SkipValueExtraction -and $Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
                         if ($noPagination -eq $true) {
                             if ($Caller -eq 'Get-GraphRequestList' -and $data.'@odata.nextLink') {
                                 @{ 'nextLink' = $data.'@odata.nextLink' }

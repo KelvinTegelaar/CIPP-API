@@ -20,10 +20,12 @@ Function Invoke-ListSharepointQuota {
             $extraHeaders = @{
                 'Accept' = 'application/json'
             }
-            $SharePointQuota = (New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2") | Sort-Object -Property GeoUsedStorageMB -Descending | Select-Object -First 1
+            $SharePointQuota = New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2"
+            $GeoUsedStorageMB = ($SharePointQuota.GeoUsedStorageMB | Measure-Object -Sum).Sum
+            $TenantStorageMB = $SharePointQuota.TenantStorageMB | Select-Object -First 1
 
-            if ($SharePointQuota) {
-                $UsedStoragePercentage = [int](($SharePointQuota.GeoUsedStorageMB / $SharePointQuota.TenantStorageMB) * 100)
+            if ($TenantStorageMB) {
+                $UsedStoragePercentage = [int](($GeoUsedStorageMB / $TenantStorageMB) * 100)
             }
         } catch {
             $UsedStoragePercentage = 'Not available'
@@ -31,8 +33,8 @@ Function Invoke-ListSharepointQuota {
     }
 
     $SharePointQuotaDetails = @{
-        GeoUsedStorageMB = $SharePointQuota.GeoUsedStorageMB
-        TenantStorageMB  = $SharePointQuota.TenantStorageMB
+        GeoUsedStorageMB = $GeoUsedStorageMB
+        TenantStorageMB  = $TenantStorageMB
         Percentage       = $UsedStoragePercentage
         Dashboard        = "$($UsedStoragePercentage) / 100"
     }
