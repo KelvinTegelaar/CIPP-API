@@ -8,7 +8,7 @@ function Invoke-CIPPStandardAuthenticationMethods {
         (Label) Configure Authentication Methods
     .DESCRIPTION
         (Helptext) Configures all authentication methods for the tenant including Microsoft Authenticator, FIDO2, SMS, Voice, Email OTP, Temporary Access Pass, Software OATH, Hardware OATH, Certificate-based, and QR Code Pin. Enable or disable each method and optionally target specific groups.
-        (DocsDescription) Unified standard to configure all authentication method policies in a single place. Each method can be independently enabled or disabled, targeted to all users or specific groups using group name wildcards, and configured with method-specific settings such as TAP lifetime, QR code pin length, and Authenticator software OTP.
+        (DocsDescription) Unified standard to configure all authentication method policies in a single place. Each method can be independently enabled or disabled, targeted to all users or specific groups using group name wildcards, and configured with method-specific settings such as TAP lifetime, QR code pin length, Authenticator software OTP, and Email OTP external user access with exclude group targeting.
     .NOTES
         CAT
             Entra (AAD) Standards
@@ -41,6 +41,8 @@ function Invoke-CIPPStandardAuthenticationMethods {
             {"type":"textField","name":"standards.AuthenticationMethods.VoiceGroup","label":"Target Group Name (wildcard supported, blank = All Users)","required":false,"condition":{"field":"standards.AuthenticationMethods.VoiceEnabled","compareType":"is","compareValue":true}}
             {"type":"switch","name":"standards.AuthenticationMethods.EmailEnabled","label":"Email OTP","defaultValue":false}
             {"type":"textField","name":"standards.AuthenticationMethods.EmailGroup","label":"Target Group Name (wildcard supported, blank = All Users)","required":false,"condition":{"field":"standards.AuthenticationMethods.EmailEnabled","compareType":"is","compareValue":true}}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Allow external users to use Email OTP","name":"standards.AuthenticationMethods.EmailAllowExternalIdToUseEmailOtp","options":[{"label":"Microsoft managed (default)","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}],"condition":{"field":"standards.AuthenticationMethods.EmailEnabled","compareType":"is","compareValue":true}}
+            {"type":"textField","name":"standards.AuthenticationMethods.EmailExcludeGroup","label":"Exclude Group Name (wildcard supported, blank = no exclusions)","required":false,"condition":{"field":"standards.AuthenticationMethods.EmailEnabled","compareType":"is","compareValue":true}}
             {"type":"switch","name":"standards.AuthenticationMethods.x509CertificateEnabled","label":"Certificate-Based Authentication","defaultValue":false}
             {"type":"textField","name":"standards.AuthenticationMethods.x509CertificateGroup","label":"Target Group Name (wildcard supported, blank = All Users)","required":false,"condition":{"field":"standards.AuthenticationMethods.x509CertificateEnabled","compareType":"is","compareValue":true}}
             {"type":"switch","name":"standards.AuthenticationMethods.QRCodePinEnabled","label":"QR Code Pin","defaultValue":false}
@@ -87,13 +89,15 @@ function Invoke-CIPPStandardAuthenticationMethods {
         $EnabledValue = $Settings.$EnabledKey
         if ($null -eq $EnabledValue) { continue }
         $GroupName = $Settings."$($Method.SettingKey)Group"
+        $ExcludeGroupName = $Settings."$($Method.SettingKey)ExcludeGroup"
         [PSCustomObject]@{
-            Id            = $Method.Id
-            RemediationId = $Method.RemediationId
-            Key           = $Method.SettingKey
-            Label         = $Method.Label
-            Enabled       = [bool]$EnabledValue
-            GroupName     = if ([string]::IsNullOrWhiteSpace($GroupName)) { $null } else { $GroupName }
+            Id               = $Method.Id
+            RemediationId    = $Method.RemediationId
+            Key              = $Method.SettingKey
+            Label            = $Method.Label
+            Enabled          = [bool]$EnabledValue
+            GroupName        = if ([string]::IsNullOrWhiteSpace($GroupName)) { $null } else { $GroupName }
+            ExcludeGroupName = if ([string]::IsNullOrWhiteSpace($ExcludeGroupName)) { $null } else { $ExcludeGroupName }
         }
     }
 
@@ -137,6 +141,26 @@ function Invoke-CIPPStandardAuthenticationMethods {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "AuthenticationMethods: Failed to resolve group '$($Method.GroupName)'. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 $GroupIdCache[$Method.GroupName] = $null
+            }
+        }
+        if ($Method.Enabled -and $Method.ExcludeGroupName -and -not $GroupIdCache.ContainsKey($Method.ExcludeGroupName)) {
+            try {
+                $EscapedName = $Method.ExcludeGroupName -replace "'", "''"
+                $GroupFilter = [System.Uri]::EscapeDataString("startsWith(displayName,'$EscapedName')")
+                $MatchedGroups = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=id,displayName&`$filter=$GroupFilter" -tenantid $Tenant)
+                if ($MatchedGroups.Count -gt 0) {
+                    $GroupIdCache[$Method.ExcludeGroupName] = @($MatchedGroups | ForEach-Object { $_.id })
+                    if ($MatchedGroups.Count -gt 1) {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "AuthenticationMethods: Multiple exclude groups matched '$($Method.ExcludeGroupName)': $($MatchedGroups.displayName -join ', ')" -sev Info
+                    }
+                } else {
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "AuthenticationMethods: No exclude group found matching '$($Method.ExcludeGroupName)'" -sev Warning
+                    $GroupIdCache[$Method.ExcludeGroupName] = $null
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "AuthenticationMethods: Failed to resolve exclude group '$($Method.ExcludeGroupName)'. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                $GroupIdCache[$Method.ExcludeGroupName] = $null
             }
         }
     }
@@ -269,6 +293,31 @@ function Invoke-CIPPStandardAuthenticationMethods {
                     }
                 }
             }
+            'Email' {
+                if ($Method.Enabled) {
+                    $DesiredExternalOtp = $Settings.EmailAllowExternalIdToUseEmailOtp.value ?? $Settings.EmailAllowExternalIdToUseEmailOtp
+                    if ($DesiredExternalOtp) {
+                        $ExpectedConfig['allowExternalIdToUseEmailOtp'] = $DesiredExternalOtp
+                        if ($CurrentConfig.allowExternalIdToUseEmailOtp -ne $DesiredExternalOtp) {
+                            $Drifts.Add("allowExternalIdToUseEmailOtp: '$($CurrentConfig.allowExternalIdToUseEmailOtp)' -> '$DesiredExternalOtp'")
+                        }
+                    }
+
+                    # Exclude targets check
+                    if ($Method.ExcludeGroupName) {
+                        $ResolvedExcludeIds = $GroupIdCache[$Method.ExcludeGroupName]
+                        if ($ResolvedExcludeIds) {
+                            $NormalizedExcludeTargets = @($ResolvedExcludeIds | ForEach-Object { @{ targetType = 'group'; id = $_ } })
+                            $ExpectedConfig['excludeTargets'] = $NormalizedExcludeTargets
+                            $CurrentExcludeIds = @($CurrentConfig.excludeTargets | ForEach-Object { $_.id })
+                            $ExcludeDiff = Compare-Object -ReferenceObject @($ResolvedExcludeIds | Sort-Object) -DifferenceObject @($CurrentExcludeIds | Sort-Object) -ErrorAction SilentlyContinue
+                            if ($ExcludeDiff) {
+                                $Drifts.Add("excludeTargets: current [$($CurrentExcludeIds -join ', ')] -> expected [$($ResolvedExcludeIds -join ', ')]")
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         [PSCustomObject]@{
@@ -333,6 +382,20 @@ function Invoke-CIPPStandardAuthenticationMethods {
                             $Params['QRCodePinLength'] = [int]($Settings.QRCodePinLength ?? 8)
                         }
                     }
+                    'Email' {
+                        if ($Result.Method.Enabled) {
+                            $DesiredExternalOtp = $Settings.EmailAllowExternalIdToUseEmailOtp.value ?? $Settings.EmailAllowExternalIdToUseEmailOtp
+                            if ($DesiredExternalOtp) {
+                                $Params['EmailAllowExternalIdToUseEmailOtp'] = $DesiredExternalOtp
+                            }
+                            if ($Result.Method.ExcludeGroupName) {
+                                $ResolvedExcludeIds = $GroupIdCache[$Result.Method.ExcludeGroupName]
+                                if ($ResolvedExcludeIds) {
+                                    $Params['EmailExcludeGroupIds'] = $ResolvedExcludeIds
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Set-CIPPAuthenticationPolicy @Params
@@ -373,6 +436,10 @@ function Invoke-CIPPStandardAuthenticationMethods {
                 } elseif ($Prop -eq 'includeTargets') {
                     # Normalize current targets to only targetType + id for comparison
                     $CurrentSnapshot[$Prop] = @($Result.CurrentConfig.includeTargets | ForEach-Object {
+                            @{ targetType = $_.targetType; id = $_.id }
+                        })
+                } elseif ($Prop -eq 'excludeTargets') {
+                    $CurrentSnapshot[$Prop] = @($Result.CurrentConfig.excludeTargets | ForEach-Object {
                             @{ targetType = $_.targetType; id = $_.id }
                         })
                 } else {

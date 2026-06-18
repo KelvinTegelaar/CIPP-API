@@ -61,8 +61,21 @@ function New-CippCoreRequest {
         }
     }
 
+    # Store action source + acting identity for outbound User-Agent attribution
+    Set-CippUserAgentContext -Headers $Request.Headers
+
     # Check if endpoint is disabled via feature flags
     $FeatureFlags = Get-CIPPFeatureFlag
+
+    # In CIPP-NG, force-enable SuperAdminNG regardless of the stored flag state.
+    if ($env:CIPPNG -eq 'true') {
+        foreach ($Flag in $FeatureFlags) {
+            if ($Flag.Id -eq 'SuperAdminNG') {
+                $Flag.Enabled = $true
+            }
+        }
+    }
+
     $DisabledEndpoint = $FeatureFlags | Where-Object {
         $_.Enabled -eq $false -and $_.Endpoints -contains $Request.Params.CIPPEndpoint
     } | Select-Object -First 1

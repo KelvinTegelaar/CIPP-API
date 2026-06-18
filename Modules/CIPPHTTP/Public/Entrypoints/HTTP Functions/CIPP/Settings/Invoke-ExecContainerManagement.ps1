@@ -31,29 +31,56 @@ function Invoke-ExecContainerManagement {
         return $info
     }
 
-    # Helper: query GHCR for the image digest of a given tag
-    function Get-GHCRImageDigest {
+    # Helper: query GHCR for the image at $Tag and return its digest + version label.
+    # The version label is set by the CI build (org.opencontainers.image.version) and matches
+    # $env:APP_VERSION in the running container — comparing them tells us whether the channel
+    # tag has been republished to a different build.
+    function Get-GHCRImageInfo {
         param([string]$ImageRef, [string]$Tag)
 
-        # Parse image reference: ghcr.io/owner/repo or owner/repo
         $imagePath = $ImageRef -replace '^ghcr\.io/', '' -replace ':.*$', ''
         if (-not $imagePath) { throw 'Could not parse image path from reference' }
 
-        # Get anonymous token for GHCR (public packages)
-        $tokenUri = "https://ghcr.io/token?scope=repository:${imagePath}:pull"
-        $tokenResp = Invoke-RestMethod -Uri $tokenUri -Method GET -ErrorAction Stop
-        $token = $tokenResp.token
-
-        # Get manifest digest via HEAD request
-        $manifestUri = "https://ghcr.io/v2/$imagePath/manifests/$Tag"
-        $digestHeaders = @{
-            Authorization = "Bearer $token"
-            Accept        = 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json'
+        # PS7's Invoke-WebRequest returns .Content as byte[] when the response lacks a charset
+        # (GHCR manifest media types omit it), so piping straight to ConvertFrom-Json yields
+        # an int array. Decode bytes first.
+        function ConvertFrom-RawJson($Content) {
+            if ($Content -is [byte[]]) { $Content = [System.Text.Encoding]::UTF8.GetString($Content) }
+            return $Content | ConvertFrom-Json
         }
-        $resp = Invoke-WebRequest -Uri $manifestUri -Method HEAD -Headers $digestHeaders -ErrorAction Stop
+
+        $tokenResp = Invoke-RestMethod -Uri "https://ghcr.io/token?scope=repository:${imagePath}:pull" -Method GET -ErrorAction Stop
+        $authHeader = @{ Authorization = "Bearer $($tokenResp.token)" }
+        $manifestAccept = 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+
+        $manifestUri = "https://ghcr.io/v2/$imagePath/manifests/$Tag"
+        $manifestHeaders = $authHeader + @{ Accept = $manifestAccept }
+        $resp = Invoke-WebRequest -Uri $manifestUri -Method GET -Headers $manifestHeaders -ErrorAction Stop
         $digest = $resp.Headers['Docker-Content-Digest']
         if ($digest -is [array]) { $digest = $digest[0] }
-        return [string]$digest
+        $manifest = ConvertFrom-RawJson $resp.Content
+
+        if ($manifest.manifests) {
+            $child = $manifest.manifests | Where-Object { $_.platform.architecture -eq 'amd64' -and $_.platform.os -eq 'linux' } | Select-Object -First 1
+            if (-not $child) { $child = $manifest.manifests | Select-Object -First 1 }
+            $childResp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$($child.digest)" -Method GET -Headers $manifestHeaders -ErrorAction Stop
+            $manifest = ConvertFrom-RawJson $childResp.Content
+        }
+
+        $version = $manifest.annotations.'org.opencontainers.image.version'
+        if (-not $version -and $manifest.config.digest) {
+            try {
+                $config = Invoke-RestMethod -Uri "https://ghcr.io/v2/$imagePath/blobs/$($manifest.config.digest)" -Method GET -Headers $authHeader -ErrorAction Stop
+                $version = $config.config.Labels.'org.opencontainers.image.version'
+            } catch {
+                Write-Information "Could not read image config labels for $($imagePath):$Tag — $($_.Exception.Message)"
+            }
+        }
+
+        return [pscustomobject]@{
+            Digest  = [string]$digest
+            Version = [string]$version
+        }
     }
 
     switch ($Action) {
@@ -88,13 +115,14 @@ function Invoke-ExecContainerManagement {
                 # Read update settings and last check result
                 $Settings = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 $UpdateInfo = @{
-                    AutoUpdate       = $false
-                    CheckInterval    = '0'
-                    CheckTime        = $null
-                    LastCheck        = $null
-                    UpdateAvailable  = $false
-                    RunningDigest    = $null
-                    RemoteDigest     = $null
+                    AutoUpdate      = $false
+                    CheckInterval   = '0'
+                    CheckTime       = $null
+                    LastCheck       = $null
+                    UpdateAvailable = $false
+                    RunningVersion  = $null
+                    RemoteVersion   = $null
+                    RemoteDigest    = $null
                 }
                 if ($Settings) {
                     $UpdateInfo.AutoUpdate = $Settings.AutoUpdate -eq 'true'
@@ -102,7 +130,8 @@ function Invoke-ExecContainerManagement {
                     $UpdateInfo.CheckTime = $Settings.CheckTime ?? $null
                     $UpdateInfo.LastCheck = if ($Settings.LastCheck) { [int64]$Settings.LastCheck } else { $null }
                     $UpdateInfo.UpdateAvailable = $Settings.UpdateAvailable -eq 'true'
-                    $UpdateInfo.RunningDigest = $Settings.RunningDigest ?? $null
+                    $UpdateInfo.RunningVersion = $Settings.RunningVersion ?? $null
+                    $UpdateInfo.RemoteVersion = $Settings.RemoteVersion ?? $null
                     $UpdateInfo.RemoteDigest = $Settings.RemoteDigest ?? $null
                 }
 
@@ -162,35 +191,30 @@ function Invoke-ExecContainerManagement {
                     break
                 }
 
-                # Determine the tag to check
+                # Determine the channel tag to check (parsed from the configured image ref)
                 $CheckTag = if ($CurrentImage -match ':([^:]+)$') { $Matches[1] } else { $ImageTag }
 
-                # Query GHCR for the remote digest
-                $RemoteDigest = Get-GHCRImageDigest -ImageRef $CurrentImage -Tag $CheckTag
+                # Query GHCR for the channel tag's manifest — gives us both the digest and
+                # the version label that the CI baked in (org.opencontainers.image.version).
+                $RemoteInfo = Get-GHCRImageInfo -ImageRef $CurrentImage -Tag $CheckTag
+                $RemoteVersion = $RemoteInfo.Version
+                $RemoteDigest = $RemoteInfo.Digest
 
-                # Get the running container's digest — query for the baked-in tag to get what we're running
-                $RunningDigest = $null
-                try {
-                    $RunningDigest = Get-GHCRImageDigest -ImageRef $CurrentImage -Tag $ImageTag
-                } catch {
-                    Write-Information "Could not get running digest for tag $ImageTag — may be first check"
-                }
-
+                $RunningVersion = $env:APP_VERSION
                 $UpdateAvailable = $false
-                if ($RemoteDigest -and $RunningDigest -and $RemoteDigest -ne $RunningDigest) {
+                if ($RemoteVersion -and $RunningVersion -and $RemoteVersion -ne $RunningVersion) {
                     $UpdateAvailable = $true
                 }
 
-                # Store result
                 $Entity = @{
                     PartitionKey    = 'Settings'
                     RowKey          = 'UpdateConfig'
                     LastCheck       = [string][int64](([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
                     UpdateAvailable = [string]$UpdateAvailable
-                    RunningDigest   = [string]($RunningDigest ?? '')
+                    RunningVersion  = [string]($RunningVersion ?? '')
+                    RemoteVersion   = [string]($RemoteVersion ?? '')
                     RemoteDigest    = [string]($RemoteDigest ?? '')
                 }
-                # Merge with existing settings (preserve AutoUpdate, CheckInterval, CheckTime)
                 $Existing = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 if ($Existing) {
                     $Entity.AutoUpdate = $Existing.AutoUpdate ?? 'false'
@@ -199,23 +223,23 @@ function Invoke-ExecContainerManagement {
                 }
                 Add-CIPPAzDataTableEntity @SettingsTable -Entity $Entity -Force | Out-Null
 
-                # Auto-restart if enabled and update is available
                 $Settings = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
-                    Write-LogMessage -API $APIName -headers $Headers -message "Auto-update: new container image detected (running: $RunningDigest, remote: $RemoteDigest). Restarting." -sev Info
-                    try { Request-CIPPRestart -Reason 'Auto-update: new container image available' } catch {}
-                    $Result = "Update available — container restart initiated (auto-update enabled). Running digest: $RunningDigest, Remote digest: $RemoteDigest"
+                    Write-LogMessage -API $APIName -headers $Headers -message "Auto-update: new container version detected (running: $RunningVersion, remote: $RemoteVersion). Restarting." -sev Info
+                    try { Request-CIPPRestart -Reason 'Auto-update: new container version available' } catch {}
+                    $Result = "Update available — container restart initiated (auto-update enabled). Running: $RunningVersion, Remote: $RemoteVersion"
                 } elseif ($UpdateAvailable) {
-                    $Result = "Update available. Running digest: $RunningDigest, Remote digest: $RemoteDigest. Restart the container to apply."
-                    Write-LogMessage -API $APIName -headers $Headers -message "Container update available (running: $RunningDigest, remote: $RemoteDigest)" -sev Info
+                    $Result = "Update available. Running: $RunningVersion, Remote: $RemoteVersion. Restart the container to apply."
+                    Write-LogMessage -API $APIName -headers $Headers -message "Container update available (running: $RunningVersion, remote: $RemoteVersion)" -sev Info
                 } else {
-                    $Result = "Container is up to date. Digest: $RunningDigest"
+                    $Result = "Container is up to date. Version: $RunningVersion"
                 }
                 $Body = @{
                     Results = @{
                         Message         = $Result
                         UpdateAvailable = $UpdateAvailable
-                        RunningDigest   = $RunningDigest
+                        RunningVersion  = $RunningVersion
+                        RemoteVersion   = $RemoteVersion
                         RemoteDigest    = $RemoteDigest
                         CheckedTag      = $CheckTag
                     }

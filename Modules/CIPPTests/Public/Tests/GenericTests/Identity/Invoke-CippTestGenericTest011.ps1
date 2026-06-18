@@ -58,6 +58,8 @@ function Invoke-CippTestGenericTest011 {
         $ResolveDisplayName = {
             param($StandardName, $TemplateSettings)
 
+            if ([string]::IsNullOrWhiteSpace($StandardName)) { return $null }
+
             # 1. Regular standards — look up in standards.json
             if ($StandardsLabelMap.ContainsKey($StandardName)) {
                 return $StandardsLabelMap[$StandardName]

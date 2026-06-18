@@ -112,7 +112,7 @@ function New-CIPPCAPolicy {
             $JSONobj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
         }
         if ($State -and $State -ne 'donotchange') {
-            $JSONobj.state = $State
+            $JSONobj | Add-Member -NotePropertyName 'state' -NotePropertyValue $State -Force
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -543,7 +543,7 @@ function New-CIPPCAPolicy {
                 return $false
             } else {
                 if ($State -eq 'donotchange') {
-                    $JSONobj.state = $CheckExisting.state
+                    $JSONobj | Add-Member -NotePropertyName 'state' -NotePropertyValue $CheckExisting.state -Force
                     $RawJSON = ConvertTo-Json -InputObject $JSONobj -Depth 10 -Compress
                 }
                 # Preserve any exclusion groups named "Vacation Exclusion - <PolicyDisplayName>" from existing policy
