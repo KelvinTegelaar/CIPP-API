@@ -18,7 +18,7 @@ function Invoke-CIPPStandardSPOVersionControl {
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.SPOVersionControl.EnableAutoTrim","label":"Enable Automatic Version Trimming (Microsoft managed)"}
             {"type":"number","name":"standards.SPOVersionControl.MajorVersionLimit","label":"Maximum Major Versions (when auto trim is off)","default":50}
-            {"type":"number","name":"standards.SPOVersionControl.ExpireVersionsAfterDays","label":"Expire Versions After Days (0 = never, when auto trim is off)","default":0}
+            {"type":"number","name":"standards.SPOVersionControl.ExpireVersionsAfterDays","label":"Expire Versions After Days (0 = never, otherwise 30-36500, when auto trim is off)","default":0,"validators":{"min":{"value":0,"message":"Use 0 for never, or 30 or more days"},"max":{"value":36500,"message":"Maximum value is 36500"}}}
             {"type":"switch","name":"standards.SPOVersionControl.ApplyToExistingSites","label":"Apply to all existing sites and document libraries"}
         IMPACT
             Medium Impact
@@ -52,6 +52,15 @@ function Invoke-CIPPStandardSPOVersionControl {
     $DesiredAutoTrim = [System.Convert]::ToBoolean($Settings.EnableAutoTrim)
     $DesiredMajorVersionLimit = [int]($Settings.MajorVersionLimit ?? 50)
     $DesiredExpireVersionsAfterDays = [int]($Settings.ExpireVersionsAfterDays ?? 0)
+
+    # SharePoint only accepts 0 (never expire) or 30-36500 days for version expiration. Reject
+    # anything in the 1-29 gap (or above the max) up front so we never send a value the tenant
+    # will refuse. This is the same 30-day floor the version cleanup (trim) job enforces.
+    if (-not $DesiredAutoTrim -and $DesiredExpireVersionsAfterDays -ne 0 -and
+        ($DesiredExpireVersionsAfterDays -lt 30 -or $DesiredExpireVersionsAfterDays -gt 36500)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "SPOVersionControl: ExpireVersionsAfterDays must be 0 (never) or between 30 and 36500 days. Received '$DesiredExpireVersionsAfterDays'. Skipping standard." -sev Error
+        return
+    }
 
     try {
         $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property _ObjectIdentity_, TenantFilter, EnableAutoExpirationVersionTrim, MajorVersionLimit, ExpireVersionsAfterDays

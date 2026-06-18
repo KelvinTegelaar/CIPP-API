@@ -43,6 +43,14 @@ function Invoke-CIPPStandardSecureScoreRemediation {
         return
     }
 
+    # secureScoreControlProfile has no top-level 'state' property; the effective state is
+    # the most recent controlStateUpdates entry. No entries means the control is at default.
+    $CurrentStates = @{}
+    foreach ($ControlProfile in $CurrentControls) {
+        $LatestUpdate = $ControlProfile.controlStateUpdates | Sort-Object updatedDateTime | Select-Object -Last 1
+        $CurrentStates[$ControlProfile.id] = [string]::IsNullOrEmpty($LatestUpdate.state) ? 'default' : $LatestUpdate.state
+    }
+
     # Build list of controls with their desired states
     $ControlsToUpdate = [System.Collections.Generic.List[object]]::new()
 
@@ -96,24 +104,25 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
     if ($Settings.remediate -eq $true) {
         $ControlsNeedingUpdate = [System.Collections.Generic.List[object]]::new()
+        $CompliantControls = [System.Collections.Generic.List[string]]::new()
 
         foreach ($Control in $ControlsToUpdate) {
             # Skip if this is a Defender control (starts with scid_)
             if ($Control.ControlName -match '^scid_') {
-                Write-Host 'scid'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Skipping Defender control $($Control.ControlName) - cannot be updated via this API" -sev Info
                 continue
             }
 
-            $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
-
             # Check if already in desired state
-            if ($CurrentControl.state -eq $Control.State) {
-                Write-Host 'Already in state'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) is already in state $($Control.State)" -sev Info
+            if ($CurrentStates[$Control.ControlName] -eq $Control.State) {
+                $CompliantControls.Add($Control.ControlName)
             } else {
                 $ControlsNeedingUpdate.Add($Control)
             }
+        }
+
+        if ($CompliantControls.Count -gt 0) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "$($CompliantControls.Count) Secure Score control(s) already in desired state: $($CompliantControls -join ', ')" -sev Info
         }
 
         # Build bulk requests for all controls that need updating
@@ -141,16 +150,21 @@ function Invoke-CIPPStandardSecureScoreRemediation {
             try {
                 $BulkResults = New-GraphBulkRequest -tenantid $Tenant -Requests @($BulkRequests)
 
+                $UpdatedControls = [System.Collections.Generic.List[string]]::new()
                 for ($i = 0; $i -lt $BulkResults.Count; $i++) {
                     $result = $BulkResults[$i]
                     $Control = $ControlsNeedingUpdate[$i]
 
                     if ($result.status -eq 200 -or $result.status -eq 204) {
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set control $($Control.ControlName) to $($Control.State)" -sev Info
+                        $UpdatedControls.Add("$($Control.ControlName) -> $($Control.State)")
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set control $($Control.ControlName) to $($Control.State). Error: $errorMsg" -sev Error
                     }
+                }
+
+                if ($UpdatedControls.Count -gt 0) {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Updated $($UpdatedControls.Count) Secure Score control(s): $($UpdatedControls -join ', ')" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -161,19 +175,18 @@ function Invoke-CIPPStandardSecureScoreRemediation {
 
     if ($Settings.alert -eq $true) {
         $AlertMessages = [System.Collections.Generic.List[string]]::new()
+        $ExpectedStateControls = [System.Collections.Generic.List[string]]::new()
 
         foreach ($Control in $ControlsToUpdate) {
             if ($Control.ControlName -match '^scid_') {
                 continue
             }
 
-            $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
-
-            if ($CurrentControl) {
-                if ($CurrentControl.state -eq $Control.State) {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Control $($Control.ControlName) is in expected state: $($Control.State)" -sev Info
+            if ($CurrentStates.ContainsKey($Control.ControlName)) {
+                if ($CurrentStates[$Control.ControlName] -eq $Control.State) {
+                    $ExpectedStateControls.Add($Control.ControlName)
                 } else {
-                    $AlertMessage = "Control $($Control.ControlName) is in state $($CurrentControl.state), expected $($Control.State)"
+                    $AlertMessage = "Control $($Control.ControlName) is in state $($CurrentStates[$Control.ControlName]), expected $($Control.State)"
                     $AlertMessages.Add($AlertMessage)
                     Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Alert
                 }
@@ -182,6 +195,10 @@ function Invoke-CIPPStandardSecureScoreRemediation {
                 $AlertMessages.Add($AlertMessage)
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $AlertMessage -sev Warning
             }
+        }
+
+        if ($ExpectedStateControls.Count -gt 0) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "$($ExpectedStateControls.Count) Secure Score control(s) in expected state: $($ExpectedStateControls -join ', ')" -sev Info
         }
 
         if ($AlertMessages.Count -gt 0) {
@@ -197,8 +214,7 @@ function Invoke-CIPPStandardSecureScoreRemediation {
                 continue
             }
 
-            $CurrentControl = $CurrentControls | Where-Object { $_.id -eq $Control.ControlName }
-            $LatestState = ($CurrentControl.controlStateUpdates | Select-Object -Last 1).state
+            $LatestState = $CurrentStates[$Control.ControlName]
             if ($LatestState -ne $Control.State) {
                 $ReportData.Add(@{
                         ControlName  = $Control.ControlName

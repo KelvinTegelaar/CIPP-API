@@ -8,6 +8,7 @@ function Test-CIPPGDAPRelationships {
 
     $GDAPissues = [System.Collections.Generic.List[object]]@()
     $MissingGroups = [System.Collections.Generic.List[object]]@()
+    $RoleMappingResults = [System.Collections.Generic.List[object]]@()
     try {
         #Get graph request to list all relationships.
         $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'" -tenantid $env:TenantID -NoAuthCheck $true
@@ -99,16 +100,51 @@ function Test-CIPPGDAPRelationships {
                 }) | Out-Null
         }
 
+        # Validate that every stored GDAP role mapping still points at a group that exists in the partner tenant.
+        # A drifted/deleted GroupId is what causes the "access container does not exist" error during onboarding.
+        # Problems are added to GDAPIssues as errors (so they count toward the Errors total) and tagged with
+        # Category 'RoleMapping' so the frontend can keep them out of the GDAP Issues table (the detail/repair view
+        # lives in RoleMappingResults).
+        $RolesTable = Get-CIPPTable -TableName 'GDAPRoles'
+        $StoredRoleMappings = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles'"
+        if (($StoredRoleMappings | Measure-Object).Count -gt 0) {
+            # Read-only check: do not write back or recreate groups from the access check card
+            $MappingCheck = Test-CIPPGDAPGroupMappings -RoleMappings $StoredRoleMappings -Headers $Headers
+            $RoleMappingResults.AddRange(@($MappingCheck.Results))
+            foreach ($MappingResult in $MappingCheck.Results) {
+                if ($MappingResult.Status -eq 'Missing') {
+                    $GDAPissues.add([PSCustomObject]@{
+                            Type         = 'Error'
+                            Category     = 'RoleMapping'
+                            Issue        = "The GDAP role mapping for '$($MappingResult.GroupName)' references a security group that no longer exists in the partner tenant. Onboarding group mapping will fail until the GDAP roles are recreated."
+                            Tenant       = '*Partner Tenant'
+                            Relationship = 'None'
+                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                        }) | Out-Null
+                } elseif ($MappingResult.Status -eq 'Stale') {
+                    $GDAPissues.add([PSCustomObject]@{
+                            Type         = 'Error'
+                            Category     = 'RoleMapping'
+                            Issue        = "The GDAP role mapping for '$($MappingResult.GroupName)' points at a stale group id but a matching group still exists. Use 'Repair Role Mappings' under Details to correct the stored group id."
+                            Tenant       = '*Partner Tenant'
+                            Relationship = 'None'
+                            Link         = 'https://docs.cipp.app/setup/installation/recommended-roles'
+                        }) | Out-Null
+                }
+            }
+        }
+
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
     $GDAPRelationships = [PSCustomObject]@{
-        GDAPIssues     = @($GDAPissues)
-        MissingGroups  = @($MissingGroups)
-        Memberships    = @($SAMUserMemberships + $NestedGroups)
-        CIPPGroupCount = $CIPPGroupCount
+        GDAPIssues         = @($GDAPissues)
+        MissingGroups      = @($MissingGroups)
+        Memberships        = @($SAMUserMemberships + $NestedGroups)
+        CIPPGroupCount     = $CIPPGroupCount
+        RoleMappingResults = @($RoleMappingResults)
     }
 
     $Table = Get-CIPPTable -TableName AccessChecks
