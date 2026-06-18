@@ -13,24 +13,52 @@ function Invoke-EditIntunePolicy {
 
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    $ID = $Request.Query.ID ?? $Request.Body.ID
-    $DisplayName = $Request.Query.newDisplayName ?? $Request.Body.newDisplayName
-    $PolicyType = $Request.Query.policyType ?? $Request.Body.policyType
+    $TenantFilter = $Request.Body.tenantFilter
+    $ID = $Request.Body.ID
+    $DisplayName = $Request.Body.newDisplayName
+    $PolicyType = $Request.Body.policyType
+    $PlatformType = $Request.Body.platformType ?? 'deviceManagement'
+
+    # The description is optional and may be sent as an empty string to clear it,
+    # so track whether the caller actually supplied the key.
+    $DescriptionProvided = $Request.Body.PSObject.Properties.Name -contains 'description'
+    $Description = $Request.Body.description
 
     try {
+        # App protection policy lists expose the singular @odata.type as the URLName, but a
+        # Graph PATCH needs the plural collection segment. Normalize the known types here.
+        $PolicyType = switch ($PolicyType) {
+            'androidManagedAppProtection' { 'androidManagedAppProtections' }
+            'iosManagedAppProtection' { 'iosManagedAppProtections' }
+            'windowsManagedAppProtection' { 'windowsManagedAppProtections' }
+            'mdmWindowsInformationProtectionPolicy' { 'mdmWindowsInformationProtectionPolicies' }
+            'windowsInformationProtectionPolicy' { 'windowsInformationProtectionPolicies' }
+            'targetedManagedAppConfiguration' { 'targetedManagedAppConfigurations' }
+            default { $PolicyType }
+        }
+
         $properties = @{}
 
-        # Only add displayName if it's provided
+        # Settings catalog policies (configurationPolicies) store the name in the 'name'
+        # property rather than 'displayName'.
+        $NameProperty = if ($PolicyType -ieq 'configurationPolicies') { 'name' } else { 'displayName' }
+
+        # Only add the name if it's provided
         if ($DisplayName) {
-            $properties['displayName'] = $DisplayName
+            $properties[$NameProperty] = $DisplayName
+        }
+
+        # Only add description if the caller supplied it (empty string clears it)
+        if ($DescriptionProvided) {
+            $properties['description'] = $Description
         }
 
         # Update the policy
-        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$PolicyType/$ID" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
+        $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$PolicyType/$ID" -tenantid $TenantFilter -type PATCH -body ($properties | ConvertTo-Json) -asapp $true
 
         $Result = "Successfully updated Intune policy $($ID)"
         if ($DisplayName) { $Result += " name to '$($DisplayName)'" }
+        if ($DescriptionProvided) { $Result += ' and description' }
 
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

@@ -145,6 +145,80 @@ function Initialize-CIPPAuth {
                 Write-Information "[Auth-Init] EasyAuth issuer reconciliation failed (non-fatal): $_"
             }
         }
+
+        # 3c. Reconcile EasyAuth policy (UnauthenticatedClientAction, ExcludedPaths) with appsettings configuration
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID) {
+            try {
+                $PolicyReconciled = [Craft.Services.AppLifecycleBridge]::ReconcileAuthPolicy('CIPP warmup')
+                if ($PolicyReconciled) {
+                    Write-Information '[Auth-Init] EasyAuth policy reconciled from Craft appsettings (drift detected and corrected)'
+                } else {
+                    Write-Information '[Auth-Init] EasyAuth policy matches appsettings — no update needed'
+                }
+            } catch {
+                Write-Information "[Auth-Init] EasyAuth policy reconcile failed (non-fatal): $_"
+            }
+        }
+
+        # 3d. Reconcile API clients — ensure the EasyAuth config matches what the
+        # "Save to Azure" action (Set-CippApiAuth) would produce for the currently
+        # enabled API clients. That means BOTH lists must be checked, not just apps:
+        #   allowedApplications = SSO app + every enabled client
+        #   allowedAudiences    = api://<id> for each of the above, plus the MCP host
+        #                         URIs and bare client IDs for MCP-enabled clients
+        # Config drifts when a client is enabled but "Save to Azure" was never run (or a
+        # prior save partially applied — e.g. apps set but audiences missing), which
+        # silently breaks API authentication for that client.
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
+            try {
+                $ApiClientsTable = Get-CippTable -tablename 'ApiClients'
+                $EnabledClients = @(Get-CIPPAzDataTableEntity @ApiClientsTable -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) })
+
+                if ($EnabledClients.Count -gt 0) {
+                    $EnabledClientIds = @($EnabledClients.RowKey)
+                    # MCPAllowed can round-trip as a bool or string; compare on string form (matches SaveToAzure)
+                    $McpClientIds = @($EnabledClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' } | ForEach-Object { $_.RowKey })
+
+                    $ApiAuthConfig = $env:WEBSITE_AUTH_V2_CONFIG_JSON | ConvertFrom-Json -ErrorAction Stop
+                    $AADConfig = $ApiAuthConfig.identityProviders.azureActiveDirectory
+
+                    # Desired state — keep in sync with Set-CippApiAuth's CIPPNG branch.
+                    $DesiredApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    if ($AADConfig.registration.clientId) { [void]$DesiredApps.Add($AADConfig.registration.clientId) }
+                    foreach ($Id in $EnabledClientIds) { if (-not [string]::IsNullOrEmpty($Id)) { [void]$DesiredApps.Add($Id) } }
+
+                    $DesiredAudiences = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Id in $DesiredApps) { [void]$DesiredAudiences.Add("api://$Id") }
+                    if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                        [void]$DesiredAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
+                        [void]$DesiredAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+                        foreach ($McpId in $McpClientIds) { if (-not [string]::IsNullOrEmpty($McpId)) { [void]$DesiredAudiences.Add($McpId) } }
+                    }
+
+                    # Current state from the platform-injected config
+                    $CurrentApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($App in @($AADConfig.validation.defaultAuthorizationPolicy.allowedApplications)) { if ($App) { [void]$CurrentApps.Add($App) } }
+                    $CurrentAudiences = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Aud in @($AADConfig.validation.allowedAudiences)) { if ($Aud) { [void]$CurrentAudiences.Add($Aud) } }
+
+                    # Drift when anything the endpoint would set is missing from the live config
+                    $AppsOk = $DesiredApps.IsSubsetOf($CurrentApps)
+                    $AudiencesOk = $DesiredAudiences.IsSubsetOf($CurrentAudiences)
+
+                    if (-not $AppsOk -or -not $AudiencesOk) {
+                        $MissingApps = @($DesiredApps | Where-Object { -not $CurrentApps.Contains($_) })
+                        $MissingAudiences = @($DesiredAudiences | Where-Object { -not $CurrentAudiences.Contains($_) })
+                        Write-Information "[Auth-Init] API client drift detected — missing apps: [$($MissingApps -join ', ')]; missing audiences: [$($MissingAudiences -join ', ')] — reconciling EasyAuth"
+                        Set-CippApiAuth -TenantId $env:TenantID -ClientIds $EnabledClientIds -McpClientIds $McpClientIds
+                        Write-Information '[Auth-Init] EasyAuth allowedApplications + allowedAudiences reconciled with enabled API clients'
+                    } else {
+                        Write-Information "[Auth-Init] EasyAuth already matches $($EnabledClients.Count) enabled API client(s) — no update needed"
+                    }
+                }
+            } catch {
+                Write-Information "[Auth-Init] API client reconcile failed (non-fatal): $_"
+            }
+        }
     } elseif ($AuthState.HasSAMCredentials) {
         # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
         Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'

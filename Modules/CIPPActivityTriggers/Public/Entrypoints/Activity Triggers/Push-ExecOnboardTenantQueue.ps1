@@ -7,6 +7,7 @@ function Push-ExecOnboardTenantQueue {
     param($Item)
     try {
         $Id = $Item.id
+        Write-Information "Onboarding: Starting for relationship $Id"
         $Start = Get-Date
         $Logs = [System.Collections.Generic.List[object]]::new()
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
@@ -61,6 +62,7 @@ function Push-ExecOnboardTenantQueue {
                 $x++
                 Start-Sleep -Seconds 30
             } while ($Relationship.status -ne 'active' -and $x -lt 6)
+            Write-Information "Onboarding: Step1 poll completed - status=$($Relationship.status) attempts=$x"
 
             if ($Relationship.status -eq 'active') {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'GDAP Invite Accepted' })
@@ -118,9 +120,34 @@ function Push-ExecOnboardTenantQueue {
                 $OnboardingSteps.Step2.Status = 'succeeded'
                 $OnboardingSteps.Step2.Message = 'Your GDAP relationship has the required roles'
             }
+
+            # Validate (and correct) that the mapped security groups still exist in the partner tenant before
+            # Step 3 tries to POST the access assignments - a missing group surfaces as a raw Graph
+            # "access container does not exist" error otherwise.
+            if ($OnboardingSteps.Step2.Status -ne 'failed' -and ($Item.Roles | Measure-Object).Count -gt 0) {
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Validating GDAP security group mappings against the partner tenant' })
+                $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Item.Roles -CreateMissing:([bool]$Item.AddMissingGroups) -WriteBack
+                foreach ($GroupResult in $GroupCheck.Results) {
+                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing')) {
+                        $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $GroupResult.Message })
+                    }
+                }
+                # Use the corrected mappings for the remainder of the onboarding (group mapping, SAM membership, retries)
+                $Item.Roles = @($GroupCheck.RoleMappings)
+
+                if (-not $GroupCheck.Valid) {
+                    $MissingGroupNames = ($GroupCheck.MissingGroups.Name | Sort-Object -Unique) -join ', '
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Missing GDAP security groups in the partner tenant: $MissingGroupNames" })
+                    $TenantOnboarding.Status = 'failed'
+                    $OnboardingSteps.Step2.Status = 'failed'
+                    $OnboardingSteps.Step2.Message = "The following GDAP security groups are missing in the partner tenant, recreate the GDAP roles and retry: $MissingGroupNames"
+                }
+            }
+
             $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+            Write-Information "Onboarding: Step2 completed - status=$($OnboardingSteps.Step2.Status) missingRoles=$($MissingRoles -join ',')"
         }
 
         if ($OnboardingSteps.Step2.Status -eq 'succeeded') {
@@ -304,43 +331,57 @@ function Push-ExecOnboardTenantQueue {
             $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+            Write-Information "Onboarding: Step3 completed - status=$($OnboardingSteps.Step3.Status)"
         }
 
         if ($OnboardingSteps.Step3.Status -eq 'succeeded') {
             # Check if the relationship was recently activated — Microsoft propagation may not have settled yet
             if ($Relationship.activatedDateTime) {
+                $MinutesSinceActivation = $null
                 try {
                     $ActivatedTimeUtc = ([DateTimeOffset]$Relationship.activatedDateTime).UtcDateTime
                     $MinutesSinceActivation = ([datetime]::UtcNow - $ActivatedTimeUtc).TotalMinutes
-                    if ($MinutesSinceActivation -lt 15) {
-                        $RetryAtUtc = [Cronos.CronExpression]::Parse('* * * * *').GetNextOccurrence([DateTime]::UtcNow.AddMinutes(15), [TimeZoneInfo]::Utc)
-                        $RetryEpoch = ([DateTimeOffset]$RetryAtUtc).ToUnixTimeSeconds()
-                        $RetryDelayMinutes = ($RetryAtUtc - [DateTime]::UtcNow).TotalMinutes
-                        $MinutesSinceActivationDisplay = ('{0:N1}' -f $MinutesSinceActivation)
-                        $RetryDelayMinutesDisplay = ('{0:N1}' -f $RetryDelayMinutes)
+                } catch {
+                    Write-Warning "Failed to parse activatedDateTime for relationship ${Id}: $($_.Exception.Message)"
+                }
+                Write-Information "Onboarding: activatedDateTime=$($Relationship.activatedDateTime) minutesSinceActivation=$MinutesSinceActivation"
+                if ($null -ne $MinutesSinceActivation -and $MinutesSinceActivation -lt 15) {
+                    $RetryAtUtc = [Cronos.CronExpression]::Parse('* * * * *').GetNextOccurrence([DateTime]::UtcNow.AddMinutes(15), [TimeZoneInfo]::Utc)
+                    $RetryEpoch = ([DateTimeOffset]$RetryAtUtc).ToUnixTimeSeconds()
+                    $RetryDelayMinutes = ($RetryAtUtc - [DateTime]::UtcNow).TotalMinutes
+                    $MinutesSinceActivationDisplay = ('{0:N1}' -f $MinutesSinceActivation)
+                    $RetryDelayMinutesDisplay = ('{0:N1}' -f $RetryDelayMinutes)
+                    $RetryParams = [PSCustomObject]@{
+                        Item = [PSCustomObject]@{
+                            id                         = $Item.id
+                            Roles                      = $Item.Roles
+                            AutoMapRoles               = $Item.AutoMapRoles
+                            IgnoreMissingRoles         = $Item.IgnoreMissingRoles
+                            AddMissingGroups           = $Item.AddMissingGroups
+                            StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
+                        }
+                    }
+                    $RetryTask = [PSCustomObject]@{
+                        Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
+                        Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
+                        Parameters    = $RetryParams
+                        TenantFilter  = $env:TenantID
+                        Recurrence    = ''
+                        ScheduledTime = $RetryEpoch
+                    }
+                    try {
+                        $ScheduleResult = Add-CIPPScheduledTask -Task $RetryTask -DesiredStartTime ([string]$RetryEpoch)
+                    } catch {
+                        $ScheduleResult = "Error - $($_.Exception.Message)"
+                    }
+                    Write-Information "Onboarding: Add-CIPPScheduledTask result=$ScheduleResult"
+                    if ($ScheduleResult -match '^Error') {
+                        $FailMessage = "Failed to schedule onboarding retry for $($Relationship.customer.displayName): $ScheduleResult"
+                        $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $FailMessage })
+                        Write-LogMessage -API 'Onboarding' -message $FailMessage -Sev 'Error'
+                    } else {
                         $RetryLogMessage = "GDAP relationship was activated $MinutesSinceActivationDisplay minutes ago. Rescheduling onboarding in $RetryDelayMinutesDisplay minutes to allow Microsoft propagation to settle."
-                        $Logs.Add([PSCustomObject]@{
-                            Date = (Get-Date).ToUniversalTime()
-                                Log  = $RetryLogMessage
-                        })
-                        $RetryParams = [PSCustomObject]@{
-                            Item = [PSCustomObject]@{
-                                id                         = $Item.id
-                                Roles                      = $Item.Roles
-                                AutoMapRoles               = $Item.AutoMapRoles
-                                IgnoreMissingRoles         = $Item.IgnoreMissingRoles
-                                StandardsExcludeAllTenants = $Item.StandardsExcludeAllTenants
-                            }
-                        }
-                        $RetryTask = [PSCustomObject]@{
-                            Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
-                            Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
-                            Parameters    = $RetryParams
-                            TenantFilter  = $env:TenantID
-                            Recurrence    = ''
-                            ScheduledTime = $RetryEpoch
-                        }
-                        $null = Add-CIPPScheduledTask -Task $RetryTask -DesiredStartTime ([string]$RetryEpoch)
+                        $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $RetryLogMessage })
                         $RetryMessage = "Rescheduled: GDAP relationship was activated $MinutesSinceActivationDisplay minutes ago. Retrying in $RetryDelayMinutesDisplay minutes to allow Microsoft propagation to settle."
                         $OnboardingSteps.Step4.Status = 'pending'
                         $OnboardingSteps.Step4.Message = $RetryMessage
@@ -351,8 +392,6 @@ function Push-ExecOnboardTenantQueue {
                         Write-LogMessage -API 'Onboarding' -message $RetryMessage -Sev 'Info'
                         return
                     }
-                } catch {
-                    Write-Warning "Failed to check activatedDateTime for relationship ${Id}: $($_.Exception.Message)"
                 }
             }
 
@@ -421,6 +460,7 @@ function Push-ExecOnboardTenantQueue {
                         }
                     } while ($Refreshing -and (Get-Date) -lt $Start.AddMinutes(8))
 
+                    Write-Information "Onboarding: CPV refresh loop completed - success=$CPVSuccess lastError=$LastCPVError"
                     if ($CPVSuccess) {
                         $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'CPV permissions refreshed' })
                         $OnboardingSteps.Step4.Status = 'succeeded'
@@ -534,6 +574,7 @@ function Push-ExecOnboardTenantQueue {
                 $ApiException = $_
             }
 
+            Write-Information "Onboarding: Step5 API test completed - userCount=$UserCount apiError=$ApiError"
             if ($UserCount -gt 0) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'API test successful' })
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Onboarding complete' })
