@@ -38,7 +38,6 @@ function New-GraphPOSTRequest {
 
         if (!$headers['User-Agent']) {
             $headers['User-Agent'] = Get-CippUserAgent
-            Write-Information "User-Agent: $($headers['User-Agent'])"
         }
 
         if (!$contentType) {
@@ -50,7 +49,7 @@ function New-GraphPOSTRequest {
         $RawErrorBody = $null
         do {
             try {
-                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | attempt: $($RetryCount + 1) of $maxRetries"
+                Write-Information "$($type.ToUpper()) [ $uri ] | tenant: $tenantid | user-agent: $($headers['User-Agent']) | attempt: $($RetryCount + 1) of $maxRetries"
                 $ReturnedData = (Invoke-CIPPRestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
                 $RequestSuccessful = $true
             } catch {
