@@ -109,7 +109,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         # This ensures drift detection compares against the desired state, not the original template state
         if ($Settings.state -and $Settings.state -ne 'donotchange') {
             Write-Information "Overriding template state from '$($Policy.state)' to '$($Settings.state)' for drift comparison"
-            $Policy.state = $Settings.state
+            $Policy | Add-Member -NotePropertyName 'state' -NotePropertyValue $Settings.state -Force
         }
 
         $CheckExististing = $AllCAPolicies | Where-Object -Property displayName -EQ $Settings.TemplateList.label
