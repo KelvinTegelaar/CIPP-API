@@ -25,12 +25,14 @@ function Get-CIPPAlertSharepointQuota {
         } catch {
             $Value = 90
         }
-        $UsedStoragePercentage = [int](($sharepointQuota.GeoUsedStorageMB / $sharepointQuota.TenantStorageMB) * 100)
+        $GeoUsedStorageMB = ($sharepointQuota.GeoUsedStorageMB | Measure-Object -Sum).Sum
+        $TenantStorageMB = $sharepointQuota.TenantStorageMB | Select-Object -First 1
+        $UsedStoragePercentage = [int](($GeoUsedStorageMB / $TenantStorageMB) * 100)
         if ($UsedStoragePercentage -gt $Value) {
             $AlertData = [PSCustomObject]@{
                 UsedStoragePercentage = $UsedStoragePercentage
-                StorageUsed           = ([math]::Round($sharepointQuota.GeoUsedStorageMB / 1024, 2))
-                StorageQuota          = ([math]::Round($sharepointQuota.TenantStorageMB / 1024, 2))
+                StorageUsed           = ([math]::Round($GeoUsedStorageMB / 1024, 2))
+                StorageQuota          = ([math]::Round($TenantStorageMB / 1024, 2))
                 AlertQuotaThreshold   = $Value
                 Tenant                = $TenantFilter
             }

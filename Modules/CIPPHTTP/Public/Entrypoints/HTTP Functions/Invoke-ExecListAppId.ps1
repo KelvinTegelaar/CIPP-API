@@ -91,7 +91,7 @@ function Invoke-ExecListAppId {
                                 redirectUris = $RedirectUris
                             }
                         } | ConvertTo-Json -Depth 10
-                        Invoke-GraphRequest -Method PATCH -Url "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
+                        $null = New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/v1.0/applications/$($AppResponse.body.id)" -Body $AppUpdateBody -tenantid $env:TenantID -NoAuthCheck $true
                         Write-LogMessage -message "Updated redirect URIs for application $($env:ApplicationID) to include $NewRedirectUri" -Sev 'Info'
                     } catch {
                         Write-LogMessage -message "Failed to update redirect URIs for application $($env:ApplicationID)" -LogData (Get-CippException -Exception $_) -sev 'Warning'
