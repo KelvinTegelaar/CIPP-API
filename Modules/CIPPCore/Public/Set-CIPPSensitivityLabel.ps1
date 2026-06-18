@@ -16,29 +16,8 @@ function Set-CIPPSensitivityLabel {
         $Headers
     )
 
-    $LabelAllowedFields = @(
-        'Name', 'DisplayName', 'Comment', 'Tooltip', 'ParentId',
-        'Disabled', 'ContentType', 'Priority',
-        'EncryptionEnabled', 'EncryptionProtectionType', 'EncryptionRightsDefinitions',
-        'EncryptionContentExpiredOnDateInDaysOrNever', 'EncryptionDoNotForward',
-        'EncryptionEncryptOnly', 'EncryptionOfflineAccessDays',
-        'EncryptionPromptUser', 'EncryptionAESKeySize',
-        'ContentMarkingHeaderEnabled', 'ContentMarkingHeaderText',
-        'ContentMarkingHeaderFontSize', 'ContentMarkingHeaderFontColor', 'ContentMarkingHeaderAlignment',
-        'ContentMarkingFooterEnabled', 'ContentMarkingFooterText',
-        'ContentMarkingFooterFontSize', 'ContentMarkingFooterFontColor', 'ContentMarkingFooterAlignment',
-        'ContentMarkingFooterMargin',
-        'ContentMarkingWatermarkEnabled', 'ContentMarkingWatermarkText',
-        'ContentMarkingWatermarkFontSize', 'ContentMarkingWatermarkFontColor', 'ContentMarkingWatermarkLayout',
-        'ApplyContentMarkingHeaderEnabled', 'ApplyContentMarkingFooterEnabled', 'ApplyWaterMarkingEnabled',
-        'SiteAndGroupProtectionEnabled', 'SiteAndGroupProtectionPrivacy',
-        'SiteAndGroupProtectionAllowAccessToGuestUsers',
-        'SiteAndGroupProtectionAllowEmailFromGuestUsers',
-        'SiteAndGroupProtectionAllowFullAccess',
-        'SiteAndGroupProtectionAllowLimitedAccess',
-        'SiteAndGroupProtectionBlockAccess',
-        'Conditions', 'AdvancedSettings', 'Settings', 'LocaleSettings'
-    )
+    # Valid New-Label/Set-Label parameter names (single source of truth, shared with the template endpoint).
+    $LabelAllowedFields = Get-CIPPSensitivityLabelField
     $PolicyAllowedFields = @(
         'Name', 'Comment', 'Labels', 'AdvancedSettings', 'Settings',
         'ExchangeLocation', 'ExchangeLocationException',
@@ -50,9 +29,19 @@ function Set-CIPPSensitivityLabel {
     $PolicyLocationFields = $PolicyAllowedFields | Where-Object { $_ -like '*Location*' }
     $LabelPolicyAddPrefixed = @('Labels') + $PolicyLocationFields
 
-    $LabelParams = Format-CIPPCompliancePolicyParams -Source $Template -AllowedFields $LabelAllowedFields
+    # Normalize the read shape (Get-Label LabelActions) into the flat New-/Set-Label parameter shape.
+    # Flat manual JSON authored against the deploy schema passes through unchanged.
+    $NormalizedLabel = ConvertTo-CIPPSensitivityLabelParams -Label $Template
+    $LabelParams = Format-CIPPCompliancePolicyParams -Source $NormalizedLabel -AllowedFields $LabelAllowedFields
     $PolicySource = $Template.PolicyParams
     $LabelName = $LabelParams.Name
+
+    # Priority is valid on Set-Label but not New-Label, so it is applied via a dedicated Set-Label call below.
+    $LabelPriority = $null
+    if ($LabelParams.ContainsKey('Priority')) {
+        $LabelPriority = $LabelParams['Priority']
+        $LabelParams.Remove('Priority')
+    }
 
     try {
         $ExistingLabels = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Label' -Compliance | Select-Object Name, DisplayName } catch { @() }
@@ -67,6 +56,17 @@ function Set-CIPPSensitivityLabel {
         } else {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-Label' -cmdParams $LabelParams -Compliance -useSystemMailbox $true
             $LabelAction = "Created sensitivity label '$LabelName' in $TenantFilter."
+        }
+
+        # Priority is Set-Label only (not a New-Label parameter) and is tenant-relative: a value valid in the
+        # source tenant can be out of range in the target. Apply it best-effort so an invalid priority never
+        # masks an otherwise successful label deployment.
+        if ($null -ne $LabelPriority) {
+            try {
+                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Label' -cmdParams @{ Identity = $LabelName; Priority = $LabelPriority } -Compliance -useSystemMailbox $true
+            } catch {
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deployed sensitivity label '$LabelName' but could not set priority $LabelPriority in $($TenantFilter): $($_.Exception.Message)" -sev Warning
+            }
         }
 
         if ($PolicySource) {
