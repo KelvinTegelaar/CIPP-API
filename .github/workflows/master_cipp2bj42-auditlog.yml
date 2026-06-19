@@ -18,10 +18,10 @@ jobs:
     
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # actions/checkout v4.1.1
       
       - name: 'Run Azure Functions Action'
-        uses: Azure/functions-action@v1
+        uses: Azure/functions-action@bc63708cc6539760eea18d8a7de4ce8ef5fdf593 # v1
         id: fa
         with:
           app-name: 'cipp2bj42-auditlog'
