@@ -49,11 +49,11 @@ function Get-CIPPAlertIntunePolicyConflicts {
     }
 
     $AlertableStatuses = @(
-        if ($Config.AlertErrors) { 'error'; 'failed' }
+        if ($Config.AlertErrors) { 'error' }
         if ($Config.AlertConflicts) { 'conflict' }
     )
 
-    if (-not $AlertableStatuses) {
+    if (-not $AlertableStatuses -and -not ($Config.IncludeApplications -and $Config.AlertErrors)) {
         return
     }
 
@@ -64,56 +64,66 @@ function Get-CIPPAlertIntunePolicyConflicts {
 
     $Issues = [System.Collections.Generic.List[object]]::new()
 
-    if ($Config.IncludePolicies) {
-        try {
-            $ManagedDevices = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$select=id,deviceName,userPrincipalName&`$expand=deviceConfigurationStates(`$select=displayName,state,settingStates)" -tenantid $TenantFilter
+    if ($Config.IncludePolicies -and $AlertableStatuses) {
+        $PolicySources = @(
+            @{ Type = 'IntuneDeviceCompliancePolicies'; Kind = 'Compliance' }
+            @{ Type = 'IntuneDeviceConfigurations'; Kind = 'Configuration' }
+        )
 
-            foreach ($Device in $ManagedDevices) {
-                $PolicyStates = $Device.deviceConfigurationStates | Where-Object { $_.state -and ($AlertableStatuses -contains $_.state) }
-                foreach ($State in $PolicyStates) {
-                    $Issues.Add([PSCustomObject]@{
-                            Message           = "Policy '$($State.displayName)' is $($State.state) on device '$($Device.deviceName)' for $($Device.userPrincipalName)."
-                            Tenant            = $TenantFilter
-                            Type              = 'Policy'
-                            PolicyName        = $State.displayName
-                            IssueStatus       = $State.state
-                            DeviceName        = $Device.deviceName
-                            UserPrincipalName = $Device.userPrincipalName
-                            DeviceId          = $Device.id
-                        })
+        foreach ($Source in $PolicySources) {
+            try {
+                $PolicyItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Source.Type | Where-Object { $_.RowKey -notlike '*-Count' }
+                foreach ($PolicyItem in $PolicyItems) {
+                    $Policy = try { $PolicyItem.Data | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+                    if (-not $Policy.id) { continue }
+
+                    $StatusItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type "$($Source.Type)_$($Policy.id)" | Where-Object { $_.RowKey -notlike '*-Count' }
+                    foreach ($StatusItem in $StatusItems) {
+                        $State = try { $StatusItem.Data | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+                        if (-not $State.status -or ($AlertableStatuses -notcontains $State.status.ToLowerInvariant())) { continue }
+
+                        $Issues.Add([PSCustomObject]@{
+                                Message           = "$($Source.Kind) policy '$($Policy.displayName)' is $($State.status) on device '$($State.deviceDisplayName)' for $($State.userPrincipalName)."
+                                Tenant            = $TenantFilter
+                                Type              = 'Policy'
+                                PolicyType        = $Source.Kind
+                                PolicyName        = $Policy.displayName
+                                IssueStatus       = $State.status
+                                DeviceName        = $State.deviceDisplayName
+                                UserPrincipalName = $State.userPrincipalName
+                                DeviceId          = $State.id
+                            })
+                    }
                 }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to read cached $($Source.Kind) policy states: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to query Intune policy states: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 
-    if ($Config.IncludeApplications) {
+    if ($Config.IncludeApplications -and $Config.AlertErrors) {
         try {
-            $Applications = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$select=id,displayName&`$expand=deviceStatuses(`$select=installState,deviceName,userPrincipalName,deviceId)" -tenantid $TenantFilter
+            $AppItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppInstallStatusAggregate' | Where-Object { $_.RowKey -notlike '*-Count' }
+            foreach ($AppItem in $AppItems) {
+                $App = try { $AppItem.Data | ConvertFrom-Json -ErrorAction Stop } catch { $null }
+                if (-not $App -or [int]($App.failedDeviceCount) -le 0) { continue }
 
-            foreach ($App in $Applications) {
-                $BadStatuses = $App.deviceStatuses | Where-Object {
-                    $_.installState -and ($AlertableStatuses -contains $_.installState.ToLowerInvariant())
-                }
-
-                foreach ($Status in $BadStatuses) {
-                    $Issues.Add([PSCustomObject]@{
-                            Message           = "App '$($App.displayName)' install is $($Status.installState) on device '$($Status.deviceName)' for $($Status.userPrincipalName)."
-                            Tenant            = $TenantFilter
-                            Type              = 'Application'
-                            AppName           = $App.displayName
-                            IssueStatus       = $Status.installState
-                            DeviceName        = $Status.deviceName
-                            UserPrincipalName = $Status.userPrincipalName
-                            DeviceId          = $Status.deviceId
-                        })
-                }
+                $Issues.Add([PSCustomObject]@{
+                        Message           = "App '$($App.displayName)' failed to install on $($App.failedDeviceCount) device(s) ($($App.failedDevicePercentage)%)."
+                        Tenant            = $TenantFilter
+                        Type              = 'Application'
+                        AppName           = $App.displayName
+                        IssueStatus       = 'failed'
+                        FailedDeviceCount = [int]$App.failedDeviceCount
+                        FailedUserCount   = [int]$App.failedUserCount
+                        FailedPercentage  = $App.failedDevicePercentage
+                        Platform          = $App.platform
+                    })
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to query Intune application states: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to read cached Intune app install status: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 
