@@ -48,7 +48,7 @@
     "Id": "CopilotAI",
     "Name": "Copilot & AI",
     "Description": "Under Development: Microsoft 365 Copilot and AI management pages including settings, usage reports, Agent365 packages, and Shadow AI analysis.",
-    "Enabled": false,
+    "Enabled": true,
     "AllowUserToggle": false,
     "Timers": [],
     "Endpoints": [
@@ -67,7 +67,7 @@
       "/copilot/reports/copilot-usage",
       "/copilot/reports/copilot-trend"
     ],
-    "Hidden": true
+    "Hidden": false
   },
   {
     "Id": "MCPServer",
