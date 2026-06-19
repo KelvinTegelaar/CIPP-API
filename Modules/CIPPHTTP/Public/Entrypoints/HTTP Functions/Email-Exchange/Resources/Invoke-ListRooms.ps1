@@ -81,8 +81,11 @@ function Invoke-ListRooms {
                         ScheduleOnlyDuringWorkHours    = $CalendarProperties.ScheduleOnlyDuringWorkHours
                         AutomateProcessing             = $CalendarProperties.AutomateProcessing
                         AddOrganizerToSubject          = $CalendarProperties.AddOrganizerToSubject
+                        DeleteComments                 = $CalendarProperties.DeleteComments
                         DeleteSubject                  = $CalendarProperties.DeleteSubject
+                        RemovePrivateProperty          = $CalendarProperties.RemovePrivateProperty
                         RemoveCanceledMeetings         = $CalendarProperties.RemoveCanceledMeetings
+                        RemoveOldMeetingMessages       = $CalendarProperties.RemoveOldMeetingMessages
 
                         # Calendar Configuration Properties
                         WorkDays                       = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkDays)) { $null } else { $CalendarConfigurationProperties.WorkDays }
