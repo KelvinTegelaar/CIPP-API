@@ -319,7 +319,7 @@ function Get-CIPPStandards {
                             $Actions = $CurrentStandard.action.value
                             if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
                                 # Key by StandardName + TemplateList.value (if present)
-                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } else { '' }
+                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } elseif ($CurrentStandard.displayName.value) { $CurrentStandard.displayName.value } elseif ($CurrentStandard.displayName) { $CurrentStandard.displayName } else { [guid]::NewGuid().ToString() }
                                 $Key = "$StandardName|$TemplateKey"
 
                                 $ComputedStandards[$Key] = $CurrentStandard
@@ -388,7 +388,7 @@ function Get-CIPPStandards {
 
                             $Actions = $CurrentStandard.action.value
                             if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
-                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } else { '' }
+                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } elseif ($CurrentStandard.displayName.value) { $CurrentStandard.displayName.value } elseif ($CurrentStandard.displayName) { $CurrentStandard.displayName } else { [guid]::NewGuid().ToString() }
                                 $Key = "$StandardName|$TemplateKey"
 
                                 if ($ComputedStandards.ContainsKey($Key)) {
@@ -468,7 +468,7 @@ function Get-CIPPStandards {
 
                             $Actions = $CurrentStandard.action.value
                             if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
-                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } else { '' }
+                                $TemplateKey = if ($CurrentStandard.TemplateList.value) { $CurrentStandard.TemplateList.value } elseif ($CurrentStandard.displayName.value) { $CurrentStandard.displayName.value } elseif ($CurrentStandard.displayName) { $CurrentStandard.displayName } else { [guid]::NewGuid().ToString() }
                                 $Key = "$StandardName|$TemplateKey"
 
                                 if ($ComputedStandards.ContainsKey($Key)) {
