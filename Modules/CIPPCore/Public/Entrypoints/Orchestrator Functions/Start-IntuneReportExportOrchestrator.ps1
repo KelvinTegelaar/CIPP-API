@@ -31,15 +31,19 @@ function Start-IntuneReportExportOrchestrator {
             return
         }
 
-        $Queue = New-CippQueueEntry -Name 'Intune Report Export Submission' -TotalTasks $LicensedTenants.Count
+        $ReportNames = @('AppInvRawData', 'AppInstallStatusAggregate')
+
+        $Queue = New-CippQueueEntry -Name 'Intune Report Export Submission' -TotalTasks ($LicensedTenants.Count * $ReportNames.Count)
 
         $Batch = foreach ($Tenant in $LicensedTenants) {
-            [PSCustomObject]@{
-                FunctionName = 'IntuneReportExportSubmit'
-                TenantFilter = $Tenant.defaultDomainName
-                ReportName   = 'AppInvRawData'
-                QueueId      = $Queue.RowKey
-                QueueName    = "Intune Export Submit - $($Tenant.defaultDomainName)"
+            foreach ($ReportName in $ReportNames) {
+                [PSCustomObject]@{
+                    FunctionName = 'IntuneReportExportSubmit'
+                    TenantFilter = $Tenant.defaultDomainName
+                    ReportName   = $ReportName
+                    QueueId      = $Queue.RowKey
+                    QueueName    = "Intune Export Submit ($ReportName) - $($Tenant.defaultDomainName)"
+                }
             }
         }
 

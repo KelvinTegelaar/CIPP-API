@@ -81,6 +81,11 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
                     policyValue = $AutoClaimPolicy.tenantPolicyValue ?? 'Disabled'
                 })
         } catch {
+            $CurrentValues.Add([PSCustomObject]@{
+                        productName = 'Trial Autoclaim'
+                        productId   = 'autoclaim'
+                        policyValue = 'Failed to retrieve current state, check the logs for details'
+                    })
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy: $($_.Exception.Message)" -sev Error
         }
     }
@@ -181,6 +186,11 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
                         policyValue = $AutoClaimPolicy.tenantPolicyValue ?? 'Disabled'
                     })
             } catch {
+                $CurrentValues.Add([PSCustomObject]@{
+                        productName = 'Trial Autoclaim'
+                        productId   = 'autoclaim'
+                        policyValue = 'Failed to retrieve current state, check the logs for details'
+                    })
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve trial autoclaim policy after remediation: $($_.Exception.Message)" -sev Error
             }
         }

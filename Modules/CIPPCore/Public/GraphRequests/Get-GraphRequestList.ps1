@@ -352,7 +352,17 @@ function Get-GraphRequestList {
 
                     if (!$QueueThresholdExceeded) {
                         #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
-                        if ($ManualPagination.IsPresent -and $nextLink -match '^https://.+') { $GraphRequest.uri = $nextLink }
+                        if ($ManualPagination.IsPresent -and $nextLink -match '^https://.+') {
+                            try {
+                                $ParsedNextLink = [System.Uri]$nextLink
+                                if ($ParsedNextLink.Host -ne 'graph.microsoft.com') {
+                                    throw "Invalid nextLink host: $($ParsedNextLink.Host)"
+                                }
+                            } catch {
+                                throw "Invalid nextLink URL: $nextLink"
+                            }
+                            $GraphRequest.uri = $nextLink
+                        }
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
                         $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
