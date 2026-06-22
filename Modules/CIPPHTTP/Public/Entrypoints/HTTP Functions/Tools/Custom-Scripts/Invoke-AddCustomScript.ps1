@@ -58,7 +58,7 @@ function Invoke-AddCustomScript {
                 }
                 'SetResultMode' {
                     $RequestedMode = $Request.Body.ResultMode
-                    $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo')
+                    $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo', 'AlwaysInvestigate')
                     if ([string]::IsNullOrWhiteSpace($RequestedMode) -or $RequestedMode -notin $ValidResultModes) {
                         throw "ResultMode must be one of: $($ValidResultModes -join ', ')"
                     }
@@ -157,7 +157,7 @@ function Invoke-AddCustomScript {
                 throw "ReturnType must be one of: $($ValidReturnTypes -join ', ')"
             }
 
-            $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo')
+            $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo', 'AlwaysInvestigate')
             if ($ResultMode -notin $ValidResultModes) {
                 throw "ResultMode must be one of: $($ValidResultModes -join ', ')"
             }
