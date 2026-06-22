@@ -30,6 +30,33 @@ function Invoke-ExecApiClient {
         }
         'AddUpdate' {
             $Results = [System.Collections.Generic.List[object]]::new()
+
+            # Authorize the role assignment BEFORE any side effects (app registration /
+            # secret creation). A caller may only assign a role whose effective
+            # permissions are a subset of their own, and may only modify an existing
+            # client whose current role is likewise within their grant. This blocks
+            # privilege escalation via the ApiClients table (e.g. editor -> superadmin).
+            $RequestedRole = [string]$Request.Body.Role.value
+            $RolesToAuthorize = [System.Collections.Generic.List[string]]::new()
+            $RolesToAuthorize.Add($RequestedRole)
+            $ExistingClientForAuth = $null
+            $AuthClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+            if ($AuthClientId) {
+                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($AuthClientId)'"
+                if ($ExistingClientForAuth) {
+                    $RolesToAuthorize.Add([string]$ExistingClientForAuth.Role)
+                }
+            }
+            $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role $RolesToAuthorize
+            if (-not $RoleGrant.Allowed) {
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client role assignment: $($RoleGrant.Message)" -Sev 'Warning'
+                $Body = @(@{
+                        resultText = $RoleGrant.Message
+                        state      = 'error'
+                    })
+                break
+            }
+
             if ($Request.Body.ClientId -or $Request.Body.AppName) {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 $AddUpdateSuccess = $false
@@ -239,6 +266,18 @@ function Invoke-ExecApiClient {
                     state      = 'error'
                 }
             } else {
+                # Block resetting the secret of a client whose role outranks the caller;
+                # otherwise an editor could harvest a working superadmin secret.
+                $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role ([string]$Client.Role)
+                if (-not $RoleGrant.Allowed) {
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client secret reset for $($Request.Body.ClientId): $($RoleGrant.Message)" -Sev 'Warning'
+                    $Results = @{
+                        resultText = $RoleGrant.Message
+                        state      = 'error'
+                    }
+                    $Body = @($Results)
+                    break
+                }
                 $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId -Headers $Request.Headers
 
                 if ($ApiConfig.ApplicationSecret) {
@@ -294,6 +333,16 @@ function Invoke-ExecApiClient {
             try {
                 if ($Request.Body.ClientId) {
                     $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+                    # Block deleting a client whose role outranks the caller (tamper/DoS).
+                    $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
+                    if ($ExistingClientForAuth) {
+                        $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role ([string]$ExistingClientForAuth.Role)
+                        if (-not $RoleGrant.Allowed) {
+                            Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client deletion for $($ClientId): $($RoleGrant.Message)" -Sev 'Warning'
+                            $Body = @{ Results = $RoleGrant.Message }
+                            break
+                        }
+                    }
                     if ($Request.Body.RemoveAppReg -eq $true) {
                         Write-Information "Deleting API Client: $ClientId from Entra"
                         $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$($ClientId)'&`$select=id,appId,web" -NoAuthCheck $true -asapp $true

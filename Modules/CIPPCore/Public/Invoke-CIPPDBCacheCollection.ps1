@@ -124,6 +124,7 @@ function Invoke-CIPPDBCacheCollection {
             'IntuneScripts'
             'IntuneReusableSettings'
             'DetectedApps'
+            'IntuneAppInstallStatus'
             'MDEOnboarding'
         )
         Compliance         = @(

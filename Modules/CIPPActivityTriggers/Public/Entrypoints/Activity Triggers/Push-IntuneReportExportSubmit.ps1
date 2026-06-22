@@ -25,6 +25,13 @@ function Push-IntuneReportExportSubmit {
                     'UserId', 'UserName', 'EmailAddress'
                 )
             }
+            'AppInstallStatusAggregate' {
+                @(
+                    'ApplicationId', 'DisplayName', 'Publisher', 'Platform', 'AppVersion', 'AppPlatform',
+                    'InstalledDeviceCount', 'FailedDeviceCount', 'FailedUserCount',
+                    'PendingInstallDeviceCount', 'NotInstalledDeviceCount', 'FailedDevicePercentage'
+                )
+            }
             default { throw "Unknown Intune report '$ReportName'" }
         }
 

@@ -38,7 +38,15 @@ function New-CIPPIntuneTemplate {
         }
         'managedAppPolicies' {
             $Type = 'AppProtection'
-            $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $TenantFilter
+            $AppProtectionUrl = switch (($ODataType -replace '#microsoft.graph.', '')) {
+                'androidManagedAppProtection' { 'androidManagedAppProtections' }
+                'iosManagedAppProtection' { 'iosManagedAppProtections' }
+                'windowsManagedAppProtection' { 'windowsManagedAppProtections' }
+                'mdmWindowsInformationProtectionPolicy' { 'mdmWindowsInformationProtectionPolicies' }
+                'targetedManagedAppConfiguration' { 'targetedManagedAppConfigurations' }
+                default { 'managedAppPolicies' }
+            }
+            $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($AppProtectionUrl)('$($ID)')" -tenantid $TenantFilter
             $DisplayName = $Template.displayName
             $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
         }
