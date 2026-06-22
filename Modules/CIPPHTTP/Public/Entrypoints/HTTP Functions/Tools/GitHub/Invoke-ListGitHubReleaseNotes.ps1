@@ -13,8 +13,8 @@
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $Owner = $Request.Query.Owner
-    $Repository = $Request.Query.Repository
+    $Owner = 'KelvinTegelaar'
+    $Repository = 'CIPP'
 
     if (-not $Owner) {
         throw 'Owner parameter is required to retrieve release notes.'
@@ -35,7 +35,7 @@
         $Latest = $false
         if ($Rows) {
             $Releases = ConvertFrom-Json -InputObject $Rows.GitHubReleases -Depth 10
-            $CurrentVersion = [semver]$global:CippVersion
+            $CurrentVersion = [semver]($env:CippVersion ?? $env:APP_VERSION)
             $CurrentMajorMinor = "$($CurrentVersion.Major).$($CurrentVersion.Minor)"
 
             foreach ($Release in $Releases) {
