@@ -80,7 +80,9 @@ function Get-CIPPAlertInactiveUsers {
             if ($AlertData) {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
-        } catch {}
+        } catch {
+            Write-Warning "Inactive users check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check inactive users with licenses for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

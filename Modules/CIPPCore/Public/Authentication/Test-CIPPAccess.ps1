@@ -134,7 +134,19 @@ function Test-CIPPAccess {
     } else {
         $Type = 'User'
         $swUserBranch = [System.Diagnostics.Stopwatch]::StartNew()
-        $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
+        $RawPrincipal = $Request.Headers.'x-ms-client-principal'
+        if ([string]::IsNullOrWhiteSpace($RawPrincipal)) {
+            throw 'Access denied: x-ms-client-principal header is missing or empty'
+        }
+        try {
+            $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($RawPrincipal)) | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            Write-LogMessage -message "Invalid x-ms-client-principal header: $($_.Exception.Message)" -Sev 'Error' -API 'Authentication'
+            throw 'Access denied: malformed client principal'
+        }
+        if ($null -eq $User -or -not ($User.PSObject.Properties.Name -contains 'userDetails') -and -not ($User.PSObject.Properties.Name -contains 'claims')) {
+            throw 'Access denied: client principal is missing required fields'
+        }
 
        if ($User.claims -and [string]::IsNullOrWhiteSpace($User.userDetails)) {
             $Claims = @($User.claims)

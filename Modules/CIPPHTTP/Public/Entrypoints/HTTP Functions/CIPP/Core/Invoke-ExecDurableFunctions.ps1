@@ -46,7 +46,8 @@ function Invoke-ExecDurableFunctions {
         'ListOrchestratorHistory' {
             if ($Request.Query.PartitionKey) {
                 $HistoryTable = Get-CippTable -TableName ('{0}History' -f $FunctionName)
-                $Filter = "PartitionKey eq '{0}'" -f $Request.Query.PartitionKey
+                $SafePartitionKey = ConvertTo-CIPPODataFilterValue -Value $Request.Query.PartitionKey -Type String
+                $Filter = "PartitionKey eq '$SafePartitionKey'"
                 $History = Get-CippAzDataTableEntity @HistoryTable -Filter $Filter -Property PartitionKey, RowKey, Timestamp, EventType, Name, IsPlayed, OrchestrationStatus | Select-Object * -ExcludeProperty ETag
 
                 $Body = [PSCustomObject]@{
@@ -136,11 +137,12 @@ function Invoke-ExecDurableFunctions {
         'PurgeOrchestrators' {
             $HistoryTable = Get-CippTable -TableName ('{0}History' -f $FunctionName)
             if ($Request.Query.PartitionKey) {
-                $HistoryEntities = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq '$($Request.Query.PartitionKey)'" -Property RowKey, PartitionKey
+                $SafePartitionKey = ConvertTo-CIPPODataFilterValue -Value $Request.Query.PartitionKey -Type String
+                $HistoryEntities = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq '$SafePartitionKey'" -Property RowKey, PartitionKey
                 if ($HistoryEntities) {
                     Remove-AzDataTableEntity -Force @HistoryTable -Entity $HistoryEntities
                 }
-                $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($Request.Query.PartitionKey)'" -Property RowKey, PartitionKey
+                $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$SafePartitionKey'" -Property RowKey, PartitionKey
                 if ($Instance) {
                     Remove-AzDataTableEntity -Force @InstancesTable -Entity $Instance
                 }

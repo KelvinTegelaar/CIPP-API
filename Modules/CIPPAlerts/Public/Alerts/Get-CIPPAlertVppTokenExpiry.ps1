@@ -26,9 +26,12 @@ function Get-CIPPAlertVppTokenExpiry {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
 
-        } catch {}
+        } catch {
+            Write-Warning "VPP token expiry check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
 
     } catch {
-        # Error handling
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check VPP token expiry for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }

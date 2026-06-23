@@ -78,7 +78,9 @@ function Get-CIPPAlertStaleEntraDevices {
             if ($AlertData) {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
-        } catch {}
+        } catch {
+            Write-Warning "Stale Entra devices check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check stale Entra devices for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

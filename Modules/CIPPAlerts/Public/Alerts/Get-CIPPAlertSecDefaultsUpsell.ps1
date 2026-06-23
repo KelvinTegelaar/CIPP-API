@@ -24,10 +24,13 @@ function Get-CIPPAlertSecDefaultsUpsell {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
             }
-        } catch {}
+        } catch {
+            Write-Warning "Security Defaults upsell check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
 
     } catch {
-        # Error handling
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check Security Defaults upsell for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }
 }
 

@@ -3,12 +3,15 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
     .FUNCTIONALITY
     Internal
     #>
+    # Initialize the synchronized cache once at the top to avoid a race between the null-check and assignment.
+    if (-not $script:classictoken) {
+        $script:classictoken = [HashTable]::Synchronized(@{})
+    }
+
     $TokenKey = '{0}-{1}' -f $TenantID, $Resource
     if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
-        #Write-Host 'Classic: cached token'
         return $script:classictoken.$TokenKey
     } else {
-        #Write-Host 'Using classic'
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
         $Body = @{
             client_id     = $env:ApplicationID
@@ -18,9 +21,8 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             grant_type    = 'refresh_token'
         }
         try {
-            if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }
-            $script:classictoken.$TokenKey = Invoke-CIPPRestMethod -Uri $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-            return $script:classictoken.$TokenKey
+            $script:classictoken[$TokenKey] = Invoke-CIPPRestMethod -Uri $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+            return $script:classictoken[$TokenKey]
         } catch {
             # Track consecutive Graph API failures
             $TenantsTable = Get-CippTable -tablename Tenants

@@ -84,7 +84,9 @@ function Get-CIPPAlertInactiveGuestUsers {
             if ($AlertData) {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
-        } catch {}
+        } catch {
+            Write-Warning "Inactive guest users check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Failed to check inactive guest users for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

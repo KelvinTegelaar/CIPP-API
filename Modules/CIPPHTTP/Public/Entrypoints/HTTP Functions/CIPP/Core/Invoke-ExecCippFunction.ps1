@@ -11,20 +11,47 @@ function Invoke-ExecCippFunction {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    # Functions that must never be callable via this endpoint regardless of role.
+    # Prefer expanding this list over shrinking it.
     $BlockList = @(
         'Get-GraphToken'
         'Get-GraphTokenFromCert'
         'Get-ClassicAPIToken'
+        'Get-CIPPSamKey'
+        'Get-CIPPAzDataTableEntity'
+        'Add-CIPPAzDataTableEntity'
+        'Update-AzDataTableEntity'
+        'Remove-AzDataTableEntity'
+        'Get-CIPPTable'
+        'New-CIPPGraphPermission'
+        'Set-CIPPSamKey'
+        'Invoke-CIPPRestMethod'
+        'New-GraphPostRequest'
+        'New-GraphPatchRequest'
+        'New-GraphDeleteRequest'
+        'Remove-CIPPGraphPermission'
     )
 
     $Function = $Request.Body.FunctionName
+
+    # Validate function name: must be a valid PowerShell verb-noun identifier
+    if ([string]::IsNullOrWhiteSpace($Function) -or $Function -notmatch '^[A-Za-z]+-[A-Za-z0-9]+$') {
+        Write-LogMessage -headers $Request.Headers -API 'ExecCippFunction' -message "Rejected invalid function name: '$Function'" -Sev 'Warning'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'Invalid function name'
+            })
+    }
+
     $Params = if ($Request.Body.Parameters) {
         $Request.Body.Parameters | ConvertTo-Json -Compress -ErrorAction Stop | ConvertFrom-Json -AsHashtable
     } else {
         @{}
     }
 
-    if (Get-Command -Module CIPPCore -Name $Function -and $BlockList -notcontains $Function) {
+    if ((Get-Command -Module CIPPCore -Name $Function -ErrorAction SilentlyContinue) -and $BlockList -notcontains $Function) {
+        Write-LogMessage -headers $Request.Headers -API 'ExecCippFunction' -message "Executing CIPPCore function: $Function" -Sev 'Info'
         try {
             $Results = & $Function @Params
             if (!$Results) {
@@ -32,11 +59,13 @@ function Invoke-ExecCippFunction {
             }
             $StatusCode = [HttpStatusCode]::OK
         } catch {
-            $Results = $_.Exception.Message
+            Write-LogMessage -headers $Request.Headers -API 'ExecCippFunction' -message "Function $Function failed: $($_.Exception.Message)" -Sev 'Error'
+            $Results = 'An error occurred executing the requested function'
             $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } else {
-        $Results = "Function $Function not found or not allowed"
+        Write-LogMessage -headers $Request.Headers -API 'ExecCippFunction' -message "Blocked call to function: '$Function'" -Sev 'Warning'
+        $Results = 'Function not found or not allowed'
         $StatusCode = [HttpStatusCode]::NotFound
     }
 

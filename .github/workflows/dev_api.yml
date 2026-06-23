@@ -33,6 +33,23 @@ jobs:
           tenant-id: ${{ secrets.DEV_TENANTID }}
           subscription-id: ${{ secrets.DEV_SUBSCRIPTIONID }}
 
+      - name: Run security and unit tests
+        shell: pwsh
+        run: |
+          $results = @()
+          Get-ChildItem -Path ./Tests -Filter 'Test-*.ps1' | ForEach-Object {
+            Write-Host "Running $($_.Name)..."
+            $output = pwsh -NonInteractive -NoProfile -File $_.FullName -SkipLiveTests 2>&1
+            $exitCode = $LASTEXITCODE
+            $output | Write-Host
+            $results += [PSCustomObject]@{ Test = $_.Name; ExitCode = $exitCode }
+          }
+          $failures = $results | Where-Object { $_.ExitCode -ne 0 }
+          if ($failures) {
+            Write-Error "The following tests failed: $($failures.Test -join ', ')"
+            exit 1
+          }
+
       - name: Build and stage modules
         shell: pwsh
         run: ./Tools/Build-DevApiModules.ps1

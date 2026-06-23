@@ -71,7 +71,8 @@ function Invoke-ExecCustomRole {
                     $Results.Add("IP ranges configured for '$($Request.Body.RoleName)' role.")
                 } else {
                     # Remove IP ranges if none provided or role is superadmin
-                    $ExistingIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
+                    $SafeRoleName = ConvertTo-CIPPODataFilterValue -Value $Request.Body.RoleName.ToLower() -Type String
+                    $ExistingIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$SafeRoleName'"
                     if ($ExistingIPRange) {
                         Remove-AzDataTableEntity -Force @AccessIPRangeTable -Entity $ExistingIPRange
                         if ($Request.Body.RoleName -ne 'superadmin') {
@@ -90,7 +91,8 @@ function Invoke-ExecCustomRole {
                     $Results.Add("Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role.")
                     Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Security group '$($Request.Body.EntraGroup.label)' assigned to the '$($Request.Body.RoleName)' role." -Sev 'Info'
                 } else {
-                    $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$($Request.Body.RoleName)'"
+                    $SafeRoleNameExact = ConvertTo-CIPPODataFilterValue -Value $Request.Body.RoleName -Type String
+                    $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "RowKey eq '$SafeRoleNameExact'"
                     if ($AccessRoleGroup) {
                         Remove-AzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
                         $Results.Add("Security group '$($AccessRoleGroup.GroupName)' removed from the '$($Request.Body.RoleName)' role.")
@@ -109,7 +111,8 @@ function Invoke-ExecCustomRole {
                 if ($Request.Body.NewRoleName -in $DefaultRoles.PSObject.Properties.Name) {
                     throw "Role name $($Request.Body.NewRoleName) cannot be used"
                 }
-                $ExistingRole = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
+                $SafeCloneSource = ConvertTo-CIPPODataFilterValue -Value $Request.Body.RoleName.ToLower() -Type String
+                $ExistingRole = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$SafeCloneSource'"
                 if (!$ExistingRole) {
                     throw "Role $($Request.Body.RoleName) not found"
                 }
@@ -118,7 +121,8 @@ function Invoke-ExecCustomRole {
                     throw 'New role name cannot be the same as the existing role name'
                 }
 
-                $NewRoleTest = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.NewRoleName.ToLower())'"
+                $SafeCloneDest = ConvertTo-CIPPODataFilterValue -Value $Request.Body.NewRoleName.ToLower() -Type String
+                $NewRoleTest = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$SafeCloneDest'"
                 if ($NewRoleTest) {
                     throw "Role name $($Request.Body.NewRoleName) already exists"
                 }
@@ -133,7 +137,7 @@ function Invoke-ExecCustomRole {
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $NewRole -Force | Out-Null
                 # Clone IP ranges if they exist
-                $ExistingIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$($Request.Body.RoleName.ToLower())'"
+                $ExistingIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$SafeCloneSource'"
                 if ($ExistingIPRange) {
                     $NewIPRangeEntity = @{
                         'PartitionKey' = 'AccessIPRanges'
@@ -152,13 +156,14 @@ function Invoke-ExecCustomRole {
         }
         'Delete' {
             Write-Information "Deleting custom role $($Request.Body.RoleName)"
-            $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
+            $SafeDeleteRole = ConvertTo-CIPPODataFilterValue -Value $Request.Body.RoleName -Type String
+            $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$SafeDeleteRole'" -Property RowKey, PartitionKey
             Remove-AzDataTableEntity -Force @Table -Entity $Role
-            $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$($Request.Body.RoleName)'"
+            $AccessRoleGroup = Get-CIPPAzDataTableEntity @AccessRoleGroupTable -Filter "PartitionKey eq 'AccessRoleGroups' and RowKey eq '$SafeDeleteRole'"
             if ($AccessRoleGroup) {
                 Remove-AzDataTableEntity -Force @AccessRoleGroupTable -Entity $AccessRoleGroup
             }
-            $AccessIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "PartitionKey eq 'AccessIPRanges' and RowKey eq '$($Request.Body.RoleName)'"
+            $AccessIPRange = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "PartitionKey eq 'AccessIPRanges' and RowKey eq '$SafeDeleteRole'"
             if ($AccessIPRange) {
                 Remove-AzDataTableEntity -Force @AccessIPRangeTable -Entity $AccessIPRange
             }

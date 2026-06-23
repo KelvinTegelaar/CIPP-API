@@ -24,8 +24,9 @@ function Get-CIPPAlertDepTokenExpiry {
                 Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
 
-        } catch {}
-
+        } catch {
+            Write-Warning "DEP token expiry check skipped for $TenantFilter (feature may not be available): $($_.Exception.Message)"
+        }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
