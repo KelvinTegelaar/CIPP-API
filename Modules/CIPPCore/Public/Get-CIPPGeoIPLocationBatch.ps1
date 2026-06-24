@@ -63,7 +63,7 @@ function Get-CIPPGeoIPLocationBatch {
     if ($Distinct.Count -eq 0) { return $Result }
 
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
-    $ValidAfter = (Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $ValidAfter = (Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
     # 1) Seed from knownlocationdbv2 (fresh, non-Unknown entries); collect the misses
     $ToResolve = [System.Collections.Generic.List[string]]::new()
