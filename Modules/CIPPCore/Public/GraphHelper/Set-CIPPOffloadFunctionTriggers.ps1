@@ -38,16 +38,7 @@ function Set-CIPPOffloadFunctionTriggers {
     }
 
     # Determine resource group
-    if ($env:WEBSITE_RESOURCE_GROUP) {
-        $ResourceGroupName = $env:WEBSITE_RESOURCE_GROUP
-    } else {
-        $Owner = $env:WEBSITE_OWNER_NAME
-        if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-            $ResourceGroupName = $Matches.RGName
-        } else {
-            throw 'Could not determine resource group. Please provide ResourceGroupName parameter.'
-        }
-    }
+    $ResourceGroupName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
 
     # Define the triggers to disable when offloading is enabled
     $TargetedTriggers = @(
