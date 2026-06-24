@@ -104,6 +104,7 @@ function Invoke-CIPPTestCollection {
 
         $Table = Get-CippTable -tablename 'CippTestResults'
         $ResultBatch = [System.Collections.Generic.List[hashtable]]::new()
+        $AlertBatch = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Guid in $EnabledGuids) {
             $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -113,6 +114,8 @@ function Invoke-CIPPTestCollection {
                 foreach ($Entity in $TestOutput) {
                     if ($Entity -is [hashtable] -and $Entity.PartitionKey -and $Entity.RowKey) {
                         $ResultBatch.Add($Entity)
+                    } elseif ($Entity -isnot [hashtable] -and $Entity.PSObject.Properties['CippCustomTestAlert']) {
+                        $AlertBatch.Add($Entity)
                     }
                 }
                 if ($ResultBatch.Count -ge 100) {
@@ -139,6 +142,12 @@ function Invoke-CIPPTestCollection {
         if ($ResultBatch.Count -gt 0) {
             Add-CIPPAzDataTableEntity @Table -Entity @($ResultBatch) -Force
             Write-Information "  [Custom] Flushed final $($ResultBatch.Count) results to table"
+        }
+
+        # Ship a single aggregated alert for the tenant covering all alert-worthy results.
+        if ($AlertBatch.Count -gt 0) {
+            Write-Information "  [Custom] Shipping $($AlertBatch.Count) custom test alert(s) for $TenantFilter"
+            Send-CIPPCustomTestAlert -TenantFilter $TenantFilter -Alerts @($AlertBatch)
         }
 
         $SuiteStopwatch.Stop()

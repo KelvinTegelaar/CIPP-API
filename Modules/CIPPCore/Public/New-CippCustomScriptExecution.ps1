@@ -59,8 +59,6 @@ function New-CippCustomScriptExecution {
         # Get script content
         $ScriptContent = $Script.ScriptContent
 
-        Write-LogMessage -API 'CustomScript' -tenant $TenantFilter -message "Executing custom script: $($Script.ScriptName) (Version: $($Script.Version))" -sev Info
-
         # Convert Parameters to hashtable if it's a PSCustomObject (from JSON)
         if ($Parameters -is [PSCustomObject]) {
             $ParamsHash = @{}
