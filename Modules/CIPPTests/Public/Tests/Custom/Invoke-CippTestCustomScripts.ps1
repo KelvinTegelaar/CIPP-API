@@ -56,9 +56,19 @@ function Invoke-CippTestCustomScripts {
             $TestId = "CustomScript-$($Script.ScriptGuid)"
             $ScriptName = if ([string]::IsNullOrWhiteSpace($Script.ScriptName)) { $TestId } else { $Script.ScriptName }
 
+            $AllStatuses = @('Passed', 'Failed', 'Info', 'Investigate')
             $AlertStatuses = @('Failed')
             if ($AlertStatusesProp -and -not [string]::IsNullOrWhiteSpace($AlertStatusesProp.Value)) {
-                $AlertStatuses = $AlertStatusesProp.Value | ConvertFrom-Json
+                $RawAlertStatuses = [string]$AlertStatusesProp.Value
+                if ($RawAlertStatuses.TrimStart().StartsWith('[')) {
+                    $AlertStatuses = @($RawAlertStatuses | ConvertFrom-Json)
+                } else {
+                    $AlertStatuses = @($RawAlertStatuses)
+                }
+            }
+            # 'All' alerts on every result status.
+            if ($AlertStatuses -contains 'All') {
+                $AlertStatuses = $AllStatuses
             }
 
             try {
@@ -105,7 +115,7 @@ function Invoke-CippTestCustomScripts {
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultDataJson $ResultDataJson -ResultMarkdown $ResultMarkdown -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
 
                 if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
-                    Write-AlertMessage -tenant $Tenant -message "Custom script test failed: $ScriptName ($($Script.ScriptGuid))"
+                    Write-AlertMessage -tenant $Tenant -message "Custom script test '$ScriptName' returned status '$FinalStatus' ($($Script.ScriptGuid))"
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
