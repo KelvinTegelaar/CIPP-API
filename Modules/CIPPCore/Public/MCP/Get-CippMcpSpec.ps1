@@ -16,19 +16,9 @@ function Get-CippMcpSpec {
         return $script:CippMcpSpec
     }
 
-    $Root = $env:CIPPRootPath
-    if (-not $Root -or -not (Test-Path (Join-Path $Root 'openapi.json'))) {
-        # Fallback: walk up from this module until openapi.json is found.
-        $Root = $PSScriptRoot
-        while ($Root -and -not (Test-Path (Join-Path $Root 'openapi.json'))) {
-            $Parent = Split-Path $Root -Parent
-            if (-not $Parent -or $Parent -eq $Root) { $Root = $null; break }
-            $Root = $Parent
-        }
-    }
+    $SpecPath = Join-Path -Path $env:CIPPRootPath -ChildPath 'Config\openapi.json'
 
-    $SpecPath = if ($Root) { Join-Path $Root 'openapi.json' } else { $null }
-    if (-not $SpecPath -or -not (Test-Path $SpecPath)) {
+    if (-not (Test-Path $SpecPath)) {
         throw [pscustomobject]@{ code = -32603; message = 'OpenAPI spec (openapi.json) not found; cannot project MCP tools.' }
     }
 

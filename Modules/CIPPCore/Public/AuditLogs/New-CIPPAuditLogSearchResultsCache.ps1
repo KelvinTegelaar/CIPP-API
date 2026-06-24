@@ -72,6 +72,21 @@ function New-CIPPAuditLogSearchResultsCache {
                 Add-CIPPAzDataTableEntity @CacheWebhooksTable -Entity $cacheEntity -Force
             }
             Write-Information "Successfully cached search ID: $($SearchId) for tenant: $TenantFilter"
+
+            try {
+                $PrefetchIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($sr in $searchResults) {
+                    $cip = $sr.auditData.clientip
+                    if (![string]::IsNullOrWhiteSpace($cip)) { $null = $PrefetchIPs.Add(([string]$cip).Trim()) }
+                }
+                if ($PrefetchIPs.Count -gt 0) {
+                    $null = Get-CIPPGeoIPLocationBatch -IPs @($PrefetchIPs)
+                    Write-Information "Geo prefetch: warmed cache for $($PrefetchIPs.Count) distinct IP(s) (search $SearchId)"
+                }
+            } catch {
+                Write-Information "Geo prefetch during ingestion failed for search ${SearchId}: $($_.Exception.Message)"
+            }
+
             try {
                 $FailedDownloadsTable = Get-CippTable -TableName 'FailedAuditLogDownloads'
                 $failedEntities = Get-CIPPAzDataTableEntity @FailedDownloadsTable -Filter "PartitionKey eq '$TenantFilter' and SearchId eq '$SearchId'"
