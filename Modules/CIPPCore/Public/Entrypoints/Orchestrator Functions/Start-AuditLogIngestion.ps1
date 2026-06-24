@@ -86,6 +86,5 @@ function Start-AuditLogIngestion {
         }
     } catch {
         Write-LogMessage -API 'AuditLogIngestion' -message 'Error in audit log ingestion orchestrator' -sev Error -LogData (Get-CippException -Exception $_)
-        Write-Information "Audit log ingestion orchestrator error: $($_.Exception.Message)"
     }
 }

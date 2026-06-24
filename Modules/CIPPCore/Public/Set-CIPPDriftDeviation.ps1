@@ -57,7 +57,7 @@ function Set-CIPPDriftDeviation {
         return "Successfully set drift deviation status for $StandardName to $Status"
 
     } catch {
-        Write-Error "Error setting drift deviation status: $($_.Exception.Message)"
+        Write-LogMessage -message "Error setting drift deviation status: $($_.Exception.Message)" -API 'Drift' -sev Error
         throw
     }
 }

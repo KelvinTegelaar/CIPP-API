@@ -112,7 +112,7 @@ function Invoke-ListUserMailboxDetails {
             $BlockedForSpam = $false
         }
     } catch {
-        Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"
+        Write-LogMessage -message "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)" -API 'ListUserMailboxDetails' -sev Error
     }
 
     # Parse permissions

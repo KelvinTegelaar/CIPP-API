@@ -94,7 +94,7 @@ function Get-CIPPBackup {
         }
         return $Info
     } catch {
-        Write-Error "Error in Get-CIPPBackup: $($_.Exception.Message)"
+        Write-LogMessage -message "Error in Get-CIPPBackup: $($_.Exception.Message)" -API 'Backup' -sev Error
         Write-Information $_.InvocationInfo.PositionMessage
     }
 }

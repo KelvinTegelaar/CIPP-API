@@ -188,7 +188,7 @@ function Get-CippSamPermissions {
         try {
             $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
         } catch {
-            Write-Error "Failed to save the CIPP-SAM permissions: $($_.Exception.Message)"
+            Write-LogMessage -message "Failed to save the CIPP-SAM permissions: $($_.Exception.Message)" -API 'SAMPermissions' -sev Error
         }
     }
 

@@ -8,7 +8,7 @@ function Invoke-CIPPStandardSendFromAlias {
         (Label) Set Send from alias state
     .DESCRIPTION
         (Helptext) Enables or disables the ability for users to send from their alias addresses.
-        (DocsDescription) Allows users to change the 'from' address to any set in their Azure AD Profile.
+        (DocsDescription) Allows users to change the 'from' address to any set in their Microsoft Entra ID profile.
     .NOTES
         CAT
             Exchange Standards

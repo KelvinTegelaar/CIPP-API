@@ -798,7 +798,7 @@ function Invoke-HuduExtensionSync {
                         'Addresses'         = "<strong>$($user.userPrincipalName)</strong><br/>$aliases"
                         'EPM Devices'       = $userDevices
                         'Assigned Licenses' = $userLicenses
-                        'Options'           = "<a target=`"_blank`" href=https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($user.id)>Azure AD</a> | <a <a target=`"_blank`" href=https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($customer.CustomerContextId)&CSDEST=o365admincenter/Adminportal/Home#/users/:/UserDetails/$($user.id)>M365 Admin</a>"
+                        'Options'           = "<a target=`"_blank`" href=https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($user.id)>Microsoft Entra</a> | <a <a target=`"_blank`" href=https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($customer.CustomerContextId)&CSDEST=o365admincenter/Adminportal/Home#/users/:/UserDetails/$($user.id)>M365 Admin</a>"
                     }
                 } catch {
                     $CompanyResult.Errors.add("User $($User.userPrincipalName): A fatal error occured while processing user $_")
@@ -1100,14 +1100,14 @@ function Invoke-HuduExtensionSync {
             }
         } catch {
             $CompanyResult.Errors.add("Company: Failed to import domain: $_")
-            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -level 'Error'
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -sev 'Error'
         }
-        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -level 'Information'
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -sev 'Info'
         $CompanyResult.Logs.Add('Hudu Sync Completed')
     } catch {
         Write-Warning "Company: A fatal error occured: $_"
         Write-Information $_.InvocationInfo.PositionMessage
-        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -level 'Error'
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -sev 'Error'
         $CompanyResult.Errors.add("Company: A fatal error occured: $_")
     }
     return $CompanyResult

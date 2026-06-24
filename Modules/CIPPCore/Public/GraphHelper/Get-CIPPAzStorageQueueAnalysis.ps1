@@ -76,7 +76,7 @@ function Get-CIPPAzStorageQueueAnalysis {
                     $t = [System.DateTimeOffset]::Parse($msg.InsertionTime)
                     if ($null -eq $oldestTime -or $t -lt $oldestTime) { $oldestTime = $t }
                     if ($null -eq $newestTime -or $t -gt $newestTime) { $newestTime = $t }
-                } catch { }
+                } catch { Write-Verbose "Could not parse queue message InsertionTime '$($msg.InsertionTime)': $_" }
             }
 
             $msgData = $msg.Message
@@ -100,7 +100,7 @@ function Get-CIPPAzStorageQueueAnalysis {
                     if (Test-Json -Json $event.Input -ErrorAction SilentlyContinue) {
                         $inputTasks = @($event.Input | ConvertFrom-Json -Depth 10)
                     }
-                } catch { }
+                } catch { Write-Verbose "Could not parse queue message input JSON: $_" }
             }
 
             foreach ($task in $inputTasks) {

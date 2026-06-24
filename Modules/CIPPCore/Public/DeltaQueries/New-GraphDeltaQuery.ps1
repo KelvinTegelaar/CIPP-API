@@ -138,7 +138,7 @@ function New-GraphDeltaQuery {
                         $deltaLink = $content.'@odata.deltaLink'
                     }
                 } catch {
-                    Write-Error "Error during Graph Delta Query request for tenant '$TenantFilter': $(Get-NormalizedError -Message $_.Exception.message)"
+                    Write-LogMessage -message "Error during Graph Delta Query request for tenant '$TenantFilter': $(Get-NormalizedError -Message $_.Exception.message)" -tenant $TenantFilter -API 'GraphDeltaQuery' -sev Error
                     $DeltaError = $true
                 }
             } while ($nextUrl -and -not $deltaLink -and -not $DeltaError)
@@ -163,7 +163,7 @@ function New-GraphDeltaQuery {
             # Always return full response with deltaLink
             return $result
         } catch {
-            Write-Error "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
+            Write-LogMessage -message "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)" -tenant $TenantFilter -API 'GraphDeltaQuery' -sev Error
             Write-Warning $_.InvocationInfo.PositionMessage
         }
     }

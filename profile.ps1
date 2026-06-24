@@ -59,7 +59,6 @@ foreach ($Module in $Modules) {
         $SwModule.Stop()
         $Timings["Module_$Module"] = $SwModule.Elapsed.TotalMilliseconds
         Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
-        Write-Error $_.Exception.Message
     }
 }
 $SwCoreModules.Stop()
@@ -254,7 +253,6 @@ foreach ($Module in $ModulesToImport) {
         $SwModule.Stop()
         $Timings["Module_$Module"] = $SwModule.Elapsed.TotalMilliseconds
         Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
-        Write-Error $_.Exception.Message
     }
 }
 

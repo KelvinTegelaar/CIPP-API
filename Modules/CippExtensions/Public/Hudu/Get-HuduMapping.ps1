@@ -35,7 +35,7 @@ function Get-HuduMapping {
             $_.Exception.message
         }
 
-        Write-LogMessage -Message "Could not get Hudu Companies, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
+        Write-LogMessage -message "Could not get Hudu Companies, error: $Message " -sev 'Error' -tenant 'CIPP' -API 'HuduMapping'
         $HuduCompanies = @(@{name = "Could not get Hudu Companies, error: $Message"; value = '-1' })
     }
     $HuduCompanies = $HuduCompanies | ForEach-Object {

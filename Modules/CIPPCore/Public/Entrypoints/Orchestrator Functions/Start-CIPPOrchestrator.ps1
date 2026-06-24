@@ -123,7 +123,7 @@ function Start-CIPPOrchestrator {
             Write-Information "Orchestration started with instance ID: $InstanceId"
             return $InstanceId
         } catch {
-            Write-Error "Failed to start orchestration in processor context: $_"
+            Write-LogMessage -message "Failed to start orchestration in processor context: $_" -API 'Orchestrator' -sev Error
             throw
         }
     }
@@ -156,7 +156,7 @@ function Start-CIPPOrchestrator {
             return $InstanceId
 
         } catch {
-            Write-Error "Failed to start orchestration from stored input: $_"
+            Write-LogMessage -message "Failed to start orchestration from stored input: $_" -API 'Orchestrator' -sev Error
             throw
         }
     } elseif ($InputObject) {
@@ -204,7 +204,7 @@ function Start-CIPPOrchestrator {
             Write-Information "Queued orchestration execution for GUID: $Guid"
 
         } catch {
-            Write-Error "Failed to queue orchestration: $_"
+            Write-LogMessage -message "Failed to queue orchestration: $_" -API 'Orchestrator' -sev Error
             throw
         }
     } else {

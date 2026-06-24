@@ -17,7 +17,7 @@ function Push-ListBasicAuthAllTenants {
     $endTime = $ts.ToString('yyyy-MM-ddTHH:MM:ss')
     $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTime)Z and (clientAppUsed eq 'AutoDiscover' or clientAppUsed eq 'Exchange ActiveSync' or clientAppUsed eq 'Exchange Online PowerShell' or clientAppUsed eq 'Exchange Web Services' or clientAppUsed eq 'IMAP4' or clientAppUsed eq 'MAPI Over HTTP' or clientAppUsed eq 'Offline Address Book' or clientAppUsed eq 'Outlook Anywhere (RPC over HTTP)' or clientAppUsed eq 'Other clients' or clientAppUsed eq 'POP3' or clientAppUsed eq 'Reporting Web Services' or clientAppUsed eq 'Authenticated SMTP' or clientAppUsed eq 'Outlook Service')"
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $domainName -ErrorAction stop | Sort-Object -Unique -Property clientAppUsed | ForEach-Object {
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=$($filters)" -tenantid $domainName -ErrorAction stop | Sort-Object -Unique -Property clientAppUsed | ForEach-Object {
             @{
                 Tenant            = $domainName
                 clientAppUsed     = $_.clientAppUsed

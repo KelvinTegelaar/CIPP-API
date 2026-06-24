@@ -36,7 +36,7 @@ Function Invoke-ListSignIns {
         Write-Host $Filters
         Write-LogMessage -headers $Headers -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
 
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($Filters)" -tenantid $TenantFilter -ErrorAction Stop
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=$($Filters)" -tenantid $TenantFilter -ErrorAction Stop
         $response = $GraphRequest | Select-Object *,
         @{l = 'additionalDetails'; e = { $_.status.additionalDetails } } ,
         @{l = 'errorCode'; e = { $_.status.errorCode } },

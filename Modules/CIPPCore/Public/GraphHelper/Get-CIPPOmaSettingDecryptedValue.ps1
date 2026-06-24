@@ -113,7 +113,7 @@ function Get-CIPPOmaSettingDecryptedValue {
         return $DeviceConfiguration
 
     } catch {
-        Write-Error "Error processing OMA settings for device configuration: $($_.Exception.Message)"
+        Write-LogMessage -message "Error processing OMA settings for device configuration: $($_.Exception.Message)" -API 'OMASettings' -sev Error
         # Return the original configuration if there's an error
         return $DeviceConfiguration
     }

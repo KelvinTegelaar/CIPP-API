@@ -523,7 +523,7 @@ function Get-CIPPTenantAlignment {
 
         return $Results
     } catch {
-        Write-Error "Error getting tenant alignment data: $($_.Exception.Message)"
+        Write-LogMessage -message "Error getting tenant alignment data: $($_.Exception.Message)" -API 'TenantAlignment' -sev Error
         Write-Information $_.InvocationInfo.PositionMessage
         throw
     }

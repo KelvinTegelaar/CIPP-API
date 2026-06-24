@@ -15,13 +15,13 @@ function Clear-CIPPImmutableId {
             # User has ImmutableID but is not synced from on-premises - safe to clear immediately
             if ($User.onPremisesSyncEnabled -ne $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
                 $DisplayName = $Username ?? $UserID
-                Write-LogMessage -Message "User $DisplayName has an ImmutableID set but is not synced from on-premises. Proceeding to clear the ImmutableID." -TenantFilter $TenantFilter -Severity 'Warning' -APIName $APIName -headers $Headers
+                Write-LogMessage -message "User $DisplayName has an ImmutableID set but is not synced from on-premises. Proceeding to clear the ImmutableID." -tenant $TenantFilter -sev 'Warning' -API $APIName -headers $Headers
                 # Continue to clear below
             }
             # User is synced from on-premises - must schedule for after deletion
             elseif ($User.onPremisesSyncEnabled -eq $true -and ![string]::IsNullOrEmpty($User.onPremisesImmutableId)) {
                 $DisplayName = $Username ?? $UserID
-                Write-LogMessage -Message "User $DisplayName is synced from on-premises. Scheduling an Immutable ID clear for when the user account has been soft deleted." -TenantFilter $TenantFilter -Severity 'Warning' -APIName $APIName -headers $Headers
+                Write-LogMessage -message "User $DisplayName is synced from on-premises. Scheduling an Immutable ID clear for when the user account has been soft deleted." -tenant $TenantFilter -sev 'Warning' -API $APIName -headers $Headers
 
                 $ScheduledTask = @{
                     TenantFilter  = $TenantFilter

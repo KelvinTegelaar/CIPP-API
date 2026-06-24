@@ -153,7 +153,7 @@ function Push-ExecAppApprovalTemplate {
                     if ($TemplateData.IncludeInEnterpriseAppList) {
                         $ServicePrincipalBody.tags = @('WindowsAzureActiveDirectoryIntegratedApp')
                     }
-                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($ServicePrincipalBody | ConvertTo-Json)
+                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($ServicePrincipalBody | ConvertTo-Json -Depth 10)
 
                     Write-LogMessage -message "Successfully deployed Application Manifest $($TemplateData.AppName) to tenant $($Item.Tenant). Application ID: $($CreatedApp.appId)" -tenant $Item.Tenant -API 'Add App Manifest' -sev Info
 
@@ -178,7 +178,7 @@ function Push-ExecAppApprovalTemplate {
                 if ($TemplateData.IncludeInEnterpriseAppList) {
                     $SpBody.tags = @('WindowsAzureActiveDirectoryIntegratedApp')
                 }
-                $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($SpBody | ConvertTo-Json)
+                $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body ($SpBody | ConvertTo-Json -Depth 10)
                 Write-LogMessage -message "Added $($Item.AppId) to tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
             } else {
                 Write-LogMessage -message "This app already exists in tenant $($Item.Tenant). We're adding the required permissions." -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
@@ -186,7 +186,7 @@ function Push-ExecAppApprovalTemplate {
                     $ExistingSP = $ServicePrincipalList | Where-Object { $_.appId -eq $Item.AppId }
                     if ($ExistingSP -and 'WindowsAzureActiveDirectoryIntegratedApp' -notin $ExistingSP.tags) {
                         $UpdatedTags = @($ExistingSP.tags) + 'WindowsAzureActiveDirectoryIntegratedApp'
-                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ExistingSP.id)" -type PATCH -tenantid $Item.Tenant -body (@{ tags = $UpdatedTags } | ConvertTo-Json)
+                        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ExistingSP.id)" -type PATCH -tenantid $Item.Tenant -body (@{ tags = $UpdatedTags } | ConvertTo-Json -Depth 10)
                     }
                 }
             }
@@ -195,6 +195,5 @@ function Push-ExecAppApprovalTemplate {
         }
     } catch {
         Write-LogMessage -message "Error adding application to tenant $($Item.Tenant) - $($_.Exception.Message)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error
-        Write-Error $_.Exception.Message
     }
 }

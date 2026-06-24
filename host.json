@@ -13,8 +13,8 @@
       "maxConcurrentActivityFunctions": 10,
       "maxConcurrentOrchestratorFunctions": 5,
       "tracing": {
-        "distributedTracingEnabled": false,
-        "version": "None"
+        "distributedTracingEnabled": true,
+        "version": "W3CTraceContext"
       },
       "defaultVersion": "10.5.4",
       "versionMatchStrategy": "Strict",

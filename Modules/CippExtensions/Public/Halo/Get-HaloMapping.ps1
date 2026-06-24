@@ -56,7 +56,7 @@ function Get-HaloMapping {
             $_.Exception.message
         }
 
-        Write-LogMessage -Message "Could not get HaloPSA Clients, error: $Message " -Level Error -tenant 'CIPP' -API 'HaloMapping'
+        Write-LogMessage -message "Could not get HaloPSA Clients, error: $Message " -sev 'Error' -tenant 'CIPP' -API 'HaloMapping'
         $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message"; id = '-1' })
     }
     $HaloClients = $RawHaloClients | ForEach-Object {

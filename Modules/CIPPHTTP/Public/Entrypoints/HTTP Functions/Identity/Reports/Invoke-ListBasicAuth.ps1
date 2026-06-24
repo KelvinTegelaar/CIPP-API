@@ -27,7 +27,7 @@ Function Invoke-ListBasicAuth {
     if ($TenantFilter -ne 'AllTenants') {
 
         try {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -ErrorAction Stop | Select-Object userPrincipalName, clientAppUsed, Status | Sort-Object -Unique -Property userPrincipalName
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=$($filters)" -tenantid $TenantFilter -ErrorAction Stop | Select-Object userPrincipalName, clientAppUsed, Status | Sort-Object -Unique -Property userPrincipalName
             $response = $GraphRequest
             Write-LogMessage -headers $Headers -API $APIName -message 'Retrieved basic authentication report' -Sev 'Debug' -tenant $TenantFilter
 

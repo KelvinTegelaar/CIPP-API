@@ -30,7 +30,7 @@ function Invoke-ExecAuditLogSearch {
 
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Search' and RowKey eq '$SearchId' and Tenant eq '$TenantFilter'"
             if (!$Existing) {
-                $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
+                $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
                 Write-Information ($Search | ConvertTo-Json -Depth 10)
 
                 $Entity = [PSCustomObject]@{

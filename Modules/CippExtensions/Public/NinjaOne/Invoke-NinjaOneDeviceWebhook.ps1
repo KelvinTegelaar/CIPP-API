@@ -51,7 +51,6 @@ function Invoke-NinjaOneDeviceWebhook {
                     } else {
                         $_.Exception.message
                     }
-                    Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -Depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message"
                     Write-LogMessage -API 'NinjaOneSync' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
                 }
             } else {
@@ -66,7 +65,6 @@ function Invoke-NinjaOneDeviceWebhook {
         } else {
             $_.Exception.message
         }
-        Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -Depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message"
         Write-LogMessage -API 'NinjaOneSync' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
     }
 

@@ -20,7 +20,7 @@ function Invoke-ExecGitHubAction {
         $Parameters = $Request.Body
     }
 
-    $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+    $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
     switch ($Action) {
         'Search' {

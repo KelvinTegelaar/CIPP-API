@@ -105,7 +105,7 @@ function Push-CIPPStandard {
         & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
 
         $result = 'Success'
-        Write-Information "Standard $($Standard) completed for tenant $($Tenant)"
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Standard $($Standard) completed successfully" -sev 'Info'
     } catch {
         $result = 'Failed'
         $err = $_.Exception.Message

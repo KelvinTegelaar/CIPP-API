@@ -8,7 +8,14 @@ function Invoke-ExecDurableFunctions {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
     # Collect info
-    $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
+    $IsDevStorage = $env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true'
+    if (-not $IsDevStorage -and $env:IDENTITY_ENDPOINT) {
+        # Prefer Managed Identity over connection string (no long-lived key in environment)
+        $AccountName = ($env:AzureWebJobsStorage -split ';' | Where-Object { $_ -match '^AccountName=' }) -replace '^AccountName=', ''
+        $StorageContext = New-AzStorageContext -StorageAccountName $AccountName -UseConnectedAccount
+    } else {
+        $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
+    }
     $FunctionName = $env:WEBSITE_SITE_NAME
 
     # Get orchestrators

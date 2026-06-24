@@ -28,7 +28,7 @@ function Set-CIPPFeatureFlag {
         $FeatureFlag = $FeatureFlags | Where-Object { $_.Id -eq $Id }
 
         if (-not $FeatureFlag) {
-            Write-Error "Feature flag '$Id' not found in FeatureFlags.json"
+            Write-LogMessage -message "Feature flag '$Id' not found in FeatureFlags.json" -API 'FeatureFlags' -sev Warning
             return $false
         }
 
@@ -55,7 +55,7 @@ function Set-CIPPFeatureFlag {
             return $true
         }
     } catch {
-        Write-Error "Error setting feature flag '$Id': $($_.Exception.Message)"
+        Write-LogMessage -message "Error setting feature flag '$Id': $($_.Exception.Message)" -API 'FeatureFlags' -sev Error
         return $false
     }
 }

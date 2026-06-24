@@ -40,7 +40,7 @@ function New-BreachTenantSearch {
             $null = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
             return $LatestBreach.Group
         } catch {
-            Write-Error "Failed to add breaches to table: $($_.Exception.Message)"
+            Write-LogMessage -message "Failed to add breaches to table: $($_.Exception.Message)" -API 'HIBP' -sev Error
             return $null
         }
     }

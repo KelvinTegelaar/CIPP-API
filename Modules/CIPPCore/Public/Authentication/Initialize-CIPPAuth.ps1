@@ -115,12 +115,12 @@ function Initialize-CIPPAuth {
                                 $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                                 $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'" -ErrorAction SilentlyContinue
                                 $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
-                            } catch { }
+                            } catch { Write-Verbose "[Auth-Init] Could not read SSOMultiTenant from DevSecrets: $_" }
                         } elseif ($KVName) {
                             try {
                                 $MtVal = Get-CippKeyVaultSecret -VaultName $KVName -Name 'SSOMultiTenant' -AsPlainText -ErrorAction Stop
                                 $SSOMultiTenant = $MtVal -eq 'True'
-                            } catch { }
+                            } catch { Write-Verbose "[Auth-Init] Could not read SSOMultiTenant from Key Vault: $_" }
                         }
 
                         $ExpectedIssuer = if ($SSOMultiTenant) {

@@ -14,7 +14,7 @@ function Get-CIPPAlertNewRiskyUsers {
         # Check if tenant has P2 capabilities
         $Capabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
         if (-not ($Capabilities.AAD_PREMIUM_P2 -eq $true)) {
-            Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message 'Tenant does not have Azure AD Premium P2 licensing required for risky users detection' -sev Warning
+            Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message 'Tenant does not have Microsoft Entra ID P2 licensing required for risky users detection' -sev Warning
             return
         }
 

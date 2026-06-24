@@ -126,7 +126,7 @@ function Invoke-ListShadowAI {
             $StartDate = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             $AppFilter = ($AiAppIds | ForEach-Object { "appId eq '$_'" }) -join ' or '
             $SignInFilter = "createdDateTime ge $StartDate and ($AppFilter)"
-            $SignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=$SignInFilter" -tenantid $TenantFilter
+            $SignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=$SignInFilter" -tenantid $TenantFilter
             $SignInGroups = $SignIns | Group-Object appId
             foreach ($Consent in $ConsentedApps) {
                 $Group = $SignInGroups | Where-Object { $_.Name -eq $Consent.applicationId }

@@ -105,6 +105,6 @@ function Push-ExecJITAdminListAllTenants {
             Tenant       = [string]$DomainName
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
-        Write-Error ('Error processing JIT Admin for {0}: {1}' -f $DomainName, $_.Exception.Message)
+        Write-LogMessage -message ('Error processing JIT Admin for {0}: {1}' -f $DomainName, $_.Exception.Message) -API 'JIT Admin' -sev Error
     }
 }

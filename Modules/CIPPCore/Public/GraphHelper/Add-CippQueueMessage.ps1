@@ -40,7 +40,7 @@ function Add-CippQueueMessage {
         Write-Information "Queued $Cmdlet for execution"
         return $true
     } catch {
-        Write-Error "Failed to queue message: $_"
+        Write-LogMessage -message "Failed to queue message: $_" -API 'QueueMessage' -sev Error
         return $false
     }
 }

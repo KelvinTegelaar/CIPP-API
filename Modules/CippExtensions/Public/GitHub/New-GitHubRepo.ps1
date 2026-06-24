@@ -51,7 +51,7 @@ function New-GitHubRepo {
         if ($Existing.id) {
             return $Existing
         }
-    } catch { }
+    } catch { Write-Verbose "GitHub repo '$Owner/$Name' not found (will create): $_" }
     if ($PSCmdlet.ShouldProcess("Create repository '$Name'")) {
         Invoke-GitHubApiRequest -Path $Path -Method POST -Body $Body
     }

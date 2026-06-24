@@ -30,18 +30,18 @@ function Update-CIPPSSORedirectUri {
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'SSO'" -ErrorAction SilentlyContinue
             $SSOAppId = $Secret.SSOAppId
             $SSOMultiTenant = $Secret.SSOMultiTenant -eq 'True'
-        } catch { }
+        } catch { Write-Verbose "[SSO-Redirect] Could not read SSO config from DevSecrets: $_" }
     } else {
         $KV = $env:WEBSITE_DEPLOYMENT_ID
         $VaultName = if ($KV) { ($KV -split '-')[0] } else { $null }
         if ($VaultName) {
             try {
                 $SSOAppId = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'SSOAppId' -AsPlainText -ErrorAction Stop
-            } catch { }
+            } catch { Write-Verbose "[SSO-Redirect] SSOAppId not found in Key Vault (may not be configured): $_" }
             try {
                 $mtVal = Get-CippKeyVaultSecret -VaultName $VaultName -Name 'SSOMultiTenant' -AsPlainText -ErrorAction Stop
                 $SSOMultiTenant = $mtVal -eq 'True'
-            } catch { }
+            } catch { Write-Verbose "[SSO-Redirect] SSOMultiTenant not found in Key Vault (defaults to single-tenant): $_" }
         }
     }
 

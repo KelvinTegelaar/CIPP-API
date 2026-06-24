@@ -46,7 +46,7 @@ function Push-CIPPDBCacheData {
             $AzureADPremiumP2Capable = Test-CIPPStandardLicense -StandardName 'AzureADPremiumP2LicenseCheck' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Azure AD Premium P2 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Microsoft Entra ID P2 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
         $ExchangeCapable = $false
@@ -164,7 +164,7 @@ function Push-CIPPDBCacheData {
                     QueueName      = "DB Cache IdentityProtection - $TenantFilter"
                 })
         } else {
-            Write-Host "Skipping Azure AD Premium P2 data collection for $TenantFilter - no required license"
+            Write-Host "Skipping Microsoft Entra ID P2 data collection for $TenantFilter - no required license"
         }
 
         if ($IntuneCapable) {

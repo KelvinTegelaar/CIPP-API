@@ -201,7 +201,7 @@ function New-CIPPCAPolicy {
             $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
 
         } else {
-            $Body = ConvertTo-Json -InputObject $JSONobj.GrantControls.authenticationStrength
+            $Body = ConvertTo-Json -Depth 10 -InputObject $JSONobj.GrantControls.authenticationStrength
             $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $TenantFilter -asApp $true -ScheduleRetry $true
             $JSONobj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
             Write-LogMessage -Headers $Headers -API $APIName -message "Created new Authentication Strength Policy: $($JSONobj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
@@ -344,7 +344,7 @@ function New-CIPPCAPolicy {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $LocationBody = $location | Select-Object * -ExcludeProperty id
                 Remove-ODataProperties -Object $LocationBody
-                $Body = ConvertTo-Json -InputObject $LocationBody
+                $Body = ConvertTo-Json -Depth 10 -InputObject $LocationBody
                 try {
                     $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $TenantFilter -asApp $true
                     Write-Information "Created named location with ID: $($GraphRequest.id)"

@@ -42,7 +42,7 @@ function Get-HuduFieldMapping {
             }
 
             Write-Warning "Could not get Hudu Asset Layouts, error: $Message"
-            Write-LogMessage -Message "Could not get Hudu Asset Layouts, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
+            Write-LogMessage -message "Could not get Hudu Asset Layouts, error: $Message " -sev 'Error' -tenant 'CIPP' -API 'HuduMapping'
             $AssetLayouts = @(@{FieldType = 'Layouts'; name = "Could not get Hudu Asset Layouts, $Message"; value = -1 })
         }
     } catch {
@@ -54,7 +54,7 @@ function Get-HuduFieldMapping {
         }
 
         Write-Warning "Could not get Hudu Asset Layouts, error: $Message"
-        Write-LogMessage -Message "Could not get Hudu Asset Layouts, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
+        Write-LogMessage -message "Could not get Hudu Asset Layouts, error: $Message " -sev 'Error' -tenant 'CIPP' -API 'HuduMapping'
         $AssetLayouts = @(@{FieldType = 'Layouts'; name = "Could not get Hudu Asset Layouts, $Message"; value = -1 })
     }
 

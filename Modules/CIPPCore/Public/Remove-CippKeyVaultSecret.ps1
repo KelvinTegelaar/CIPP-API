@@ -52,7 +52,7 @@ function Remove-CippKeyVaultSecret {
             }
         }
 
-        Write-Error "Failed to delete secret '$Name' from vault '$VaultName': $($_.Exception.Message)"
+        Write-LogMessage -message "Failed to delete secret '$Name' from vault '$VaultName': $($_.Exception.Message)" -API 'KeyVault' -sev Error
         throw
     }
 }

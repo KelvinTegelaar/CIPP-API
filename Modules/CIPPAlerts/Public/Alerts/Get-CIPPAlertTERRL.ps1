@@ -36,6 +36,6 @@ function Get-CIPPAlertTERRL {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -tenant $TenantFilter -message "Could not get TERRL status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -severity 'Error' -API 'CIPPAlertTERRL' -LogData $ErrorMessage
+        Write-LogMessage -tenant $TenantFilter -message "Could not get TERRL status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev 'Error' -API 'CIPPAlertTERRL' -LogData $ErrorMessage
     }
 }

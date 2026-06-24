@@ -18,6 +18,6 @@ function Remove-CippAuditLogSearch {
     )
 
     process {
-        New-GraphPostRequest -type DELETE -body '{}' -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}' -f $QueryId) -AsApp $true -tenantid $TenantFilter
+        New-GraphPostRequest -type DELETE -body '{}' -uri ('https://graph.microsoft.com/v1.0/security/auditLog/queries/{0}' -f $QueryId) -AsApp $true -tenantid $TenantFilter
     }
 }

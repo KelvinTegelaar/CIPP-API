@@ -51,7 +51,7 @@ function Push-BECRun {
         }
         Write-Information 'Getting last sign-in'
         try {
-            $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc"
+            $URI = "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc"
             $LastSignIn = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
             id,
             @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
@@ -105,7 +105,7 @@ function Push-BECRun {
 
         Write-Information 'Getting last 50 logons'
         try {
-            $Last50Logons = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userDisplayName ne 'On-Premises Directory Synchronization Service Account'&`$top=50&`$orderby=createdDateTime desc" -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
+            $Last50Logons = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=userDisplayName ne 'On-Premises Directory Synchronization Service Account'&`$top=50&`$orderby=createdDateTime desc" -tenantid $TenantFilter -noPagination $true | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
             id,
             @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
             @{ Name = 'Status'; Expression = { if (($_.conditionalAccessStatus -eq 'Success' -or 'Not Applied') -and $_.status.errorCode -eq 0) { 'Success' } else { 'Failed' } } },

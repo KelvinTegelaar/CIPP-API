@@ -12,7 +12,7 @@ function Push-GraphDeltaQuery {
     try {
         New-GraphDeltaQuery @Item
     } catch {
-        Write-Error "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
+        Write-LogMessage -message "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)" -API 'GraphDeltaQuery' -sev Error
         Write-Warning $_.InvocationInfo.PositionMessage
     }
 

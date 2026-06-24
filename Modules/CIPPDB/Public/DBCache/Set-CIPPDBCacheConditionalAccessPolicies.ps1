@@ -20,7 +20,7 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
         $TestResult = Test-CIPPStandardLicense -StandardName 'ConditionalAccessCache' -TenantFilter $TenantFilter -Preset Entra -SkipLog
 
         if ($TestResult -eq $false) {
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Azure AD Premium license, skipping CA' -sev Debug
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Microsoft Entra ID P1 license, skipping CA' -sev Debug
             return
         }
 

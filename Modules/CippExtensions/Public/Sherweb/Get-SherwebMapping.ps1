@@ -33,7 +33,7 @@ function Get-SherwebMapping {
             $_.Exception.message
         }
 
-        Write-LogMessage -Message "Could not get Sherweb Companies, error: $Message " -Level Error -tenant 'CIPP' -API 'SherwebMapping'
+        Write-LogMessage -message "Could not get Sherweb Companies, error: $Message " -sev 'Error' -tenant 'CIPP' -API 'SherwebMapping'
         $SherwebCustomers = @(@{name = "Could not get Sherweb Companies, error: $Message"; value = '-1' })
     }
 

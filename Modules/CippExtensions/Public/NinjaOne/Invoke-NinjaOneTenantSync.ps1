@@ -1264,7 +1264,7 @@ function Invoke-NinjaOneTenantSync {
                                     Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
                                 }
                             } else {
-                                Write-Error "Unmatched Doc: $($UserDoc | ConvertTo-Json -Depth 100)"
+                                Write-LogMessage -message "NinjaOne Unmatched Doc for user mapping: $($UserDoc.documentId)" -API 'NinjaOneSync' -sev Warning
                             }
 
                         }
@@ -1274,7 +1274,7 @@ function Invoke-NinjaOneTenantSync {
 
                 }
             } catch {
-                Write-Error "User $($User.UserPrincipalName): A fatal error occurred while processing user $_"
+                Write-LogMessage -message "User $($User.UserPrincipalName): A fatal error occurred while processing user $_" -API 'NinjaOneSync' -sev Error
             }
 
         }
@@ -1341,7 +1341,7 @@ function Invoke-NinjaOneTenantSync {
                             Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
                         }
                     } else {
-                        Write-Error "Unmatched Doc: $($UserDoc | ConvertTo-Json -Depth 100)"
+                        Write-LogMessage -message "NinjaOne Unmatched Doc for user mapping: $($UserDoc.documentId)" -API 'NinjaOneSync' -sev Warning
                     }
 
                 }
@@ -2222,7 +2222,6 @@ function Invoke-NinjaOneTenantSync {
         } else {
             $_.Exception.message
         }
-        Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error:  $Message"
         Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Failed' -Force

@@ -96,7 +96,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
 
         if ($Item.productId -in $exclusions) {
             $desiredPolicyValue = 'Enabled'
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exclusion present for self-service license '$($Item.productName) - $($Item.productId)'"
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exclusion present for self-service license '$($Item.productName) - $($Item.productId)'" -sev 'Info'
         } else {
             $desiredPolicyValue = 'Disabled'
         }

@@ -115,7 +115,7 @@ function Get-CIPPFeatureFlag {
         }
     } catch {
         $ErrorMsg = if ($Id) { "'$Id'" } else { 'flags' }
-        Write-Error "Error retrieving feature $($ErrorMsg): $($_.Exception.Message)"
+        Write-LogMessage -message "Error retrieving feature $($ErrorMsg): $($_.Exception.Message)" -API 'FeatureFlags' -sev Error
         return $null
     }
 }

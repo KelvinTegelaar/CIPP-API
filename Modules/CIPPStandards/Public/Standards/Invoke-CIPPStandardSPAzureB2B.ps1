@@ -5,10 +5,10 @@ function Invoke-CIPPStandardSPAzureB2B {
     .COMPONENT
         (APIName) SPAzureB2B
     .SYNOPSIS
-        (Label) Enable SharePoint and OneDrive integration with Azure AD B2B
+        (Label) Enable SharePoint and OneDrive integration with Microsoft Entra B2B
     .DESCRIPTION
-        (Helptext) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
-        (DocsDescription) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
+        (Helptext) Ensure SharePoint and OneDrive integration with Microsoft Entra B2B is enabled
+        (DocsDescription) Ensure SharePoint and OneDrive integration with Microsoft Entra B2B is enabled
     .NOTES
         CAT
             SharePoint Standards

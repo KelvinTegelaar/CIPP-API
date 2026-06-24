@@ -83,7 +83,7 @@ function Sync-CippExtensionData {
                 $SingleGraphQueries = @(@{
                         id           = 'SecureScore'
                         graphRequest = @{
-                            uri          = 'https://graph.microsoft.com/beta/security/secureScores?$top=1'
+                            uri          = 'https://graph.microsoft.com/v1.0/security/secureScores?$top=1'
                             noPagination = $true
                         }
                     })

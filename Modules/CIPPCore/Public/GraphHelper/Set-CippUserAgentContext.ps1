@@ -9,7 +9,7 @@ function Set-CippUserAgentContext {
     .PARAMETER Headers
         The request headers (live or stored snapshot) containing x-ms-client-principal* values.
     .PARAMETER Source
-        The action source label, e.g. 'scheduled-task'. When omitted, 'api' is inferred for AAD API clients and 'user' otherwise.
+        The action source label, e.g. 'scheduled-task'. When omitted, 'api' is inferred for Entra ID API clients and 'user' otherwise.
     .PARAMETER TaskId
         Optional task identifier (e.g. the scheduled task RowKey) included in the User-Agent for cross-referencing.
     .PARAMETER TemplateId
@@ -33,7 +33,7 @@ function Set-CippUserAgentContext {
     $GuidRegex = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
     if ($Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Headers.'x-ms-client-principal-name' -match $GuidRegex) {
-        # Direct API client - principal name is the AppId
+        # Entra ID direct API client — principal name is the AppId
         $Identity = $Headers.'x-ms-client-principal-name'
         if (-not $Source) { $Source = 'api' }
     } elseif ($Headers.'x-ms-client-principal') {

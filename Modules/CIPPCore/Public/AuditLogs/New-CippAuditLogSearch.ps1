@@ -149,7 +149,7 @@ function New-CippAuditLogSearch {
 
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
         try {
-            $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+            $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
         } catch {
             $AuditLogError = $null
             $AuditLogErrorMessage = [string]$_.Exception.Message

@@ -33,7 +33,7 @@ function Push-TableCleanupTask {
                 $Where = { $true }
             }
 
-            $DataTableProps = $Item.DataTableProps | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+            $DataTableProps = $Item.DataTableProps | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
             $Table = Get-CIPPTable -tablename $Item.TableName
             $CleanupCompleted = $false
 

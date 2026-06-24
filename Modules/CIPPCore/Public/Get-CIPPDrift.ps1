@@ -473,7 +473,7 @@ function Get-CIPPDrift {
         return @($Results)
 
     } catch {
-        Write-Error "Error getting drift data: $($_.Exception.Message)"
+        Write-LogMessage -message "Error getting drift data: $($_.Exception.Message)" -API 'Drift' -sev Error
         throw
     }
 }
