@@ -28,6 +28,20 @@ function Invoke-SetAuthMethod {
         if ($GroupIds) {
             $Params.GroupIds = @($GroupIds)
         }
+        # Forward any method-specific sub-settings present in the body (omitted ones keep current/default values)
+        $OptionalSettings = @(
+            'TAPisUsableOnce', 'TAPMinimumLifetime', 'TAPMaximumLifetime', 'TAPDefaultLifeTime', 'TAPDefaultLength'
+            'MicrosoftAuthenticatorSoftwareOathEnabled', 'MicrosoftAuthenticatorDisplayAppInfo', 'MicrosoftAuthenticatorDisplayLocation', 'MicrosoftAuthenticatorCompanionApp'
+            'EmailAllowExternalIdToUseEmailOtp', 'EmailExcludeGroupIds'
+            'QRCodeLifetimeInDays', 'QRCodePinLength'
+            'FIDO2AttestationEnforced', 'FIDO2SelfServiceRegistration', 'VoiceIsOfficePhoneAllowed'
+            'SmsIsUsableForSignIn'
+        )
+        foreach ($Setting in $OptionalSettings) {
+            if ($null -ne $Request.Body.$Setting) {
+                $Params.$Setting = $Request.Body.$Setting
+            }
+        }
         $Result = Set-CIPPAuthenticationPolicy @Params
         $StatusCode = [HttpStatusCode]::OK
     } catch {
