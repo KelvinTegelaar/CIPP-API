@@ -3,11 +3,11 @@ name: Upload Dev zip
 on:
   push:
     branches:
-      - dev
+      - master
+  workflow_dispatch:
 
 jobs:
   release:
-    if: github.event.repository.fork == false && github.event_name == 'push'
     name: Upload to Azure
     runs-on: ubuntu-latest
 
