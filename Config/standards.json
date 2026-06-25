@@ -5865,7 +5865,7 @@
       {
         "type": "switch",
         "name": "standards.TeamsFederationConfiguration.AllowTeamsConsumer",
-        "label": "Allow users to communicate with other organizations"
+        "label": "Allow users to communicate with consumer Teams accounts"
       },
       {
         "type": "autoComplete",
@@ -7257,6 +7257,12 @@
       },
       {
         "type": "switch",
+        "name": "standards.DefenderCompliancePolicy.grantMobileThreatDefensePartnerRole",
+        "label": "Grant MTD role to MDE on enrolled Android COBO/COPE devices",
+        "defaultValue": false
+      },
+      {
+        "type": "switch",
         "name": "standards.DefenderCompliancePolicy.ConnectIos",
         "label": "Connect iOS/iPadOS devices to MDE",
         "defaultValue": false
@@ -7264,13 +7270,19 @@
       {
         "type": "switch",
         "name": "standards.DefenderCompliancePolicy.ConnectIosCompliance",
-        "label": "Connect iOS 13.0+ (App-based MAM)",
+        "label": "Connect iOS/iPadOS devices for app protection policy evaluation (MAM)",
         "defaultValue": false
       },
       {
         "type": "switch",
         "name": "standards.DefenderCompliancePolicy.appSync",
-        "label": "Enable App Sync for iOS",
+        "label": "Enable App Sync (sending application inventory) for iOS/iPadOS devices",
+        "defaultValue": false
+      },
+      {
+        "type": "switch",
+        "name": "standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalApplicationMetadata",
+        "label": "Send full application inventory data on personally-owned iOS/iPadOS devices",
         "defaultValue": false
       },
       {
@@ -7282,13 +7294,13 @@
       {
         "type": "switch",
         "name": "standards.DefenderCompliancePolicy.allowPartnerToCollectIosCertificateMetadata",
-        "label": "Collect certificate metadata from iOS",
+        "label": "Enable Certificate Sync for iOS/iPadOS devices",
         "defaultValue": false
       },
       {
         "type": "switch",
         "name": "standards.DefenderCompliancePolicy.allowPartnerToCollectIosPersonalCertificateMetadata",
-        "label": "Collect personal certificate metadata from iOS",
+        "label": "Send full certificate inventory data on personally-owned iOS/iPadOS devices",
         "defaultValue": false
       },
       {
