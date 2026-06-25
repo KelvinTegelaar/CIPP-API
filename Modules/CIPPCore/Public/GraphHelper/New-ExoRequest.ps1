@@ -160,6 +160,15 @@ function New-ExoRequest {
                     } elseif ($ReportedError.error.message) { $ReportedError.error.message }
                 } catch { $Message = $_.ErrorDetails }
                 if ($null -eq $Message) { $Message = $ErrorMess }
+                if ($ResponseHeaders -and $ResponseHeaders['WWW-Authenticate']) {
+                    $WwwAuth = $ResponseHeaders['WWW-Authenticate']
+                    if ($WwwAuth -is [array]) { $WwwAuth = $WwwAuth -join '; ' }
+                    if ($WwwAuth -match 'error_description="([^"]+)"') {
+                        $Message = "$Message (EXO auth: $($Matches[1]))"
+                    } elseif (-not [string]::IsNullOrWhiteSpace($WwwAuth)) {
+                        $Message = "$Message (WWW-Authenticate: $WwwAuth)"
+                    }
+                }
                 throw $Message
             }
             return $ReturnedData.value
