@@ -27,17 +27,18 @@ function Set-CIPPDefenderCompliancePolicy {
         macEnabled                                          = [bool]$Compliance.ConnectMac
         partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
         partnerUnresponsivenessThresholdInDays              = 7
-        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
-        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
+        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.AppSync
+        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalApplicationMetadata
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.iosDeviceBlockedOnMissingPartnerData
         windowsDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData
         macDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.macDeviceBlockedOnMissingPartnerData
         androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
-        iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
+        iosMobileApplicationManagementEnabled               = [bool]$Compliance.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Compliance.windowsMobileApplicationManagementEnabled
         allowPartnerToCollectIosCertificateMetadata         = [bool]$Compliance.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalCertificateMetadata
+        grantMobileThreatDefensePartnerRole                 = [bool]$Compliance.grantMobileThreatDefensePartnerRole
         microsoftDefenderForEndpointAttachEnabled           = [bool]$true
     }
     $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
