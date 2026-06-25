@@ -82,13 +82,31 @@ function Set-CIPPSAMAdminRoles {
                 $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -Compliance -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Compliance Center')
             } catch {
-                $ActionLogs.Add('Service Principal already added to Compliance Center')
+                $SpError = $_.Exception.Message
+                if ($SpError -match 'already exist') {
+                    $ActionLogs.Add('Service Principal already added to Compliance Center')
+                } else {
+                    $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError")
+                    $HasFailures = $true
+                }
             }
             try {
-                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
-                $ActionLogs.Add('Added Service Principal to Exchange Online')
+                try {
+                    $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true
+                    $ActionLogs.Add('Added Service Principal to Exchange Online (delegated)')
+                } catch {
+                    if ($_.Exception.Message -match 'already exist') { throw }
+                    $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
+                    $ActionLogs.Add('Added Service Principal to Exchange Online (app-only fallback)')
+                }
             } catch {
-                $ActionLogs.Add('Service Principal already added to Exchange Online')
+                $SpError = $_.Exception.Message
+                if ($SpError -match 'already exist') {
+                    $ActionLogs.Add('Service Principal already added to Exchange Online')
+                } else {
+                    $ActionLogs.Add("Failed to add Service Principal to Exchange Online: $SpError")
+                    $HasFailures = $true
+                }
             }
 
             Write-Verbose ($Requests | ConvertTo-Json -Depth 5)

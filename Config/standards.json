@@ -4157,12 +4157,10 @@
         "defaultValue": false
       },
       {
-        "type": "autoComplete",
-        "multiple": true,
-        "creatable": true,
+        "type": "LanguageCodeMultiSelect",
         "required": false,
         "name": "standards.SpamFilterPolicy.LanguageBlockList",
-        "label": "Languages to block (uppercase ISO 639-1 two-letter)",
+        "label": "Languages to block (ISO 639-1 two-letter)",
         "condition": {
           "field": "standards.SpamFilterPolicy.EnableLanguageBlockList",
           "compareType": "is",
@@ -4176,12 +4174,10 @@
         "defaultValue": false
       },
       {
-        "type": "autoComplete",
-        "multiple": true,
-        "creatable": true,
+        "type": "CountryCodeMultiSelect",
         "required": false,
         "name": "standards.SpamFilterPolicy.RegionBlockList",
-        "label": "Regions to block (uppercase ISO 3166-1 two-letter)",
+        "label": "Regions to block (ISO 3166-1 two-letter)",
         "condition": {
           "field": "standards.SpamFilterPolicy.EnableRegionBlockList",
           "compareType": "is",
