@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -609,9 +610,33 @@ namespace CIPP
             using (response)
             {
                 var statusCode = (int)response.StatusCode;
-                var content    = response.Content is not null
-                    ? await response.Content.ReadAsStringAsync(token).ConfigureAwait(false)
-                    : string.Empty;
+
+                // Read the body defensively. With AutomaticDecompression enabled, ReadAsStringAsync can throw
+                // (InvalidDataException "...unsupported compression method", IOException, ...) when a response
+                // carries a Content-Encoding the handler cannot decode or a malformed/mislabeled body. Such a
+                // read failure must NOT mask the HTTP status: for an error response we surface the status code
+                // (the actionable signal - e.g. a 403 from EXO), and for a success response we surface a clear,
+                // attributable error instead of an opaque decompression exception. Callers that skip the error
+                // check (e.g. redirect / compliance-URL discovery) keep their headers and fall back to an empty body.
+                string content;
+                try
+                {
+                    content = response.Content is not null
+                        ? await response.Content.ReadAsStringAsync(token).ConfigureAwait(false)
+                        : string.Empty;
+                }
+                catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
+                {
+                    if (!(skipErrorCheck || noRedirect))
+                    {
+                        TrackPoolResult(selection.Pool, response.IsSuccessStatusCode, statusCode);
+                        var readFailMessage = !response.IsSuccessStatusCode
+                            ? $"Response status code does not indicate success: {statusCode}"
+                            : $"Failed to read response body (status {statusCode}): {ex.Message}";
+                        throw new HttpRequestException(readFailMessage, ex, response.StatusCode);
+                    }
+                    content = string.Empty;
+                }
 
             // ----------------------------------------------------------
             // Response headers
