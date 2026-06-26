@@ -20,7 +20,7 @@ function Set-CIPPDBCacheRiskDetections {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching risk detections from Identity Protection' -sev Debug
 
         # Requires P2 licensing
-        $RiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskDetections' -tenantid $TenantFilter
+        $RiskDetections = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskDetections?$top=500' -tenantid $TenantFilter
 
         if ($RiskDetections) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskDetections' -Data $RiskDetections -AddCount
