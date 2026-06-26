@@ -82,16 +82,34 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     } #we're done.
 
     # Use custom name if provided, otherwise use default for backward compatibility
-    $PolicyName = if ($Settings.name) { $Settings.name } else { 'CIPP Default Spam Filter Policy' }
+    $DefaultPolicyName = 'CIPP Default Spam Filter Policy'
+    $PolicyName = if ($Settings.name) { $Settings.name } else { $DefaultPolicyName }
 
     try {
-        $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName
+        $AllSpamFilterPolicies = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy'
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SpamFilterPolicy state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
+
+    # Only match against legacy/default names when no custom name is provided. When a custom name is
+    # set, deploy it as a new policy instead of reusing an existing default-named one. 'Default' is
+    # Microsoft's built-in inbound anti-spam policy ("Anti-spam inbound policy" in the portal); it
+    # cannot be renamed and has no associated rule.
+    if ($PolicyName -eq $DefaultPolicyName) {
+        $PolicyList = @($PolicyName, 'Default Spam Filter Policy', 'Default')
+        $ExistingPolicy = $AllSpamFilterPolicies | Where-Object -Property Name -In $PolicyList | Select-Object -First 1
+        if ($null -ne $ExistingPolicy.Name) {
+            # Use existing policy name if found
+            $PolicyName = $ExistingPolicy.Name
+        }
+    }
+
+    # The built-in default policy cannot have a HostedContentFilterRule, so rule remediation is skipped for it.
+    $IsDefaultPolicy = $PolicyName -eq 'Default'
+
+    $CurrentState = $AllSpamFilterPolicies | Where-Object -Property Name -EQ $PolicyName
 
     $SpamAction = $Settings.SpamAction.value ?? $Settings.SpamAction
     $SpamQuarantineTag = $Settings.SpamQuarantineTag.value ?? $Settings.SpamQuarantineTag
@@ -253,7 +271,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             }
         }
 
-        if ($RuleStateIsCorrect -eq $false) {
+        if ($RuleStateIsCorrect -eq $false -and -not $IsDefaultPolicy) {
             $cmdParams = @{
                 Priority          = 0
                 RecipientDomainIs = ConvertTo-SafeArray -Field $AcceptedDomains.Name
