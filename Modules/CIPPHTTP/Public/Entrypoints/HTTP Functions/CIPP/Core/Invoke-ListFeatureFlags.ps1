@@ -21,6 +21,9 @@ function Invoke-ListFeatureFlags {
                 if ($Flag.Id -eq 'SuperAdminNG') {
                     $Flag.Enabled = $true
                 }
+                elseIf ($Flag.Id -eq 'AppInsights') {
+                    $Flag.Enabled = $false
+                }
             }
         }
 
