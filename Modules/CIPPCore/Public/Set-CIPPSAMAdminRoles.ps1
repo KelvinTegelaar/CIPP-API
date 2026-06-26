@@ -91,14 +91,8 @@ function Set-CIPPSAMAdminRoles {
                 }
             }
             try {
-                try {
-                    $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true
-                    $ActionLogs.Add('Added Service Principal to Exchange Online (delegated)')
-                } catch {
-                    if ($_.Exception.Message -match 'already exist') { throw }
-                    $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
-                    $ActionLogs.Add('Added Service Principal to Exchange Online (app-only fallback)')
-                }
+                $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
+                $ActionLogs.Add('Added Service Principal to Exchange Online')
             } catch {
                 $SpError = $_.Exception.Message
                 if ($SpError -match 'already exist') {
