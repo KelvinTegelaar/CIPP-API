@@ -86,12 +86,11 @@ function Start-ContainerUpdateCheck {
             # Resolve ARM site details
             $Subscription = Get-CIPPAzFunctionAppSubId
             $SiteName = $env:WEBSITE_SITE_NAME
-            $RGName = $env:WEBSITE_RESOURCE_GROUP
-            if (-not $RGName) {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                }
+            try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $SiteName
+            } catch {
+                Write-Information "Could not determine resource group: $($_.Exception.Message)"
+                $RGName = $null
             }
 
             $ImageTag = $env:IMAGE_TAG ?? 'unknown'

@@ -56,9 +56,19 @@ function Invoke-CippTestCustomScripts {
             $TestId = "CustomScript-$($Script.ScriptGuid)"
             $ScriptName = if ([string]::IsNullOrWhiteSpace($Script.ScriptName)) { $TestId } else { $Script.ScriptName }
 
+            $AllStatuses = @('Passed', 'Failed', 'Info', 'Investigate')
             $AlertStatuses = @('Failed')
             if ($AlertStatusesProp -and -not [string]::IsNullOrWhiteSpace($AlertStatusesProp.Value)) {
-                $AlertStatuses = $AlertStatusesProp.Value | ConvertFrom-Json
+                $RawAlertStatuses = [string]$AlertStatusesProp.Value
+                if ($RawAlertStatuses.TrimStart().StartsWith('[')) {
+                    $AlertStatuses = @($RawAlertStatuses | ConvertFrom-Json)
+                } else {
+                    $AlertStatuses = @($RawAlertStatuses)
+                }
+            }
+            # 'All' alerts on every result status.
+            if ($AlertStatuses -contains 'All') {
+                $AlertStatuses = $AllStatuses
             }
 
             try {
@@ -105,7 +115,24 @@ function Invoke-CippTestCustomScripts {
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultDataJson $ResultDataJson -ResultMarkdown $ResultMarkdown -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
 
                 if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
-                    Write-AlertMessage -tenant $Tenant -message "Custom script test failed: $ScriptName ($($Script.ScriptGuid))"
+                    # Logbook entry for the UI/audit trail. Uses API 'CustomTests' + a non-alert
+                    # severity so Push-SchedulerCIPPNotifications does not re-ship it.
+                    Write-LogMessage -API 'CustomTests' -tenant $Tenant -message "Custom script test '$ScriptName' returned status '$FinalStatus' ($($Script.ScriptGuid))" -sev Info
+                    # Emit an alert record. Delivery is batched per-tenant by Invoke-CIPPTestCollection
+                    # after the whole suite runs (Send-CIPPCustomTestAlert). Manual single-test runs
+                    # via Push-CIPPTest discard this, so they intentionally do not ship an alert.
+                    [PSCustomObject]@{
+                        CippCustomTestAlert = $true
+                        TestId              = $TestId
+                        ScriptGuid          = $Script.ScriptGuid
+                        ScriptName          = $ScriptName
+                        Status              = $FinalStatus
+                        Risk                = $Script.Risk ?? 'Medium'
+                        Pillar              = $Script.Pillar
+                        FailedRows          = $FailedRows
+                        ResultMarkdown      = $ResultMarkdown
+                        ErrorMessage        = $null
+                    }
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -117,7 +144,19 @@ function Invoke-CippTestCustomScripts {
                 }
                 Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Custom' -Status $FinalStatus -ResultMarkdown "Custom script execution failed: $($ErrorMessage.NormalizedError)" -Risk ($Script.Risk ?? 'Medium') -Name $ScriptName -Pillar $Script.Pillar -UserImpact $Script.UserImpact -ImplementationEffort $Script.ImplementationEffort -Category 'Custom Script'
                 if ($ShouldAlert -and $FinalStatus -in $AlertStatuses) {
-                    Write-AlertMessage -tenant $Tenant -message "Custom script execution failed: $ScriptName ($($Script.ScriptGuid)) - $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -API 'CustomTests' -tenant $Tenant -message "Custom script execution failed: $ScriptName ($($Script.ScriptGuid)) - $($ErrorMessage.NormalizedError)" -sev Warning
+                    [PSCustomObject]@{
+                        CippCustomTestAlert = $true
+                        TestId              = $TestId
+                        ScriptGuid          = $Script.ScriptGuid
+                        ScriptName          = $ScriptName
+                        Status              = $FinalStatus
+                        Risk                = $Script.Risk ?? 'Medium'
+                        Pillar              = $Script.Pillar
+                        FailedRows          = @()
+                        ResultMarkdown      = ''
+                        ErrorMessage        = $ErrorMessage.NormalizedError
+                    }
                 }
             }
         }

@@ -16,7 +16,7 @@ function Push-TableCleanupTask {
                     if ($Table) {
                         Write-Information "Deleting table $($Table.Context.TableName)"
                         try {
-                            Remove-AzDataTable -Context $Table.Context -Force
+                            Remove-AzDataTable -Context $Table.Context
                         } catch {
                             #Write-LogMessage -API 'TableCleanup' -message "Failed to delete table $($Table.Context.TableName)" -sev Error -LogData (Get-CippException -Exception $_)
                         }
