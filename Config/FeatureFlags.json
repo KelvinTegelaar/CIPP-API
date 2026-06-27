@@ -81,5 +81,20 @@
     ],
     "Pages": [],
     "Hidden": false
+  },
+  {
+    "Id": "AppInsights",
+    "Name": "App Insights",
+    "Description": "App Insights page not used in NG",
+    "Enabled": true,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [
+      "ExecAppInsightsQuery"
+    ],
+    "Pages": [
+      "/cipp/advanced/diagnostics"
+    ],
+    "Hidden": true
   }
 ]
