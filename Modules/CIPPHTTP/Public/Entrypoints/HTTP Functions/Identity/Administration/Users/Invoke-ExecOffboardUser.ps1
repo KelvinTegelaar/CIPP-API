@@ -7,8 +7,17 @@ function Invoke-ExecOffboardUser {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $AllUsers = $Request.Body.user.value
-    $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
+
+    $Validation = Test-CIPPOffboardingRequest -Body $Request.Body
+    if (-not $Validation.IsValid) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{ Results = @($Validation.Errors) }
+            })
+    }
+
+    $AllUsers = $Validation.Users
+    $TenantFilter = $Validation.TenantFilter
     $OffboardingOptions = $Request.Body | Select-Object * -ExcludeProperty user, tenantFilter, Scheduled
 
     $StatusCode = [HttpStatusCode]::OK

@@ -10,6 +10,11 @@ function Test-CIPPAuditLogRules {
     try {
         # Pre-compiled regex patterns for GUID matching (performance optimization)
         $script:StandardGuidRegex = [regex]'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        $script:ClientIpRegex = [regex]'^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
+        $script:ReservedIpRegex = [regex]::new(
+            '^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|(?:22[4-9]|23[0-9]|24[0-9]|25[0-5])\.|::1?$|fe[89ab]|f[cd]|ff)',
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
         $script:PartnerUpnRegex = [regex]'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)'
         $script:PartnerExchangeRegex = [regex]'([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})'
 
@@ -419,7 +424,32 @@ function Test-CIPPAuditLogRules {
         $ExcludedUsers = Get-CIPPAzDataTableEntity @AuditLogUserExclusions -Filter "PartitionKey eq '$TenantFilter'"
 
         if ($LogCount -gt 0) {
-            $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
+            $TrustedIPEntries = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and state eq 'Trusted'"
+            $TrustedIPLookup = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($TrustedEntry in $TrustedIPEntries) {
+                if (![string]::IsNullOrEmpty($TrustedEntry.RowKey)) {
+                    $null = $TrustedIPLookup.Add([string]$TrustedEntry.RowKey)
+                }
+            }
+
+            $GeoPrefetchIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($AuditRecord in $SearchResults) {
+                $cip = $AuditRecord.auditData.clientip
+                if ([string]::IsNullOrEmpty($cip) -or $cip -match '[X]+') { continue }
+                $cip = $script:ClientIpRegex.Replace([string]$cip, '$1') -replace '[\[\]]', ''
+                if ($TrustedIPLookup.Contains($cip) -or $script:ReservedIpRegex.IsMatch($cip)) { continue }
+                $null = $GeoPrefetchIPs.Add($cip)
+            }
+            $GeoLookup = @{}
+            if ($GeoPrefetchIPs.Count -gt 0) {
+                try {
+                    $GeoLookup = Get-CIPPGeoIPLocationBatch -IPs @($GeoPrefetchIPs)
+                    Write-Information "Geo prefetch: $($GeoLookup.Count)/$($GeoPrefetchIPs.Count) distinct IPs resolved"
+                } catch {
+                    #Write-Warning "Geo prefetch failed, falling back to per-record lookup: $($_.Exception.Message)"
+                }
+            }
+
             $ProcessedData = foreach ($AuditRecord in $SearchResults) {
                 $RecordStartTime = Get-Date
                 Write-Information "Processing RowKey $($AuditRecord.id) - $($TenantFilter)."
@@ -471,68 +501,35 @@ function Test-CIPPAuditLogRules {
                     if (![string]::IsNullOrEmpty($Data.clientip) -and $Data.clientip -notmatch '[X]+') {
                         # Ignore IP addresses that have been redacted
 
-                        $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
-                        $Data.clientip = $Data.clientip -replace $IPRegex, '$1' -replace '[\[\]]', ''
-
-                        # Check if IP is on trusted IP list
-                        $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
-                        if ($TrustedIP) {
-                            #write-warning "IP $($Data.clientip) is trusted"
-                            $Trusted = $true
-                        }
+                        $Data.clientip = $script:ClientIpRegex.Replace([string]$Data.clientip, '$1') -replace '[\[\]]', ''
+                        $Trusted = $TrustedIPLookup.Contains([string]$Data.clientip)
+                        $IsReserved = $script:ReservedIpRegex.IsMatch([string]$Data.clientip)
                         if (!$Trusted) {
-                            $CacheLookupStartTime = Get-Date
-                            $Location = Get-AzDataTableEntity @LocationTable -Filter "PartitionKey eq 'ip' and RowKey eq '$($Data.clientIp)'" | Select-Object -ExcludeProperty Tenant
-                            $CacheLookupEndTime = Get-Date
-                            $CacheLookupSeconds = ($CacheLookupEndTime - $CacheLookupStartTime).TotalSeconds
-                            Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
-
-                            if ($Location) {
-                                $Country = $Location.CountryOrRegion
-                                $City = $Location.City
-                                $Proxy = $Location.Proxy
-                                $hosting = $Location.Hosting
-                                $ASName = $Location.ASName
+                            if ($IsReserved) {
+                                $Data.CIPPGeoLocation = 'Unknown'
+                                $Data.CIPPBadRepIP = 'Unknown'
+                                $Data.CIPPHostedIP = 'Unknown'
+                                $Data.CIPPIPDetected = [string]$Data.clientip
+                                $Data.CIPPLocationInfo = $null
+                                $HasLocationData = $true
                             } else {
-                                try {
-                                    $IPLookupStartTime = Get-Date
-                                    $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
-                                    $IPLookupEndTime = Get-Date
-                                    $IPLookupSeconds = ($IPLookupEndTime - $IPLookupStartTime).TotalSeconds
-                                    Write-Warning "IP lookup for $($Data.clientip) took $IPLookupSeconds seconds"
-                                } catch {
-                                    #write-warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
-                                }
-                                $Country = if ($Location.countryCode) { $Location.countryCode } else { 'Unknown' }
-                                $City = if ($Location.city) { $Location.city } else { 'Unknown' }
-                                $Proxy = if ($Location.proxy -ne $null) { $Location.proxy } else { 'Unknown' }
-                                $hosting = if ($Location.hosting -ne $null) { $Location.hosting } else { 'Unknown' }
-                                $ASName = if ($Location.asname) { $Location.asname } else { 'Unknown' }
-                                $IP = $Data.ClientIP
-                                $LocationInfo = @{
-                                    RowKey          = [string]$Data.clientip
-                                    PartitionKey    = 'ip'
-                                    Tenant          = [string]$TenantFilter
-                                    CountryOrRegion = "$Country"
-                                    City            = "$City"
-                                    Proxy           = "$Proxy"
-                                    Hosting         = "$hosting"
-                                    ASName          = "$ASName"
-                                }
-
-                                try {
-                                    $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
-                                } catch {
-                                    #write-warning "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
-
+                                $Loc = $GeoLookup[[string]$Data.clientip]
+                                if ($Loc) {
+                                    $Data.CIPPGeoLocation = $Loc.CountryOrRegion
+                                    $Data.CIPPBadRepIP = $Loc.Proxy
+                                    $Data.CIPPHostedIP = $Loc.Hosting
+                                    $Data.CIPPIPDetected = [string]$Data.clientip
+                                    $Data.CIPPLocationInfo = ($Loc | ConvertTo-Json -Compress -Depth 10)
+                                    $HasLocationData = $true
+                                } else {
+                                    $Data.CIPPGeoLocation = 'Unknown'
+                                    $Data.CIPPBadRepIP = 'Unknown'
+                                    $Data.CIPPHostedIP = 'Unknown'
+                                    $Data.CIPPIPDetected = [string]$Data.clientip
+                                    $Data.CIPPLocationInfo = $null
+                                    $HasLocationData = $false
                                 }
                             }
-                            $Data.CIPPGeoLocation = $Country
-                            $Data.CIPPBadRepIP = $Proxy
-                            $Data.CIPPHostedIP = $hosting
-                            $Data.CIPPIPDetected = $IP
-                            $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress -Depth 10)
-                            $HasLocationData = $true
                         }
                     }
                     $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress -Depth 10)
@@ -543,19 +540,17 @@ function Test-CIPPAuditLogRules {
                     Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
                 }
 
-                Write-Information "Removing row $($AuditRecord.id) from cache"
                 try {
-                    Write-Information 'Removing processed rows from cache'
-                    $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
-                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
-                    Write-Information "Removed row $($AuditRecord.id) from cache"
+                    $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity ([pscustomobject]@{
+                            PartitionKey = $TenantFilter
+                            RowKey       = [string]$AuditRecord.id
+                        })
                 } catch {
-                    Write-Information "Error removing rows from cache: $($_.Exception.Message)"
-                } finally {
-                    $RecordEndTime = Get-Date
-                    $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
-                    Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
+                    Write-Information "Error removing row $($AuditRecord.id) from cache: $($_.Exception.Message)"
                 }
+                $RecordEndTime = Get-Date
+                $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
+                Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
             }
             #write-warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
             #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
@@ -688,14 +683,13 @@ function Test-CIPPAuditLogRules {
         }
 
         try {
-            Write-Information 'Removing processed rows from cache'
-            foreach ($Row in $Rows) {
-                if ($Row.id) {
-                    $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
-                    if ($RowEntity) {
-                        Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
-                        Write-Information "Removed row $($Row.id) from cache at final pass."
-                    }
+            $RowIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.id | Where-Object { $_ }))
+            if ($RowIds.Count -gt 0) {
+                $CachedRows = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter'"
+                $RowsToRemove = @($CachedRows | Where-Object { $RowIds.Contains([string]$_.RowKey) })
+                if ($RowsToRemove.Count -gt 0) {
+                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
+                    Write-Information "Removed $($RowsToRemove.Count) processed rows from cache"
                 }
             }
         } catch {

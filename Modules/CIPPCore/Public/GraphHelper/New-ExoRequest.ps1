@@ -48,7 +48,7 @@ function New-ExoRequest {
         } else {
             $Params = @{}
         }
-        $ExoBody = ConvertTo-Json -Depth 5 -Compress -InputObject @{
+        $ExoBody = ConvertTo-Json -Depth 20 -Compress -InputObject @{
             CmdletInput = @{
                 CmdletName = $cmdlet
                 Parameters = $Params
