@@ -3,12 +3,14 @@ function Set-CIPPAssignedApplication {
     param(
         $GroupName,
         $ExcludeGroup,
+        $ExcludeGroupIds,
         $Intent,
         $AppType,
         $ApplicationId,
         $TenantFilter,
         $GroupIds,
         $AssignmentMode = 'replace',
+        $AssignmentDirection,
         $APIName = 'Assign Application',
         $Headers,
         $AssignmentFilterName,
@@ -106,7 +108,7 @@ function Set-CIPPAssignedApplication {
                 $resolvedGroupIds = @()
                 if ($PSBoundParameters.ContainsKey('GroupIds') -and $GroupIds) {
                     $resolvedGroupIds = $GroupIds
-                } else {
+                } elseif ($GroupName) {
                     $GroupNames = $GroupName.Split(',')
                     $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
                         $Group = $_
@@ -119,8 +121,10 @@ function Set-CIPPAssignedApplication {
                     Write-Information "found $($resolvedGroupIds) groups"
                 }
 
-                # We ain't found nothing so we panic
-                if (-not $resolvedGroupIds) {
+                # Only panic when an include target was actually requested. Exclude-only
+                # assignments legitimately resolve to no include groups here.
+                $IncludeRequested = $GroupName -or ($GroupIds -and @($GroupIds).Count -gt 0)
+                if (-not $resolvedGroupIds -and $IncludeRequested) {
                     throw 'No matching groups resolved for assignment request.'
                 }
 
@@ -138,20 +142,34 @@ function Set-CIPPAssignedApplication {
             }
         }
 
+        # Normalize to an array so appending exclusions appends an element rather than
+        # merging hashtable keys (a single include group makes the switch return a scalar).
+        # Filter nulls so an exclude-only assignment doesn't carry an empty placeholder.
+        $MobileAppAssignment = @($MobileAppAssignment | Where-Object { $_ })
+
         # Add exclusion group assignments
-        if ($ExcludeGroup) {
-            Write-Host "Excluding group(s) from application assignment: $ExcludeGroup"
-            $ExcludeGroupNames = $ExcludeGroup.Split(',').Trim()
-            $ExcludeGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
-                $Group = $_
-                foreach ($SingleName in $ExcludeGroupNames) {
-                    if ($Group.displayName -like $SingleName) {
-                        $Group.id
+        if ($ExcludeGroup -or ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0)) {
+            # Prefer explicit group IDs (from the picker); fall back to name resolution
+            # for templates/wizards/API callers that still send ExcludeGroup names.
+            if ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) {
+                Write-Host "Excluding group(s) by id from application assignment: $($ExcludeGroupIds -join ', ')"
+                $ResolvedExcludeIds = @($ExcludeGroupIds)
+            } else {
+                Write-Host "Excluding group(s) from application assignment: $ExcludeGroup"
+                $ExcludeGroupNames = $ExcludeGroup.Split(',').Trim()
+                $ResolvedExcludeIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
+                    $Group = $_
+                    foreach ($SingleName in $ExcludeGroupNames) {
+                        if ($Group.displayName -like $SingleName) {
+                            $Group.id
+                        }
                     }
                 }
             }
 
-            foreach ($egid in $ExcludeGroupIds) {
+            foreach ($egid in $ResolvedExcludeIds) {
+                # Graph rejects 'settings' on exclusion targets:
+                # "Exclusion assignment does not support MobileAppAssignment Settings."
                 $MobileAppAssignment += @{
                     '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                     target        = @{
@@ -159,7 +177,6 @@ function Set-CIPPAssignedApplication {
                         groupId       = $egid
                     }
                     intent        = $Intent
-                    settings      = $assignmentSettings
                 }
             }
         }
@@ -176,59 +193,70 @@ function Set-CIPPAssignedApplication {
             }
         }
 
-        # If we're appending, we need to get existing assignments
-        if ($AssignmentMode -eq 'append') {
+        # Determine which existing assignments (if any) must be preserved.
+        #   append              -> keep all existing (minus ones the new set overrides)
+        #   replace + direction -> keep everything except the direction being edited
+        #                          (Custom Group action only; legacy replace overwrites everything)
+        $DirectionScoped = -not [string]::IsNullOrWhiteSpace($AssignmentDirection)
+        $EditedType = switch ($AssignmentDirection) {
+            'exclude' { '#microsoft.graph.exclusionGroupAssignmentTarget' }
+            'include' { '#microsoft.graph.groupAssignmentTarget' }
+            default { $null }
+        }
+        $PreserveExisting = ($AssignmentMode -eq 'append') -or ($AssignmentMode -eq 'replace' -and $DirectionScoped)
+
+        $ExistingAssignments = @()
+        if ($PreserveExisting) {
             try {
                 $ExistingAssignments = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assignments" -tenantid $TenantFilter
             } catch {
-                Write-Warning "Unable to retrieve existing assignments for $ApplicationId. Proceeding with new assignments only. Error: $($_.Exception.Message)"
-                $ExistingAssignments = @()
+                $ErrorMessage = "Unable to retrieve existing assignments for $ApplicationId. Existing assignments must be preserved for assignment mode '$AssignmentMode' and direction '$AssignmentDirection'. Aborting to avoid removing assignments. Error: $($_.Exception.Message)"
+                Write-Warning $ErrorMessage
+                throw $ErrorMessage
             }
         }
 
-        # Deduplicate current assignments so the new ones override existing ones
+        # Decide which existing assignments to carry forward.
+        $KeptAssignments = [System.Collections.Generic.List[object]]::new()
         if ($ExistingAssignments) {
-            $ExistingAssignments = $ExistingAssignments | ForEach-Object {
-                $ExistingAssignment = $_
-                switch ($ExistingAssignment.target.'@odata.type') {
-                    '#microsoft.graph.groupAssignmentTarget' {
-                        if ($ExistingAssignment.target.groupId -notin $MobileAppAssignment.target.groupId) {
-                            $ExistingAssignment
-                        }
+            foreach ($ExistingAssignment in @($ExistingAssignments)) {
+                $ExistingType = $ExistingAssignment.target.'@odata.type'
+                $Keep = if ($AssignmentMode -eq 'replace' -and $DirectionScoped) {
+                    # Direction-scoped replace: drop every target of the edited type, keep the rest
+                    # (the other direction plus All Users / All Devices broad targets).
+                    $ExistingType -ne $EditedType
+                } else {
+                    # Append: keep existing unless the new set overrides the same group/target.
+                    switch ($ExistingType) {
+                        '#microsoft.graph.groupAssignmentTarget' { $ExistingAssignment.target.groupId -notin $MobileAppAssignment.target.groupId }
+                        '#microsoft.graph.exclusionGroupAssignmentTarget' { $ExistingAssignment.target.groupId -notin $MobileAppAssignment.target.groupId }
+                        default { $ExistingType -notin $MobileAppAssignment.target.'@odata.type' }
                     }
-                    '#microsoft.graph.exclusionGroupAssignmentTarget' {
-                        if ($ExistingAssignment.target.groupId -notin $MobileAppAssignment.target.groupId) {
-                            $ExistingAssignment
-                        }
-                    }
-                    default {
-                        if ($ExistingAssignment.target.'@odata.type' -notin $MobileAppAssignment.target.'@odata.type') {
-                            $ExistingAssignment
-                        }
-                    }
+                }
+                if ($Keep) {
+                    $KeptAssignments.Add($ExistingAssignment)
                 }
             }
         }
 
         $FinalAssignments = [System.Collections.Generic.List[object]]::new()
-        if ($AssignmentMode -eq 'append' -and $ExistingAssignments) {
-            $ExistingAssignments | ForEach-Object {
-                $FinalAssignments.Add(@{
-                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
-                        target        = $_.target
-                        intent        = $_.intent
-                        settings      = $_.settings
-                    })
+        if ($PreserveExisting) {
+            # Rebuild each assignment, omitting 'settings' on exclusion targets (Graph rejects it).
+            $AddAssignment = {
+                param($a)
+                $entry = @{
+                    '@odata.type' = '#microsoft.graph.mobileAppAssignment'
+                    target        = $a.target
+                    intent        = $a.intent
+                }
+                if ($a.target.'@odata.type' -ne '#microsoft.graph.exclusionGroupAssignmentTarget' -and $null -ne $a.settings) {
+                    $entry.settings = $a.settings
+                }
+                $FinalAssignments.Add($entry)
             }
 
-            $MobileAppAssignment | ForEach-Object {
-                $FinalAssignments.Add(@{
-                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
-                        target        = $_.target
-                        intent        = $_.intent
-                        settings      = $_.settings
-                    })
-            }
+            $KeptAssignments | ForEach-Object { & $AddAssignment $_ }
+            $MobileAppAssignment | ForEach-Object { & $AddAssignment $_ }
         } else {
             $FinalAssignments = $MobileAppAssignment
         }
